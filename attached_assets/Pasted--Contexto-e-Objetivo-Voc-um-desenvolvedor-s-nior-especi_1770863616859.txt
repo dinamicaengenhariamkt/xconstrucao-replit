@@ -1,0 +1,249 @@
+# Contexto e Objetivo
+
+Você é um desenvolvedor sênior especializado em Next.js, React e TypeScript. Sua tarefa é criar uma aplicação web completa chamada XConstrução (plataforma de gestão de obras) a partir de um repositório existente com telas HTML/CSS estáticas. O objetivo é recriar essas interfaces, tornando-as totalmente funcionais e interativas, com um design moderno e atraente.
+
+O repositório atual está em: https://github.com/dinamicaengenhariamkt/xconstrucao
+
+Você deve:
+1. Analisar a estrutura de pastas e telas HTML existentes (a organização atual é apenas sugestiva para referência).
+2. Criar um projeto Next.js moderno seguindo as melhores práticas de folder-based routing.
+3. Migrar todas as telas HTML para componentes React reutilizáveis, utilizando os componentes de UI definidos.
+4. Implementar backend com Node.js + Express separado.
+5. Configurar o banco de dados PostgreSQL nativo do Replit.
+6. Manter fidelidade visual ao design original, mas aprimorando elementos como botões, backgrounds e outros detalhes com a Aceternity UI, sem ser extravagante.
+7. Garantir responsividade, acessibilidade e performance.
+
+---
+
+## Stack Tecnológica Definida
+
+### Frontend
+- Framework: Next.js 15+ com App Router e React 19+.
+- Linguagem: TypeScript em strict mode.
+- Estilos: Tailwind CSS v4.
+- Componentes UI: shadcn/ui (baseado em Radix UI) **e Aceternity UI (para aprimoramentos visuais e efeitos)**.
+- Ícones: react-icons.
+- Formulários: React Hook Form com validação Zod (forms controlados para otimização e sem re-render desnecessário).
+- Data Fetching: TanStack Query v5 para cache e otimização.
+- Tabelas: react-data-table-component.
+- Gráficos: Recharts.
+- Datas: date-fns.
+- Notificações: sonner via shadcn/ui.
+
+### Backend
+- Framework: Node.js com Express.
+- Linguagem: TypeScript.
+- Validação: Zod.
+- ORM: Prisma.
+- Autenticação: JWT com jsonwebtoken e bcrypt.
+
+### Banco de Dados
+- Provedor: PostgreSQL nativo do Replit.
+- ORM: Prisma.
+
+### Ferramentas
+- Linting: ESLint com Prettier.
+- Gerenciador de pacotes: pnpm ou npm.
+
+---
+
+## Análise do Repositório Atual
+
+O repositório contém as seguintes pastas com telas HTML/CSS e imagens:
+- acesso-plataforma: Telas de onboarding.
+- administrador: Painel administrativo.
+- cadastro: Fluxo de cadastro.
+- contratante: Painel do contratante (dono da obra).
+- empreiteiro: Painel do empreiteiro (executor).
+- homepage: Landing page institucional.
+- login: Tela de login.
+- logo: Assets de marca.
+- recuperar-senha: Fluxo de recuperação de senha.
+- xgestao-inteligente: (Nova pasta identificada na análise do GitHub).
+
+Cada pasta contém arquivos HTML com Tailwind CSS inline, Material Symbols Outlined do Google Fonts, estrutura de sidebar, topbar, conteúdo principal, cards, tabelas, formulários e gráficos em SVG placeholder.
+
+IMPORTANTE: Esta estrutura de pastas é apenas para organização de referência durante o desenvolvimento HTML. Na aplicação Next.js, você deve criar uma estrutura folder-based otimizada seguindo as convenções do App Router.
+
+---
+
+## Tarefas Detalhadas
+
+### FASE 1: Setup Inicial do Projeto Next.js
+
+1. Criar projeto Next.js com TypeScript, Tailwind, App Router, src directory e import alias configurado.
+
+2. Configurar Tailwind CSS v4 com:
+   - Cores personalizadas: primary #333333, success #22846D, warning #F5A623, error #E53935, info #1E88E5.
+   - Font family: Manrope do Google Fonts.
+   - Breakpoints responsivos.
+   - Plugins: forms e container-queries.
+
+3. Instalar e configurar shadcn/ui:
+   - Inicializar com Tailwind CSS.
+   - Instalar componentes base necessários: button, card, dialog, dropdown-menu, form, input, label, select, table, tabs, toast, accordion.
+
+4. **Instalar e configurar Aceternity UI:**
+   - Seguir as instruções de instalação da CLI da Aceternity UI para integrar com o projeto Next.js e Tailwind.
+   - Instalar componentes selecionados da Aceternity UI que possam aprimorar o design de botões, backgrounds ou outros elementos visuais, sempre com moderação e sem extravagância. Exemplos iniciais podem incluir `Moving Border Button`, `Sparkles Background`, `Card Hover Effect` ou `Text Generate Effect` onde fizer sentido para melhorar a UX sem descaracterizar o layout base.
+
+5. Instalar todas as dependências do frontend:
+   - react-hook-form, zod e hookform/resolvers.
+   - @tanstack/react-query e @tanstack/react-query-devtools.
+   - react-data-table-component.
+   - recharts.
+   - date-fns.
+   - react-icons.
+   - sonner.
+   - clsx e tailwind-merge.
+   - next-themes.
+
+6. Criar a estrutura de pastas do backend com Node.js + Express em um diretório separado (`/backend`).
+
+7. Inicializar o projeto backend com TypeScript, Express, Prisma e as dependências de autenticação (jsonwebtoken, bcrypt).
+
+8. Configurar o Prisma para conectar ao PostgreSQL nativo do Replit.
+
+---
+
+### FASE 2: Definição do Schema do Banco de Dados e Backend
+
+1. Definir o schema do Prisma (`schema.prisma`) com os modelos de dados essenciais para a plataforma:
+   - User (para administradores, contratantes, empreiteiros).
+   - Cliente.
+   - Empreiteira.
+   - Obra.
+   - Medicao.
+   - Pagamento.
+   - Anuncio (para a nova tela de gestão de anúncios).
+   - Outros modelos que se fizerem necessários a partir da análise das telas HTML.
+
+2. Gerar as migrations iniciais do Prisma e aplicar ao banco de dados do Replit.
+
+3. Desenvolver a estrutura básica do backend Express:
+   - Configurar middlewares (CORS, JSON parser).
+   - Criar rotas de autenticação (login, registro).
+   - Criar rotas CRUD (Create, Read, Update, Delete) para os principais modelos (Clientes, Empreiteiras, Obras).
+   - Implementar validação de entrada com Zod para os endpoints.
+
+---
+
+### FASE 3: Migração das Interfaces HTML para Next.js/React
+
+1. Criar a estrutura de rotas do Next.js (App Router) baseada nas telas HTML existentes, organizando de forma lógica (ex: `/admin`, `/contratante`, `/empreiteiro`, `/auth`, `/homepage`).
+
+2. Migrar as telas HTML para componentes React/Next.js:
+   - Começar pelos componentes mais básicos e reutilizáveis (Layouts, Sidebar, Topbar, Footer).
+   - Utilizar shadcn/ui e Aceternity UI para reconstruir os elementos visuais, mantendo a identidade da marca XConstrução.
+   - Converter os formulários para usar React Hook Form e Zod para validação.
+   - Substituir tabelas HTML por `react-data-table-component`.
+   - Integrar `react-icons` para os ícones.
+   - Converter gráficos SVG estáticos para componentes Recharts dinâmicos.
+   - Implementar componentes dinâmicos com dados mockados inicialmente.
+   - Preparar para receber dados reais da API.
+
+---
+
+### FASE 4: Integração Frontend e Backend
+
+1. Configurar TanStack Query:
+   - Adicionar `QueryClientProvider` no layout raiz.
+   - Criar hooks customizados para cada domínio (`useClientes`, `useEmpreiteiras`, `useObras`, `useAnuncios`).
+   - Implementar mutations para operações POST, PUT, DELETE.
+
+2. Criar cliente API:
+   - Configurar Axios ou Fetch com base URL via variável de ambiente.
+   - Adicionar interceptors para tratamento de erros e autenticação.
+   - Criar funções helper para cada endpoint.
+
+3. Implementar sistema de autenticação:
+   - Endpoint de login retornando JWT.
+   - Armazenamento seguro de token.
+   - Middleware de autenticação no backend verificando JWT.
+   - Proteção de rotas no Next.js usando `middleware.ts`.
+   - Redirecionamento automático baseado em estado de autenticação.
+
+4. Conectar telas aos endpoints reais:
+   - Substituir dados mockados por chamadas de API.
+   - Implementar loading states usando Skeleton do shadcn/ui.
+   - Implementar error states com toast de notificação.
+
+---
+
+### FASE 5: Responsividade e Acessibilidade
+
+1. Testar em todos os breakpoints:
+   - Mobile: 320px a 768px.
+   - Tablet: 768px a 1024px.
+   - Desktop: 1024px ou mais.
+
+2. Garantir acessibilidade completa:
+   - Navegação por teclado funcional (Tab, Enter, Esc).
+   - ARIA labels em todos os ícones e botões sem texto.
+   - Contraste de cores seguindo WCAG AA.
+   - Compatibilidade com screen readers.
+
+3. Otimizar performance:
+   - Lazy loading de componentes pesados.
+   - Code splitting automático do Next.js.
+   - Otimização de imagens usando `next/image`.
+   - Memoização de componentes quando apropriado.
+
+---
+
+### FASE 6: Configuração Final e Deploy
+
+1. Configurar variáveis de ambiente:
+   - Arquivo `.env.local` para frontend.
+   - Arquivo `.env` para backend.
+   - Usar Replit Secrets para valores sensíveis em produção.
+
+2. Criar scripts úteis no `package.json`:
+   - Scripts para dev, build e start do frontend.
+   - Scripts para dev e build do backend.
+   - Scripts para Prisma (push, studio, migrate).
+
+3. Documentação:
+   - `README.md` com instruções completas de setup.
+   - Comentários em código complexo.
+   - Documentação de API endpoints.
+
+---
+
+## Regras e Boas Práticas Obrigatórias
+
+1. TypeScript em strict mode sem uso de `any` - tipar todas as funções e variáveis.
+2. Componentes pequenos e focados - máximo 200 linhas por arquivo.
+3. Server Components por padrão - usar `'use client'` apenas quando necessário.
+4. Validação dupla - cliente para UX e servidor para segurança.
+5. Tratamento robusto de erros - `try/catch` com logs e feedback ao usuário.
+6. Commits semânticos - usar prefixos `feat:`, `fix:`, `refactor:`, `docs:`.
+7. Código limpo - seguir ESLint e Prettier.
+
+---
+
+## Entregáveis Esperados
+
+Ao final do projeto:
+- Aplicação Next.js funcional com todas as telas migradas.
+- Backend Express com API REST completa e documentada.
+- Banco de dados PostgreSQL do Replit configurado com schema Prisma.
+- Sistema de autenticação JWT funcionando.
+- Formulários validados com React Hook Form e Zod.
+- Tabelas interativas com sorting, filtering e pagination.
+- Gráficos dinâmicos usando Recharts.
+- Responsividade mobile-first em todas as telas.
+- Acessibilidade seguindo WCAG AA.
+- `README` com instruções de setup e execução.
+
+---
+
+## Abordagem de Implementação
+
+Execute as fases sequencialmente. Após concluir cada fase, faça um commit descritivo e me notifique para validação antes de prosseguir para a próxima fase.
+
+Para a estrutura de pastas do Next.js, use sua expertise para criar a organização mais eficiente possível seguindo as convenções do App Router. A estrutura HTML atual serve apenas como referência de conteúdo, não de organização.
+
+Priorize clareza, manutenibilidade e performance em todas as decisões de arquitetura.
+
+Aguardo confirmação para iniciar a FASE 1.
