@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -12,6 +13,7 @@ declare module "http" {
   }
 }
 
+app.use(cookieParser());
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -60,6 +62,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { seedDatabase } = await import("./seed");
+  await seedDatabase().catch(console.error);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

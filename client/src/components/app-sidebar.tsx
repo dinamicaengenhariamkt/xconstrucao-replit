@@ -1,0 +1,135 @@
+import { useLocation, Link } from "wouter";
+import { useAuth } from "@/lib/auth";
+import { useCallback } from "react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
+import {
+  Users,
+  HardHat,
+  Wallet,
+  Building2,
+  TrendingUp,
+  TrendingDown,
+  Megaphone,
+  HelpCircle,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+
+const adminItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Clientes", url: "/dashboard/clientes", icon: Users },
+  { title: "Empreiteiras", url: "/dashboard/empreiteiras", icon: HardHat },
+  { title: "Obras", url: "/dashboard/obras", icon: Building2 },
+  { title: "Financeiro", url: "/dashboard/financeiro", icon: Wallet },
+  { title: "Entradas", url: "/dashboard/entradas", icon: TrendingUp },
+  { title: "Saídas", url: "/dashboard/saidas", icon: TrendingDown },
+  { title: "Anúncios", url: "/dashboard/anuncios", icon: Megaphone },
+];
+
+const bottomItems = [
+  { title: "Perguntas Frequentes", url: "/dashboard/faq", icon: HelpCircle },
+  { title: "Configurações", url: "/dashboard/config", icon: Settings },
+];
+
+export function AppSidebar() {
+  const [location, navigate] = useLocation();
+  const { user, logout } = useAuth();
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate("/");
+  }, [logout, navigate]);
+
+  const isActive = (url: string) => {
+    if (url === "/dashboard") return location === "/dashboard";
+    return location.startsWith(url);
+  };
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="p-6">
+        <Link href="/dashboard">
+          <div className="flex items-center gap-2 cursor-pointer" data-testid="link-sidebar-brand">
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center">
+              <span className="text-background font-extrabold text-sm">X</span>
+            </div>
+            <span className="text-base font-extrabold tracking-tight">xconstrução</span>
+          </div>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    data-testid={`sidebar-item-${item.title.toLowerCase()}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-sm font-medium">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="p-4">
+        <SidebarMenu>
+          {bottomItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild data-testid={`sidebar-item-${item.title.toLowerCase()}`}>
+                <Link href={item.url}>
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+          <Separator className="my-2" />
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="text-destructive hover:text-destructive"
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        {user && (
+          <div className="flex items-center gap-3 pt-3 mt-2 border-t border-sidebar-border">
+            <Avatar className="w-9 h-9">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
+                {user.name?.slice(0, 2).toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate" data-testid="text-user-name">{user.name}</p>
+              <p className="text-[11px] text-muted-foreground font-medium capitalize" data-testid="text-user-role">{user.role}</p>
+            </div>
+          </div>
+        )}
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
