@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { StructuredData } from "@/components/structured-data";
+import { BackToTop } from "@/components/back-to-top";
 import { generateOrganizationSchema, BASE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -59,6 +60,7 @@ export default function RootLayout({
       <body>
         <StructuredData data={generateOrganizationSchema()} />
         <Providers>{children}</Providers>
+        <BackToTop />
       </body>
     </html>
   );
