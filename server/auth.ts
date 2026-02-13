@@ -1,6 +1,5 @@
 import { createHmac, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
-import type { Request, Response, NextFunction } from "express";
 
 const JWT_SECRET = process.env.SESSION_SECRET || randomBytes(32).toString("hex");
 
@@ -38,11 +37,26 @@ export function verifyToken(token: string): { userId: string } | null {
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  const token = req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
-  if (!token) return res.status(401).json({ message: "Não autenticado" });
-  const payload = verifyToken(token);
-  if (!payload) return res.status(401).json({ message: "Token inválido" });
-  (req as any).userId = payload.userId;
+export function authMiddleware(req: any, res: any, next: any) {
+  const cookieHeader = req.headers.cookie || null;
+  const userId = getUserIdFromRequest(cookieHeader);
+  if (!userId) {
+    return res.status(401).json({ message: "Não autenticado" });
+  }
+  req.userId = userId;
   next();
+}
+
+export function getUserIdFromRequest(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null;
+  const cookies = Object.fromEntries(
+    cookieHeader.split(";").map((c) => {
+      const [key, ...rest] = c.trim().split("=");
+      return [key, rest.join("=")];
+    })
+  );
+  const token = cookies.token;
+  if (!token) return null;
+  const result = verifyToken(token);
+  return result?.userId || null;
 }
