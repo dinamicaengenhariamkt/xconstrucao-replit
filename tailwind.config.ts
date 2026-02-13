@@ -2,7 +2,11 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./client/index.html",
+    "./client/src/**/*.{js,jsx,ts,tsx}",
+    "./client/src/components/aceternity/**/*.{js,jsx,ts,tsx}"
+  ],
   theme: {
     extend: {
       borderRadius: {
@@ -80,6 +84,24 @@ export default {
           away: "rgb(245 158 11)",
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
+        },
+        // Brand colors for landing page
+        brand: {
+          primary: "#333333",
+          success: "#22846D",
+          warning: "#F5A623",
+          error: "#E53935",
+          info: "#1E88E5",
+          gray: {
+            light: "#F4F5F5",
+            dark: "#7A7A7A",
+          },
+          bg: {
+            dark: "#1C1F22",
+          },
+          surface: {
+            dark: "#2A2D30",
+          },
         },
       },
       fontFamily: {

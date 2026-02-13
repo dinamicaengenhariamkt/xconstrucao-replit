@@ -58,6 +58,17 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
+  /* Brand colors for landing page (from Figma design) */
+  --brand-primary: 0 0% 20%;          /* #333333 */
+  --brand-success: 158 64% 32%;        /* #22846D */
+  --brand-warning: 36 92% 55%;         /* #F5A623 */
+  --brand-error: 4 79% 57%;            /* #E53935 */
+  --brand-info: 207 77% 51%;           /* #1E88E5 */
+  --brand-gray-light: 180 11% 96%;     /* #F4F5F5 */
+  --brand-gray-dark: 0 0% 48%;         /* #7A7A7A */
+  --brand-bg-dark: 210 9% 12%;         /* #1C1F22 */
+  --brand-surface-dark: 210 7% 18%;    /* #2A2D30 */
+
 /* Fallback for older browsers */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
@@ -170,9 +181,24 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+/* Landing page specific color overrides */
+.landing-page {
+  --primary: var(--brand-primary);
+  --primary-foreground: 0 0% 98%;
+}
+
+.landing-page.dark {
+  --primary: var(--brand-primary);
+  --primary-foreground: 0 0% 98%;
 }
 
 /**

@@ -9,8 +9,15 @@ export async function seedDatabase() {
 
   console.log("Seeding database...");
 
-  const adminPassword = await hashPassword("admin123");
-  const userPassword = await hashPassword("user123");
+  // CREDENCIAIS DE DESENVOLVIMENTO:
+  // Email: admin@xconstrucao.com
+  // Senha: 123456
+  // (Em produção, a senha do admin é diferente por segurança)
+  const devPassword = "123456";
+  const prodAdminPassword = "admin123";
+
+  const adminPassword = await hashPassword(process.env.NODE_ENV === "production" ? prodAdminPassword : devPassword);
+  const userPassword = await hashPassword(devPassword);
 
   await db.insert(users).values([
     { username: "admin", password: adminPassword, name: "Rafael Santos", email: "admin@xconstrucao.com", role: "admin" },
