@@ -172,17 +172,20 @@ var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.sign
 const ThemeContext = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["createContext"])(null);
 function ThemeProvider({ children }) {
     _s();
-    const [theme, setTheme] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({
-        "ThemeProvider.useState": ()=>{
-            if ("TURBOPACK compile-time truthy", 1) {
-                return localStorage.getItem("xconstrucao-theme") || "light";
-            }
-            //TURBOPACK unreachable
-            ;
-        }
-    }["ThemeProvider.useState"]);
+    const [theme, setTheme] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])("light");
+    const [mounted, setMounted] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "ThemeProvider.useEffect": ()=>{
+            const stored = localStorage.getItem("xconstrucao-theme");
+            if (stored === "dark" || stored === "light") {
+                setTheme(stored);
+            }
+            setMounted(true);
+        }
+    }["ThemeProvider.useEffect"], []);
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "ThemeProvider.useEffect": ()=>{
+            if (!mounted) return;
             const root = document.documentElement;
             if (theme === "dark") {
                 root.classList.add("dark");
@@ -192,7 +195,8 @@ function ThemeProvider({ children }) {
             localStorage.setItem("xconstrucao-theme", theme);
         }
     }["ThemeProvider.useEffect"], [
-        theme
+        theme,
+        mounted
     ]);
     const toggleTheme = ()=>setTheme((t)=>t === "light" ? "dark" : "light");
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(ThemeContext.Provider, {
@@ -203,11 +207,11 @@ function ThemeProvider({ children }) {
         children: children
     }, void 0, false, {
         fileName: "[project]/components/theme-provider.tsx",
-        lineNumber: 35,
+        lineNumber: 40,
         columnNumber: 5
     }, this);
 }
-_s(ThemeProvider, "+zh+cnh6TOD78lF4XTGOUQgPUsI=");
+_s(ThemeProvider, "fqhTJOakwRKvaOykVeD8S7Yfj/s=");
 _c = ThemeProvider;
 function useTheme() {
     _s1();

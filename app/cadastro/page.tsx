@@ -1,0 +1,265 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { registerSchema } from "@shared/schema";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { GlassNav } from "@/components/glass-nav";
+import { SiteFooter } from "@/components/site-footer";
+
+type RegisterValues = z.infer<typeof registerSchema>;
+
+const perfilConfig: Record<string, { icon: string; text: string }> = {
+  contratante: { icon: "business", text: "Contratante" },
+  empreiteiro: { icon: "construction", text: "Empreiteiro" },
+};
+
+export default function CadastroPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const perfil = searchParams.get("perfil") || "contratante";
+  const config = perfilConfig[perfil] || perfilConfig.contratante;
+  const { register: registerUser } = useAuth();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (perfil === "administrador") {
+      router.push("/login?perfil=administrador");
+    }
+  }, [perfil, router]);
+
+  const form = useForm<RegisterValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      username: "",
+      password: "",
+      role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+      phone: "",
+    },
+  });
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    if (!acceptTerms) {
+      toast({
+        title: "Termos obrigatórios",
+        description: "Aceite os termos de uso para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await registerUser({
+        ...values,
+        role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+      });
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao criar conta. Tente novamente.";
+      toast({
+        title: "Erro no cadastro",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  });
+
+  if (perfil === "administrador") return null;
+
+  return (
+    <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
+      <GlassNav showAccessButton={false} />
+
+      <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-md">
+          <div
+            className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800"
+            style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+          >
+            {/* Badge de Perfil */}
+            <div className="flex justify-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
+                <span className="material-symbols-outlined text-lg">
+                  {config.icon}
+                </span>
+                <span data-testid="text-perfil-badge">{config.text}</span>
+              </div>
+            </div>
+
+            <h2
+              className="text-2xl font-extrabold text-center mb-2"
+              data-testid="text-register-title"
+            >
+              Criar conta
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-8">
+              Preencha seus dados para começar
+            </p>
+
+            {/* Social Login */}
+            <div className="space-y-3 mb-6">
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
+                data-testid="button-google-register"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                Continuar com Google
+              </button>
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
+                data-testid="button-apple-register"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                </svg>
+                Continuar com Apple
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <span className="text-xs text-slate-400 font-medium uppercase">ou</span>
+              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+            </div>
+
+            {/* Register Form */}
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Nome completo</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">person</span>
+                  <input
+                    type="text"
+                    placeholder="Seu nome completo"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-name"
+                    {...form.register("name")}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
+                  <input
+                    type="email"
+                    placeholder="seu@email.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-email"
+                    {...form.register("email")}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Usuário</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">alternate_email</span>
+                  <input
+                    type="text"
+                    placeholder="Seu nome de usuário"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-username"
+                    {...form.register("username")}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Telefone</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">phone</span>
+                  <input
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-phone"
+                    {...form.register("phone")}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Senha</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
+                  <input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-password"
+                    {...form.register("password")}
+                  />
+                </div>
+              </div>
+
+              {/* Terms */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-[#333333] focus:ring-[#333333]/20 mt-0.5"
+                  data-testid="checkbox-terms"
+                />
+                <span className="text-xs text-slate-500 leading-relaxed">
+                  Aceito os{" "}
+                  <a href="#" className="font-bold text-[#333333] dark:text-white underline">
+                    Termos de Uso
+                  </a>{" "}
+                  e a{" "}
+                  <a href="#" className="font-bold text-[#333333] dark:text-white underline">
+                    Política de Privacidade
+                  </a>
+                </span>
+              </label>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm"
+                data-testid="button-register"
+              >
+                {isLoading ? "Cadastrando..." : "Criar conta"}
+              </button>
+            </form>
+
+            {/* Login Link */}
+            <p className="text-center text-sm text-slate-500 mt-8">
+              Já tem conta?{" "}
+              <Link
+                href={`/login?perfil=${perfil}`}
+                className="font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                data-testid="link-login"
+              >
+                Fazer login
+              </Link>
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
