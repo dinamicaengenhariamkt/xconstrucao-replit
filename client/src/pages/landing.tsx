@@ -19,7 +19,6 @@ export default function LandingPage() {
         <ProjectGrid />
         <MonetizationSection />
         <HighlightsSection />
-        
         <FinalCTA />
       </main>
       <Footer />
