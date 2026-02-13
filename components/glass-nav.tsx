@@ -22,7 +22,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
       >
         <Link href="/">
           <Image
-            src="/images/logo-xconstrucao-horizontal.png"
+            src="/images/logo-xconstrucao-horizontal-01.png"
             alt="XConstrução"
             width={160}
             height={48}

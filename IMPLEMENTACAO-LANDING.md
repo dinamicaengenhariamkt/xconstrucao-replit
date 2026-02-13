@@ -140,8 +140,8 @@ As cores foram extraídas do HTML fornecido:
 └── index.css  (ATUALIZADO com cores brand)
 
 /client/public/
-├── logo-xconstrucao-horizontal.png  ✓
-├── logo-xconstrucao-vertical.png    ✓
+├── logo-xconstrucao-horizontal-01.png  ✓
+├── logo-xconstrucao-vertical-01.png    ✓
 └── background-homepage.png          ✓
 ```
 

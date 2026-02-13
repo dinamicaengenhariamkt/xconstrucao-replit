@@ -6,7 +6,7 @@ export function GlassNav() {
     <header className="fixed top-0 left-0 right-0 z-50 flex justify-center py-4 px-6">
       <nav className="flex items-center justify-between w-full max-w-[1200px] px-8 py-3 rounded-full border border-white/20 dark:border-white/10 bg-white/70 dark:bg-[#1C1F22]/70 backdrop-blur-xl shadow-lg">
         <img
-          src="/logo-xconstrucao-horizontal.png"
+          src="/logo-xconstrucao-horizontal-01.png"
           alt="XCon"
           className="h-12"
         />

@@ -10,18 +10,29 @@ export default function HomePage() {
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
       <GlassNav />
 
-      <main className="relative pt-32 overflow-hidden">
+      <main className="relative overflow-hidden">
         {/* Hero Section */}
         <section
           id="inicio"
-          className="flex flex-col items-center justify-center min-h-[85vh] px-6 text-center"
+          className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-32 text-center"
         >
-          <div className="max-w-[1000px] w-full">
+          {/* Background Image Overlay */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <div
+              className="w-full h-full bg-cover bg-center opacity-[0.08]"
+              style={{
+                backgroundImage: 'url("/images/background-homepage.png")',
+              }}
+            />
+          </div>
+
+          {/* Content */}
+          <div className="relative z-10 max-w-[1000px] w-full pb-16">
             <Image
-              src="/images/logo-xconstrucao-vertical.png"
+              src="/images/logo-xconstrucao-vertical-01.png"
               alt="XConstrução"
-              width={96}
-              height={96}
+              width={600}
+              height={300}
               className="h-24 w-auto mx-auto mb-8"
               priority
             />
@@ -60,20 +71,26 @@ export default function HomePage() {
         </section>
 
         {/* Parceiros / Trust Bar */}
-        <section className="py-16 px-6">
-          <div className="max-w-[1200px] mx-auto text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold mb-10">
-              Nossos Parceiros
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-12 opacity-40">
+        <section className="py-24 px-6">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Nossos <br />
+                  Parceiros
+                </h2>
+                <p className="text-xl text-slate-500">
+                  Confiado pelas maiores empresas do mercado.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-12 opacity-40 grayscale items-center justify-items-center">
               {["Parceiro 1", "Parceiro 2", "Parceiro 3", "Parceiro 4", "Parceiro 5"].map(
                 (partner) => (
                   <div
                     key={partner}
-                    className="text-sm font-bold text-slate-500 uppercase tracking-wider"
-                  >
-                    {partner}
-                  </div>
+                    className="h-8 w-32 bg-slate-400 rounded-sm"
+                  ></div>
                 )
               )}
             </div>
@@ -81,99 +98,98 @@ export default function HomePage() {
         </section>
 
         {/* Bento Features - Inovação em cada etapa */}
-        <section id="solucoes" className="py-20 px-6">
+        <section id="solucoes" className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
           <div className="max-w-[1200px] mx-auto">
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-[-0.03em] mb-16 text-center">
-              Inovação em cada etapa
-            </h2>
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Inovação em <br />
+                  cada etapa
+                </h2>
+                <p className="text-xl text-slate-500">
+                  Nossa plataforma oferece as ferramentas necessárias para
+                  transformar a gestão de obras complexas.
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8 flex flex-col justify-between min-h-[220px]"
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-4xl text-[#333333] dark:text-white mb-4">
-                  security
+                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
+                  shield
                 </span>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
-                    Segurança e agilidade
-                  </h3>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-2xl font-extrabold mb-3">Segurança e agilidade</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    Processos protegidos e otimizados para garantir eficiência em
-                    cada fase.
+                    Na xconstrução, a relação é segura do começo ao fim: pagamentos só após comprovação, profissionais com histórico verificado e transparência total em cada etapa. Acabou a desconfiança — a obra anda com segurança para todos.
                   </p>
                 </div>
               </div>
 
               <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8 flex flex-col justify-between min-h-[220px]"
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-4xl text-[#333333] dark:text-white mb-4">
-                  precision_manufacturing
+                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
+                  target
                 </span>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-2xl font-extrabold mb-3">
                     Precisão digital e previsibilidade
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    Dados e métricas inteligentes para decisões assertivas em
-                    todos os seus projetos.
+                    Dados em tempo real para decisões assertivas, eliminando erros comuns em grandes cronogramas.
                   </p>
                 </div>
               </div>
 
               <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8 flex flex-col justify-between min-h-[220px]"
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-4xl text-[#333333] dark:text-white mb-4">
+                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
                   hub
                 </span>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
-                    Conexão xconstrução
-                  </h3>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-2xl font-extrabold mb-3">Conexão xconstrução</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    Rede exclusiva que conecta contratantes a empreiteiros
-                    qualificados.
+                    Acesse os melhores projetos e profissionais do mercado através de nosso ecossistema verificado. Profissionais respaldados por Responsabilidade Técnica ativa (ART/RRT) e portfólio de obras reais validado pela plataforma — garantia de qualidade, legalidade e experiência comprovada em projetos diversos e de alto padrão.
                   </p>
                 </div>
               </div>
 
               <div
-                className="bg-[#333333] text-white rounded-2xl p-8 flex flex-col justify-between min-h-[220px] md:col-span-2"
+                className="bg-[#333333] text-white rounded-2xl p-10 flex flex-col min-h-[300px] md:col-span-2"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-4xl mb-4">
+                <span className="material-symbols-outlined text-5xl mb-6">
                   verified
                 </span>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
-                    Profissionais com Responsabilidade Técnica e portfólio
-                    validado
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-2xl font-extrabold mb-3">
+                    Profissionais com Responsabilidade Técnica e portfólio validado
                   </h3>
-                  <p className="text-white/70 text-sm leading-relaxed">
-                    Todos os profissionais da plataforma são verificados e possuem
-                    documentação técnica comprovada.
+                  <p className="text-white/80 text-sm leading-relaxed">
+                    Profissionais respaldados por Responsabilidade Técnica ativa (ART/RRT) e portfólio de obras reais validado pela plataforma — garantia de qualidade, legalidade e experiência comprovada em projetos diversos e de alto padrão.
                   </p>
                 </div>
               </div>
 
               <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8 flex flex-col justify-between min-h-[220px]"
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-4xl text-[#333333] dark:text-white mb-4">
-                  monitoring
+                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
+                  bolt
                 </span>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-2xl font-extrabold mb-3">
                     Gestão ágil e monitorada
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    Acompanhe cada detalhe com dashboards modernos e relatórios
-                    em tempo real.
+                    Interface intuitiva e colaborativa para otimizar cronogramas e recursos. Com clareza total em todas as etapas, todos trabalham em sincronia. Bem-vindo à nova dinâmica da construção.
                   </p>
                 </div>
               </div>
@@ -182,49 +198,52 @@ export default function HomePage() {
         </section>
 
         {/* Projetos em Destaque */}
-        <section id="projetos" className="py-20 px-6 bg-[#F4F5F5] dark:bg-[#2A2D30]">
+        <section id="projetos" className="py-32 px-6">
           <div className="max-w-[1200px] mx-auto">
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-[-0.03em] mb-4 text-center">
-              Projetos em Destaque
-            </h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400 text-center mb-16 max-w-[600px] mx-auto">
-              Conheça alguns dos projetos que estão transformando o mercado da
-              construção civil.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Projetos em <br />
+                  Destaque
+                </h2>
+                <p className="text-xl text-slate-500">
+                  Conheça alguns dos projetos que transformamos em realidade.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 {
-                  title: "Residencial Alto Padrão",
-                  category: "Residencial",
-                  status: "Em andamento",
+                  title: "Residência Aurora",
+                  location: "Alphaville, SP",
+                  imageUrl:
+                    "https://lh3.googleusercontent.com/aida-public/AB6AXuA8DmbXHWnFRx9HxLakzPyNurJA72UzcVOvQQEBJqvLxnyCcZeKjX1aXtrBDlXVEaKi49al2DZGMd2ur1D_-Jzoszo_rG7WhvAcJU1jZHR1fY0XtuYvxQE6etY5f1_4bQ_nszNI7JNfvPJ-mPrD900yFW47Iwnr22abQx1dR3PCkmaldJj9XTbNZuL0gppYAHJwDGJ4O3-8TLdIXjtEKGTSIbUrlsrFYM-P0kjU2emLbko53Z4_5_fCNiUVrl2ShrZGxRJZBRMwDrL8",
                 },
                 {
-                  title: "Complexo Comercial Centro",
-                  category: "Comercial",
-                  status: "Concluído",
+                  title: "Edifício Horizonte",
+                  location: "Itaim Bibi, SP",
+                  imageUrl:
+                    "https://lh3.googleusercontent.com/aida-public/AB6AXuB1BBXAC9cxWtr_xxq6GMheh1UPMH7QOxjVXSxQMxBDlikGJlY7tcI8lLgR1phw-5h0LupLOK0buFsedKQd_HhLx_ot54xJ74x-QU43v_Vv_PGsGWt3AjxViGN79yfdq8UcyPOgE51HrOIMiE0hca5CUMZVPgdT4rbFNrg2aNk3hgNC7EHMhLfE7v1VHieW_Jm5GbXhcbToyZnqG_Ywfot5vZzy0oD7UAfDmKZ3WPAb6EiDMEUdVQqtNHN8ChonOHFid74Qa5MZguOO",
                 },
                 {
-                  title: "Retrofit Industrial",
-                  category: "Industrial",
-                  status: "Em andamento",
+                  title: "Loft Industrial",
+                  location: "Lapa, RJ",
+                  imageUrl:
+                    "https://lh3.googleusercontent.com/aida-public/AB6AXuCEFDr73BPGE09f2fzelh2zX730l7a3m3Qpst4iN6IVL0ZpJa0b3tZO6dF5GFwLDt7GC5EpG4D9mW3iL0Eb3Wo9mOIzpI5nNqIpHHDZU0M5M6AM6uk4zZeXIXVRUMSx-QPgfNoDIn9JX3pOd5lmdHtrTDNWyGdKWfa0_KRgDwFMAnPxgwg4l1YH55RALHwoMCnmhBJwnWaX6KRWnldYsBM4rQrLu0etItQtd7amvmvoxq83hLsupAAqxZuUe0SpI_J7z6TBSbqwM7wj",
                 },
               ].map((project) => (
-                <div
-                  key={project.title}
-                  className="bg-white dark:bg-[#1C1F22] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
-                  style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-                >
-                  <div className="h-48 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800" />
-                  <div className="p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#333333] dark:text-white bg-[#F4F5F5] dark:bg-[#2A2D30] px-3 py-1 rounded-full">
-                        {project.category}
-                      </span>
-                      <span className="text-xs font-medium text-[#22846D]">
-                        {project.status}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold">{project.title}</h3>
+                <div key={project.title} className="flex flex-col gap-4">
+                  <div
+                    className="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer grayscale hover:grayscale-0"
+                    style={{
+                      backgroundImage: `url("${project.imageUrl}")`,
+                    }}
+                  ></div>
+                  <div className="flex justify-between items-center px-1">
+                    <span className="font-bold">{project.title}</span>
+                    <span className="text-xs bg-slate-100 px-2 py-1 rounded">
+                      {project.location}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -233,69 +252,110 @@ export default function HomePage() {
         </section>
 
         {/* Mercado em Foco */}
-        <section className="py-20 px-6">
+        <section className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
           <div className="max-w-[1200px] mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-              <div>
-                <h2 className="text-3xl md:text-5xl font-extrabold tracking-[-0.03em] mb-6">
-                  Mercado em Foco
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Mercado em <br />
+                  Foco
                 </h2>
-                <p className="text-lg text-slate-500 dark:text-slate-400 leading-relaxed mb-8">
-                  Acompanhe as principais tendências, índices e dados do
-                  mercado da construção civil em tempo real. Fique sempre à
-                  frente com informações atualizadas.
+                <p className="text-xl text-slate-500">
+                  Informações e conteúdos selecionados para profissionais da
+                  construção.
                 </p>
-                <div className="flex flex-wrap gap-6">
-                  <div>
-                    <p className="text-3xl font-extrabold text-[#333333] dark:text-white">
-                      R$ 2.8T
-                    </p>
-                    <p className="text-sm text-slate-400">PIB Construção 2025</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Card 1: Conteúdo de Marca (Advertorial) */}
+              <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-lg">
+                <div className="relative">
+                  <div
+                    className="aspect-video bg-cover bg-center"
+                    style={{
+                      backgroundImage:
+                        'url("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600")',
+                    }}
+                  ></div>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+                      Conteúdo de Marca
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-3xl font-extrabold text-[#22846D]">
-                      +12.4%
-                    </p>
-                    <p className="text-sm text-slate-400">Crescimento Anual</p>
-                  </div>
-                  <div>
-                    <p className="text-3xl font-extrabold text-[#1E88E5]">
-                      3.2M
-                    </p>
-                    <p className="text-sm text-slate-400">Empregos Gerados</p>
-                  </div>
+                  <p className="text-slate-500 text-sm mb-2">
+                    Por{" "}
+                    <span className="font-semibold text-slate-700">
+                      Anunciante
+                    </span>
+                  </p>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
+                    Inovações em construção modular aceleram entregas de
+                    projetos
+                  </h3>
                 </div>
               </div>
-              <div className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8">
-                <h3 className="text-lg font-bold mb-6">Índices do Mercado</h3>
-                <div className="space-y-4">
-                  {[
-                    { name: "INCC-M", value: "0.67%", trend: "up" },
-                    { name: "CUB/m²", value: "R$ 1.892,45", trend: "up" },
-                    { name: "SINAPI", value: "R$ 1.756,30", trend: "down" },
-                    { name: "IPCA Habitação", value: "0.45%", trend: "up" },
-                  ].map((index) => (
-                    <div
-                      key={index.name}
-                      className="flex items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700 last:border-0"
-                    >
-                      <span className="font-medium text-sm">{index.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm">{index.value}</span>
-                        <span
-                          className={`material-symbols-outlined text-sm ${
-                            index.trend === "up"
-                              ? "text-[#22846D]"
-                              : "text-[#E53935]"
-                          }`}
-                        >
-                          {index.trend === "up"
-                            ? "trending_up"
-                            : "trending_down"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+
+              {/* Card 2: Widget de Cotações (Valor/Mia) */}
+              <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-lg p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-600 font-bold text-sm">
+                      valor data
+                    </span>
+                    <span className="text-purple-600 font-bold text-xl">
+                      mia
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">oferecido por</p>
+                    <span className="text-purple-600 font-bold text-xl">
+                      nu
+                    </span>
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <p className="text-slate-500 text-sm">Ibovespa</p>
+                  <p className="text-slate-400 text-xs">
+                    179.847pts (+4257,19)
+                  </p>
+                  <p className="text-green-500 text-2xl font-bold flex items-center gap-1">
+                    <span>▲</span> 2.43%
+                  </p>
+                </div>
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                  <div className="flex justify-between text-xs text-slate-400 mb-2">
+                    <span>MOEDAS</span>
+                    <span>COMPRA</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800">
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Dólar Comercial
+                    </span>
+                    <span className="text-orange-500 font-semibold">
+                      R$ 5,287
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-2">
+                    <span className="text-slate-700 dark:text-slate-300">
+                      Euro Comercial
+                    </span>
+                    <span className="text-orange-500 font-semibold">
+                      R$ 6,245
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs text-slate-400">
+                    atualizado 23/01/2026 18h00
+                  </p>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">fonte:</p>
+                    <span className="text-red-600 font-bold text-sm">
+                      Valor<sup className="text-xs">PRO</sup>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

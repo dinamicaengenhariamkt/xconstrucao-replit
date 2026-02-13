@@ -3,7 +3,7 @@ export function Footer() {
     <footer className="py-12 px-6 border-t border-border">
       <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
         <img
-          src="/logo-xconstrucao-horizontal.png"
+          src="/logo-xconstrucao-horizontal-01.png"
           alt="XCon"
           className="h-12"
         />

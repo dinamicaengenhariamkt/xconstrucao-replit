@@ -24,7 +24,7 @@ export function HeroSection() {
       {/* Content */}
       <div className="relative z-10 max-w-[1000px] w-full pt-20">
         <motion.img
-          src="/logo-xconstrucao-vertical.png"
+          src="/logo-xconstrucao-vertical-01.png"
           alt="XConstrução"
           className="h-24 mx-auto mb-8"
           initial={{ opacity: 0, y: 20 }}

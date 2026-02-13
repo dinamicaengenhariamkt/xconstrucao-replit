@@ -9,7 +9,7 @@ export function SiteFooter() {
       <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
         <Link href="/">
           <Image
-            src="/images/logo-xconstrucao-horizontal.png"
+            src="/images/logo-xconstrucao-horizontal-01.png"
             alt="XConstrução"
             width={160}
             height={48}
