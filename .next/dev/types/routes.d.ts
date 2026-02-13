@@ -4,7 +4,7 @@
 type AppRoutes = "/" | "/acesso-plataforma" | "/cadastro" | "/dashboard" | "/dashboard/clientes" | "/dashboard/empreiteiras" | "/dashboard/financeiro" | "/dashboard/obras" | "/login" | "/politica-privacidade" | "/recuperar-senha" | "/register" | "/termos" | "/xgestao-inteligente"
 type AppRouteHandlerRoutes = "/api/auth/login" | "/api/auth/logout" | "/api/auth/me" | "/api/auth/register" | "/api/clientes" | "/api/clientes/[id]" | "/api/dashboard/stats" | "/api/empreiteiras" | "/api/empreiteiras/[id]" | "/api/financeiro" | "/api/obras" | "/api/obras/[id]"
 type PageRoutes = never
-type LayoutRoutes = "/" | "/dashboard"
+type LayoutRoutes = "/" | "/cadastro" | "/dashboard" | "/login" | "/politica-privacidade" | "/termos" | "/xgestao-inteligente"
 type RedirectRoutes = never
 type RewriteRoutes = never
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
@@ -44,7 +44,12 @@ export type ParamsOf<Route extends Routes> = ParamMap[Route]
 
 interface LayoutSlotMap {
   "/": never
+  "/cadastro": never
   "/dashboard": never
+  "/login": never
+  "/politica-privacidade": never
+  "/termos": never
+  "/xgestao-inteligente": never
 }
 
 

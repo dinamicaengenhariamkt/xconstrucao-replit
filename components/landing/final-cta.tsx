@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { MovingBorder } from "@/components/aceternity/interactive/moving-border";
-import { Link } from "wouter";
+import Link from "next/link";
 
 export function FinalCTA() {
   return (

@@ -285,6 +285,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 
 
 
+// Validate ../../../app/cadastro/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/cadastro">> = Specific
+  const handler = {} as typeof import("../../../app/cadastro/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/dashboard/layout.tsx
 {
   type __IsExpected<Specific extends LayoutConfig<"/dashboard">> = Specific
@@ -298,6 +307,42 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends LayoutConfig<"/">> = Specific
   const handler = {} as typeof import("../../../app/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/login/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/login">> = Specific
+  const handler = {} as typeof import("../../../app/login/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/politica-privacidade/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/politica-privacidade">> = Specific
+  const handler = {} as typeof import("../../../app/politica-privacidade/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/termos/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/termos">> = Specific
+  const handler = {} as typeof import("../../../app/termos/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/xgestao-inteligente/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/xgestao-inteligente">> = Specific
+  const handler = {} as typeof import("../../../app/xgestao-inteligente/layout.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

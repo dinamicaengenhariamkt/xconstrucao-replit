@@ -4,10 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { StructuredData } from "@/components/structured-data";
+import { generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
 
 export default function HomePage() {
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
+      <StructuredData data={[
+        generateBreadcrumbSchema([{ name: 'Home', url: '/' }]),
+        generateWebPageSchema({
+          title: 'Reinventando as relações na construção civil',
+          description: 'Conectamos projetos a executores de excelência com praticidade, precisão e previsibilidade',
+          url: '/',
+          datePublished: '2026-01-01',
+          dateModified: '2026-02-13',
+        })
+      ]} />
       <GlassNav />
 
       <main className="relative overflow-hidden">

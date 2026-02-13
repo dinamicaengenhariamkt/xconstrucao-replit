@@ -1,0 +1,14 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow authentication and platform pages
+Disallow: /login
+Disallow: /cadastro
+Disallow: /register
+Disallow: /recuperar-senha
+Disallow: /acesso-plataforma
+Disallow: /dashboard
+
+# Sitemap location
+Sitemap: https://xconstrucao.com.br/sitemap.xml

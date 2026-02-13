@@ -7,10 +7,24 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Shield, Mail } from "lucide-react";
+import { StructuredData } from "@/components/structured-data";
+import { generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
 
 export default function PoliticaDePrivacidade() {
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
+      <StructuredData data={[
+        generateBreadcrumbSchema([
+          { name: 'Home', url: '/' },
+          { name: 'Política de Privacidade', url: '/politica-privacidade' }
+        ]),
+        generateWebPageSchema({
+          title: 'Política de Privacidade - XConstrução',
+          description: 'Política de privacidade e proteção de dados da XConstrução',
+          url: '/politica-privacidade',
+          datePublished: '2026-01-01',
+        })
+      ]} />
       <GlassNav />
 
       <main className="relative overflow-hidden">

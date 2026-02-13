@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { StructuredData } from "@/components/structured-data";
+import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
 
 const features = [
   {
@@ -77,6 +79,19 @@ const differentials = [
 export default function XGestaoInteligentePage() {
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
+      <StructuredData data={[
+        generateProductSchema(),
+        generateBreadcrumbSchema([
+          { name: 'Home', url: '/' },
+          { name: 'xgestão inteligente', url: '/xgestao-inteligente' }
+        ]),
+        generateWebPageSchema({
+          title: 'xgestão inteligente - Gestão de Obras com Inteligência Artificial',
+          description: 'Sistema completo para gerenciar orçamentos com IA',
+          url: '/xgestao-inteligente',
+          datePublished: '2026-01-01',
+        })
+      ]} />
       <GlassNav />
 
       <main className="relative overflow-hidden">
