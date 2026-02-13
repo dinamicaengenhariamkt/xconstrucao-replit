@@ -79,23 +79,32 @@ export default function XGestaoInteligentePage() {
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
       <GlassNav />
 
-      <main className="relative pt-32 overflow-hidden">
+      <main className="relative overflow-hidden">
         {/* Hero Section */}
-        <section className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-          <div className="max-w-[900px] w-full">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider mb-8">
+        <section className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-32 pb-20">
+          {/* Background Overlay */}
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <div
+              className="w-full h-full bg-cover bg-center opacity-[0.08]"
+              style={{ backgroundImage: 'url("/images/background-homepage.png")' }}
+            />
+          </div>
+
+          {/* Content */}
+          <div className="relative z-10 max-w-[1000px] w-full flex flex-col items-center text-center gap-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
               <span className="material-symbols-outlined text-lg">dashboard_customize</span>
               <span>xgestão inteligente</span>
             </div>
             <h1
-              className="text-4xl md:text-6xl font-extrabold tracking-[-0.04em] leading-[0.95] mb-6"
+              className="text-5xl md:text-7xl font-extrabold tracking-[-0.04em] leading-[0.95]"
               data-testid="text-xgestao-title"
               style={{ textShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
             >
               Gestão de obras com{" "}
               <span className="text-[#333333]">inteligência</span>
             </h1>
-            <p className="text-xl text-slate-500 dark:text-slate-400 font-medium max-w-[600px] mx-auto leading-relaxed mb-12">
+            <p className="text-xl md:text-2xl text-slate-500 dark:text-slate-400 font-medium max-w-[600px] leading-relaxed">
               Sistema completo para gerenciar orçamentos, equipes, financeiro e
               documentação da sua obra com precisão e eficiência.
             </p>
@@ -120,13 +129,17 @@ export default function XGestaoInteligentePage() {
         {/* Funcionalidades */}
         <section id="funcionalidades" className="py-20 px-6">
           <div className="max-w-[1200px] mx-auto">
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-[-0.03em] mb-4 text-center">
-              Funcionalidades
-            </h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400 text-center mb-16 max-w-[600px] mx-auto">
-              Tudo que você precisa para gerenciar suas obras com eficiência e
-              controle total.
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Funcionalidades
+                </h2>
+                <p className="text-xl text-slate-500 dark:text-slate-400">
+                  Tudo que você precisa para gerenciar suas obras com eficiência e
+                  controle total.
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {features.map((feature) => (
                 <div
@@ -148,14 +161,18 @@ export default function XGestaoInteligentePage() {
         </section>
 
         {/* Diferenciais */}
-        <section className="py-20 px-6 bg-[#F4F5F5] dark:bg-[#2A2D30]">
+        <section className="py-20 px-6 bg-[#F4F5F5] dark:bg-[#2A2D30] transition-colors duration-300">
           <div className="max-w-[1200px] mx-auto">
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-[-0.03em] mb-4 text-center">
-              Diferenciais
-            </h2>
-            <p className="text-lg text-slate-500 dark:text-slate-400 text-center mb-16 max-w-[600px] mx-auto">
-              O que torna a xgestão inteligente única no mercado.
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Diferenciais
+                </h2>
+                <p className="text-xl text-slate-500 dark:text-slate-400">
+                  O que torna a xgestão inteligente única no mercado.
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {differentials.map((diff) => (
                 <div
