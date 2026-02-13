@@ -106,6 +106,7 @@
     --color-slate-300: #cad5e2;
     --color-slate-400: #90a1b9;
     --color-slate-500: #62748e;
+    --color-slate-600: #45556c;
     --color-slate-700: #314158;
     --color-slate-800: #1d293d;
     --color-slate-900: #0f172b;
@@ -226,6 +227,7 @@
       --color-slate-300: lab(84.7652% -1.94535 -7.93337);
       --color-slate-400: lab(65.5349% -2.25151 -14.5072);
       --color-slate-500: lab(48.0876% -2.03595 -16.5814);
+      --color-slate-600: lab(35.5623% -1.74978 -15.4316);
       --color-slate-700: lab(26.9569% -1.47016 -15.6993);
       --color-slate-800: lab(16.132% -.318035 -14.6672);
       --color-slate-900: lab(7.78673% 1.82345 -15.0537);
@@ -992,6 +994,10 @@
     margin-block: 1rem;
   }
 
+  .my-12 {
+    margin-block: 3rem;
+  }
+
   .my-auto {
     margin-block: auto;
   }
@@ -1002,6 +1008,10 @@
 
   .mt-0\.5 {
     margin-top: .125rem;
+  }
+
+  .mt-1 {
+    margin-top: .25rem;
   }
 
   .mt-1\.5 {
@@ -1022,6 +1032,10 @@
 
   .mt-8 {
     margin-top: 2rem;
+  }
+
+  .mt-12 {
+    margin-top: 3rem;
   }
 
   .mt-16 {
@@ -2047,6 +2061,10 @@
 
   .list-outside {
     list-style-position: outside;
+  }
+
+  .list-disc {
+    list-style-type: disc;
   }
 
   .list-none {
@@ -3795,6 +3813,10 @@
     padding-left: 1rem;
   }
 
+  .pl-6 {
+    padding-left: 1.5rem;
+  }
+
   .pl-8 {
     padding-left: 2rem;
   }
@@ -4259,6 +4281,10 @@
 
   .text-slate-500 {
     color: var(--color-slate-500);
+  }
+
+  .text-slate-600 {
+    color: var(--color-slate-600);
   }
 
   .text-slate-700 {
@@ -5888,6 +5914,12 @@
   }
 
   @media (hover: hover) {
+    .hover\:no-underline:hover {
+      text-decoration-line: none;
+    }
+  }
+
+  @media (hover: hover) {
     .hover\:underline:hover {
       text-decoration-line: underline;
     }
@@ -7110,6 +7142,11 @@
     background-color: #2a2d30;
   }
 
+  .dark\:bg-\[\#2A2D30\]\/50:is(.dark *) {
+    background-color: #2a2d3080;
+    background-color: lab(18.2568% -.803903 -2.42437 / .5);
+  }
+
   .dark\:bg-background\/50:is(.dark *) {
     background-color: hsl(var(--background));
   }
@@ -7172,6 +7209,16 @@
 
   .dark\:bg-white:is(.dark *) {
     background-color: var(--color-white);
+  }
+
+  .dark\:bg-white\/10:is(.dark *) {
+    background-color: #ffffff1a;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .dark\:bg-white\/10:is(.dark *) {
+      background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
+    }
   }
 
   .dark\:text-brand-primary:is(.dark *) {

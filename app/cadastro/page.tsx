@@ -224,13 +224,13 @@ export default function CadastroPage() {
                 />
                 <span className="text-xs text-slate-500 leading-relaxed">
                   Aceito os{" "}
-                  <a href="#" className="font-bold text-[#333333] dark:text-white underline">
+                  <Link href="/termos" className="font-bold text-[#333333] dark:text-white underline">
                     Termos de Uso
-                  </a>{" "}
+                  </Link>{" "}
                   e a{" "}
-                  <a href="#" className="font-bold text-[#333333] dark:text-white underline">
+                  <Link href="/politica-privacidade" className="font-bold text-[#333333] dark:text-white underline">
                     Política de Privacidade
-                  </a>
+                  </Link>
                 </span>
               </label>
 
