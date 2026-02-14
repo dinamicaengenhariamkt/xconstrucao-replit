@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { storage } from "@/server/storage";
-import { getUserIdFromRequest } from "@/server/auth";
+import { auth } from "@/auth";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = getUserIdFromRequest(request.headers.get("cookie"));
-    if (!userId) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    }
+    const userId = session.user.id;
 
     const user = await storage.getUser(userId);
     if (!user) return NextResponse.json({ message: "Usuário não encontrado" }, { status: 404 });

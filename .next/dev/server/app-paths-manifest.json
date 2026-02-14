@@ -1,10 +1,5 @@
 {
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/auth/register/route": "app/api/auth/register/route.js",
-  "/api/auth/verify-email/route": "app/api/auth/verify-email/route.js",
-  "/cadastro/page": "app/cadastro/page.js",
   "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/verificar-email/page": "app/verificar-email/page.js",
-  "/xgestao-inteligente/page": "app/xgestao-inteligente/page.js"
+  "/page": "app/page.js"
 }

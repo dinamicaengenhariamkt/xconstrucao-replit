@@ -35,7 +35,9 @@ export async function POST(request: NextRequest) {
     const token = createPasswordResetToken(user.id, user.email);
 
     // Criar URL de reset
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const proto = request.headers.get("x-forwarded-proto") || "http";
+    const host = request.headers.get("host") || "localhost:5000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
     const resetUrl = `${baseUrl}/reset-senha?token=${token}`;
 
     // Enviar email

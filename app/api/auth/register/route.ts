@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     const verificationToken = createEmailVerificationToken(user.id, user.email);
 
     // Construir URL de verificação
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const proto = request.headers.get("x-forwarded-proto") || "http";
+    const host = request.headers.get("host") || "localhost:5000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
     const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
     // Enviar email de verificação (bloqueante para garantir que foi enviado)

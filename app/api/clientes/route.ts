@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
-import { getUserIdFromRequest } from "@/server/auth";
+import { auth } from "@/auth";
 import { insertClienteSchema } from "@shared/schema";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const userId = getUserIdFromRequest(request.headers.get("cookie"));
-    if (!userId) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    }
+    const userId = session.user.id;
 
     const clientes = await storage.getClientes();
     return NextResponse.json(clientes);
@@ -17,8 +20,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = getUserIdFromRequest(request.headers.get("cookie"));
-    if (!userId) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
+    }
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = insertClienteSchema.safeParse(body);

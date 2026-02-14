@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 // Base URL configuration (should match production domain)
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000'
 
 // Default metadata that all pages will inherit
 export const defaultMetadata = {

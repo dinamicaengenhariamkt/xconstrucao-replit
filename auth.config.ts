@@ -122,32 +122,4 @@ export default {
     maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
   trustHost: true,
-  cookies: {
-    csrfToken: {
-      name: "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
-    },
-    callbackUrl: {
-      name: "next-auth.callback-url",
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
-    },
-    sessionToken: {
-      name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
-    },
-  },
 } satisfies NextAuthConfig;
