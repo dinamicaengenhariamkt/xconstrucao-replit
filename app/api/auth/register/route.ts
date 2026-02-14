@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
-import { hashPassword, createToken } from "@/server/auth";
+import { hashPassword, createEmailVerificationToken } from "@/server/auth";
 import { registerSchema } from "@shared/schema";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,14 +25,41 @@ export async function POST(request: NextRequest) {
     }
 
     const hashed = await hashPassword(password);
-    const user = await storage.createUser({ name, email, username, password: hashed, role, phone: phone || null });
-    const token = createToken(user.id);
-    const { password: _, ...userData } = user;
 
-    const response = NextResponse.json({ user: userData }, { status: 201 });
-    response.cookies.set("token", token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60, sameSite: "lax", path: "/" });
-    return response;
+    // Criar usuário com emailVerified = null
+    const user = await storage.createUser({
+      name,
+      email,
+      username,
+      password: hashed,
+      role,
+      phone: phone || null,
+      emailVerified: null // Explicitamente null
+    });
+
+    // Gerar token de verificação
+    const verificationToken = createEmailVerificationToken(user.id, user.email);
+
+    // Construir URL de verificação
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
+
+    // Enviar email de verificação (bloqueante para garantir que foi enviado)
+    try {
+      await sendVerificationEmail(user.email, verificationUrl, user.name);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Ainda retornar sucesso, mas logar o erro
+      // Em produção, considere usar fila de emails
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Conta criada com sucesso! Verifique seu email para ativar.",
+      email: user.email
+    }, { status: 201 });
   } catch (error) {
+    console.error("Erro no registro:", error);
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
   }
 }

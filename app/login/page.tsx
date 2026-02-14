@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { signIn } from "next-auth/react";
 import { loginSchema } from "@shared/schema";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -44,9 +45,25 @@ export default function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setIsLoading(true);
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password, rememberMe);
       router.push("/dashboard");
     } catch (error: unknown) {
+      // Tratar erro de email não verificado
+      if (error instanceof Error && error.message.includes("EMAIL_NOT_VERIFIED")) {
+        toast({
+          title: "Email não verificado",
+          description: "Por favor, verifique seu email antes de fazer login. Verifique sua caixa de entrada e spam.",
+          variant: "destructive",
+        });
+
+        // Redirecionar para página de verificação
+        setTimeout(() => {
+          router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
+        }, 2000);
+
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -95,6 +112,7 @@ export default function LoginPage() {
             <div className="space-y-3 mb-6">
               <button
                 type="button"
+                onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
                 data-testid="button-google-login"
               >

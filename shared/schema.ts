@@ -9,10 +9,12 @@ export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida"
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  username: text("username").unique(),
+  password: text("password"),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  emailVerified: timestamp("email_verified"),
+  image: text("image"),
   role: userRoleEnum("role").notNull().default("contratante"),
   phone: text("phone"),
   avatarUrl: text("avatar_url"),
@@ -65,6 +67,35 @@ export const financeiro = pgTable("financeiro", {
   data: text("data").notNull(),
   obraId: varchar("obra_id").references(() => obras.id),
   categoria: text("categoria"),
+});
+
+// NextAuth.js tables
+export const accounts = pgTable("accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  provider: text("provider").notNull(),
+  providerAccountId: text("provider_account_id").notNull(),
+  refresh_token: text("refresh_token"),
+  access_token: text("access_token"),
+  expires_at: integer("expires_at"),
+  token_type: text("token_type"),
+  scope: text("scope"),
+  id_token: text("id_token"),
+  session_state: text("session_state"),
+});
+
+export const sessions = pgTable("sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionToken: text("session_token").notNull().unique(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires").notNull(),
+});
+
+export const verificationTokens = pgTable("verification_tokens", {
+  identifier: text("identifier").notNull(),
+  token: text("token").notNull().unique(),
+  expires: timestamp("expires").notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });

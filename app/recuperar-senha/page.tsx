@@ -4,24 +4,80 @@ import { useState } from "react";
 import Link from "next/link";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { useToast } from "@/hooks/use-toast";
 
 export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const { toast } = useToast();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (email) {
-      setSent(true);
+    if (!email) return;
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setSent(true);
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Erro",
+          description: data.message || "Erro ao enviar email de recuperação",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar email. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handleResend() {
+  async function handleResend() {
     setResending(true);
-    setTimeout(() => {
-      setResending(false);
-    }, 3000);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Email reenviado!",
+          description: "Verifique sua caixa de entrada.",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao reenviar email",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao reenviar email",
+        variant: "destructive",
+      });
+    } finally {
+      setTimeout(() => setResending(false), 2000);
+    }
   }
 
   return (
@@ -75,10 +131,11 @@ export default function RecuperarSenhaPage() {
 
                 <button
                   type="submit"
-                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm"
+                  disabled={loading}
+                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-send-recovery"
                 >
-                  Enviar link de recuperação
+                  {loading ? "Enviando..." : "Enviar link de recuperação"}
                 </button>
               </form>
 
@@ -126,7 +183,7 @@ export default function RecuperarSenhaPage() {
               </p>
               <p className="text-xs text-slate-400 mb-6">
                 Verifique sua caixa de entrada e a pasta de spam.
-                <br />O link expira em 24 horas.
+                <br />O link expira em 15 minutos.
               </p>
 
               <button

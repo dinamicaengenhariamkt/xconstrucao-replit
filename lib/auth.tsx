@@ -1,62 +1,84 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
-import type { User } from "@shared/schema";
-import { apiRequest, queryClient } from "./queryClient";
-
-type AuthContextType = {
-  user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { name: string; email: string; username: string; password: string; role: string; phone?: string }) => Promise<void>;
-  logout: () => Promise<void>;
-};
-
-const AuthContext = createContext<AuthContextType | null>(null);
+import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { queryClient } from "./queryClient";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiRequest("POST", "/api/auth/login", { email, password });
-    const data = await res.json();
-    setUser(data.user);
-  }, []);
-
-  const register = useCallback(async (data: { name: string; email: string; username: string; password: string; role: string; phone?: string }) => {
-    const res = await apiRequest("POST", "/api/auth/register", data);
-    const result = await res.json();
-    setUser(result.user);
-  }, []);
-
-  const logout = useCallback(async () => {
-    await apiRequest("POST", "/api/auth/logout");
-    setUser(null);
-    queryClient.clear();
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <SessionProvider>{children}</SessionProvider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const login = async (email: string, password: string, rememberMe?: boolean) => {
+    const result = await signIn("credentials", {
+      email,
+      password,
+      rememberMe, // Será usado no callback jwt
+      redirect: false,
+    });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    // Redirecionar para dashboard após login
+    router.push("/dashboard");
+  };
+
+  const register = async (data: {
+    name: string;
+    email: string;
+    username: string;
+    password: string;
+    role: string;
+    phone?: string;
+  }) => {
+    // Criar usuário via API
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || "Erro ao criar conta");
+    }
+
+    const result = await res.json();
+
+    // Redirecionar para página de verificação de email
+    router.push(`/verificar-email?email=${encodeURIComponent(data.email)}`);
+  };
+
+  const logout = async () => {
+    queryClient.clear();
+    await signOut({ redirect: false });
+    router.push("/login");
+  };
+
+  return {
+    user: session?.user
+      ? {
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.name!,
+          role: session.user.role,
+          image: session.user.image,
+          // Campos extras para compatibilidade (se necessário)
+          username: null,
+          password: null,
+          emailVerified: null,
+          phone: null,
+          avatarUrl: session.user.image,
+        }
+      : null,
+    isLoading: status === "loading",
+    login,
+    register,
+    logout,
+  };
 }
