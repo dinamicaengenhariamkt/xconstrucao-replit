@@ -90,18 +90,15 @@
 @layer theme {
   :root, :host {
     --color-red-50: #fef2f2;
-    --color-red-100: #ffe2e2;
     --color-red-300: #ffa3a3;
     --color-red-400: #ff6568;
+    --color-red-500: #fb2c36;
     --color-red-600: #e40014;
     --color-orange-500: #fe6e00;
-    --color-green-100: #dcfce7;
     --color-green-400: #05df72;
     --color-green-500: #00c758;
     --color-green-600: #00a544;
-    --color-blue-100: #dbeafe;
     --color-blue-500: #3080ff;
-    --color-blue-600: #155dfc;
     --color-blue-800: #193cb8;
     --color-purple-600: #9810fa;
     --color-slate-50: #f8fafc;
@@ -114,9 +111,7 @@
     --color-slate-700: #314158;
     --color-slate-800: #1d293d;
     --color-slate-900: #0f172b;
-    --color-gray-50: #f9fafb;
     --color-gray-100: #f3f4f6;
-    --color-gray-500: #6a7282;
     --color-black: #000;
     --color-white: #fff;
     --container-sm: 24rem;
@@ -217,18 +212,15 @@
   @supports (color: lab(0% 0 0)) {
     :root, :host {
       --color-red-50: lab(96.5005% 4.18508 1.52328);
-      --color-red-100: lab(92.243% 10.2865 3.83865);
       --color-red-300: lab(76.5514% 36.422 15.5335);
       --color-red-400: lab(63.7053% 60.745 31.3109);
+      --color-red-500: lab(55.4814% 75.0732 48.8528);
       --color-red-600: lab(48.4493% 77.4328 61.5452);
       --color-orange-500: lab(64.272% 57.1788 90.3583);
-      --color-green-100: lab(96.1861% -13.8464 6.52365);
       --color-green-400: lab(78.503% -64.9265 39.7492);
       --color-green-500: lab(70.5521% -66.5147 45.8073);
       --color-green-600: lab(59.0978% -58.6621 41.2579);
-      --color-blue-100: lab(92.0301% -2.24757 -11.6453);
       --color-blue-500: lab(54.1736% 13.3369 -74.6839);
-      --color-blue-600: lab(44.0605% 29.0279 -86.0352);
       --color-blue-800: lab(30.2514% 27.7853 -70.2699);
       --color-purple-600: lab(43.0295% 75.21 -86.5669);
       --color-slate-50: lab(98.1434% -.369519 -1.05966);
@@ -241,9 +233,7 @@
       --color-slate-700: lab(26.9569% -1.47016 -15.6993);
       --color-slate-800: lab(16.132% -.318035 -14.6672);
       --color-slate-900: lab(7.78673% 1.82345 -15.0537);
-      --color-gray-50: lab(98.2596% -.247031 -.706708);
       --color-gray-100: lab(96.1596% -.0823438 -1.13575);
-      --color-gray-500: lab(47.7841% -.393182 -10.0268);
     }
   }
 }
@@ -3168,10 +3158,6 @@
     }
   }
 
-  .bg-blue-100 {
-    background-color: var(--color-blue-100);
-  }
-
   .bg-blue-800 {
     background-color: var(--color-blue-800);
   }
@@ -3215,10 +3201,6 @@
     background-color: hsl(var(--foreground));
   }
 
-  .bg-gray-50 {
-    background-color: var(--color-gray-50);
-  }
-
   .bg-gray-100 {
     background-color: var(--color-gray-100);
   }
@@ -3231,10 +3213,6 @@
     .bg-gray-100\/50 {
       background-color: color-mix(in oklab, var(--color-gray-100) 50%, transparent);
     }
-  }
-
-  .bg-green-100 {
-    background-color: var(--color-green-100);
   }
 
   .bg-muted {
@@ -3303,8 +3281,14 @@
     }
   }
 
-  .bg-red-100 {
-    background-color: var(--color-red-100);
+  .bg-red-500\/10 {
+    background-color: #fb2c361a;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-red-500\/10 {
+      background-color: color-mix(in oklab, var(--color-red-500) 10%, transparent);
+    }
   }
 
   .bg-secondary {
@@ -4250,10 +4234,6 @@
     color: var(--color-blue-500);
   }
 
-  .text-blue-600 {
-    color: var(--color-blue-600);
-  }
-
   .text-brand-info {
     color: #1e88e5;
   }
@@ -4300,10 +4280,6 @@
     }
   }
 
-  .text-gray-500 {
-    color: var(--color-gray-500);
-  }
-
   .text-green-500 {
     color: var(--color-green-500);
   }
@@ -4334,6 +4310,10 @@
 
   .text-purple-600 {
     color: var(--color-purple-600);
+  }
+
+  .text-red-500 {
+    color: var(--color-red-500);
   }
 
   .text-red-600 {

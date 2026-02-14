@@ -170,7 +170,7 @@ function VerificarEmailContent() {
                 </button>
 
                 <button
-                  onClick={() => router.push("/acesso-plataforma")}
+                  onClick={() => router.push("/login")}
                   className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
                   data-testid="link-back-login"
                 >
