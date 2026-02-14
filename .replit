@@ -52,3 +52,10 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+NEXTAUTH_URL = "https://51413c3e-4847-4bb3-851a-f02c3f76aa1d-00-1o01ujob0udrx.worf.replit.dev"
+NEXT_PUBLIC_BASE_URL = "https://51413c3e-4847-4bb3-851a-f02c3f76aa1d-00-1o01ujob0udrx.worf.replit.dev"
+EMAIL_FROM = "onboarding@resend.dev"
