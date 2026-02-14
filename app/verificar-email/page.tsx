@@ -1,22 +1,21 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, XCircle, Mail, Loader2 } from "lucide-react";
+import { useState, Suspense } from "react";
+import { GlassNav } from "@/components/glass-nav";
+import { SiteFooter } from "@/components/site-footer";
+import { useToast } from "@/hooks/use-toast";
 
-export default function VerificarEmailPage() {
+function VerificarEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isResending, setIsResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
+  const { toast } = useToast();
 
   const success = searchParams.get("success");
   const error = searchParams.get("error");
   const email = searchParams.get("email");
 
-  // Estados: pending (aguardando verificação), verified (sucesso), error (falha)
   const getStatus = () => {
     if (success === "verified") return "verified";
     if (success === "already_verified") return "verified";
@@ -38,128 +37,160 @@ export default function VerificarEmailPage() {
       });
 
       if (response.ok) {
-        setResendSuccess(true);
-        setTimeout(() => setResendSuccess(false), 5000);
+        toast({
+          title: "Email reenviado!",
+          description: "Verifique sua caixa de entrada e spam.",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível reenviar o email. Tente novamente.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error("Erro ao reenviar email:", error);
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Erro ao reenviar email. Tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setIsResending(false);
     }
   };
 
+  const errorMessages: Record<string, string> = {
+    token_invalid: "Link de verificação inválido ou expirado.",
+    token_missing: "Link de verificação incompleto.",
+    user_not_found: "Usuário não encontrado.",
+    server_error: "Erro no servidor. Tente novamente.",
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          {status === "verified" && (
-            <>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
-              </div>
-              <CardTitle className="text-2xl">Email Verificado!</CardTitle>
-              <CardDescription>
-                Sua conta foi ativada com sucesso. Você já pode fazer login.
-              </CardDescription>
-            </>
-          )}
+    <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
+      <GlassNav />
 
-          {status === "error" && (
-            <>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                <XCircle className="h-10 w-10 text-red-600" />
-              </div>
-              <CardTitle className="text-2xl">Erro na Verificação</CardTitle>
-              <CardDescription>
-                {error === "token_invalid" && "Link de verificação inválido ou expirado."}
-                {error === "token_missing" && "Link de verificação incompleto."}
-                {error === "user_not_found" && "Usuário não encontrado."}
-                {error === "server_error" && "Erro no servidor. Tente novamente."}
-              </CardDescription>
-            </>
-          )}
-
-          {status === "pending" && (
-            <>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <Mail className="h-10 w-10 text-blue-600" />
-              </div>
-              <CardTitle className="text-2xl">Verifique seu Email</CardTitle>
-              <CardDescription>
-                Enviamos um email de confirmação para <strong>{email}</strong>.
-                Por favor, clique no link do email para ativar sua conta.
-              </CardDescription>
-            </>
-          )}
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {status === "verified" && (
-            <Button
-              onClick={() => router.push("/login")}
-              className="w-full"
-            >
-              Fazer Login
-            </Button>
-          )}
-
-          {status === "error" && email && (
-            <Button
-              onClick={handleResendEmail}
-              disabled={isResending}
-              className="w-full"
-              variant="outline"
-            >
-              {isResending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Reenviando...
-                </>
-              ) : (
-                "Solicitar Novo Link"
-              )}
-            </Button>
-          )}
-
-          {status === "pending" && (
-            <>
-              {resendSuccess && (
-                <p className="text-sm text-green-600 text-center">
-                  ✓ Email reenviado com sucesso!
-                </p>
-              )}
-
-              <Button
-                onClick={handleResendEmail}
-                disabled={isResending || !email}
-                className="w-full"
-                variant="outline"
-              >
-                {isResending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Reenviando...
-                  </>
-                ) : (
-                  "Reenviar Email"
-                )}
-              </Button>
-
-              <p className="text-xs text-gray-500 text-center">
-                Não recebeu? Verifique sua caixa de spam ou solicite um novo email.
-              </p>
-            </>
-          )}
-
-          <Button
-            onClick={() => router.push("/")}
-            variant="ghost"
-            className="w-full"
+      <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-md">
+          <div
+            className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800 text-center"
+            style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
           >
-            Voltar para Home
-          </Button>
-        </CardContent>
-      </Card>
+            {status === "verified" && (
+              <>
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-[#22846D]/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-[#22846D]">
+                      check_circle
+                    </span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-extrabold mb-2" data-testid="text-verified-title">
+                  Email Verificado!
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                  Sua conta foi ativada com sucesso. Você já pode fazer login.
+                </p>
+                <button
+                  onClick={() => router.push("/login")}
+                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm"
+                  data-testid="button-go-login"
+                >
+                  Fazer Login
+                </button>
+              </>
+            )}
+
+            {status === "error" && (
+              <>
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-red-500">
+                      error
+                    </span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-extrabold mb-2" data-testid="text-error-title">
+                  Erro na Verificação
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                  {error ? errorMessages[error] || "Ocorreu um erro inesperado." : "Ocorreu um erro inesperado."}
+                </p>
+                {email && (
+                  <button
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
+                    data-testid="button-resend-error"
+                  >
+                    {isResending ? "Reenviando..." : "Solicitar Novo Link"}
+                  </button>
+                )}
+                <button
+                  onClick={() => router.push("/login")}
+                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  data-testid="link-back-login-error"
+                >
+                  Voltar ao login
+                </button>
+              </>
+            )}
+
+            {status === "pending" && (
+              <>
+                <div className="flex justify-center mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-[#333333] dark:text-white">
+                      mark_email_unread
+                    </span>
+                  </div>
+                </div>
+                <h2 className="text-2xl font-extrabold mb-2" data-testid="text-pending-title">
+                  Verifique seu Email
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                  Enviamos um email de confirmação para:
+                </p>
+                <p className="text-sm font-bold text-[#333333] dark:text-white mb-6" data-testid="text-email">
+                  {email}
+                </p>
+                <p className="text-xs text-slate-400 mb-8">
+                  Clique no link do email para ativar sua conta.
+                  <br />
+                  Verifique também sua caixa de spam.
+                </p>
+
+                <button
+                  onClick={handleResendEmail}
+                  disabled={isResending || !email}
+                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
+                  data-testid="button-resend"
+                >
+                  {isResending ? "Reenviando..." : "Reenviar Email"}
+                </button>
+
+                <button
+                  onClick={() => router.push("/acesso-plataforma")}
+                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  data-testid="link-back-login"
+                >
+                  Voltar ao login
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </main>
+
+      <SiteFooter />
     </div>
+  );
+}
+
+export default function VerificarEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
+      <VerificarEmailContent />
+    </Suspense>
   );
 }
