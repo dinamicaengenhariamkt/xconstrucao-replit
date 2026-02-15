@@ -28,16 +28,6 @@ export default function HomePage() {
           id="inicio"
           className="relative flex flex-col items-center justify-center min-h-screen px-6 pt-32 text-center"
         >
-          {/* Background Image Overlay */}
-          <div className="absolute inset-0 z-0 overflow-hidden">
-            <div
-              className="w-full h-full bg-cover bg-center opacity-[0.08]"
-              style={{
-                backgroundImage: 'url("/images/background-homepage.png")',
-              }}
-            />
-          </div>
-
           {/* Content */}
           <div className="relative z-10 max-w-[1000px] w-full pb-16">
             <Image
@@ -78,6 +68,16 @@ export default function HomePage() {
               >
                 Sou Contratante
               </Link>
+            </div>
+            {/* Imagem ilustrativa */}
+            <div className="mt-12 w-full">
+              <Image
+                src="/images/bg-homepage-dark.png"
+                alt="Ilustração XConstrução"
+                width={1000}
+                height={600}
+                className="w-full h-auto rounded-2xl"
+              />
             </div>
           </div>
         </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { queryClient } from "./queryClient";
 
@@ -20,7 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
-  refreshToken: () => Promise<boolean>;
+  refreshToken: (signal?: AbortSignal) => Promise<boolean>;
 }
 
 interface RegisterData {
@@ -39,12 +39,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [skipInitialCheck, setSkipInitialCheck] = useState(false);
+  const skipInitialCheckRef = useRef(false);
+  const hasCheckedAuthRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   // Verificar se usuário está autenticado ao carregar
   useEffect(() => {
+    // Cancelar requests pendentes quando pathname muda
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     const isPublicAuthRoute =
       pathname === "/login" ||
       pathname === "/cadastro" ||
@@ -52,29 +59,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pathname === "/reset-senha" ||
       pathname === "/verificar-email";
 
-    if (isPublicAuthRoute && !user) {
+    // Early exit para rotas públicas
+    if (isPublicAuthRoute) {
+      setUser((currentUser) => {
+        if (!currentUser) {
+          setIsLoading(false);
+        }
+        return currentUser;
+      });
+      hasCheckedAuthRef.current = true;
+      return;
+    }
+
+    // Skip se devemos pular verificação inicial (após login/oauth)
+    if (skipInitialCheckRef.current) {
+      skipInitialCheckRef.current = false;
+      hasCheckedAuthRef.current = true;
       setIsLoading(false);
       return;
     }
 
-    // Evita race condition após login bem-sucedido
-    if (!skipInitialCheck) {
+    // Verificar auth apenas uma vez no mount ou ao navegar para rotas protegidas
+    if (!hasCheckedAuthRef.current) {
       checkAuth();
-    } else {
-      setIsLoading(false);
-      setSkipInitialCheck(false);
+      hasCheckedAuthRef.current = true;
     }
-  }, [skipInitialCheck, pathname, user]);
+
+    // Cleanup: abortar requests pendentes no unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [pathname]); // APENAS pathname como dependência
 
   const checkAuth = async () => {
     try {
-      // Tentar renovar token (se existir refresh token)
-      const success = await refreshToken();
+      // Criar novo AbortController para este request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      const success = await refreshToken(controller.signal);
+
+      // Verificar se request foi abortado
+      if (controller.signal.aborted) {
+        return;
+      }
 
       if (!success) {
         setUser(null);
       }
     } catch (error) {
+      // Ignorar erros de abort (são intencionais)
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -125,7 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
 
       // Evita checkAuth() automático após login bem-sucedido
-      setSkipInitialCheck(true);
+      skipInitialCheckRef.current = true;
+      hasCheckedAuthRef.current = false; // Permitir que próximo effect defina loading state
       setIsLoading(false);
 
       // Confirmar sessão antes da navegação para reduzir race condition de cookies
@@ -184,12 +224,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const refreshToken = async (): Promise<boolean> => {
+  const refreshToken = async (signal?: AbortSignal): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/refresh", {
         method: "POST",
         credentials: "include",
         cache: "no-store",
+        signal, // Passar AbortSignal para fetch
       });
 
       if (!res.ok) {
@@ -200,6 +241,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(data.user);
       return true;
     } catch (error) {
+      // Não logar erros de abort (são intencionais)
+      if (error instanceof Error && error.name === 'AbortError') {
+        return false;
+      }
       console.error("Erro ao renovar token:", error);
       return false;
     }

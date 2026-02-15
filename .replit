@@ -60,3 +60,5 @@ NEXTAUTH_URL = "https://51413c3e-4847-4bb3-851a-f02c3f76aa1d-00-1o01ujob0udrx.wo
 NEXT_PUBLIC_BASE_URL = "https://51413c3e-4847-4bb3-851a-f02c3f76aa1d-00-1o01ujob0udrx.worf.replit.dev"
 EMAIL_FROM = "onboarding@resend.dev"
 NEXTAUTH_SECRET = "ofv+8AUZAhmG+iMwS312VcynIZX8RDxL9JY6vAILMGU="
+GOOGLE_CLIENT_ID = "688191140994-j7o7ds3shs4s7tm4aehs58a0mnoid3s2.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"

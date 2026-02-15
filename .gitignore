@@ -11,3 +11,6 @@ vite.config.ts.*
 out
 *.tsbuildinfo
 next-env.d.ts
+
+# Replit config with sensitive credentials
+.replit
