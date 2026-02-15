@@ -3,25 +3,32 @@ import { storage } from "@/server/storage";
 import { hashPassword, createEmailVerificationToken } from "@/server/auth";
 import { registerSchema } from "@shared/schema";
 import { sendVerificationEmail } from "@/lib/email";
+import { getBaseUrl, setNoCacheHeaders } from "@/server/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+      const response = NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const { name, email, username, password, role, phone } = parsed.data;
 
     const existingEmail = await storage.getUserByEmail(email);
     if (existingEmail) {
-      return NextResponse.json({ message: "Email já cadastrado" }, { status: 409 });
+      const response = NextResponse.json({ message: "Email já cadastrado" }, { status: 409 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const existingUsername = await storage.getUserByUsername(username);
     if (existingUsername) {
-      return NextResponse.json({ message: "Nome de usuário já cadastrado" }, { status: 409 });
+      const response = NextResponse.json({ message: "Nome de usuário já cadastrado" }, { status: 409 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const hashed = await hashPassword(password);
@@ -41,9 +48,7 @@ export async function POST(request: NextRequest) {
     const verificationToken = createEmailVerificationToken(user.id, user.email);
 
     // Construir URL de verificação
-    const proto = request.headers.get("x-forwarded-proto") || "http";
-    const host = request.headers.get("host") || "localhost:5000";
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
+    const baseUrl = getBaseUrl(request);
     const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
     // Enviar email de verificação (bloqueante para garantir que foi enviado)
@@ -55,13 +60,17 @@ export async function POST(request: NextRequest) {
       // Em produção, considere usar fila de emails
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Conta criada com sucesso! Verifique seu email para ativar.",
       email: user.email
     }, { status: 201 });
+    setNoCacheHeaders(response);
+    return response;
   } catch (error) {
     console.error("Erro no registro:", error);
-    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
+    const response = NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
+    setNoCacheHeaders(response);
+    return response;
   }
 }

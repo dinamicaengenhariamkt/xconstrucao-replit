@@ -11,56 +11,6 @@ export async function comparePassword(password: string, stored: string): Promise
   return bcrypt.compare(password, stored);
 }
 
-export function createToken(userId: string): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const payload = Buffer.from(JSON.stringify({
-    sub: userId,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-  })).toString("base64url");
-  const signature = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-  return `${header}.${payload}.${signature}`;
-}
-
-export function verifyToken(token: string): { userId: string } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const [header, payload, signature] = parts;
-    const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-    if (signature !== expectedSig) return null;
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-    if (data.exp < Math.floor(Date.now() / 1000)) return null;
-    return { userId: data.sub };
-  } catch {
-    return null;
-  }
-}
-
-export function authMiddleware(req: any, res: any, next: any) {
-  const cookieHeader = req.headers.cookie || null;
-  const userId = getUserIdFromRequest(cookieHeader);
-  if (!userId) {
-    return res.status(401).json({ message: "Não autenticado" });
-  }
-  req.userId = userId;
-  next();
-}
-
-export function getUserIdFromRequest(cookieHeader: string | null): string | null {
-  if (!cookieHeader) return null;
-  const cookies = Object.fromEntries(
-    cookieHeader.split(";").map((c) => {
-      const [key, ...rest] = c.trim().split("=");
-      return [key, rest.join("=")];
-    })
-  );
-  const token = cookies.token;
-  if (!token) return null;
-  const result = verifyToken(token);
-  return result?.userId || null;
-}
-
 export function createPasswordResetToken(userId: string, email: string): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({

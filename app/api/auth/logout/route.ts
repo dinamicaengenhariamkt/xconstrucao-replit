@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clearAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,29 +9,9 @@ export async function POST(request: NextRequest) {
       message: "Logout realizado com sucesso"
     });
 
-    // Prevent caching of auth responses
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-
-    // Limpar cookies de autenticação
-    // Access token
-    response.cookies.set("access_token", "", {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0, // Expirar imediatamente
-    });
-
-    // Refresh token
-    response.cookies.set("refresh_token", "", {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax", // Mudado de strict para lax
-      path: "/",
-      maxAge: 0, // Expirar imediatamente
-    });
+    // Configurar headers de segurança e limpar cookies
+    setNoCacheHeaders(response);
+    clearAuthCookies(response);
 
     // Também limpar cookies antigos do NextAuth (migração)
     response.cookies.set("next-auth.session-token", "", {
@@ -57,8 +38,7 @@ export async function POST(request: NextRequest) {
       { error: "Erro interno do servidor" },
       { status: 500 }
     );
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
+    setNoCacheHeaders(response);
     return response;
   }
 }

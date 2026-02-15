@@ -5,6 +5,7 @@ import {
   createAccessToken,
   rotateRefreshToken
 } from "@/server/auth";
+import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +17,7 @@ export async function POST(request: NextRequest) {
         { error: "Refresh token não encontrado" },
         { status: 401 }
       );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
+      setNoCacheHeaders(response);
       return response;
     }
 
@@ -29,8 +29,7 @@ export async function POST(request: NextRequest) {
         { error: "Refresh token inválido ou expirado" },
         { status: 401 }
       );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
+      setNoCacheHeaders(response);
       return response;
     }
 
@@ -42,8 +41,7 @@ export async function POST(request: NextRequest) {
         { error: "Usuário não encontrado" },
         { status: 404 }
       );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
+      setNoCacheHeaders(response);
       return response;
     }
 
@@ -69,30 +67,10 @@ export async function POST(request: NextRequest) {
       user: userData,
     });
 
-    // Prevent caching of auth responses
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-
-    // Setar novo access token
-    response.cookies.set("access_token", newAccessToken, {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 15 * 60, // 15 minutos
-    });
-
-    // Rotacionar refresh token se foi gerado novo
+    // Configurar headers de segurança e cookies
+    setNoCacheHeaders(response);
     if (newRefreshToken) {
-      const refreshMaxAge = payload.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
-      response.cookies.set("refresh_token", newRefreshToken, {
-        httpOnly: true,
-        secure: true, // Sempre true - Replit usa HTTPS
-        sameSite: "lax", // Mudado de strict para lax
-        path: "/",
-        maxAge: refreshMaxAge,
-      });
+      createAuthCookies(response, newAccessToken, newRefreshToken, payload.rememberMe);
     }
 
     return response;
@@ -103,8 +81,7 @@ export async function POST(request: NextRequest) {
       { error: "Erro interno do servidor" },
       { status: 500 }
     );
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
+    setNoCacheHeaders(response);
     return response;
   }
 }

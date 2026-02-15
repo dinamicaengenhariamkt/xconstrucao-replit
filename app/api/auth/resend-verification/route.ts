@@ -2,32 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { createEmailVerificationToken } from "@/server/auth";
 import { sendVerificationEmail } from "@/lib/email";
+import { getBaseUrl, setNoCacheHeaders } from "@/server/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();
 
     if (!email) {
-      return NextResponse.json({ message: "Email é obrigatório" }, { status: 400 });
+      const response = NextResponse.json({ message: "Email é obrigatório" }, { status: 400 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const user = await storage.getUserByEmail(email);
 
     // Por segurança, sempre retorna sucesso (não revela se email existe)
     if (!user) {
-      return NextResponse.json({ success: true }, { status: 200 });
+      const response = NextResponse.json({ success: true }, { status: 200 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     // Se já verificado, retorna sucesso sem enviar
     if (user.emailVerified) {
-      return NextResponse.json({ success: true, alreadyVerified: true }, { status: 200 });
+      const response = NextResponse.json({ success: true, alreadyVerified: true }, { status: 200 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     // Gerar novo token
     const verificationToken = createEmailVerificationToken(user.id, user.email);
-    const proto = request.headers.get("x-forwarded-proto") || "http";
-    const host = request.headers.get("host") || "localhost:5000";
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
+    const baseUrl = getBaseUrl(request);
     const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
     // Enviar email
@@ -35,12 +40,18 @@ export async function POST(request: NextRequest) {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
       console.error('Failed to resend verification email:', emailError);
-      return NextResponse.json({ message: "Erro ao enviar email" }, { status: 500 });
+      const response = NextResponse.json({ message: "Erro ao enviar email" }, { status: 500 });
+      setNoCacheHeaders(response);
+      return response;
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    const response = NextResponse.json({ success: true }, { status: 200 });
+    setNoCacheHeaders(response);
+    return response;
   } catch (error) {
     console.error("Erro ao reenviar verificação:", error);
-    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
+    const response = NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
+    setNoCacheHeaders(response);
+    return response;
   }
 }

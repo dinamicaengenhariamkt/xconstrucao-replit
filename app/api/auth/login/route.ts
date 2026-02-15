@@ -6,6 +6,7 @@ import {
   createAccessToken,
   createRefreshToken
 } from "@/server/auth";
+import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se email foi verificado
-    if (!user.emailVerified) {
+    if (user.emailVerified === null) {
       const response = NextResponse.json(
         {
           error: "EMAIL_NOT_VERIFIED",
@@ -100,30 +101,9 @@ export async function POST(request: NextRequest) {
       user: userData,
     });
 
-    // Prevent caching of auth responses
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('Expires', '0');
-
-    // Configurar cookies HTTP-only
-    // Access Token (15 minutos)
-    response.cookies.set("access_token", accessToken, {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 15 * 60, // 15 minutos
-    });
-
-    // Refresh Token (7 ou 30 dias)
-    const refreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
-    response.cookies.set("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax", // Mudado de strict para lax (melhor compatibilidade)
-      path: "/",
-      maxAge: refreshMaxAge,
-    });
+    // Configurar headers de segurança e cookies
+    setNoCacheHeaders(response);
+    createAuthCookies(response, accessToken, refreshToken, rememberMe);
 
     return response;
 

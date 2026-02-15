@@ -4,6 +4,7 @@ import {
   createAccessToken,
   createRefreshToken
 } from "@/server/auth";
+import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
 
 /**
  * Endpoint para converter sessão NextAuth (OAuth) em tokens JWT custom
@@ -15,10 +16,12 @@ export async function POST(request: NextRequest) {
     const session = await auth();
 
     if (!session || !session.user) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: "Sessão não encontrada" },
         { status: 401 }
       );
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const user = session.user;
@@ -43,32 +46,19 @@ export async function POST(request: NextRequest) {
       user: userData,
     });
 
-    // Setar cookies HTTP-only com tokens JWT
-    // Access Token (15 minutos)
-    response.cookies.set("access_token", accessToken, {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax",
-      path: "/",
-      maxAge: 15 * 60,
-    });
-
-    // Refresh Token (30 dias para OAuth)
-    response.cookies.set("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: true, // Sempre true - Replit usa HTTPS
-      sameSite: "lax", // Mudado de strict para lax
-      path: "/",
-      maxAge: 30 * 24 * 60 * 60,
-    });
+    // Configurar headers de segurança e cookies
+    setNoCacheHeaders(response);
+    createAuthCookies(response, accessToken, refreshToken, true); // OAuth sempre 30 dias
 
     return response;
 
   } catch (error) {
     console.error("Erro ao converter sessão OAuth:", error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }
     );
+    setNoCacheHeaders(response);
+    return response;
   }
 }

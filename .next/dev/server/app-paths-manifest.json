@@ -1,3 +1,19 @@
 {
-  "/login/page": "app/login/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/acesso-plataforma/page": "app/acesso-plataforma/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/me/route": "app/api/auth/me/route.js",
+  "/api/auth/refresh/route": "app/api/auth/refresh/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/auth/resend-verification/route": "app/api/auth/resend-verification/route.js",
+  "/api/auth/verify-email/route": "app/api/auth/verify-email/route.js",
+  "/api/clientes/route": "app/api/clientes/route.js",
+  "/api/dashboard/stats/route": "app/api/dashboard/stats/route.js",
+  "/cadastro/page": "app/cadastro/page.js",
+  "/dashboard/clientes/page": "app/dashboard/clientes/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/verificar-email/page": "app/verificar-email/page.js"
 }

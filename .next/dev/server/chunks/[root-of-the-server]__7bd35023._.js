@@ -247,8 +247,6 @@ module.exports = mod;
 return __turbopack_context__.a(async (__turbopack_handle_async_dependencies__, __turbopack_async_result__) => { try {
 
 __turbopack_context__.s([
-    "authMiddleware",
-    ()=>authMiddleware,
     "comparePassword",
     ()=>comparePassword,
     "createAccessToken",
@@ -259,12 +257,8 @@ __turbopack_context__.s([
     ()=>createPasswordResetToken,
     "createRefreshToken",
     ()=>createRefreshToken,
-    "createToken",
-    ()=>createToken,
     "getAccessTokenFromCookieHeader",
     ()=>getAccessTokenFromCookieHeader,
-    "getUserIdFromRequest",
-    ()=>getUserIdFromRequest,
     "hashPassword",
     ()=>hashPassword,
     "rotateRefreshToken",
@@ -276,9 +270,7 @@ __turbopack_context__.s([
     "verifyPasswordResetToken",
     ()=>verifyPasswordResetToken,
     "verifyRefreshToken",
-    ()=>verifyRefreshToken,
-    "verifyToken",
-    ()=>verifyToken
+    ()=>verifyRefreshToken
 ]);
 var __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__ = __turbopack_context__.i("[externals]/crypto [external] (crypto, cjs)");
 var __TURBOPACK__imported__module__$5b$externals$5d2f$bcryptjs__$5b$external$5d$__$28$bcryptjs$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f$bcryptjs$29$__ = __turbopack_context__.i("[externals]/bcryptjs [external] (bcryptjs, esm_import, [project]/node_modules/bcryptjs)");
@@ -294,60 +286,6 @@ async function hashPassword(password) {
 }
 async function comparePassword(password, stored) {
     return __TURBOPACK__imported__module__$5b$externals$5d2f$bcryptjs__$5b$external$5d$__$28$bcryptjs$2c$__esm_import$2c$__$5b$project$5d2f$node_modules$2f$bcryptjs$29$__["default"].compare(password, stored);
-}
-function createToken(userId) {
-    const header = Buffer.from(JSON.stringify({
-        alg: "HS256",
-        typ: "JWT"
-    })).toString("base64url");
-    const payload = Buffer.from(JSON.stringify({
-        sub: userId,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
-    })).toString("base64url");
-    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-    return `${header}.${payload}.${signature}`;
-}
-function verifyToken(token) {
-    try {
-        const parts = token.split(".");
-        if (parts.length !== 3) return null;
-        const [header, payload, signature] = parts;
-        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-        if (signature !== expectedSig) return null;
-        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-        if (data.exp < Math.floor(Date.now() / 1000)) return null;
-        return {
-            userId: data.sub
-        };
-    } catch  {
-        return null;
-    }
-}
-function authMiddleware(req, res, next) {
-    const cookieHeader = req.headers.cookie || null;
-    const userId = getUserIdFromRequest(cookieHeader);
-    if (!userId) {
-        return res.status(401).json({
-            message: "Não autenticado"
-        });
-    }
-    req.userId = userId;
-    next();
-}
-function getUserIdFromRequest(cookieHeader) {
-    if (!cookieHeader) return null;
-    const cookies = Object.fromEntries(cookieHeader.split(";").map((c)=>{
-        const [key, ...rest] = c.trim().split("=");
-        return [
-            key,
-            rest.join("=")
-        ];
-    }));
-    const token = cookies.token;
-    if (!token) return null;
-    const result = verifyToken(token);
-    return result?.userId || null;
 }
 function createPasswordResetToken(userId, email) {
     const header = Buffer.from(JSON.stringify({

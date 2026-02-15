@@ -3,6 +3,7 @@ import { storage } from "@/server/storage";
 import { createPasswordResetToken } from "@/server/auth";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { z } from "zod";
+import { getBaseUrl, setNoCacheHeaders } from "@/server/auth-utils";
 
 const schema = z.object({
   email: z.string().email("Email inválido"),
@@ -14,10 +15,12 @@ export async function POST(request: NextRequest) {
     const result = schema.safeParse(body);
 
     if (!result.success) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: "Email inválido" },
         { status: 400 }
       );
+      setNoCacheHeaders(response);
+      return response;
     }
 
     const { email } = result.data;
@@ -28,27 +31,31 @@ export async function POST(request: NextRequest) {
     // Por questões de segurança, sempre retornar sucesso
     // mesmo se o email não existir (não revelar se email está cadastrado)
     if (!user) {
-      return NextResponse.json({ success: true });
+      const response = NextResponse.json({ success: true });
+      setNoCacheHeaders(response);
+      return response;
     }
 
     // Criar token de reset (válido por 15 minutos)
     const token = createPasswordResetToken(user.id, user.email);
 
     // Criar URL de reset
-    const proto = request.headers.get("x-forwarded-proto") || "http";
-    const host = request.headers.get("host") || "localhost:5000";
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${proto}://${host}`;
+    const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/reset-senha?token=${token}`;
 
     // Enviar email
     await sendPasswordResetEmail(user.email, resetUrl, user.name);
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    setNoCacheHeaders(response);
+    return response;
   } catch (error) {
     console.error("Erro ao processar solicitação de reset:", error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       { message: "Erro ao processar solicitação. Tente novamente mais tarde." },
       { status: 500 }
     );
+    setNoCacheHeaders(response);
+    return response;
   }
 }

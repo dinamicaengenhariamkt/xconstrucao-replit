@@ -48,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isPublicAuthRoute =
       pathname === "/login" ||
       pathname === "/cadastro" ||
-      pathname === "/register" ||
       pathname === "/recuperar-senha" ||
       pathname === "/reset-senha" ||
       pathname === "/verificar-email";
