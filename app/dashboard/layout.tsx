@@ -14,8 +14,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
+    // Só redireciona se realmente não tem usuário E não está carregando
+    // Adiciona delay para evitar redirect durante login
     if (!isLoading && !user) {
-      router.push("/login");
+      const timer = setTimeout(() => {
+        router.push("/login");
+      }, 200);
+      return () => clearTimeout(timer);
     }
   }, [isLoading, user, router]);
 

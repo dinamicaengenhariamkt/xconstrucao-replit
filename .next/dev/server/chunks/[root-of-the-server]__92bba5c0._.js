@@ -45,6 +45,8 @@ module.exports = mod;
 "use strict";
 
 __turbopack_context__.s([
+    "accounts",
+    ()=>accounts,
     "clientes",
     ()=>clientes,
     "empreiteiras",
@@ -69,12 +71,16 @@ __turbopack_context__.s([
     ()=>obras,
     "registerSchema",
     ()=>registerSchema,
+    "sessions",
+    ()=>sessions,
     "statusEnum",
     ()=>statusEnum,
     "userRoleEnum",
     ()=>userRoleEnum,
     "users",
-    ()=>users
+    ()=>users,
+    "verificationTokens",
+    ()=>verificationTokens
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$sql$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/sql/sql.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$table$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/table.js [app-route] (ecmascript)");
@@ -82,6 +88,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$o
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/columns/varchar.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$integer$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/columns/integer.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$numeric$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/columns/numeric.js [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$timestamp$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/columns/timestamp.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$enum$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-orm/pg-core/columns/enum.js [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$zod$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/drizzle-zod/index.mjs [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$zod$2f$lib$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/zod/lib/index.mjs [app-route] (ecmascript)");
@@ -107,10 +114,12 @@ const obraStatusEnum = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_
 ]);
 const users = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$table$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["pgTable"])("users", {
     id: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("id").primaryKey().default(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$sql$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["sql"]`gen_random_uuid()`),
-    username: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("username").notNull().unique(),
-    password: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("password").notNull(),
+    username: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("username").unique(),
+    password: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("password"),
     name: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("name").notNull(),
     email: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("email").notNull().unique(),
+    emailVerified: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$timestamp$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["timestamp"])("email_verified"),
+    image: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("image"),
     role: userRoleEnum("role").notNull().default("contratante"),
     phone: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("phone"),
     avatarUrl: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("avatar_url")
@@ -174,6 +183,35 @@ const financeiro = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modu
     data: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("data").notNull(),
     obraId: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("obra_id").references(()=>obras.id),
     categoria: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("categoria")
+});
+const accounts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$table$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["pgTable"])("accounts", {
+    id: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("id").primaryKey().default(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$sql$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["sql"]`gen_random_uuid()`),
+    userId: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("user_id").notNull().references(()=>users.id, {
+        onDelete: "cascade"
+    }),
+    type: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("type").notNull(),
+    provider: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("provider").notNull(),
+    providerAccountId: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("provider_account_id").notNull(),
+    refresh_token: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("refresh_token"),
+    access_token: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("access_token"),
+    expires_at: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$integer$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["integer"])("expires_at"),
+    token_type: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("token_type"),
+    scope: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("scope"),
+    id_token: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("id_token"),
+    session_state: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("session_state")
+});
+const sessions = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$table$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["pgTable"])("sessions", {
+    id: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("id").primaryKey().default(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$sql$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["sql"]`gen_random_uuid()`),
+    sessionToken: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("session_token").notNull().unique(),
+    userId: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$varchar$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["varchar"])("user_id").notNull().references(()=>users.id, {
+        onDelete: "cascade"
+    }),
+    expires: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$timestamp$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["timestamp"])("expires").notNull()
+});
+const verificationTokens = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$table$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["pgTable"])("verification_tokens", {
+    identifier: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("identifier").notNull(),
+    token: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$text$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["text"])("token").notNull().unique(),
+    expires: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$pg$2d$core$2f$columns$2f$timestamp$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["timestamp"])("expires").notNull()
 });
 const insertUserSchema = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$zod$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__["createInsertSchema"])(users).omit({
     id: true
@@ -278,6 +316,16 @@ class DatabaseStorage {
         const [user] = await __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].insert(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["users"]).values(data).returning();
         return user;
     }
+    async updateUserPassword(userId, hashedPassword) {
+        await __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].update(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["users"]).set({
+            password: hashedPassword
+        }).where((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$expressions$2f$conditions$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["eq"])(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["users"].id, userId));
+    }
+    async updateUserEmailVerified(userId, timestamp) {
+        await __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].update(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["users"]).set({
+            emailVerified: timestamp
+        }).where((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$drizzle$2d$orm$2f$sql$2f$expressions$2f$conditions$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["eq"])(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["users"].id, userId));
+    }
     async getClientes() {
         return __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].select().from(__TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["clientes"]);
     }
@@ -378,12 +426,32 @@ __turbopack_context__.s([
     ()=>authMiddleware,
     "comparePassword",
     ()=>comparePassword,
+    "createAccessToken",
+    ()=>createAccessToken,
+    "createEmailVerificationToken",
+    ()=>createEmailVerificationToken,
+    "createPasswordResetToken",
+    ()=>createPasswordResetToken,
+    "createRefreshToken",
+    ()=>createRefreshToken,
     "createToken",
     ()=>createToken,
+    "getAccessTokenFromCookieHeader",
+    ()=>getAccessTokenFromCookieHeader,
     "getUserIdFromRequest",
     ()=>getUserIdFromRequest,
     "hashPassword",
     ()=>hashPassword,
+    "rotateRefreshToken",
+    ()=>rotateRefreshToken,
+    "verifyAccessToken",
+    ()=>verifyAccessToken,
+    "verifyEmailVerificationToken",
+    ()=>verifyEmailVerificationToken,
+    "verifyPasswordResetToken",
+    ()=>verifyPasswordResetToken,
+    "verifyRefreshToken",
+    ()=>verifyRefreshToken,
     "verifyToken",
     ()=>verifyToken
 ]);
@@ -456,6 +524,156 @@ function getUserIdFromRequest(cookieHeader) {
     const result = verifyToken(token);
     return result?.userId || null;
 }
+function createPasswordResetToken(userId, email) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({
+        type: "password-reset",
+        sub: userId,
+        email,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 15 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function verifyPasswordResetToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        // Verificar se é token de reset e se não expirou
+        if (data.type !== "password-reset") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return {
+            userId: data.sub,
+            email: data.email
+        };
+    } catch  {
+        return null;
+    }
+}
+function createEmailVerificationToken(userId, email) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({
+        type: "email-verification",
+        sub: userId,
+        email,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function verifyEmailVerificationToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        if (data.type !== "email-verification") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return {
+            userId: data.sub,
+            email: data.email
+        };
+    } catch  {
+        return null;
+    }
+}
+function getAccessTokenFromCookieHeader(cookieHeader) {
+    if (!cookieHeader) return null;
+    const cookies = Object.fromEntries(cookieHeader.split(";").map((c)=>{
+        const [key, ...rest] = c.trim().split("=");
+        return [
+            key,
+            rest.join("=")
+        ];
+    }));
+    return cookies.access_token || null;
+}
+function createAccessToken(user) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        image: user.image,
+        avatarUrl: user.avatarUrl,
+        type: "access",
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 15 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function createRefreshToken(userId, rememberMe = false) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const expirationDays = rememberMe ? 30 : 7; // 30 dias se "Remember Me", senão 7 dias
+    const payload = Buffer.from(JSON.stringify({
+        sub: userId,
+        type: "refresh",
+        rememberMe,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + expirationDays * 24 * 60 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function verifyAccessToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        // Verificar tipo e expiração
+        if (data.type !== "access") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return data;
+    } catch  {
+        return null;
+    }
+}
+function verifyRefreshToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        // Verificar tipo e expiração
+        if (data.type !== "refresh") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return data;
+    } catch  {
+        return null;
+    }
+}
+function rotateRefreshToken(oldToken) {
+    const payload = verifyRefreshToken(oldToken);
+    if (!payload) return null;
+    return createRefreshToken(payload.sub, payload.rememberMe);
+}
 __turbopack_async_result__();
 } catch(e) { __turbopack_async_result__(e); } }, false);}),
 "[project]/app/api/auth/login/route.ts [app-route] (ecmascript)", ((__turbopack_context__) => {
@@ -468,9 +686,9 @@ __turbopack_context__.s([
     ()=>POST
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/server.js [app-route] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/shared/schema.ts [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$storage$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/server/storage.ts [app-route] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/server/auth.ts [app-route] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/shared/schema.ts [app-route] (ecmascript)");
 var __turbopack_async_dependencies__ = __turbopack_handle_async_dependencies__([
     __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$storage$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__,
     __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__
@@ -483,50 +701,118 @@ var __turbopack_async_dependencies__ = __turbopack_handle_async_dependencies__([
 async function POST(request) {
     try {
         const body = await request.json();
-        const parsed = __TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["loginSchema"].safeParse(body);
-        if (!parsed.success) {
-            return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                message: "Dados inválidos",
-                errors: parsed.error.flatten()
+        // Validar dados de entrada com Zod
+        const validation = __TURBOPACK__imported__module__$5b$project$5d2f$shared$2f$schema$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["loginSchema"].safeParse(body);
+        if (!validation.success) {
+            const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                error: "Dados inválidos",
+                details: validation.error.errors
             }, {
                 status: 400
             });
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            response.headers.set('Pragma', 'no-cache');
+            return response;
         }
-        const { email, password } = parsed.data;
+        const { email, password } = validation.data;
+        const rememberMe = body.rememberMe || false;
+        // Buscar usuário por email
         const user = await __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$storage$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["storage"].getUserByEmail(email);
         if (!user) {
-            return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                message: "Email ou senha incorretos"
+            const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                error: "Email ou senha incorretos"
             }, {
                 status: 401
             });
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            response.headers.set('Pragma', 'no-cache');
+            return response;
         }
-        const valid = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["comparePassword"])(password, user.password);
-        if (!valid) {
-            return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                message: "Email ou senha incorretos"
+        // Verificar se email foi verificado
+        if (!user.emailVerified) {
+            const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                error: "EMAIL_NOT_VERIFIED",
+                message: "Por favor, verifique seu email antes de fazer login"
+            }, {
+                status: 403
+            });
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            response.headers.set('Pragma', 'no-cache');
+            return response;
+        }
+        // Verificar se usuário tem senha (pode ser OAuth)
+        if (!user.password) {
+            const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                error: "Esta conta usa login via Google. Use o botão 'Continuar com Google'"
+            }, {
+                status: 400
+            });
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            response.headers.set('Pragma', 'no-cache');
+            return response;
+        }
+        // Comparar senha
+        const isPasswordValid = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["comparePassword"])(password, user.password);
+        if (!isPasswordValid) {
+            const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                error: "Email ou senha incorretos"
             }, {
                 status: 401
             });
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            response.headers.set('Pragma', 'no-cache');
+            return response;
         }
-        const token = (0, __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["createToken"])(user.id);
-        const { password: _, ...userData } = user;
+        // Preparar dados do usuário (sem password)
+        const userData = {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            name: user.name,
+            image: user.image,
+            avatarUrl: user.avatarUrl
+        };
+        // Gerar tokens JWT
+        const accessToken = (0, __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["createAccessToken"])(userData);
+        const refreshToken = (0, __TURBOPACK__imported__module__$5b$project$5d2f$server$2f$auth$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["createRefreshToken"])(user.id, rememberMe);
+        // Criar resposta
         const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+            success: true,
             user: userData
         });
-        response.cookies.set("token", token, {
+        // Prevent caching of auth responses
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        // Configurar cookies HTTP-only
+        // Access Token (15 minutos)
+        response.cookies.set("access_token", accessToken, {
             httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60,
+            secure: true,
             sameSite: "lax",
-            path: "/"
+            path: "/",
+            maxAge: 15 * 60
+        });
+        // Refresh Token (7 ou 30 dias)
+        const refreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+        response.cookies.set("refresh_token", refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+            maxAge: refreshMaxAge
         });
         return response;
     } catch (error) {
-        return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-            message: "Erro interno do servidor"
+        console.error("Erro no login:", error);
+        const response = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+            error: "Erro interno do servidor"
         }, {
             status: 500
         });
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        response.headers.set('Pragma', 'no-cache');
+        return response;
     }
 }
 __turbopack_async_result__();

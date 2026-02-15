@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
-import { auth } from "@/auth";
+import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
+    const payload = token ? verifyAccessToken(token) : null;
+
+    if (!payload?.sub) {
       return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = payload.sub;
 
     const { id } = await params;
     await storage.deleteObra(id);

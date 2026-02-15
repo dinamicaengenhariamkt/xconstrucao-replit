@@ -78,3 +78,9 @@ XConstrução is a comprehensive construction management platform that connects 
 - Auth flow: login returns { user } wrapper, /me returns user directly
 - E2E tests passed: login, dashboard navigation, CRUD pages
 - Old Vite/Express files cleaned up
+
+## Replit Auth Notes
+- Keep a stable `SESSION_SECRET` in Replit Secrets (required for JWT validation consistency across restarts)
+- Access the app through a single canonical public URL during auth tests (avoid switching between preview/public domains)
+- Login, refresh and protected APIs rely on `access_token` and `refresh_token` httpOnly cookies
+- If `POST /api/auth/refresh` returns 401, validate if `refresh_token` is present in request cookies first

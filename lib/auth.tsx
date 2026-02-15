@@ -1,84 +1,230 @@
 "use client";
 
-import { SessionProvider, useSession, signIn, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { queryClient } from "./queryClient";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+// Tipos
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  image?: string | null;
+  avatarUrl?: string | null;
 }
 
-export function useAuth() {
-  const { data: session, status } = useSession();
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshToken: () => Promise<boolean>;
+}
+
+interface RegisterData {
+  name: string;
+  email: string;
+  username: string;
+  password: string;
+  role: string;
+  phone?: string;
+}
+
+// Context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Provider
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [skipInitialCheck, setSkipInitialCheck] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
-  const login = async (email: string, password: string, rememberMe?: boolean) => {
-    const result = await signIn("credentials", {
-      email,
-      password,
-      rememberMe, // Será usado no callback jwt
-      redirect: false,
-    });
+  // Verificar se usuário está autenticado ao carregar
+  useEffect(() => {
+    const isPublicAuthRoute =
+      pathname === "/login" ||
+      pathname === "/cadastro" ||
+      pathname === "/register" ||
+      pathname === "/recuperar-senha" ||
+      pathname === "/reset-senha" ||
+      pathname === "/verificar-email";
 
-    if (result?.error) {
-      throw new Error(result.error);
+    if (isPublicAuthRoute && !user) {
+      setIsLoading(false);
+      return;
     }
 
-    // Redirecionar para dashboard após login
-    router.push("/dashboard");
+    // Evita race condition após login bem-sucedido
+    if (!skipInitialCheck) {
+      checkAuth();
+    } else {
+      setIsLoading(false);
+      setSkipInitialCheck(false);
+    }
+  }, [skipInitialCheck, pathname, user]);
+
+  const checkAuth = async () => {
+    try {
+      // Tentar renovar token (se existir refresh token)
+      const success = await refreshToken();
+
+      if (!success) {
+        setUser(null);
+      }
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const register = async (data: {
-    name: string;
-    email: string;
-    username: string;
-    password: string;
-    role: string;
-    phone?: string;
-  }) => {
-    // Criar usuário via API
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+  const confirmSessionReady = async (): Promise<boolean> => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || "Erro ao criar conta");
+        if (res.ok) return true;
+      } catch {
+        // Tenta novamente
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
 
-    const result = await res.json();
+    return false;
+  };
 
-    // Redirecionar para página de verificação de email
-    router.push(`/verificar-email?email=${encodeURIComponent(data.email)}`);
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Importante para cookies
+        body: JSON.stringify({ email, password, rememberMe }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+
+        // Tratamento de erro específico para email não verificado
+        if (error.error === "EMAIL_NOT_VERIFIED") {
+          throw new Error("Por favor, verifique seu email antes de fazer login");
+        }
+
+        throw new Error(error.error || "Erro ao fazer login");
+      }
+
+      const data = await res.json();
+      setUser(data.user);
+
+      // Evita checkAuth() automático após login bem-sucedido
+      setSkipInitialCheck(true);
+      setIsLoading(false);
+
+      // Confirmar sessão antes da navegação para reduzir race condition de cookies
+      const sessionReady = await confirmSessionReady();
+
+      if (!sessionReady) {
+        setUser(null);
+        throw new Error("Não foi possível confirmar a sessão. Tente novamente.");
+      }
+
+      // Redirecionar para dashboard
+      router.replace("/dashboard");
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const register = async (data: RegisterData) => {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erro ao criar conta");
+      }
+
+      // Redirecionar para página de verificação de email
+      router.push(`/verificar-email?email=${encodeURIComponent(data.email)}`);
+    } catch (error) {
+      throw error;
+    }
   };
 
   const logout = async () => {
-    queryClient.clear();
-    await signOut({ redirect: false });
-    router.push("/login");
+    try {
+      // Limpar cache do React Query
+      queryClient.clear();
+
+      // Chamar API de logout (limpa cookies)
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      setUser(null);
+      router.push("/login");
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      // Mesmo com erro, limpar estado local
+      setUser(null);
+      router.push("/login");
+    }
   };
 
-  return {
-    user: session?.user
-      ? {
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.name!,
-          role: session.user.role,
-          image: session.user.image,
-          // Campos extras para compatibilidade (se necessário)
-          username: null,
-          password: null,
-          emailVerified: null,
-          phone: null,
-          avatarUrl: session.user.image,
-        }
-      : null,
-    isLoading: status === "loading",
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        return false;
+      }
+
+      const data = await res.json();
+      setUser(data.user);
+      return true;
+    } catch (error) {
+      console.error("Erro ao renovar token:", error);
+      return false;
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    isLoading,
     login,
     register,
     logout,
+    refreshToken,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// Hook para usar o contexto
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+  }
+
+  return context;
 }

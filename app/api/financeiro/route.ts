@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
-import { auth } from "@/auth";
+import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
 import { insertFinanceiroSchema } from "@shared/schema";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
+    const payload = token ? verifyAccessToken(token) : null;
+
+    if (!payload?.sub) {
       return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = payload.sub;
 
     const financeiros = await storage.getFinanceiros();
     return NextResponse.json(financeiros);
@@ -20,11 +22,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
+    const payload = token ? verifyAccessToken(token) : null;
+
+    if (!payload?.sub) {
       return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = payload.sub;
 
     const body = await request.json();
     const parsed = insertFinanceiroSchema.safeParse(body);

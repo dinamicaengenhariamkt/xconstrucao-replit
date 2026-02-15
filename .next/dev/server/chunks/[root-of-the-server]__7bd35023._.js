@@ -251,20 +251,32 @@ __turbopack_context__.s([
     ()=>authMiddleware,
     "comparePassword",
     ()=>comparePassword,
+    "createAccessToken",
+    ()=>createAccessToken,
     "createEmailVerificationToken",
     ()=>createEmailVerificationToken,
     "createPasswordResetToken",
     ()=>createPasswordResetToken,
+    "createRefreshToken",
+    ()=>createRefreshToken,
     "createToken",
     ()=>createToken,
+    "getAccessTokenFromCookieHeader",
+    ()=>getAccessTokenFromCookieHeader,
     "getUserIdFromRequest",
     ()=>getUserIdFromRequest,
     "hashPassword",
     ()=>hashPassword,
+    "rotateRefreshToken",
+    ()=>rotateRefreshToken,
+    "verifyAccessToken",
+    ()=>verifyAccessToken,
     "verifyEmailVerificationToken",
     ()=>verifyEmailVerificationToken,
     "verifyPasswordResetToken",
     ()=>verifyPasswordResetToken,
+    "verifyRefreshToken",
+    ()=>verifyRefreshToken,
     "verifyToken",
     ()=>verifyToken
 ]);
@@ -403,6 +415,89 @@ function verifyEmailVerificationToken(token) {
     } catch  {
         return null;
     }
+}
+function getAccessTokenFromCookieHeader(cookieHeader) {
+    if (!cookieHeader) return null;
+    const cookies = Object.fromEntries(cookieHeader.split(";").map((c)=>{
+        const [key, ...rest] = c.trim().split("=");
+        return [
+            key,
+            rest.join("=")
+        ];
+    }));
+    return cookies.access_token || null;
+}
+function createAccessToken(user) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        image: user.image,
+        avatarUrl: user.avatarUrl,
+        type: "access",
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 15 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function createRefreshToken(userId, rememberMe = false) {
+    const header = Buffer.from(JSON.stringify({
+        alg: "HS256",
+        typ: "JWT"
+    })).toString("base64url");
+    const expirationDays = rememberMe ? 30 : 7; // 30 dias se "Remember Me", senão 7 dias
+    const payload = Buffer.from(JSON.stringify({
+        sub: userId,
+        type: "refresh",
+        rememberMe,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + expirationDays * 24 * 60 * 60
+    })).toString("base64url");
+    const signature = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    return `${header}.${payload}.${signature}`;
+}
+function verifyAccessToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        // Verificar tipo e expiração
+        if (data.type !== "access") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return data;
+    } catch  {
+        return null;
+    }
+}
+function verifyRefreshToken(token) {
+    try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        const [header, payload, signature] = parts;
+        const expectedSig = (0, __TURBOPACK__imported__module__$5b$externals$5d2f$crypto__$5b$external$5d$__$28$crypto$2c$__cjs$29$__["createHmac"])("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+        if (signature !== expectedSig) return null;
+        const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+        // Verificar tipo e expiração
+        if (data.type !== "refresh") return null;
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+        return data;
+    } catch  {
+        return null;
+    }
+}
+function rotateRefreshToken(oldToken) {
+    const payload = verifyRefreshToken(oldToken);
+    if (!payload) return null;
+    return createRefreshToken(payload.sub, payload.rememberMe);
 }
 __turbopack_async_result__();
 } catch(e) { __turbopack_async_result__(e); } }, false);}),

@@ -1,65 +1,31 @@
 import type { NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
-import Credentials from "next-auth/providers/credentials";
-import { loginSchema } from "@shared/schema";
 import { storage } from "@/server/storage";
-import { comparePassword } from "@/server/auth";
 
 export default {
   providers: [
+    // Google OAuth - Mantido apenas para autenticação via Google
+    // Autenticação com email/senha agora usa /api/auth/login diretamente
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true, // Permite vincular conta Google a usuário existente com mesmo email
-    }),
-    Credentials({
-      async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-
-        if (!parsed.success) {
-          return null;
-        }
-
-        const { email, password } = parsed.data;
-
-        // Buscar usuário por email
-        const user = await storage.getUserByEmail(email);
-
-        if (!user || !user.password) {
-          return null;
-        }
-
-        // Verificar senha
-        const valid = await comparePassword(password, user.password);
-
-        if (!valid) {
-          return null;
-        }
-
-        // Verificar se email foi verificado
-        if (!user.emailVerified) {
-          throw new Error("EMAIL_NOT_VERIFIED");
-        }
-
-        // Extrair rememberMe das credentials
-        const rememberMe = (credentials as any).rememberMe === true || (credentials as any).rememberMe === "true";
-
-        // Retornar usuário (sem a senha) com rememberMe
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          image: user.avatarUrl || user.image,
-          rememberMe, // Adicionar rememberMe ao objeto user
-        };
-      },
+      allowDangerousEmailAccountLinking: true,
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Após login OAuth, redirecionar para página de conversão JWT
+      if (url.includes("/api/auth/callback")) {
+        return `${baseUrl}/auth/oauth-success`;
+      }
+      // Permite redirect relativo ou para baseUrl
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
+    },
     async signIn({ user, account, profile }) {
-      // Para OAuth providers
-      if (account?.provider !== "credentials") {
+      // Para Google OAuth
+      if (account?.provider === "google") {
         // Verificar se usuário já existe
         const existingUser = await storage.getUserByEmail(user.email!);
 
@@ -68,18 +34,17 @@ export default {
           await storage.updateUserEmailVerified(existingUser.id, new Date());
         }
 
-        // Se usuário existe mas é OAuth, atualizar dados
+        // Buscar role do usuário existente ou usar default
         if (existingUser) {
-          // NextAuth faz o link automaticamente via accounts table
-          // Aqui podemos adicionar lógica extra se necessário
-          return true;
+          user.role = existingUser.role;
+        } else {
+          // Novo usuário OAuth - será criado automaticamente com role padrão "contratante"
+          user.role = "contratante";
         }
 
-        // Se é novo usuário OAuth, NextAuth criará automaticamente
         return true;
       }
 
-      // Para Credentials, sempre permitir
       return true;
     },
     async jwt({ token, user, trigger, account }) {
@@ -90,13 +55,6 @@ export default {
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image;
-
-        // Ajustar expiração do token baseado em "rememberMe"
-        if (trigger === "signIn" && account?.provider === "credentials") {
-          const rememberMe = (user as any).rememberMe === true;
-          const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 dias vs 7 dias
-          token.exp = Math.floor(Date.now() / 1000) + maxAge;
-        }
       }
 
       return token;
@@ -116,10 +74,39 @@ export default {
   pages: {
     signIn: "/login",
     error: "/login",
+    newUser: "/auth/oauth-success",
   },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
   trustHost: true,
+  cookies: {
+    csrfToken: {
+      name: "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: "next-auth.callback-url",
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+      },
+    },
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+      },
+    },
+  },
 } satisfies NextAuthConfig;
