@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { GlassNav } from "@/components/glass-nav";
-import { SiteFooter } from "@/components/site-footer";
+import { GlassNav } from "@features/landing/components/GlassNav";
+import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
 
 function ResetSenhaContent() {

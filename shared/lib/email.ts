@@ -1,8 +1,8 @@
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import PasswordResetEmail from '@/emails/password-reset';
-import WelcomeEmail from '@/emails/welcome';
-import VerificationEmail from '@/emails/verification';
+import PasswordResetEmail from '@features/auth/emails/password-reset';
+import WelcomeEmail from '@features/auth/emails/welcome';
+import VerificationEmail from '@features/auth/emails/verification';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 

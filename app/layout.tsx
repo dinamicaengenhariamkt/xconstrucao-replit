@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@shared/components/providers";
-import { StructuredData } from "@/components/structured-data";
-import { BackToTop } from "@/components/back-to-top";
-import { generateOrganizationSchema, BASE_URL } from "@/lib/seo";
+import { StructuredData } from "@features/landing/components/StructuredData";
+import { BackToTop } from "@features/landing/components/BackToTop";
+import { generateOrganizationSchema, BASE_URL } from "@features/landing/seo/seo-utils";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

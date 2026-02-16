@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { GlassNav } from "@/components/glass-nav";
-import { SiteFooter } from "@/components/site-footer";
-import { StructuredData } from "@/components/structured-data";
-import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
+import { GlassNav } from "@features/landing/components/GlassNav";
+import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { StructuredData } from "@features/landing/components/StructuredData";
+import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 
 const features = [
   {

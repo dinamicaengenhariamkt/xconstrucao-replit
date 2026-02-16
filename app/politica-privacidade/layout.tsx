@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { generateMetadata as genMeta } from '@/lib/seo'
+import { generateMetadata as genMeta } from '@features/landing/seo/seo-utils'
 
 // Route Segment Config - force static generation
 export const dynamic = 'force-static'

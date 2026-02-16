@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@features/auth/hooks/use-auth";
 import { useCallback } from "react";
 import {
   Sidebar,

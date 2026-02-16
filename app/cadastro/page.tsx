@@ -13,8 +13,8 @@ import { signIn } from "next-auth/react";
 import { registerSchema } from "@features/auth/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
 import { useToast } from "@shared/hooks/use-toast";
-import { GlassNav } from "@/components/glass-nav";
-import { SiteFooter } from "@/components/site-footer";
+import { GlassNav } from "@features/landing/components/GlassNav";
+import { SiteFooter } from "@features/landing/components/SiteFooter";
 
 type RegisterValues = z.infer<typeof registerSchema>;
 

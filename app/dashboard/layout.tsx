@@ -3,7 +3,7 @@ import { useAuth } from "@features/auth/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@shared/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@shared/components/AppSidebar";
 import { useTheme } from "@shared/components/theme-provider";
 import { Button } from "@shared/components/ui/button";
 import { Moon, Sun } from "lucide-react";

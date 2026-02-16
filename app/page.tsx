@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { GlassNav } from "@/components/glass-nav";
-import { SiteFooter } from "@/components/site-footer";
-import { StructuredData } from "@/components/structured-data";
-import { generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
+import { GlassNav } from "@features/landing/components/GlassNav";
+import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { StructuredData } from "@features/landing/components/StructuredData";
+import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 
 export default function HomePage() {
   return (

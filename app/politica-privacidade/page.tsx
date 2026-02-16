@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { GlassNav } from "@/components/glass-nav";
-import { SiteFooter } from "@/components/site-footer";
+import { GlassNav } from "@features/landing/components/GlassNav";
+import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@shared/components/ui/accordion";
 import { Card, CardContent } from "@shared/components/ui/card";
 import { Separator } from "@shared/components/ui/separator";
 import { Shield, Mail } from "lucide-react";
-import { StructuredData } from "@/components/structured-data";
-import { generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';
+import { StructuredData } from "@features/landing/components/StructuredData";
+import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 
 export default function PoliticaDePrivacidade() {
   return (
