@@ -26,8 +26,20 @@ export function middleware(request: NextRequest) {
     console.log(`[Middleware] ${pathname} - access_token: ${accessToken ? '✅ presente' : '❌ ausente'}`);
   }
 
-  // Proteção de rotas /dashboard
-  if (pathname.startsWith("/dashboard")) {
+  // Rotas protegidas que requerem autenticação
+  const protectedRoutes = [
+    "/dashboard",
+    "/empreiteiro",
+    "/contratante",
+    "/administrador",
+  ];
+
+  // Verifica se a rota atual é protegida
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  if (isProtectedRoute) {
     // Se não tem access token, redirecionar para login
     // Nota: Não validamos JWT aqui (Edge Runtime não suporta crypto)
     // Validação completa acontece no useAuth() hook e API routes
@@ -40,9 +52,9 @@ export function middleware(request: NextRequest) {
     }
 
     // Cookie existe - permitir acesso
-    // Dashboard layout fará validação completa via useAuth
+    // Layout específico de cada área fará validação completa via useAuth
     if (isDev) {
-      console.log(`[Middleware] Permitindo acesso ao dashboard`);
+      console.log(`[Middleware] Permitindo acesso a rota protegida: ${pathname}`);
     }
     return NextResponse.next();
   }
@@ -53,5 +65,10 @@ export function middleware(request: NextRequest) {
 
 // Configurar rotas que devem passar pelo middleware
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/empreiteiro/:path*",
+    "/contratante/:path*",
+    "/administrador/:path*",
+  ],
 };

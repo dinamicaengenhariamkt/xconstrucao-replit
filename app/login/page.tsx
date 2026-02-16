@@ -45,7 +45,7 @@ export default function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setIsLoading(true);
     try {
-      await login(values.email, values.password, rememberMe);
+      await login(values.email, values.password, rememberMe, router);
     } catch (error: unknown) {
       // Tratar erro de email não verificado
       if (error instanceof Error && error.message.includes("EMAIL_NOT_VERIFIED")) {
