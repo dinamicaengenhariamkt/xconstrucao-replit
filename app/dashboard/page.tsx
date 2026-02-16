@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@shared/components/ui/card";
+import { Skeleton } from "@shared/components/ui/skeleton";
 import { Users, HardHat, Building2, Wallet } from "lucide-react";
 
 function formatBRL(value: number | string) {

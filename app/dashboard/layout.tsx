@@ -1,11 +1,11 @@
 "use client";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@features/auth/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@shared/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { useTheme } from "@/components/theme-provider";
-import { Button } from "@/components/ui/button";
+import { useTheme } from "@shared/components/theme-provider";
+import { Button } from "@shared/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

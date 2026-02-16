@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
 import {
   verifyRefreshToken,
   createAccessToken,
   rotateRefreshToken
-} from "@/server/auth";
-import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
+} from "@features/auth/api/auth-service";
+import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar usuário no banco
-    const user = await storage.getUser(payload.sub);
+    const user = await getUser(payload.sub);
 
     if (!user) {
       const response = NextResponse.json(

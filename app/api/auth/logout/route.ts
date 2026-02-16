@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clearAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
+import { clearAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
-import { insertClienteSchema } from "@shared/schema";
+import { insertClienteSchema } from "@shared/db/schema";
 
 export async function GET(request: NextRequest) {
   try {

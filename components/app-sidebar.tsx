@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
-} from "@/components/ui/sidebar";
+} from "@shared/components/ui/sidebar";
 import {
   Users,
   HardHat,
@@ -28,8 +28,8 @@ import {
   LogOut,
   LayoutDashboard,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@shared/components/ui/avatar";
+import { Separator } from "@shared/components/ui/separator";
 
 const adminItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

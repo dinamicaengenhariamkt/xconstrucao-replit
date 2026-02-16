@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, clientes, empreiteiras, obras, financeiro } from "@shared/schema";
+import { users, clientes, empreiteiras, obras, financeiro } from "@shared/db/schema";
 import { hashPassword } from "./auth";
 import { sql } from "drizzle-orm";
 

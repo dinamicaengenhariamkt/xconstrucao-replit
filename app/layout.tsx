@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "@/components/providers";
+import { Providers } from "@shared/components/providers";
 import { StructuredData } from "@/components/structured-data";
 import { BackToTop } from "@/components/back-to-top";
 import { generateOrganizationSchema, BASE_URL } from "@/lib/seo";

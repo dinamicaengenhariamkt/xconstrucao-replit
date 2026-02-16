@@ -7,7 +7,7 @@ import {
   type Empreiteira, type InsertEmpreiteira,
   type Obra, type InsertObra,
   type Financeiro, type InsertFinanceiro,
-} from "@shared/schema";
+} from "@shared/db/schema";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@shared/components/ui/accordion";
+import { Card, CardContent } from "@shared/components/ui/card";
+import { Separator } from "@shared/components/ui/separator";
 import { Shield, Mail } from "lucide-react";
 import { StructuredData } from "@/components/structured-data";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@/lib/seo';

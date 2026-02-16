@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@shared/hooks/use-toast";
 
 export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState("");

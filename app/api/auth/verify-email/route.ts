@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEmailVerificationToken } from "@/server/auth";
-import { storage } from "@/server/storage";
+import { verifyEmailVerificationToken } from "@features/auth/api/auth-service";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar se usuário existe
-    const user = await storage.getUser(result.userId);
+    const user = await getUser(result.userId);
     if (!user) {
       return NextResponse.redirect(
         new URL("/verificar-email?error=user_not_found", request.url)
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Atualizar emailVerified
-    await storage.updateUserEmailVerified(result.userId, new Date());
+    await updateUserEmailVerified(result.userId, new Date());
 
     return NextResponse.redirect(
       new URL("/verificar-email?success=verified", request.url)

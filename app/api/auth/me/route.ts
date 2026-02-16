@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
-import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
     const userId = payload.sub;
 
-    const user = await storage.getUser(userId);
+    const user = await getUser(userId);
     if (!user) return NextResponse.json({ message: "Usuário não encontrado" }, { status: 404 });
 
     const { password: _, ...userData } = user;

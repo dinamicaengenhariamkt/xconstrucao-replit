@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
-import { hashPassword, createEmailVerificationToken } from "@/server/auth";
-import { registerSchema } from "@shared/schema";
-import { sendVerificationEmail } from "@/lib/email";
-import { getBaseUrl, setNoCacheHeaders } from "@/server/auth-utils";
+import { getUserByEmail, getUserByUsername, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { hashPassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
+import { registerSchema } from "@features/auth/schemas";
+import { sendVerificationEmail } from "@shared/lib/email";
+import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,14 +17,14 @@ export async function POST(request: NextRequest) {
 
     const { name, email, username, password, role, phone } = parsed.data;
 
-    const existingEmail = await storage.getUserByEmail(email);
+    const existingEmail = await getUserByEmail(email);
     if (existingEmail) {
       const response = NextResponse.json({ message: "Email já cadastrado" }, { status: 409 });
       setNoCacheHeaders(response);
       return response;
     }
 
-    const existingUsername = await storage.getUserByUsername(username);
+    const existingUsername = await getUserByUsername(username);
     if (existingUsername) {
       const response = NextResponse.json({ message: "Nome de usuário já cadastrado" }, { status: 409 });
       setNoCacheHeaders(response);
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const hashed = await hashPassword(password);
 
     // Criar usuário com emailVerified = null
-    const user = await storage.createUser({
+    const user = await createUser({
       name,
       email,
       username,

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
-import { createPasswordResetToken } from "@/server/auth";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { createPasswordResetToken } from "@features/auth/api/auth-service";
+import { sendPasswordResetEmail } from "@shared/lib/email";
 import { z } from "zod";
-import { getBaseUrl, setNoCacheHeaders } from "@/server/auth-utils";
+import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 const schema = z.object({
   email: z.string().email("Email inválido"),
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { email } = result.data;
 
     // Buscar usuário por email
-    const user = await storage.getUserByEmail(email);
+    const user = await getUserByEmail(email);
 
     // Por questões de segurança, sempre retornar sucesso
     // mesmo se o email não existir (não revelar se email está cadastrado)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
-import { verifyPasswordResetToken, hashPassword } from "@/server/auth";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { verifyPasswordResetToken, hashPassword } from "@features/auth/api/auth-service";
 import { z } from "zod";
 
 const schema = z.object({
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hashPassword(newPassword);
 
     // Atualizar senha no banco
-    await storage.updateUserPassword(payload.userId, hashedPassword);
+    await updateUserPassword(payload.userId, hashedPassword);
 
     return NextResponse.json({
       success: true,

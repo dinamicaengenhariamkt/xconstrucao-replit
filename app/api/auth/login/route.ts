@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loginSchema } from "@shared/schema";
-import { storage } from "@/server/storage";
+import { loginSchema } from "@features/auth/schemas";
+import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
 import {
   comparePassword,
   createAccessToken,
   createRefreshToken
-} from "@/server/auth";
-import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
+} from "@features/auth/api/auth-service";
+import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const rememberMe = body.rememberMe || false;
 
     // Buscar usuário por email
-    const user = await storage.getUserByEmail(email);
+    const user = await getUserByEmail(email);
 
     if (!user) {
       const response = NextResponse.json(

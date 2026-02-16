@@ -10,9 +10,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
-import { registerSchema } from "@shared/schema";
-import { useAuth } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
+import { registerSchema } from "@features/auth/schemas";
+import { useAuth } from "@features/auth/hooks/use-auth";
+import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@/components/glass-nav";
 import { SiteFooter } from "@/components/site-footer";
 

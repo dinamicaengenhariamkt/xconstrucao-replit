@@ -3,8 +3,8 @@ import { auth } from "@/auth";
 import {
   createAccessToken,
   createRefreshToken
-} from "@/server/auth";
-import { createAuthCookies, setNoCacheHeaders } from "@/server/auth-utils";
+} from "@features/auth/api/auth-service";
+import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 
 /**
  * Endpoint para converter sessão NextAuth (OAuth) em tokens JWT custom
