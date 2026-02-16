@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { storage } from "@/server/storage";
-import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
-import { insertFinanceiroSchema } from "@shared/db/schema";
+import { getFinanceiros, createFinanceiro } from "@features/financeiro/api/financeiro-service";
+import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
+import { insertFinanceiroSchema } from "@features/financeiro/schemas";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
     const userId = payload.sub;
 
-    const financeiros = await storage.getFinanceiros();
+    const financeiros = await getFinanceiros();
     return NextResponse.json(financeiros);
   } catch (error) {
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
     }
 
-    const financeiro = await storage.createFinanceiro(parsed.data);
+    const financeiro = await createFinanceiro(parsed.data);
     return NextResponse.json(financeiro, { status: 201 });
   } catch (error) {
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
