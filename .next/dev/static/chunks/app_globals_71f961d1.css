@@ -4266,14 +4266,6 @@
     padding-bottom: 1rem;
   }
 
-  .pb-6 {
-    padding-bottom: 1.5rem;
-  }
-
-  .pb-8 {
-    padding-bottom: 2rem;
-  }
-
   .pb-16 {
     padding-bottom: 4rem;
   }
@@ -5166,11 +5158,6 @@
 
   .shadow-\[0_0_0_1px_hsl\(var\(--sidebar-border\)\)\] {
     --tw-shadow: 0 0 0 1px var(--tw-shadow-color, hsl(var(--sidebar-border)));
-    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-
-  .shadow-\[0px_4px_15px_rgba\(0\,0\,0\,0\.04\)\] {
-    --tw-shadow: 0px 4px 15px var(--tw-shadow-color, #0000000a);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
@@ -6342,18 +6329,6 @@
     @supports (color: color-mix(in lab, red, red)) {
       .hover\:border-primary\/20:hover {
         border-color: color-mix(in oklab, hsl(var(--primary)) 20%, transparent);
-      }
-    }
-  }
-
-  @media (hover: hover) {
-    .hover\:border-primary\/30:hover {
-      border-color: hsl(var(--primary));
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      .hover\:border-primary\/30:hover {
-        border-color: color-mix(in oklab, hsl(var(--primary)) 30%, transparent);
       }
     }
   }

@@ -1,11 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import type { IconType } from 'react-icons';
 import { Button } from '@shared/components/ui/button';
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: IconType;
   title: string;
   description: string;
   action?: {

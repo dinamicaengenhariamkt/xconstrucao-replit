@@ -1,6 +1,6 @@
 'use client';
 
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { RiLineChartLine, RiArrowDownLine } from 'react-icons/ri';
 import { formatCompactCurrency, formatPercentage } from '../utils';
 import { cn } from '@shared/lib/utils';
 
@@ -69,9 +69,9 @@ export function FinancialMiniCard({
         </div>
         <div className={cn('p-2 rounded-lg', iconColorClasses[color])}>
           {trend === 'up' ? (
-            <TrendingUp className="w-5 h-5" />
+            <RiLineChartLine className="w-5 h-5" />
           ) : (
-            <TrendingDown className="w-5 h-5" />
+            <RiArrowDownLine className="w-5 h-5" />
           )}
         </div>
       </div>

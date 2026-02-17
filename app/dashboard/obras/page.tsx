@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@shared/components/ui/form";
 import { Skeleton } from "@shared/components/ui/skeleton";
 import { Progress } from "@shared/components/ui/progress";
-import { Plus, Trash2 } from "lucide-react";
+import { RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 
 function formatBRL(value: number | string) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
@@ -74,7 +74,7 @@ export default function ObrasPage() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-obra">
-              <Plus className="w-4 h-4 mr-2" />
+              <RiAddLine className="w-4 h-4 mr-2" />
               Nova Obra
             </Button>
           </DialogTrigger>
@@ -181,7 +181,7 @@ export default function ObrasPage() {
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-obra-${i}`}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <RiDeleteBinLine className="w-4 h-4 text-destructive" />
                     </Button>
                   </td>
                 </tr>

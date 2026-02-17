@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu } from "lucide-react";
+import { RiMenuLine } from 'react-icons/ri';
 import { Sheet, SheetContent, SheetTrigger } from "@shared/components/ui/sheet";
 
 interface GlassNavProps {
@@ -39,7 +39,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
           {/* Mobile Hamburger Button */}
           <SheetTrigger asChild className="md:hidden">
             <button className="p-2 hover:opacity-70 transition-opacity" aria-label="Menu">
-              <Menu className="h-6 w-6" />
+              <RiMenuLine className="h-6 w-6" />
             </button>
           </SheetTrigger>
 

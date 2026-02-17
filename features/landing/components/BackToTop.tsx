@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronUp } from "lucide-react";
+import { RiArrowUpSLine } from 'react-icons/ri';
 
 export function BackToTop() {
   const [isVisible, setIsVisible] = useState(false);
@@ -39,7 +39,7 @@ export function BackToTop() {
         ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'}`}
       aria-label="Voltar ao topo"
     >
-      <ChevronUp className="h-6 w-6 mx-auto" />
+      <RiArrowUpSLine className="h-6 w-6 mx-auto" />
     </button>
   );
 }

@@ -6,7 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@shared/components/ui/sidebar";
 import { AppSidebar } from "@shared/components/AppSidebar";
 import { useTheme } from "@shared/components/theme-provider";
 import { Button } from "@shared/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { RiMoonLine, RiSunLine } from 'react-icons/ri';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={toggleTheme}
               data-testid="button-theme-toggle"
             >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === "dark" ? <RiSunLine className="w-4 h-4" /> : <RiMoonLine className="w-4 h-4" />}
             </Button>
           </header>
           <main className="flex-1 overflow-auto p-6">

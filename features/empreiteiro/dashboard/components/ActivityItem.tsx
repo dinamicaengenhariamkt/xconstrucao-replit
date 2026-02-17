@@ -1,7 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import * as Icons from 'lucide-react';
+import {
+  RiCheckboxCircleLine,
+  RiMoneyDollarCircleLine,
+  RiArchiveLine,
+  RiFileTextLine,
+} from 'react-icons/ri';
+import type { IconType } from 'react-icons';
 import { getRelativeTime, getActivityColor } from '../utils';
 import type { Activity } from '../types';
 import { cn } from '@shared/lib/utils';
@@ -10,8 +16,15 @@ interface ActivityItemProps {
   activity: Activity;
 }
 
+const ACTIVITY_ICON_MAP: Record<string, IconType> = {
+  CheckCircle2: RiCheckboxCircleLine,
+  DollarSign: RiMoneyDollarCircleLine,
+  Package: RiArchiveLine,
+  FileText: RiFileTextLine,
+};
+
 export function ActivityItem({ activity }: ActivityItemProps) {
-  const IconComponent = Icons[activity.icon as keyof typeof Icons] as React.ComponentType<{ className?: string }>;
+  const IconComponent = ACTIVITY_ICON_MAP[activity.icon];
 
   const colorClasses = {
     success: 'bg-success/10 text-success',

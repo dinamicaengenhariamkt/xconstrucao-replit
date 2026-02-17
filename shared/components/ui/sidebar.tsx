@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { LuPanelLeft } from 'react-icons/lu'
 
 import { useIsMobile } from "@shared/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -256,7 +256,7 @@ function Sidebar({
 function SidebarTrigger({
   className,
   onClick,
-  icon: IconComponent = PanelLeftIcon,
+  icon: IconComponent = LuPanelLeft,
   ...props
 }: React.ComponentProps<typeof Button> & {
   icon?: React.ComponentType<{ className?: string }>

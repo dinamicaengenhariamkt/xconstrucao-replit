@@ -16,29 +16,29 @@ import {
   SidebarHeader,
 } from '@shared/components/ui/sidebar';
 import {
-  Building2,
-  LayoutDashboard,
-  Search,
-  MessageSquare,
-  HelpCircle,
-  Settings,
-  LogOut,
-} from 'lucide-react';
+  RiBuilding2Line,
+  RiLayout2Line,
+  RiSearchLine,
+  RiChat3Line,
+  RiQuestionLine,
+  RiSettings3Line,
+  RiLogoutBoxRLine,
+} from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent } from '@shared/components/ui/card';
 import Image from 'next/image';
 
 const empreiteiroItems = [
-  { title: 'Minhas Obras', url: '/empreiteiro/minhas-obras', icon: Building2 },
-  { title: 'Dashboard', url: '/empreiteiro/dashboard', icon: LayoutDashboard },
-  { title: 'Novas Obras Disponíveis', url: '/empreiteiro/novas-obras', icon: Search },
-  { title: 'xchat', url: '/empreiteiro/chat', icon: MessageSquare },
+  { title: 'Minhas Obras', url: '/empreiteiro/minhas-obras', icon: RiBuilding2Line },
+  { title: 'Dashboard', url: '/empreiteiro/dashboard', icon: RiLayout2Line },
+  { title: 'Novas Obras Disponíveis', url: '/empreiteiro/novas-obras', icon: RiSearchLine },
+  { title: 'xchat', url: '/empreiteiro/chat', icon: RiChat3Line },
 ];
 
 const bottomItems = [
-  { title: 'Perguntas Frequentes', url: '/empreiteiro/faq', icon: HelpCircle },
-  { title: 'Configurações', url: '/empreiteiro/config', icon: Settings },
+  { title: 'Perguntas Frequentes', url: '/empreiteiro/faq', icon: RiQuestionLine },
+  { title: 'Configurações', url: '/empreiteiro/config', icon: RiSettings3Line },
 ];
 
 export function EmpreiteiroSidebar() {
@@ -155,7 +155,7 @@ export function EmpreiteiroSidebar() {
               onClick={handleLogout}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
-              <LogOut className="w-4 h-4" />
+              <RiLogoutBoxRLine className="w-4 h-4" />
               <span className="text-sm font-medium">Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

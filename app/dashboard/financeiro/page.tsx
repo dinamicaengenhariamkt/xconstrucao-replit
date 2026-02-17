@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@shared/components/ui/form";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { Plus, Trash2 } from "lucide-react";
+import { RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 
 function formatBRL(value: number | string) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
@@ -65,7 +65,7 @@ export default function FinanceiroPage() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-financeiro">
-              <Plus className="w-4 h-4 mr-2" />
+              <RiAddLine className="w-4 h-4 mr-2" />
               Novo Registro
             </Button>
           </DialogTrigger>
@@ -160,7 +160,7 @@ export default function FinanceiroPage() {
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-financeiro-${i}`}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <RiDeleteBinLine className="w-4 h-4 text-destructive" />
                     </Button>
                   </td>
                 </tr>

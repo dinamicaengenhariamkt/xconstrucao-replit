@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@shared/components/ui/button';
-import { Download } from 'lucide-react';
+import { RiDownloadLine } from 'react-icons/ri';
 
 export function ExportBanner() {
   const handleExport = () => {
@@ -48,7 +48,7 @@ export function ExportBanner() {
         onClick={handleExport}
         className="relative z-10 px-8 py-3 bg-white text-primary font-extrabold rounded-xl hover:bg-gray-50 transition-colors shadow-xl"
       >
-        <Download className="w-4 h-4 mr-2" />
+        <RiDownloadLine className="w-4 h-4 mr-2" />
         Gerar PDF Completo
       </Button>
     </div>

@@ -8,7 +8,7 @@ import { Input } from '@shared/components/ui/input';
 import { Badge } from '@shared/components/ui/badge';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
 import { SearchModal, SearchResult } from '@shared/components/SearchModal';
-import { Search, Bell, Settings, Menu } from 'lucide-react';
+import { RiSearchLine, RiNotificationLine, RiSettings3Line, RiMenuLine } from 'react-icons/ri';
 
 export function EmpreiteiroTopbar() {
   const { user } = useAuth();
@@ -28,10 +28,10 @@ export function EmpreiteiroTopbar() {
       {/* Busca Global */}
       <div className="flex items-center gap-2 md:gap-4 w-full md:w-1/3">
         {/* Mobile Hamburger Menu */}
-        <SidebarTrigger icon={Menu} className="md:hidden" />
+        <SidebarTrigger icon={RiMenuLine} className="md:hidden" />
 
         {/* Desktop Sidebar Toggle */}
-        <SidebarTrigger icon={Menu} className="hidden md:flex" />
+        <SidebarTrigger icon={RiMenuLine} className="hidden md:flex" />
 
         {/* Mobile: Botão Ícone de Busca */}
         <Button
@@ -41,12 +41,12 @@ export function EmpreiteiroTopbar() {
           className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
           aria-label="Abrir busca"
         >
-          <Search className="w-5 h-5" />
+          <RiSearchLine className="w-5 h-5" />
         </Button>
 
         {/* Desktop: Campo de Busca Inline */}
         <div className="relative w-full max-w-xs md:max-w-sm hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <Input
             type="text"
             placeholder="Buscar obras, documentos ou propostas..."
@@ -66,7 +66,7 @@ export function EmpreiteiroTopbar() {
             variant="ghost"
             className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
           >
-            <Bell className="w-5 h-5" />
+            <RiNotificationLine className="w-5 h-5" />
           </Button>
           <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] border-2 border-background">
             3
@@ -79,7 +79,7 @@ export function EmpreiteiroTopbar() {
           variant="ghost"
           className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
         >
-          <Settings className="w-5 h-5" />
+          <RiSettings3Line className="w-5 h-5" />
         </Button>
 
         {/* Separator */}

@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@shared/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@shared/components/ui/form";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { Plus, Trash2 } from "lucide-react";
+import { RiAddLine, RiDeleteBinLine } from 'react-icons/ri';
 
 export default function EmpreiteirasPage() {
   const [open, setOpen] = useState(false);
@@ -63,7 +63,7 @@ export default function EmpreiteirasPage() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-empreiteira">
-              <Plus className="w-4 h-4 mr-2" />
+              <RiAddLine className="w-4 h-4 mr-2" />
               Nova Empreiteira
             </Button>
           </DialogTrigger>
@@ -170,7 +170,7 @@ export default function EmpreiteirasPage() {
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-empreiteira-${i}`}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <RiDeleteBinLine className="w-4 h-4 text-destructive" />
                     </Button>
                   </td>
                 </tr>

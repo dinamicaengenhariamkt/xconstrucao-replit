@@ -7,7 +7,7 @@ import { ActivityItem } from './ActivityItem';
 import { EfficiencyProgress } from './EfficiencyProgress';
 import { EmptyState } from './EmptyState';
 import type { Activity, EfficiencyData } from '../types';
-import { Clock } from 'lucide-react';
+import { RiTimeLine } from 'react-icons/ri';
 
 interface RecentActivitiesProps {
   activities: Activity[];
@@ -25,7 +25,7 @@ export function RecentActivities({ activities, efficiency }: RecentActivitiesPro
         </CardHeader>
         <CardContent>
           <EmptyState
-            icon={Clock}
+            icon={RiTimeLine}
             title="Nenhuma atividade recente"
             description="As atividades aparecerão aqui conforme você trabalha"
           />

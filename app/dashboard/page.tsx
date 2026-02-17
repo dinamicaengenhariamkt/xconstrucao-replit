@@ -2,7 +2,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@shared/components/ui/card";
 import { Skeleton } from "@shared/components/ui/skeleton";
-import { Users, HardHat, Building2, Wallet } from "lucide-react";
+import { RiGroupLine, RiBuilding2Line, RiWalletLine } from 'react-icons/ri';
+import { LuHardHat } from 'react-icons/lu';
 
 function formatBRL(value: number | string) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value));
@@ -22,28 +23,28 @@ export default function DashboardPage() {
     {
       label: "Total Clientes",
       value: data?.totalClientes ?? 0,
-      icon: Users,
+      icon: RiGroupLine,
       testId: "stat-total-clientes",
       format: (v: number) => String(v),
     },
     {
       label: "Total Empreiteiras",
       value: data?.totalEmpreiteiras ?? 0,
-      icon: HardHat,
+      icon: LuHardHat,
       testId: "stat-total-empreiteiras",
       format: (v: number) => String(v),
     },
     {
       label: "Total Obras",
       value: data?.totalObras ?? 0,
-      icon: Building2,
+      icon: RiBuilding2Line,
       testId: "stat-total-obras",
       format: (v: number) => String(v),
     },
     {
       label: "Volume Financeiro",
       value: data?.volumeFinanceiro ?? 0,
-      icon: Wallet,
+      icon: RiWalletLine,
       testId: "stat-volume-financeiro",
       format: (v: number) => formatBRL(v),
     },

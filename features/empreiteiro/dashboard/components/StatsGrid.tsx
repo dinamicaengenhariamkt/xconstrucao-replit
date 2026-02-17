@@ -1,12 +1,17 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Construction, CheckCircle2, TrendingUp, Wallet } from 'lucide-react';
+import {
+  RiToolsLine,
+  RiCheckboxCircleLine,
+  RiLineChartLine,
+  RiWalletLine,
+  RiBuilding2Line,
+} from 'react-icons/ri';
 import { StatsCard } from './StatsCard';
 import { EmptyState } from './EmptyState';
 import { formatCompactCurrency } from '../utils';
 import type { DashboardStats } from '../types';
-import { Building2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface StatsGridProps {
@@ -20,7 +25,7 @@ export function StatsGrid({ data }: StatsGridProps) {
   if (!data || (data.obrasAtivas === 0 && data.obrasConcluidas === 0)) {
     return (
       <EmptyState
-        icon={Building2}
+        icon={RiBuilding2Line}
         title="Nenhuma obra cadastrada"
         description="Comece cadastrando sua primeira obra para acompanhar o progresso"
         action={{
@@ -35,7 +40,7 @@ export function StatsGrid({ data }: StatsGridProps) {
     {
       label: 'Obras Ativas',
       value: data.obrasAtivas,
-      icon: Construction,
+      icon: RiToolsLine,
       iconBgColor: 'bg-primary/10 text-primary',
       badge:
         data.obrasAtivasDelta > 0
@@ -48,7 +53,7 @@ export function StatsGrid({ data }: StatsGridProps) {
     {
       label: 'Obras Concluídas',
       value: data.obrasConcluidas,
-      icon: CheckCircle2,
+      icon: RiCheckboxCircleLine,
       iconBgColor: 'bg-success/10 text-success',
       badge: {
         label: data.obrasConcluidasPeriodo,
@@ -58,7 +63,7 @@ export function StatsGrid({ data }: StatsGridProps) {
     {
       label: 'Valor Recebido',
       value: formatCompactCurrency(data.valorRecebido),
-      icon: TrendingUp,
+      icon: RiLineChartLine,
       iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
       badge:
         data.valorRecebidoDelta > 0
@@ -71,7 +76,7 @@ export function StatsGrid({ data }: StatsGridProps) {
     {
       label: 'Valor Gasto',
       value: formatCompactCurrency(data.valorGasto),
-      icon: Wallet,
+      icon: RiWalletLine,
       iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
       badge: {
         label: data.valorGastoPeriodo,

@@ -7,7 +7,7 @@
 
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
-import { DollarSign, TrendingUp, Users, CreditCard, Receipt, BarChart3 } from 'lucide-react';
+import { RiMoneyDollarCircleLine, RiLineChartLine, RiGroupLine, RiBankCardLine, RiReceiptLine, RiBarChart2Line } from 'react-icons/ri';
 
 export default function AdministradorFinanceiroPage() {
   const { user } = useAuth();
@@ -32,7 +32,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Receita Total
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <RiMoneyDollarCircleLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">R$ 0,00</div>
@@ -47,7 +47,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Crescimento
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <RiLineChartLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">+0%</div>
@@ -62,7 +62,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Usuários Ativos
               </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <RiGroupLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div>
@@ -77,7 +77,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Transações
               </CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <RiBankCardLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div>
@@ -92,7 +92,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Receita Recorrente
               </CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <RiReceiptLine className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">R$ 0,00</div>
@@ -107,7 +107,7 @@ export default function AdministradorFinanceiroPage() {
               <CardTitle className="text-sm font-medium">
                 Churn Rate
               </CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <RiBarChart2Line className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0%</div>

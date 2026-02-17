@@ -1,14 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import type { IconType } from 'react-icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
 
 interface StatsCardProps {
   label: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: IconType;
   iconBgColor: string;
   badge?: {
     label: string;

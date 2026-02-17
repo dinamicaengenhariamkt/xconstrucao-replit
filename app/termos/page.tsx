@@ -6,7 +6,7 @@ import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@shared/components/ui/accordion";
 import { Card, CardContent } from "@shared/components/ui/card";
 import { Separator } from "@shared/components/ui/separator";
-import { Scale, Mail } from "lucide-react";
+import { RiScalesLine, RiMailLine } from 'react-icons/ri';
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 
@@ -41,7 +41,7 @@ export default function TermosDeUso() {
           {/* Content */}
           <div className="relative z-10 max-w-[900px] w-full flex flex-col items-center text-center gap-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 dark:bg-white/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
-              <Scale className="w-4 h-4" />
+              <RiScalesLine className="w-4 h-4" />
               <span>Termos de Uso</span>
             </div>
 
@@ -302,7 +302,7 @@ export default function TermosDeUso() {
             <Card className="mt-12 bg-[#F4F5F5] dark:bg-[#2A2D30] border-0" style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}>
               <CardContent className="p-8">
                 <div className="flex items-start gap-4">
-                  <Mail className="w-8 h-8 text-[#333333] dark:text-white flex-shrink-0" />
+                  <RiMailLine className="w-8 h-8 text-[#333333] dark:text-white flex-shrink-0" />
                   <div>
                     <h3 className="text-lg font-bold mb-2">Dúvidas?</h3>
                     <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">

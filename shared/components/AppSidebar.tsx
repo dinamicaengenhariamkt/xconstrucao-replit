@@ -16,35 +16,35 @@ import {
   SidebarHeader,
 } from "@shared/components/ui/sidebar";
 import {
-  Users,
-  HardHat,
-  Wallet,
-  Building2,
-  TrendingUp,
-  TrendingDown,
-  Megaphone,
-  HelpCircle,
-  Settings,
-  LogOut,
-  LayoutDashboard,
-} from "lucide-react";
+  RiGroupLine,
+  RiWalletLine,
+  RiBuilding2Line,
+  RiLineChartLine,
+  RiArrowDownLine,
+  RiMegaphoneLine,
+  RiQuestionLine,
+  RiSettings3Line,
+  RiLogoutBoxRLine,
+  RiLayout2Line,
+} from 'react-icons/ri';
+import { LuHardHat } from 'react-icons/lu';
 import { Avatar, AvatarFallback } from "@shared/components/ui/avatar";
 import { Separator } from "@shared/components/ui/separator";
 
 const adminItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Clientes", url: "/dashboard/clientes", icon: Users },
-  { title: "Empreiteiras", url: "/dashboard/empreiteiras", icon: HardHat },
-  { title: "Obras", url: "/dashboard/obras", icon: Building2 },
-  { title: "Financeiro", url: "/dashboard/financeiro", icon: Wallet },
-  { title: "Entradas", url: "/dashboard/entradas", icon: TrendingUp },
-  { title: "Saídas", url: "/dashboard/saidas", icon: TrendingDown },
-  { title: "Anúncios", url: "/dashboard/anuncios", icon: Megaphone },
+  { title: "Dashboard", url: "/dashboard", icon: RiLayout2Line },
+  { title: "Clientes", url: "/dashboard/clientes", icon: RiGroupLine },
+  { title: "Empreiteiras", url: "/dashboard/empreiteiras", icon: LuHardHat },
+  { title: "Obras", url: "/dashboard/obras", icon: RiBuilding2Line },
+  { title: "Financeiro", url: "/dashboard/financeiro", icon: RiWalletLine },
+  { title: "Entradas", url: "/dashboard/entradas", icon: RiLineChartLine },
+  { title: "Saídas", url: "/dashboard/saidas", icon: RiArrowDownLine },
+  { title: "Anúncios", url: "/dashboard/anuncios", icon: RiMegaphoneLine },
 ];
 
 const bottomItems = [
-  { title: "Perguntas Frequentes", url: "/dashboard/faq", icon: HelpCircle },
-  { title: "Configurações", url: "/dashboard/config", icon: Settings },
+  { title: "Perguntas Frequentes", url: "/dashboard/faq", icon: RiQuestionLine },
+  { title: "Configurações", url: "/dashboard/config", icon: RiSettings3Line },
 ];
 
 export function AppSidebar() {
@@ -115,7 +115,7 @@ export function AppSidebar() {
               className="text-destructive hover:text-destructive"
               data-testid="button-logout"
             >
-              <LogOut className="w-4 h-4" />
+              <RiLogoutBoxRLine className="w-4 h-4" />
               <span className="text-sm font-medium">Sair</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

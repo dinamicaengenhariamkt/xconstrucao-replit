@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
 import type { CashFlowData } from '../types';
 import { EmptyState } from './EmptyState';
-import { TrendingUp } from 'lucide-react';
+import { RiLineChartLine } from 'react-icons/ri';
 
 interface CashFlowChartProps {
   data: CashFlowData[];
@@ -15,7 +15,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
     return (
       <div className="h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto" />
+          <RiLineChartLine className="w-12 h-12 text-muted-foreground mx-auto" />
           <div>
             <p className="font-semibold text-gray-900 dark:text-gray-100">Sem dados financeiros</p>
             <p className="text-sm text-muted-foreground">
