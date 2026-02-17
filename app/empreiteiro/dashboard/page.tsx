@@ -38,7 +38,7 @@ export default function EmpreiteiroDashboardPage() {
 
       <StatsGrid data={stats} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-stretch">
         <div className="lg:col-span-2">
           <FinancialOverview data={financial} />
         </div>

@@ -13,7 +13,7 @@ interface CashFlowChartProps {
 export function CashFlowChart({ data }: CashFlowChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="h-[280px] flex items-center justify-center">
+      <div className="h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
           <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto" />
           <div>
@@ -39,7 +39,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
   };
 
   return (
-    <div className="relative h-[280px] w-full">
+    <div className="relative h-[100%] w-full">
       <ChartContainer config={chartConfig}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -65,7 +65,7 @@ export function CashFlowChart({ data }: CashFlowChartProps) {
             <ChartTooltip content={<ChartTooltipContent />} />
             <Legend
               wrapperStyle={{ paddingTop: '20px' }}
-              iconType="line"
+              iconType="circle"
               formatter={(value) => (
                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                   {value}

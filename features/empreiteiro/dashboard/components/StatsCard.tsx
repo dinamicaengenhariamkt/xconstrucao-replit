@@ -19,12 +19,14 @@ interface StatsCardProps {
 export function StatsCard({ label, value, icon: Icon, iconBgColor, badge }: StatsCardProps) {
   return (
     <motion.div
+      className="rounded-xl overflow-hidden"
       whileHover={{
-        scale: 1.02,
+        scale: 1.01,
+        boxShadow: '0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
       }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="hover:border-primary/30 transition-colors">
+      <Card className="h-full transition-colors">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
           <div className={cn('p-3 rounded-lg', iconBgColor)}>
             <Icon className="w-5 h-5" />

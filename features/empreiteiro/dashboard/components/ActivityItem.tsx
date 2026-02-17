@@ -23,7 +23,7 @@ export function ActivityItem({ activity }: ActivityItemProps) {
 
   return (
     <motion.div
-      className="flex gap-4"
+      className="flex gap-4 cursor-pointer px-3 py-2 -mx-3 -my-2 rounded-lg"
       whileHover={{
         x: 4,
         backgroundColor: 'hsl(var(--accent))',

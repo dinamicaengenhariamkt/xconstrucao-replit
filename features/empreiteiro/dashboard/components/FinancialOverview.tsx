@@ -20,7 +20,7 @@ export function FinancialOverview({ data }: FinancialOverviewProps) {
           Acompanhamento de receitas, despesas e obras em {new Date().getFullYear()}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8">
+      <CardContent className="space-y-6">
         {/* Mini Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FinancialMiniCard
@@ -49,7 +49,7 @@ export function FinancialOverview({ data }: FinancialOverviewProps) {
         </div>
 
         {/* Chart Section */}
-        <div>
+        <div className="pb-2">
           <div className="flex items-center justify-between mb-6">
             <h4 className="text-base font-bold text-gray-900 dark:text-gray-100">
               Fluxo de Caixa Mensal

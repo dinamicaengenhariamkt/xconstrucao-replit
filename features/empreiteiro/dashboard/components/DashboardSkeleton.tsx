@@ -46,7 +46,7 @@ export function DashboardSkeleton() {
                 ))}
               </div>
             </div>
-            <Skeleton className="h-[280px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
           </CardContent>
         </Card>
         <Card>

@@ -24,7 +24,6 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent } from '@shared/components/ui/card';
@@ -45,7 +44,7 @@ const bottomItems = [
 export function EmpreiteiroSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = useCallback(async () => {
     await logout();
@@ -161,51 +160,6 @@ export function EmpreiteiroSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-
-        {/* Banner Monetização Inferior */}
-        <div className="mt-4">
-          <a
-            href="#"
-            className="block bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-border-light dark:border-gray-800 hover:shadow-md transition-shadow"
-          >
-            <div
-              className="aspect-[4/3] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=300')",
-              }}
-            />
-            <div className="p-3">
-              <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                Anúncio
-              </span>
-              <p className="text-[10px] text-gray-400 mt-2">
-                Por <span className="font-medium text-gray-500">Loja Local</span>
-              </p>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
-                Ferramentas profissionais na sua região
-              </p>
-            </div>
-          </a>
-        </div>
-
-        {/* User Info */}
-        {user && (
-          <div className="flex items-center gap-3 pt-3 mt-2 border-t border-sidebar-border">
-            <Avatar className="w-9 h-9">
-              {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-                {user.name?.slice(0, 2).toUpperCase() || 'E'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold truncate">{user.name}</p>
-              <p className="text-[11px] text-muted-foreground font-medium capitalize">
-                Empreiteiro
-              </p>
-            </div>
-          </div>
-        )}
       </SidebarFooter>
     </Sidebar>
   );

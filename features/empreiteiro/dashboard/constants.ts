@@ -48,8 +48,8 @@ export const FORMAT_CONFIG = {
   },
 } as const;
 
-// Configuração de cache do React Query (estratégia conservadora)
+// Configuração de cache do React Query (estratégia balanceada)
 export const QUERY_CONFIG = {
-  staleTime: 1 * 60 * 1000, // 1 minuto - cache conservador
+  staleTime: 5 * 60 * 1000, // 5 minutos - reduz refetch desnecessário
   refetchOnWindowFocus: true, // Refetch ao focar na janela
 } as const;
