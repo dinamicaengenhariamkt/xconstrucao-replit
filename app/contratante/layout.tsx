@@ -9,8 +9,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { ContratanteLayout } from '@features/contratante/components/ContratanteLayout';
 
-export default function ContratanteLayout({
+export default function ContratanteRootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -39,5 +40,5 @@ export default function ContratanteLayout({
     return null;
   }
 
-  return <>{children}</>;
+  return <ContratanteLayout>{children}</ContratanteLayout>;
 }

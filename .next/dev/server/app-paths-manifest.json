@@ -1,5 +1,11 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/acesso-plataforma/page": "app/acesso-plataforma/page.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/auth/me/route": "app/api/auth/me/route.js",
   "/api/auth/refresh/route": "app/api/auth/refresh/route.js",
+  "/contratante/dashboard/page": "app/contratante/dashboard/page.js",
+  "/empreiteiro/dashboard/page": "app/empreiteiro/dashboard/page.js",
   "/login/page": "app/login/page.js",
   "/page": "app/page.js"
 }
