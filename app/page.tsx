@@ -55,14 +55,14 @@ export default function HomePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/acesso-plataforma"
+                href="/login?perfil=empreiteiro"
                 className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                 data-testid="link-sou-empreiteiro"
               >
                 Sou Empreiteiro
               </Link>
               <Link
-                href="/acesso-plataforma"
+                href="/login?perfil=contratante"
                 className="bg-white dark:bg-[#2A2D30] text-[#333333] dark:text-white font-bold h-14 px-10 rounded-full border-2 border-[#333333] dark:border-white/20 hover:brightness-95 transition-all inline-flex items-center justify-center"
                 data-testid="link-sou-contratante"
               >

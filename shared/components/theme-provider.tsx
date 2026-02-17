@@ -1,50 +1,29 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useThemeStore } from "@shared/store/theme-store";
 
-type Theme = "light" | "dark";
+function ThemeSync() {
+  const theme = useThemeStore((state) => state.theme);
 
-type ThemeContextType = {
-  theme: Theme;
-  toggleTheme: () => void;
-};
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+  return null;
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("xconstrucao-theme") as Theme | null;
-    if (stored === "dark" || stored === "light") {
-      setTheme(stored);
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("xconstrucao-theme", theme);
-  }, [theme, mounted]);
-
-  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <>
+      <ThemeSync />
       {children}
-    </ThemeContext.Provider>
+    </>
   );
 }
 
 export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
-  return ctx;
+  const theme = useThemeStore((state) => state.theme);
+  const toggleTheme = useThemeStore((state) => state.toggleTheme);
+  return { theme, toggleTheme };
 }
