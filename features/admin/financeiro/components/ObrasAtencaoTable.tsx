@@ -1,15 +1,9 @@
-'use client';
-
 import { cn } from '@shared/lib/utils';
-import type { ObraAtencao } from '../types';
+import type { ObrasAtencaoTableProps, ProgressBarProps } from '../types';
 import { SITUACAO_CONFIG } from '../constants';
 import { formatCurrency } from '../utils';
 
-interface ObrasAtencaoTableProps {
-  obras: ObraAtencao[];
-}
-
-function ProgressBar({ percent }: { percent: number }) {
+function ProgressBar({ percent }: ProgressBarProps) {
   const barColor =
     percent >= 70 ? 'bg-[#22846D]' : percent >= 40 ? 'bg-[#F5A623]' : 'bg-[#E53935]';
 

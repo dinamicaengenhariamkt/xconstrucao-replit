@@ -11,11 +11,7 @@ import {
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import { EvolutionDataPoint } from '../types';
-
-interface EvolutionChartProps {
-  data: EvolutionDataPoint[];
-}
+import type { EvolutionChartProps } from '../types';
 
 const chartConfig = {
   planejado: { label: 'Planejado', color: '#22846D' },

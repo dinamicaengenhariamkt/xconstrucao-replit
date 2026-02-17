@@ -1,12 +1,7 @@
 'use client';
 
 import { RiCalendarLine } from 'react-icons/ri';
-import type { PeriodoSeletor } from '../types';
-
-interface WelcomeSectionProps {
-  periodo: PeriodoSeletor;
-  onPeriodoChange: (periodo: PeriodoSeletor) => void;
-}
+import type { PeriodoSeletor, WelcomeSectionProps } from '../types';
 
 const periodos: { key: PeriodoSeletor; label: string; hasIcon?: boolean }[] = [
   { key: '30dias', label: 'Últimos 30 dias' },

@@ -1,5 +1,3 @@
-'use client';
-
 import { Skeleton } from '@shared/components/ui/skeleton';
 
 export function DashboardSkeleton() {

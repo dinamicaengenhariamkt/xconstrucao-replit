@@ -1,20 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { IconType } from 'react-icons';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
-
-interface StatsCardProps {
-  label: string;
-  value: string | number;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: 'success' | 'neutral' | 'blue' | 'amber' | 'red';
-  };
-}
+import type { StatsCardProps } from '../types';
 
 const badgeClasses: Record<string, string> = {
   success: 'text-[#22846D] bg-[#22846D]/10',

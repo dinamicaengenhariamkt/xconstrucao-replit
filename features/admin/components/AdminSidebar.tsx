@@ -15,35 +15,10 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from '@shared/components/ui/sidebar';
-import {
-  RiUserLine,
-  RiTeamLine,
-  RiMoneyDollarCircleLine,
-  RiWalletLine,
-  RiArrowUpCircleLine,
-  RiArrowDownCircleLine,
-  RiMegaphoneLine,
-  RiQuestionLine,
-  RiSettings3Line,
-  RiLogoutBoxRLine,
-} from 'react-icons/ri';
+import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import Image from 'next/image';
-
-const adminItems = [
-  { title: 'Cliente', url: '/admin/clientes', icon: RiUserLine },
-  { title: 'Empreiteira', url: '/admin/empreiteiras', icon: RiTeamLine },
-  { title: 'Financeiro', url: '/admin/financeiro', icon: RiMoneyDollarCircleLine },
-  { title: 'Caixa', url: '/admin/caixa', icon: RiWalletLine },
-  { title: 'Entradas', url: '/admin/entradas', icon: RiArrowUpCircleLine },
-  { title: 'Saídas', url: '/admin/saidas', icon: RiArrowDownCircleLine },
-  { title: 'Anúncios', url: '/admin/anuncios', icon: RiMegaphoneLine },
-];
-
-const bottomItems = [
-  { title: 'Perguntas Frequentes', url: '/admin/faq', icon: RiQuestionLine },
-  { title: 'Configurações', url: '/admin/config', icon: RiSettings3Line },
-];
+import { ADMIN_NAV_ITEMS, ADMIN_BOTTOM_NAV_ITEMS } from '../constants';
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -55,7 +30,7 @@ export function AdminSidebar() {
     router.push('/');
   }, [logout, router]);
 
-  const isActive = (url: string) => pathname.startsWith(url);
+  const isActive = (url: string): boolean => pathname.startsWith(url);
 
   return (
     <Sidebar className="bg-[#FAFAFA] dark:bg-background-dark">
@@ -77,7 +52,7 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {ADMIN_NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -102,7 +77,7 @@ export function AdminSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {bottomItems.map((item) => (
+          {ADMIN_BOTTOM_NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
                 <Link href={item.url}>

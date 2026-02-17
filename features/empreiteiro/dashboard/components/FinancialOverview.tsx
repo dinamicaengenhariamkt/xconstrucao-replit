@@ -3,11 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import { FinancialMiniCard } from './FinancialMiniCard';
 import { CashFlowChart } from './CashFlowChart';
-import type { FinancialOverview as FinancialOverviewType } from '../types';
-
-interface FinancialOverviewProps {
-  data: FinancialOverviewType;
-}
+import type { FinancialOverviewProps } from '../types';
 
 export function FinancialOverview({ data }: FinancialOverviewProps) {
   return (

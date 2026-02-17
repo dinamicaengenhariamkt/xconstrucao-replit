@@ -1,5 +1,3 @@
-'use client';
-
 import {
   RiErrorWarningLine,
   RiAlertLine,
@@ -7,11 +5,8 @@ import {
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
-import { Pendencia, PendenciaPriority } from '../types';
-
-interface PendenciasCardProps {
-  pendencias: Pendencia[];
-}
+import { PendenciaPriority } from '../types';
+import type { PendenciasCardProps } from '../types';
 
 const priorityConfig: Record<
   PendenciaPriority,

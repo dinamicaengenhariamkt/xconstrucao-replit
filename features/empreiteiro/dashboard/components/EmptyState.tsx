@@ -1,18 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { IconType } from 'react-icons';
 import { Button } from '@shared/components/ui/button';
-
-interface EmptyStateProps {
-  icon: IconType;
-  title: string;
-  description: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
-}
+import type { EmptyStateProps } from '../types';
 
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (

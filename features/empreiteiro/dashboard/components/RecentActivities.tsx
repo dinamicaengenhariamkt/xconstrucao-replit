@@ -2,17 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
-import { Separator } from '@shared/components/ui/separator';
 import { ActivityItem } from './ActivityItem';
 import { EfficiencyProgress } from './EfficiencyProgress';
 import { EmptyState } from './EmptyState';
-import type { Activity, EfficiencyData } from '../types';
 import { RiTimeLine } from 'react-icons/ri';
-
-interface RecentActivitiesProps {
-  activities: Activity[];
-  efficiency: EfficiencyData;
-}
+import type { RecentActivitiesProps } from '../types';
 
 export function RecentActivities({ activities, efficiency }: RecentActivitiesProps) {
   if (!activities || activities.length === 0) {

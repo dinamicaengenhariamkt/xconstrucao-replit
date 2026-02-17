@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { WelcomeSection } from '@features/admin/financeiro/components/WelcomeSection';
-import { StatsGrid } from '@features/admin/financeiro/components/StatsGrid';
+import { StatsGridContainer } from '@features/admin/financeiro/components/StatsGrid.container';
 import { PaymentsEvolutionChart } from '@features/admin/financeiro/components/PaymentsEvolutionChart';
 import { StatusDistributionChart } from '@features/admin/financeiro/components/StatusDistributionChart';
 import { ObrasAtencaoTable } from '@features/admin/financeiro/components/ObrasAtencaoTable';
@@ -44,7 +44,7 @@ export default function AdminFinanceiroPage() {
       <WelcomeSection periodo={periodo} onPeriodoChange={setPeriodo} />
 
       {/* Bloco 2: KPI Cards */}
-      <StatsGrid data={mockDashboardStats} />
+      <StatsGridContainer data={mockDashboardStats} />
 
       {/* Bloco 3: Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

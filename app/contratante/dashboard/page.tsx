@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { WelcomeSection } from '@features/contratante/dashboard/components/WelcomeSection';
-import { StatsGrid } from '@features/contratante/dashboard/components/StatsGrid';
+import { StatsGridContainer } from '@features/contratante/dashboard/components/StatsGrid.container';
 import { EvolutionChart } from '@features/contratante/dashboard/components/EvolutionChart';
 import { PhaseDistributionChart } from '@features/contratante/dashboard/components/PhaseDistributionChart';
 import { RecentActivitiesCard } from '@features/contratante/dashboard/components/RecentActivitiesCard';
@@ -34,7 +34,7 @@ export default function ContratanteDashboardPage() {
     <div className="space-y-10 p-10">
       <WelcomeSection />
 
-      <StatsGrid data={mockDashboardStats} />
+      <StatsGridContainer data={mockDashboardStats} />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

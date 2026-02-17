@@ -71,6 +71,7 @@ export default function CadastroPage() {
         title: "Conta criada com sucesso!",
         description: "Enviamos um email de confirmação. Verifique sua caixa de entrada.",
       });
+      router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
     } catch (error: unknown) {
       const message =
         error instanceof Error

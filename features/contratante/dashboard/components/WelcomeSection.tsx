@@ -1,5 +1,3 @@
-'use client';
-
 export function WelcomeSection() {
   const now = new Date();
   const formatted = now.toLocaleDateString('pt-BR', {

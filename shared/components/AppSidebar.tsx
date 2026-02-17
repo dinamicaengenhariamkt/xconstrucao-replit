@@ -15,37 +15,13 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from "@shared/components/ui/sidebar";
-import {
-  RiGroupLine,
-  RiWalletLine,
-  RiBuilding2Line,
-  RiLineChartLine,
-  RiArrowDownLine,
-  RiMegaphoneLine,
-  RiQuestionLine,
-  RiSettings3Line,
-  RiLogoutBoxRLine,
-  RiLayout2Line,
-} from 'react-icons/ri';
-import { LuHardHat } from 'react-icons/lu';
+import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Avatar, AvatarFallback } from "@shared/components/ui/avatar";
 import { Separator } from "@shared/components/ui/separator";
-
-const adminItems = [
-  { title: "Dashboard", url: "/dashboard", icon: RiLayout2Line },
-  { title: "Clientes", url: "/dashboard/clientes", icon: RiGroupLine },
-  { title: "Empreiteiras", url: "/dashboard/empreiteiras", icon: LuHardHat },
-  { title: "Obras", url: "/dashboard/obras", icon: RiBuilding2Line },
-  { title: "Financeiro", url: "/dashboard/financeiro", icon: RiWalletLine },
-  { title: "Entradas", url: "/dashboard/entradas", icon: RiLineChartLine },
-  { title: "Saídas", url: "/dashboard/saidas", icon: RiArrowDownLine },
-  { title: "Anúncios", url: "/dashboard/anuncios", icon: RiMegaphoneLine },
-];
-
-const bottomItems = [
-  { title: "Perguntas Frequentes", url: "/dashboard/faq", icon: RiQuestionLine },
-  { title: "Configurações", url: "/dashboard/config", icon: RiSettings3Line },
-];
+import {
+  APP_SIDEBAR_NAV_ITEMS,
+  APP_SIDEBAR_BOTTOM_NAV_ITEMS,
+} from '@shared/constants/navigation';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -57,7 +33,7 @@ export function AppSidebar() {
     router.push("/");
   }, [logout, router]);
 
-  const isActive = (url: string) => {
+  const isActive = (url: string): boolean => {
     if (url === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(url);
   };
@@ -78,7 +54,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {APP_SIDEBAR_NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -98,7 +74,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {bottomItems.map((item) => (
+          {APP_SIDEBAR_BOTTOM_NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild data-testid={`sidebar-item-${item.title.toLowerCase()}`}>
                 <Link href={item.url}>

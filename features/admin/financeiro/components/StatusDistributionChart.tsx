@@ -2,19 +2,9 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import type { StatusDistributionData } from '../types';
+import type { StatusDistributionChartProps, StatusDistributionChartTooltipProps } from '../types';
 
-interface StatusDistributionChartProps {
-  data: StatusDistributionData[];
-  totalObras?: number;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
-}
-
-function CustomTooltip({ active, payload }: CustomTooltipProps) {
+function CustomTooltip({ active, payload }: StatusDistributionChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (

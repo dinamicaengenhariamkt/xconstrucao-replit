@@ -3,10 +3,7 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar';
 import { ContratanteSidebar } from './ContratanteSidebar';
 import { ContratanteTopbar } from './ContratanteTopbar';
-
-interface ContratanteLayoutProps {
-  children: React.ReactNode;
-}
+import type { ContratanteLayoutProps } from '../types';
 
 export function ContratanteLayout({ children }: ContratanteLayoutProps) {
   const style = {

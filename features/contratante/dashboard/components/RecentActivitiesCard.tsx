@@ -9,11 +9,8 @@ import {
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
-import { ContratanteActivity, ActivityColor } from '../types';
-
-interface RecentActivitiesCardProps {
-  activities: ContratanteActivity[];
-}
+import { ActivityColor } from '../types';
+import type { RecentActivitiesCardProps } from '../types';
 
 const iconMap = {
   check: RiCheckboxCircleLine,

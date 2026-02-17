@@ -2,11 +2,12 @@
  * Hook React Query para estatísticas do dashboard
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { getDashboardStats } from '../api/dashboard-service';
 import { QUERY_CONFIG } from '../constants';
+import type { DashboardStats } from '../types';
 
-export function useDashboardStats() {
+export function useDashboardStats(): UseQueryResult<DashboardStats, Error> {
   return useQuery({
     queryKey: ['empreiteiro', 'dashboard', 'stats'],
     queryFn: getDashboardStats,

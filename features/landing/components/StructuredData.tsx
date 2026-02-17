@@ -1,6 +1,6 @@
-"use client";
+import type { StructuredDataProps } from '../types';
 
-export function StructuredData({ data }: { data: object | object[] }) {
+export function StructuredData({ data }: StructuredDataProps) {
   return (
     <script
       type="application/ld+json"

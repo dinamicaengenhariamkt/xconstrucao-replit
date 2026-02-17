@@ -3,10 +3,7 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopbar } from './AdminTopbar';
-
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
+import type { AdminLayoutProps } from '../types';
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const style = {

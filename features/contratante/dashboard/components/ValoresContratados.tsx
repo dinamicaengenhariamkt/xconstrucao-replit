@@ -1,13 +1,7 @@
-'use client';
-
 import { RiBankLine, RiAddCircleLine } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import { ValoresContratadosData } from '../types';
 import { formatCurrency } from '../utils';
-
-interface ValoresContratadosProps {
-  data: ValoresContratadosData;
-}
+import type { ValoresContratadosProps } from '../types';
 
 export function ValoresContratados({ data }: ValoresContratadosProps) {
   return (

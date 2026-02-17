@@ -2,6 +2,12 @@
  * Types para o Dashboard do Contratante
  */
 
+import type { IconType } from 'react-icons';
+
+// ---------------------------------------------------------------------------
+// Domain types
+// ---------------------------------------------------------------------------
+
 export interface ContratanteDashboardStats {
   obrasAtivas: number;
   obrasAtivasDelta: number;
@@ -50,4 +56,59 @@ export interface ValoresContratadosData {
   executado: number;
   aExecutar: number;
   progressPercent: number;
+}
+
+// ---------------------------------------------------------------------------
+// Component prop types
+// ---------------------------------------------------------------------------
+
+export type StatsCardBadgeVariant = 'success' | 'neutral' | 'blue' | 'amber' | 'red';
+
+export interface StatsCardData {
+  label: string;
+  value: string | number;
+  icon: IconType;
+  iconBgColor: string;
+  badge?: {
+    label: string;
+    variant: StatsCardBadgeVariant;
+  };
+}
+
+export type StatsCardProps = StatsCardData;
+
+/** Props da apresentação pura (recebe stats já montados) */
+export interface StatsGridProps {
+  stats: StatsCardData[];
+}
+
+/** Props do container (recebe dados brutos do domínio) */
+export interface StatsGridContainerProps {
+  data: ContratanteDashboardStats;
+}
+
+export interface EvolutionChartProps {
+  data: EvolutionDataPoint[];
+}
+
+export interface PhaseDistributionChartProps {
+  data: PhaseData[];
+  totalObras?: number;
+}
+
+export interface PhaseDistributionChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; payload: PhaseData }>;
+}
+
+export interface RecentActivitiesCardProps {
+  activities: ContratanteActivity[];
+}
+
+export interface PendenciasCardProps {
+  pendencias: Pendencia[];
+}
+
+export interface ValoresContratadosProps {
+  data: ValoresContratadosData;
 }

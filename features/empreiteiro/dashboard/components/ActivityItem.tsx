@@ -8,13 +8,9 @@ import {
   RiFileTextLine,
 } from 'react-icons/ri';
 import type { IconType } from 'react-icons';
-import { getRelativeTime, getActivityColor } from '../utils';
-import type { Activity } from '../types';
+import { getRelativeTime } from '../utils';
 import { cn } from '@shared/lib/utils';
-
-interface ActivityItemProps {
-  activity: Activity;
-}
+import type { ActivityItemProps } from '../types';
 
 const ACTIVITY_ICON_MAP: Record<string, IconType> = {
   CheckCircle2: RiCheckboxCircleLine,

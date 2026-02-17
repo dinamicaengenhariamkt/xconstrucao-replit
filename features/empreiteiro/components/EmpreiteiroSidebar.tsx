@@ -15,31 +15,15 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from '@shared/components/ui/sidebar';
-import {
-  RiBuilding2Line,
-  RiLayout2Line,
-  RiSearchLine,
-  RiChat3Line,
-  RiQuestionLine,
-  RiSettings3Line,
-  RiLogoutBoxRLine,
-} from 'react-icons/ri';
+import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent } from '@shared/components/ui/card';
 import Image from 'next/image';
-
-const empreiteiroItems = [
-  { title: 'Minhas Obras', url: '/empreiteiro/minhas-obras', icon: RiBuilding2Line },
-  { title: 'Dashboard', url: '/empreiteiro/dashboard', icon: RiLayout2Line },
-  { title: 'Novas Obras Disponíveis', url: '/empreiteiro/novas-obras', icon: RiSearchLine },
-  { title: 'xchat', url: '/empreiteiro/chat', icon: RiChat3Line },
-];
-
-const bottomItems = [
-  { title: 'Perguntas Frequentes', url: '/empreiteiro/faq', icon: RiQuestionLine },
-  { title: 'Configurações', url: '/empreiteiro/config', icon: RiSettings3Line },
-];
+import {
+  EMPREITEIRO_NAV_ITEMS,
+  EMPREITEIRO_BOTTOM_NAV_ITEMS,
+} from '../constants';
 
 export function EmpreiteiroSidebar() {
   const pathname = usePathname();
@@ -51,7 +35,7 @@ export function EmpreiteiroSidebar() {
     router.push('/');
   }, [logout, router]);
 
-  const isActive = (url: string) => {
+  const isActive = (url: string): boolean => {
     if (url === '/empreiteiro/dashboard') return pathname === url;
     return pathname.startsWith(url);
   };
@@ -76,7 +60,7 @@ export function EmpreiteiroSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {empreiteiroItems.map((item) => (
+              {EMPREITEIRO_NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -139,7 +123,7 @@ export function EmpreiteiroSidebar() {
         </div>
 
         <SidebarMenu>
-          {bottomItems.map((item) => (
+          {EMPREITEIRO_BOTTOM_NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
                 <Link href={item.url}>

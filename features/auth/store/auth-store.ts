@@ -6,7 +6,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { queryClient } from '@shared/lib/queryClient';
-import { getRedirectPathByRole } from '../utils/redirect-by-role';
 
 // Tipos
 interface User {
@@ -43,9 +42,9 @@ interface AuthState {
   setHasCheckedAuth: (checked: boolean) => void;
   setSkipInitialCheck: (skip: boolean) => void;
 
-  login: (email: string, password: string, rememberMe?: boolean, router?: any) => Promise<void>;
-  register: (data: RegisterData, router?: any) => Promise<void>;
-  logout: (router?: any) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth: () => Promise<void>;
   confirmSessionReady: () => Promise<boolean>;
@@ -164,7 +163,7 @@ export const useAuthStore = create<AuthState>()(
         },
 
         // Login
-        login: async (email: string, password: string, rememberMe: boolean = false, router?: any) => {
+        login: async (email: string, password: string, rememberMe: boolean = false) => {
           const { setUser, setSkipInitialCheck, setHasCheckedAuth, setLoading, confirmSessionReady } =
             get();
 
@@ -203,21 +202,13 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Não foi possível confirmar a sessão. Tente novamente.');
             }
 
-            // ✅ NOVO: Redirecionar baseado em role
-            if (router && data.user.role) {
-              const redirectPath = getRedirectPathByRole(data.user.role);
-              router.replace(redirectPath);
-            } else if (router) {
-              // Fallback para dashboard genérico
-              router.replace('/dashboard');
-            }
           } catch (error) {
             throw error;
           }
         },
 
         // Registro
-        register: async (data: RegisterData, router?: any) => {
+        register: async (data: RegisterData) => {
           try {
             const res = await fetch('/api/auth/register', {
               method: 'POST',
@@ -229,18 +220,13 @@ export const useAuthStore = create<AuthState>()(
               const error = await res.json();
               throw new Error(error.message || 'Erro ao criar conta');
             }
-
-            // Redirecionar para página de verificação de email
-            if (router) {
-              router.push(`/verificar-email?email=${encodeURIComponent(data.email)}`);
-            }
           } catch (error) {
             throw error;
           }
         },
 
         // Logout
-        logout: async (router?: any) => {
+        logout: async () => {
           const { setUser } = get();
 
           try {
@@ -254,18 +240,10 @@ export const useAuthStore = create<AuthState>()(
             });
 
             setUser(null);
-
-            if (router) {
-              router.push('/login');
-            }
           } catch (error) {
             console.error('Erro ao fazer logout:', error);
             // Mesmo com erro, limpar estado local
             setUser(null);
-
-            if (router) {
-              router.push('/login');
-            }
           }
         },
       }),

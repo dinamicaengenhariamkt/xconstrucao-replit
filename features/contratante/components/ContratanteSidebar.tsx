@@ -15,30 +15,14 @@ import {
   SidebarFooter,
   SidebarHeader,
 } from '@shared/components/ui/sidebar';
-import {
-  RiAddBoxLine,
-  RiBuildingLine,
-  RiDashboardLine,
-  RiChat1Line,
-  RiQuestionLine,
-  RiSettings3Line,
-  RiLogoutBoxRLine,
-} from 'react-icons/ri';
+import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import Image from 'next/image';
-
-const contratanteItems = [
-  { title: 'Nova Obra', url: '/contratante/nova-obra', icon: RiAddBoxLine },
-  { title: 'Minhas Obras', url: '/contratante/minhas-obras', icon: RiBuildingLine },
-  { title: 'Dashboard', url: '/contratante/dashboard', icon: RiDashboardLine },
-  { title: 'xchat', url: '/contratante/chat', icon: RiChat1Line },
-];
-
-const bottomItems = [
-  { title: 'Perguntas Frequentes', url: '/contratante/faq', icon: RiQuestionLine },
-  { title: 'Configurações', url: '/contratante/config', icon: RiSettings3Line },
-];
+import {
+  CONTRATANTE_NAV_ITEMS,
+  CONTRATANTE_BOTTOM_NAV_ITEMS,
+} from '../constants';
 
 export function ContratanteSidebar() {
   const pathname = usePathname();
@@ -50,7 +34,7 @@ export function ContratanteSidebar() {
     router.push('/');
   }, [logout, router]);
 
-  const isActive = (url: string) => {
+  const isActive = (url: string): boolean => {
     if (url === '/contratante/dashboard') return pathname === url;
     return pathname.startsWith(url);
   };
@@ -75,7 +59,7 @@ export function ContratanteSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {contratanteItems.map((item) => (
+              {CONTRATANTE_NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -138,7 +122,7 @@ export function ContratanteSidebar() {
         </div>
 
         <SidebarMenu>
-          {bottomItems.map((item) => (
+          {CONTRATANTE_BOTTOM_NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
                 <Link href={item.url}>

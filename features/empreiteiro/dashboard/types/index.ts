@@ -2,6 +2,12 @@
  * Types para o Dashboard do Empreiteiro
  */
 
+import type { IconType } from 'react-icons';
+
+// ---------------------------------------------------------------------------
+// Domain types
+// ---------------------------------------------------------------------------
+
 export interface DashboardStats {
   obrasAtivas: number;
   obrasAtivasDelta: number;
@@ -49,13 +55,72 @@ export interface EfficiencyData {
   period: string;
 }
 
+// ---------------------------------------------------------------------------
+// Component prop types
+// ---------------------------------------------------------------------------
+
 export interface StatsCardData {
   label: string;
-  value: number;
-  icon: string;
+  value: string | number;
+  icon: IconType;
+  iconBgColor: string;
   badge?: {
     label: string;
     variant: 'success' | 'neutral';
   };
-  iconBgColor: string;
+}
+
+export type StatsCardProps = StatsCardData;
+
+/** Props da apresentação pura (recebe stats já montados) */
+export interface StatsGridProps {
+  stats: StatsCardData[];
+}
+
+/** Props do container (recebe dados brutos do domínio) */
+export interface StatsGridContainerProps {
+  data: DashboardStats;
+}
+
+export interface FinancialOverviewProps {
+  data: FinancialOverview;
+}
+
+export interface CashFlowChartProps {
+  data: CashFlowData[];
+}
+
+export interface RecentActivitiesProps {
+  activities: Activity[];
+  efficiency: EfficiencyData;
+}
+
+export interface ActivityItemProps {
+  activity: Activity;
+}
+
+export interface EfficiencyProgressProps {
+  percentage: number;
+  label: string;
+}
+
+export interface FinancialMiniCardProps {
+  label: string;
+  value: number;
+  format: 'percentage' | 'currency' | 'number';
+  color: 'success' | 'info' | 'primary';
+  trend?: 'up' | 'down' | 'neutral';
+  delta?: number;
+}
+
+export interface EmptyStateAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface EmptyStateProps {
+  icon: IconType;
+  title: string;
+  description: string;
+  action?: EmptyStateAction;
 }

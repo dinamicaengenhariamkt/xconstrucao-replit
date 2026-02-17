@@ -2,11 +2,12 @@
  * Hook React Query para atividades recentes
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { getRecentActivities } from '../api/activities-service';
 import { QUERY_CONFIG } from '../constants';
+import type { Activity } from '../types';
 
-export function useRecentActivities() {
+export function useRecentActivities(): UseQueryResult<Activity[], Error> {
   return useQuery({
     queryKey: ['empreiteiro', 'dashboard', 'activities'],
     queryFn: getRecentActivities,

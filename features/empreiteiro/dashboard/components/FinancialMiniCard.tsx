@@ -1,17 +1,7 @@
-'use client';
-
 import { RiLineChartLine, RiArrowDownLine } from 'react-icons/ri';
 import { formatCompactCurrency, formatPercentage } from '../utils';
 import { cn } from '@shared/lib/utils';
-
-interface FinancialMiniCardProps {
-  label: string;
-  value: number;
-  format: 'percentage' | 'currency' | 'number';
-  color: 'success' | 'info' | 'primary';
-  trend?: 'up' | 'down' | 'neutral';
-  delta?: number;
-}
+import type { FinancialMiniCardProps } from '../types';
 
 export function FinancialMiniCard({
   label,

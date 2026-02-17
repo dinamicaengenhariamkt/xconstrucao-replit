@@ -1,12 +1,9 @@
 'use client';
 
-import { SidebarProvider, SidebarTrigger } from '@shared/components/ui/sidebar';
+import { SidebarProvider } from '@shared/components/ui/sidebar';
 import { EmpreiteiroSidebar } from './EmpreiteiroSidebar';
 import { EmpreiteiroTopbar } from './EmpreiteiroTopbar';
-
-interface EmpreiteiroLayoutProps {
-  children: React.ReactNode;
-}
+import type { EmpreiteiroLayoutProps } from '../types';
 
 export function EmpreiteiroLayout({ children }: EmpreiteiroLayoutProps) {
   const style = {

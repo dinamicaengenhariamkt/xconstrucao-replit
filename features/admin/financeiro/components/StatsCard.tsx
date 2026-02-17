@@ -1,24 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { IconType } from 'react-icons';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
+import type { StatsCardProps, StatsCardBadgeVariant } from '../types';
 
-type BadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
-
-interface StatsCardProps {
-  label: string;
-  value: string;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: BadgeVariant;
-  };
-}
-
-const badgeClasses: Record<BadgeVariant, string> = {
+const badgeClasses: Record<StatsCardBadgeVariant, string> = {
   primary: 'text-primary bg-primary/10',
   success: 'text-[#22846D] bg-[#22846D]/10',
   warning: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20',

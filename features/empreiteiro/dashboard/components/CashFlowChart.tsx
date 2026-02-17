@@ -2,13 +2,8 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
-import type { CashFlowData } from '../types';
-import { EmptyState } from './EmptyState';
 import { RiLineChartLine } from 'react-icons/ri';
-
-interface CashFlowChartProps {
-  data: CashFlowData[];
-}
+import type { CashFlowChartProps } from '../types';
 
 export function CashFlowChart({ data }: CashFlowChartProps) {
   if (!data || data.length === 0) {

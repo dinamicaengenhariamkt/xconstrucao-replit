@@ -6,11 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { RiMenuLine } from 'react-icons/ri';
 import { Sheet, SheetContent, SheetTrigger } from "@shared/components/ui/sheet";
-
-interface GlassNavProps {
-  showAccessButton?: boolean;
-  showAdminButton?: boolean;
-}
+import type { GlassNavProps } from '../types';
 
 export function GlassNav({ showAccessButton = true, showAdminButton = false }: GlassNavProps) {
   const pathname = usePathname();

@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { animate } from 'framer-motion';
-
-interface EfficiencyProgressProps {
-  percentage: number;
-  label: string;
-}
+import type { EfficiencyProgressProps } from '../types';
 
 export function EfficiencyProgress({ percentage, label }: EfficiencyProgressProps) {
   const [animatedValue, setAnimatedValue] = useState(0);

@@ -1,20 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import type { IconType } from 'react-icons';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
-
-interface StatsCardProps {
-  label: string;
-  value: string | number;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: 'success' | 'neutral';
-  };
-}
+import type { StatsCardProps } from '../types';
 
 export function StatsCard({ label, value, icon: Icon, iconBgColor, badge }: StatsCardProps) {
   return (

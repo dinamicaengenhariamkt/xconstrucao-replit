@@ -10,12 +10,8 @@ import {
   Tooltip,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import type { PaymentEvolutionData } from '../types';
+import type { PaymentsEvolutionChartProps, PaymentsEvolutionChartTooltipProps } from '../types';
 import { ADMIN_DASHBOARD_COLORS } from '../constants';
-
-interface PaymentsEvolutionChartProps {
-  data: PaymentEvolutionData[];
-}
 
 function formatYAxis(value: number): string {
   if (value >= 1_000_000) return `R$${(value / 1_000_000).toFixed(1)}M`;
@@ -23,13 +19,7 @@ function formatYAxis(value: number): string {
   return `R$${value}`;
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
-}
-
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({ active, payload, label }: PaymentsEvolutionChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3 shadow-lg text-sm space-y-1">

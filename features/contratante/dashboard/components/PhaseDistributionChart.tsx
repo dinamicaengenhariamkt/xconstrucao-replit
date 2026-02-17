@@ -2,19 +2,9 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import { PhaseData } from '../types';
+import type { PhaseDistributionChartProps, PhaseDistributionChartTooltipProps } from '../types';
 
-interface PhaseDistributionChartProps {
-  data: PhaseData[];
-  totalObras?: number;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; payload: PhaseData }>;
-}
-
-function CustomTooltip({ active, payload }: CustomTooltipProps) {
+function CustomTooltip({ active, payload }: PhaseDistributionChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (

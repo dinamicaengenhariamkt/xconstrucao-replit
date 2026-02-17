@@ -1,15 +1,8 @@
-'use client';
-
 import { RiReceiptLine, RiBarChartBoxLine, RiVipCrownLine, RiToolsLine } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import type { ReceitaPlataforma, ReceitaTipo } from '../types';
+import type { ReceitasPlataformaTableProps, ReceitaTipo } from '../types';
 import { formatCurrency } from '../utils';
 import { cn } from '@shared/lib/utils';
-
-interface ReceitasPlataformaTableProps {
-  receitas: ReceitaPlataforma[];
-  total: number;
-}
 
 const tipoIconMap: Record<ReceitaTipo, React.ElementType> = {
   medicoes: RiBarChartBoxLine,

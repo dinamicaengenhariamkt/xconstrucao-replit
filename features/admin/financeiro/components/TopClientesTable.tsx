@@ -1,13 +1,7 @@
-'use client';
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import type { TopCliente } from '../types';
+import type { TopClientesTableProps } from '../types';
 import { formatCurrency } from '../utils';
 import { cn } from '@shared/lib/utils';
-
-interface TopClientesTableProps {
-  clientes: TopCliente[];
-}
 
 export function TopClientesTable({ clientes }: TopClientesTableProps) {
   return (

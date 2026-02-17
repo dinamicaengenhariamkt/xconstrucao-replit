@@ -29,9 +29,9 @@ export interface RegisterData {
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean, router?: any) => Promise<void>;
-  register: (data: RegisterData, router?: any) => Promise<void>;
-  logout: (router?: any) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
+  logout: () => Promise<void>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth?: () => Promise<void>;
 }
