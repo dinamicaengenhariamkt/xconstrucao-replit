@@ -11,7 +11,7 @@ export function getRedirectPathByRole(role: string): string {
     case 'contratante':
       return '/contratante/dashboard';
     case 'admin':
-      return '/administrador/financeiro';
+      return '/admin/financeiro';
     default:
       // Fallback para dashboard genérico
       return '/dashboard';

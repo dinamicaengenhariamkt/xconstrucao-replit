@@ -56,6 +56,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/admin/financeiro/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/admin/financeiro">> = Specific
+  const handler = {} as typeof import("../../../app/admin/financeiro/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/administrador/financeiro/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/administrador/financeiro">> = Specific
@@ -401,6 +410,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 
 
 
+
+// Validate ../../../app/admin/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/admin">> = Specific
+  const handler = {} as typeof import("../../../app/admin/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
 
 // Validate ../../../app/administrador/layout.tsx
 {
