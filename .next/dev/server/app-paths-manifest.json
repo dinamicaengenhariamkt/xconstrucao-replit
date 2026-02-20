@@ -1,15 +1,4 @@
 {
-  "/api/auth/login/route": "app/api/auth/login/route.js",
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
-  "/api/auth/me/route": "app/api/auth/me/route.js",
   "/api/auth/refresh/route": "app/api/auth/refresh/route.js",
-  "/contratante/dashboard/page": "app/contratante/dashboard/page.js",
-  "/empreiteiro/chat/page": "app/empreiteiro/chat/page.js",
-  "/empreiteiro/dashboard/page": "app/empreiteiro/dashboard/page.js",
-  "/empreiteiro/minhas-obras/[id]/page": "app/empreiteiro/minhas-obras/[id]/page.js",
-  "/empreiteiro/minhas-obras/page": "app/empreiteiro/minhas-obras/page.js",
-  "/empreiteiro/novas-obras/[id]/page": "app/empreiteiro/novas-obras/[id]/page.js",
-  "/empreiteiro/novas-obras/page": "app/empreiteiro/novas-obras/page.js",
-  "/login/page": "app/login/page.js",
   "/page": "app/page.js"
 }

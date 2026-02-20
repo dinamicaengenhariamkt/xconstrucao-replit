@@ -5,6 +5,7 @@ import {
   RiChat1Line,
   RiQuestionLine,
   RiSettings3Line,
+  RiMoneyDollarCircleLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -12,6 +13,7 @@ export const CONTRATANTE_NAV_ITEMS: NavItem[] = [
   { title: 'Nova Obra', url: '/contratante/nova-obra', icon: RiAddBoxLine },
   { title: 'Minhas Obras', url: '/contratante/minhas-obras', icon: RiBuildingLine },
   { title: 'Dashboard', url: '/contratante/dashboard', icon: RiDashboardLine },
+  { title: 'Pagamentos', url: '/contratante/pagamentos', icon: RiMoneyDollarCircleLine },
   { title: 'xchat', url: '/contratante/chat', icon: RiChat1Line },
 ];
 
