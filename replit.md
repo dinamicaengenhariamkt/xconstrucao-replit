@@ -70,13 +70,34 @@ XConstrução is a comprehensive construction management platform that connects 
 - `tsconfig.json` - TypeScript with path aliases (@/, @shared/)
 - Tailwind CSS v4 uses CSS-based config in globals.css (no tailwind.config.ts)
 
+## Empreiteiro Feature Architecture
+Feature-based architecture under `features/empreiteiro/`:
+- Each feature has: types/, mocks/, hooks/, api/, components/ folders
+- Mock data enabled via `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK=true`
+- React Query hooks with 5min stale time, Zustand for state (xchat)
+- Shared components in `features/shared/components/` (PageHeader, FilterChips, StatusBadge, ProgressBar)
+- Shared types in `features/shared/types/`
+
+### Empreiteiro Pages
+- `/empreiteiro/dashboard` - Stats overview, financial charts, recent activities
+- `/empreiteiro/minhas-obras` - Active projects with status filters (em execução, com atrasos, pendências, planejamento, finalizadas)
+- `/empreiteiro/novas-obras` - Available projects with complexity filters, blocked state banner
+- `/empreiteiro/novas-obras/[id]` - Project detail with hero, accordion sections, 3 application states
+- `/empreiteiro/chat` - Two-panel messaging (conversations list + messages area)
+- `/empreiteiro/faq` - FAQ with hero search, category tabs, accordion items
+
+### Empreiteiro Nav Constants
+- `features/empreiteiro/constants.ts` - EMPREITEIRO_NAV_ITEMS, EMPREITEIRO_BOTTOM_NAV_ITEMS
+- Sidebar: `features/empreiteiro/components/EmpreiteiroSidebar.tsx`
+
 ## Recent Changes
+- 2026-02-20: Built complete empreiteiro internal views (Minhas Obras, Novas Obras, Detalhes da Obra, xchat, FAQ)
 - 2026-02-13: Migrated from Vite+Express to Next.js 16 App Router
 - All API routes migrated to Next.js Route Handlers
 - All pages migrated to App Router with proper client/server component separation
 - Tailwind CSS v4 with PostCSS plugin configured
 - Auth flow: login returns { user } wrapper, /me returns user directly
-- E2E tests passed: login, dashboard navigation, CRUD pages
+- E2E tests passed: login, dashboard navigation, CRUD pages, empreiteiro features
 - Old Vite/Express files cleaned up
 
 ## Replit Auth Notes
