@@ -70,10 +70,10 @@ XConstrução is a comprehensive construction management platform that connects 
 - `tsconfig.json` - TypeScript with path aliases (@/, @shared/)
 - Tailwind CSS v4 uses CSS-based config in globals.css (no tailwind.config.ts)
 
-## Empreiteiro Feature Architecture
-Feature-based architecture under `features/empreiteiro/`:
+## Feature Architecture (Empreiteiro & Contratante)
+Feature-based architecture under `features/empreiteiro/` and `features/contratante/`:
 - Each feature has: types/, mocks/, hooks/, api/, components/ folders
-- Mock data enabled via `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK=true`
+- Mock data enabled via `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK=true` (shared for both roles)
 - React Query hooks with 5min stale time, Zustand for state (xchat)
 - Shared components in `features/shared/components/` (PageHeader, FilterChips, StatusBadge, ProgressBar)
 - Shared types in `features/shared/types/`
@@ -90,7 +90,21 @@ Feature-based architecture under `features/empreiteiro/`:
 - `features/empreiteiro/constants.ts` - EMPREITEIRO_NAV_ITEMS, EMPREITEIRO_BOTTOM_NAV_ITEMS
 - Sidebar: `features/empreiteiro/components/EmpreiteiroSidebar.tsx`
 
+### Contratante Pages
+- `/contratante/dashboard` - Stats overview (already complete, do not modify)
+- `/contratante/minhas-obras` - Projects with status filters, grayscale→color hover cards
+- `/contratante/minhas-obras/[id]` - Project detail with hero, KPIs, tabs (Visão Geral, Etapas, Financeiro, Equipe, Fotos)
+- `/contratante/nova-obra` - Multi-card form (Info, Location, Timeline/Budget, Documents)
+- `/contratante/pagamentos` - Financial KPIs, filters, transaction table with status badges
+- `/contratante/chat` - Two-panel messaging with Zustand store
+- `/contratante/faq` - FAQ with hero search, category tabs, accordion items
+
+### Contratante Nav Constants
+- `features/contratante/constants.ts` - CONTRATANTE_NAV_ITEMS (Nova Obra, Minhas Obras, Dashboard, Pagamentos, xchat), CONTRATANTE_BOTTOM_NAV_ITEMS (FAQ, Configurações)
+- Sidebar: `features/contratante/components/ContratanteSidebar.tsx`
+
 ## Recent Changes
+- 2026-02-20: Built complete contratante internal views (Minhas Obras, Detalhes da Obra, Nova Obra, Pagamentos, xchat, FAQ)
 - 2026-02-20: Built complete empreiteiro internal views (Minhas Obras, Novas Obras, Detalhes da Obra, xchat, FAQ)
 - 2026-02-13: Migrated from Vite+Express to Next.js 16 App Router
 - All API routes migrated to Next.js Route Handlers
