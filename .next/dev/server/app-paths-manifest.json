@@ -1,11 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/api/auth/refresh/route": "app/api/auth/refresh/route.js",
-  "/empreiteiro/chat/page": "app/empreiteiro/chat/page.js",
-  "/empreiteiro/dashboard/page": "app/empreiteiro/dashboard/page.js",
-  "/empreiteiro/faq/page": "app/empreiteiro/faq/page.js",
   "/empreiteiro/minhas-obras/page": "app/empreiteiro/minhas-obras/page.js",
-  "/empreiteiro/novas-obras/[id]/page": "app/empreiteiro/novas-obras/[id]/page.js",
-  "/empreiteiro/novas-obras/page": "app/empreiteiro/novas-obras/page.js",
   "/page": "app/page.js"
 }

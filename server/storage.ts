@@ -1,12 +1,13 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, clientes, empreiteiras, obras, financeiro,
+  users, clientes, empreiteiras, obras, financeiro, candidaturas,
   type User, type InsertUser,
   type Cliente, type InsertCliente,
   type Empreiteira, type InsertEmpreiteira,
   type Obra, type InsertObra,
   type Financeiro, type InsertFinanceiro,
+  type Candidatura, type InsertCandidatura,
 } from "@shared/db/schema";
 
 export interface IStorage {
@@ -34,6 +35,10 @@ export interface IStorage {
 
   getFinanceiros(): Promise<Financeiro[]>;
   createFinanceiro(data: InsertFinanceiro): Promise<Financeiro>;
+
+  getCandidaturas(empreiteiroId: string): Promise<Candidatura[]>;
+  getCandidaturaByObraAndEmpreiteiro(obraId: string, empreiteiroId: string): Promise<Candidatura | undefined>;
+  createCandidatura(data: InsertCandidatura): Promise<Candidatura>;
 
   getDashboardStats(): Promise<{
     totalClientes: number;
@@ -136,6 +141,21 @@ export class DatabaseStorage implements IStorage {
   async createFinanceiro(data: InsertFinanceiro) {
     const [f] = await db.insert(financeiro).values(data).returning();
     return f;
+  }
+
+  async getCandidaturas(empreiteiroId: string) {
+    return db.select().from(candidaturas).where(eq(candidaturas.empreiteiroId, empreiteiroId));
+  }
+
+  async getCandidaturaByObraAndEmpreiteiro(obraId: string, empreiteiroId: string) {
+    const [c] = await db.select().from(candidaturas)
+      .where(sql`${candidaturas.obraId} = ${obraId} AND ${candidaturas.empreiteiroId} = ${empreiteiroId}`);
+    return c;
+  }
+
+  async createCandidatura(data: InsertCandidatura) {
+    const [c] = await db.insert(candidaturas).values(data).returning();
+    return c;
   }
 
   async getDashboardStats() {

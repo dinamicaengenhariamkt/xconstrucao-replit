@@ -69,6 +69,23 @@ export const financeiro = pgTable("financeiro", {
   categoria: text("categoria"),
 });
 
+export const candidaturaStatusEnum = pgEnum("candidatura_status", ["pendente", "aceita", "rejeitada"]);
+
+export const candidaturas = pgTable("candidaturas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").references(() => obras.id),
+  empreiteiroId: varchar("empreiteiro_id").references(() => users.id),
+  valorProposta: numeric("valor_proposta", { precision: 15, scale: 2 }).notNull(),
+  prazoEstimado: integer("prazo_estimado"),
+  dataInicio: text("data_inicio"),
+  dataTermino: text("data_termino"),
+  descricao: text("descricao"),
+  observacoesPrazo: text("observacoes_prazo"),
+  status: candidaturaStatusEnum("status").notNull().default("pendente"),
+  createdAt: timestamp("created_at").defaultNow(),
+  atividades: text("atividades"),
+});
+
 // NextAuth.js tables
 export const accounts = pgTable("accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -103,6 +120,7 @@ export const insertClienteSchema = createInsertSchema(clientes).omit({ id: true 
 export const insertEmpreiteiraSchema = createInsertSchema(empreiteiras).omit({ id: true });
 export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
 export const insertFinanceiroSchema = createInsertSchema(financeiro).omit({ id: true });
+export const insertCandidaturaSchema = createInsertSchema(candidaturas).omit({ id: true, createdAt: true });
 
 export const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -128,3 +146,5 @@ export type InsertObra = z.infer<typeof insertObraSchema>;
 export type Obra = typeof obras.$inferSelect;
 export type InsertFinanceiro = z.infer<typeof insertFinanceiroSchema>;
 export type Financeiro = typeof financeiro.$inferSelect;
+export type InsertCandidatura = z.infer<typeof insertCandidaturaSchema>;
+export type Candidatura = typeof candidaturas.$inferSelect;
