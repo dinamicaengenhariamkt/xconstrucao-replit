@@ -1,8 +1,11 @@
 import type { IconType } from 'react-icons';
 
-// ---------------------------------------------------------------------------
-// Domain types
-// ---------------------------------------------------------------------------
+export type PeriodoSeletor = '30dias' | '3meses' | '12meses' | 'personalizado';
+
+export interface WelcomeSectionProps {
+  periodo: PeriodoSeletor;
+  onPeriodoChange: (p: PeriodoSeletor) => void;
+}
 
 export interface AdminFinanceiroDashboardStats {
   volumeContratado: number;
@@ -11,6 +14,37 @@ export interface AdminFinanceiroDashboardStats {
   taxasPlataforma: number;
   obrasRiscoFinanceiro: number;
   inadimplencia: number;
+}
+
+export type StatsCardBadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
+
+export interface StatsCardBadge {
+  label: string;
+  variant: StatsCardBadgeVariant;
+}
+
+export interface StatsCardProps {
+  label: string;
+  value: string;
+  icon: IconType;
+  iconBgColor: string;
+  badge?: StatsCardBadge;
+}
+
+export interface StatsCardData {
+  label: string;
+  value: string;
+  icon: IconType;
+  iconBgColor: string;
+  badge?: StatsCardBadge;
+}
+
+export interface StatsGridProps {
+  stats: StatsCardData[];
+}
+
+export interface StatsGridContainerProps {
+  data: AdminFinanceiroDashboardStats;
 }
 
 export interface PaymentEvolutionData {
@@ -25,11 +59,7 @@ export interface StatusDistributionData {
   color: string;
 }
 
-export type ObraSituacao =
-  | 'pagamento_atrasado'
-  | 'medicao_pendente'
-  | 'em_dia'
-  | 'obra_suspensa';
+export type SituacaoKey = 'pagamento_atrasado' | 'medicao_pendente' | 'em_dia' | 'obra_suspensa';
 
 export interface ObraAtencao {
   id: string;
@@ -40,7 +70,7 @@ export interface ObraAtencao {
   valorContratado: number;
   valorPago: number;
   percentConcluido: number;
-  situacao: ObraSituacao;
+  situacao: SituacaoKey;
 }
 
 export interface TopCliente {
@@ -61,91 +91,12 @@ export interface TopEmpreiteira {
   saldo: number;
 }
 
-export type ReceitaTipo = 'medicoes' | 'assinatura' | 'outros';
-
 export interface ReceitaPlataforma {
   id: string;
-  tipo: ReceitaTipo;
+  tipo: string;
   nome: string;
   valor: number;
   percentTotal: number;
   iconColor: string;
   barColor: string;
-}
-
-export type PeriodoSeletor = '30dias' | '3meses' | '12meses' | 'personalizado';
-
-// ---------------------------------------------------------------------------
-// Component prop types
-// ---------------------------------------------------------------------------
-
-export type StatsCardBadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
-
-export interface StatsCardData {
-  label: string;
-  value: string;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: StatsCardBadgeVariant;
-  };
-}
-
-export type StatsCardProps = StatsCardData;
-
-/** Props da apresentação pura (recebe stats já montados) */
-export interface StatsGridProps {
-  stats: StatsCardData[];
-}
-
-/** Props do container (recebe dados brutos do domínio) */
-export interface StatsGridContainerProps {
-  data: AdminFinanceiroDashboardStats;
-}
-
-export interface PaymentsEvolutionChartProps {
-  data: PaymentEvolutionData[];
-}
-
-export interface PaymentsEvolutionChartTooltipProps {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
-}
-
-export interface StatusDistributionChartProps {
-  data: StatusDistributionData[];
-  totalObras?: number;
-}
-
-export interface StatusDistributionChartTooltipProps {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number }>;
-}
-
-export interface ProgressBarProps {
-  percent: number;
-}
-
-export interface ObrasAtencaoTableProps {
-  obras: ObraAtencao[];
-}
-
-export interface TopClientesTableProps {
-  clientes: TopCliente[];
-}
-
-export interface TopEmpreiteirasTableProps {
-  empreiteiras: TopEmpreiteira[];
-}
-
-export interface ReceitasPlataformaTableProps {
-  receitas: ReceitaPlataforma[];
-  total: number;
-}
-
-export interface WelcomeSectionProps {
-  periodo: PeriodoSeletor;
-  onPeriodoChange: (periodo: PeriodoSeletor) => void;
 }
