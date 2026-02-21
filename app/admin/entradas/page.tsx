@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   RiMoneyDollarCircleLine,
@@ -25,7 +25,7 @@ import {
 } from '@shared/components/ui/table';
 import { cn } from '@shared/lib/utils';
 import type { EntradaCategoria, Entrada } from '@features/admin/entradas/types';
-import { mockEntradaResumo, mockEntradas } from '@features/admin/entradas/mocks';
+import { useEntradaResumo, useEntradas } from '@features/admin/entradas/hooks/use-entradas';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -107,20 +107,15 @@ function EntradasSkeleton() {
 }
 
 export default function AdminEntradasPage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [categoriaFilter, setCategoriaFilter] = useState<FilterCategoria>('todas');
   const [search, setSearch] = useState('');
+  const { data: resumo, isLoading: isLoadingResumo } = useEntradaResumo();
+  const { data: entradas, isLoading: isLoadingEntradas } = useEntradas();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const resumo = mockEntradaResumo;
-  const entradas = mockEntradas;
+  const isLoading = isLoadingResumo || isLoadingEntradas;
 
   const filtered = useMemo(() => {
-    let result = entradas;
+    let result = entradas ?? [];
     if (categoriaFilter !== 'todas') {
       result = result.filter((e) => e.categoria === categoriaFilter);
     }
@@ -136,32 +131,35 @@ export default function AdminEntradasPage() {
     return result;
   }, [entradas, categoriaFilter, search]);
 
-  const kpiCards = useMemo(() => [
-    {
-      label: 'Total do Mês',
-      value: formatCurrency(resumo.totalMes),
-      icon: RiMoneyDollarCircleLine,
-      iconBg: 'bg-primary/10 text-primary',
-    },
-    {
-      label: 'Confirmado',
-      value: formatCurrency(resumo.totalConfirmado),
-      icon: RiCheckboxCircleLine,
-      iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
-    },
-    {
-      label: 'Pendente',
-      value: formatCurrency(resumo.totalPendente),
-      icon: RiTimeLine,
-      iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
-    },
-    {
-      label: 'Crescimento',
-      value: `${resumo.crescimentoMes.toFixed(1).replace('.', ',')}%`,
-      icon: RiArrowUpLine,
-      iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    },
-  ], [resumo]);
+  const kpiCards = useMemo(() => {
+    if (!resumo) return [];
+    return [
+      {
+        label: 'Total do Mês',
+        value: formatCurrency(resumo.totalMes),
+        icon: RiMoneyDollarCircleLine,
+        iconBg: 'bg-primary/10 text-primary',
+      },
+      {
+        label: 'Confirmado',
+        value: formatCurrency(resumo.totalConfirmado),
+        icon: RiCheckboxCircleLine,
+        iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+      },
+      {
+        label: 'Pendente',
+        value: formatCurrency(resumo.totalPendente),
+        icon: RiTimeLine,
+        iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
+      },
+      {
+        label: 'Crescimento',
+        value: `${resumo.crescimentoMes.toFixed(1).replace('.', ',')}%`,
+        icon: RiArrowUpLine,
+        iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+      },
+    ];
+  }, [resumo]);
 
   if (isLoading) {
     return <EntradasSkeleton />;

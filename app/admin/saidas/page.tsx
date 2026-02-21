@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   RiMoneyDollarCircleLine,
@@ -25,7 +25,7 @@ import {
 } from '@shared/components/ui/table';
 import { cn } from '@shared/lib/utils';
 import type { SaidaCategoria, Saida } from '@features/admin/saidas/types';
-import { mockSaidaResumo, mockSaidas } from '@features/admin/saidas/mocks';
+import { useSaidaResumo, useSaidas } from '@features/admin/saidas/hooks/use-saidas';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -107,20 +107,15 @@ function SaidasSkeleton() {
 }
 
 export default function AdminSaidasPage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [categoriaFilter, setCategoriaFilter] = useState<FilterCategoria>('todas');
   const [search, setSearch] = useState('');
+  const { data: resumo, isLoading: isLoadingResumo } = useSaidaResumo();
+  const { data: saidas, isLoading: isLoadingSaidas } = useSaidas();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const resumo = mockSaidaResumo;
-  const saidas = mockSaidas;
+  const isLoading = isLoadingResumo || isLoadingSaidas;
 
   const filtered = useMemo(() => {
-    let result = saidas;
+    let result = saidas ?? [];
     if (categoriaFilter !== 'todas') {
       result = result.filter((s) => s.categoria === categoriaFilter);
     }
@@ -136,32 +131,35 @@ export default function AdminSaidasPage() {
     return result;
   }, [saidas, categoriaFilter, search]);
 
-  const kpiCards = useMemo(() => [
-    {
-      label: 'Total do Mês',
-      value: formatCurrency(resumo.totalMes),
-      icon: RiMoneyDollarCircleLine,
-      iconBg: 'bg-primary/10 text-primary',
-    },
-    {
-      label: 'Pago',
-      value: formatCurrency(resumo.totalPago),
-      icon: RiCheckboxCircleLine,
-      iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
-    },
-    {
-      label: 'Pendente',
-      value: formatCurrency(resumo.totalPendente),
-      icon: RiTimeLine,
-      iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
-    },
-    {
-      label: 'Agendado',
-      value: formatCurrency(resumo.totalAgendado),
-      icon: RiCalendarScheduleLine,
-      iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    },
-  ], [resumo]);
+  const kpiCards = useMemo(() => {
+    if (!resumo) return [];
+    return [
+      {
+        label: 'Total do Mês',
+        value: formatCurrency(resumo.totalMes),
+        icon: RiMoneyDollarCircleLine,
+        iconBg: 'bg-primary/10 text-primary',
+      },
+      {
+        label: 'Pago',
+        value: formatCurrency(resumo.totalPago),
+        icon: RiCheckboxCircleLine,
+        iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+      },
+      {
+        label: 'Pendente',
+        value: formatCurrency(resumo.totalPendente),
+        icon: RiTimeLine,
+        iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
+      },
+      {
+        label: 'Agendado',
+        value: formatCurrency(resumo.totalAgendado),
+        icon: RiCalendarScheduleLine,
+        iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+      },
+    ];
+  }, [resumo]);
 
   if (isLoading) {
     return <SaidasSkeleton />;

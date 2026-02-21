@@ -103,7 +103,30 @@ Feature-based architecture under `features/empreiteiro/` and `features/contratan
 - `features/contratante/constants.ts` - CONTRATANTE_NAV_ITEMS (Nova Obra, Minhas Obras, Dashboard, Pagamentos, xchat), CONTRATANTE_BOTTOM_NAV_ITEMS (FAQ, Configurações)
 - Sidebar: `features/contratante/components/ContratanteSidebar.tsx`
 
+### Admin Pages
+- `/admin/financeiro` - Financial dashboard with KPIs, charts, tables (already complete)
+- `/admin/clientes` - Client list with filters, stats, search
+- `/admin/clientes/[id]` - Client detail (cadastro info, KPIs, tabs)
+- `/admin/clientes/[id]/obras` - Client's projects subpage
+- `/admin/clientes/novo` - New client form (useForm + zodResolver)
+- `/admin/empreiteiras` - Contractors list with filters, stats, search
+- `/admin/empreiteiras/[id]` - Contractor detail (cadastro, KPIs, especialidades, rating)
+- `/admin/empreiteiras/[id]/obras` - Contractor's projects subpage
+- `/admin/empreiteiras/nova` - New contractor form (useForm + zodResolver)
+- `/admin/caixa` - Cash flow overview with KPIs, period filter, movements table
+- `/admin/entradas` - Income entries with category filters, search, table
+- `/admin/saidas` - Expense entries with category filters, search, table
+- `/admin/anuncios` - Ads management with KPIs, status filters, ad cards
+- `/admin/faq` - FAQ management with category filters, search, accordion
+
+### Admin Nav Constants
+- `features/admin/constants.ts` - ADMIN_NAV_ITEMS (Cliente, Empreiteira, Financeiro, Caixa, Entradas, Saídas, Anúncios), ADMIN_BOTTOM_NAV_ITEMS (FAQ, Configurações)
+- Sidebar: `features/admin/components/AdminSidebar.tsx`
+- Topbar: `features/admin/components/AdminTopbar.tsx`
+- Layout: `features/admin/components/AdminLayout.tsx`
+
 ## Recent Changes
+- 2026-02-21: Built complete admin internal views (Clientes, Empreiteiras, Caixa, Entradas, Saídas, Anúncios, FAQ with full CRUD forms)
 - 2026-02-20: Built complete contratante internal views (Minhas Obras, Detalhes da Obra, Nova Obra, Pagamentos, xchat, FAQ)
 - 2026-02-20: Built complete empreiteiro internal views (Minhas Obras, Novas Obras, Detalhes da Obra, xchat, FAQ)
 - 2026-02-13: Migrated from Vite+Express to Next.js 16 App Router

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   RiWalletLine,
@@ -22,7 +22,7 @@ import {
 } from '@shared/components/ui/table';
 import { cn } from '@shared/lib/utils';
 import type { CaixaPeriodo, Movimentacao } from '@features/admin/caixa/types';
-import { mockCaixaResumo, mockMovimentacoes } from '@features/admin/caixa/mocks';
+import { useCaixaResumo, useMovimentacoes } from '@features/admin/caixa/hooks/use-caixa';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -80,43 +80,41 @@ function CaixaSkeleton() {
 }
 
 export default function AdminCaixaPage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<CaixaPeriodo>('30dias');
+  const { data: resumo, isLoading: isLoadingResumo } = useCaixaResumo();
+  const { data: movimentacoes, isLoading: isLoadingMovimentacoes } = useMovimentacoes();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const isLoading = isLoadingResumo || isLoadingMovimentacoes;
 
-  const resumo = mockCaixaResumo;
-  const movimentacoes = mockMovimentacoes;
-
-  const kpiCards = useMemo(() => [
-    {
-      label: 'Saldo Atual',
-      value: formatCurrency(resumo.saldoAtual),
-      icon: RiWalletLine,
-      iconBg: 'bg-primary/10 text-primary',
-    },
-    {
-      label: 'Entradas do Mês',
-      value: formatCurrency(resumo.entradasMes),
-      icon: RiArrowUpLine,
-      iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
-    },
-    {
-      label: 'Saídas do Mês',
-      value: formatCurrency(resumo.saidasMes),
-      icon: RiArrowDownLine,
-      iconBg: 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400',
-    },
-    {
-      label: 'Previsão Próx. Mês',
-      value: formatCurrency(resumo.previsaoProximoMes),
-      icon: RiLineChartLine,
-      iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
-    },
-  ], [resumo]);
+  const kpiCards = useMemo(() => {
+    if (!resumo) return [];
+    return [
+      {
+        label: 'Saldo Atual',
+        value: formatCurrency(resumo.saldoAtual),
+        icon: RiWalletLine,
+        iconBg: 'bg-primary/10 text-primary',
+      },
+      {
+        label: 'Entradas do Mês',
+        value: formatCurrency(resumo.entradasMes),
+        icon: RiArrowUpLine,
+        iconBg: 'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+      },
+      {
+        label: 'Saídas do Mês',
+        value: formatCurrency(resumo.saidasMes),
+        icon: RiArrowDownLine,
+        iconBg: 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+      },
+      {
+        label: 'Previsão Próx. Mês',
+        value: formatCurrency(resumo.previsaoProximoMes),
+        icon: RiLineChartLine,
+        iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+      },
+    ];
+  }, [resumo]);
 
   if (isLoading) {
     return <CaixaSkeleton />;
@@ -196,7 +194,7 @@ export default function AdminCaixaPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {movimentacoes.map((mov: Movimentacao) => (
+              {(movimentacoes ?? []).map((mov: Movimentacao) => (
                 <TableRow key={mov.id} data-testid={`row-movimentacao-${mov.id}`}>
                   <TableCell className="whitespace-nowrap">{formatDate(mov.data)}</TableCell>
                   <TableCell>
