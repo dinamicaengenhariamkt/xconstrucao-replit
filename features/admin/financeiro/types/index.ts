@@ -91,12 +91,55 @@ export interface TopEmpreiteira {
   saldo: number;
 }
 
+export type ReceitaTipo = 'medicoes' | 'assinatura' | 'outros';
+
 export interface ReceitaPlataforma {
   id: string;
-  tipo: string;
+  tipo: ReceitaTipo;
   nome: string;
   valor: number;
   percentTotal: number;
   iconColor: string;
   barColor: string;
+}
+
+export interface ProgressBarProps {
+  percent: number;
+}
+
+export interface ObrasAtencaoTableProps {
+  obras: ObraAtencao[];
+}
+
+export interface TopClientesTableProps {
+  clientes: TopCliente[];
+}
+
+export interface TopEmpreiteirasTableProps {
+  empreiteiras: TopEmpreiteira[];
+}
+
+export interface ReceitasPlataformaTableProps {
+  receitas: ReceitaPlataforma[];
+  total: number;
+}
+
+export interface PaymentsEvolutionChartProps {
+  data: PaymentEvolutionData[];
+}
+
+export interface PaymentsEvolutionChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?: string;
+}
+
+export interface StatusDistributionChartProps {
+  data: StatusDistributionData[];
+  totalObras?: number;
+}
+
+export interface StatusDistributionChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number }>;
 }

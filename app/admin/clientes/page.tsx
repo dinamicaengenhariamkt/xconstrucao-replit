@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
@@ -10,7 +9,17 @@ import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { FilterChips } from '@features/shared/components/FilterChips';
 import { ClienteCard } from '@features/admin/clientes/components/ClienteCard';
+import { NovoClienteModal } from '@features/admin/clientes/components/NovoClienteModal';
 import { useAdminClientes } from '@features/admin/clientes/hooks/use-clientes';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
 import {
   RiSearchLine,
   RiUserAddLine,
@@ -22,6 +31,15 @@ import {
 } from 'react-icons/ri';
 import type { FilterChipOption } from '@features/shared/types';
 
+const ITEMS_PER_PAGE = 12;
+
+function getPaginationRange(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis', total];
+  if (current >= total - 3) return [1, 'ellipsis', total - 4, total - 3, total - 2, total - 1, total];
+  return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
+}
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -29,6 +47,18 @@ export default function AdminClientesPage() {
   const { data: clientes, isLoading } = useAdminClientes();
   const [activeFilter, setActiveFilter] = useState('todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  function handleFilterChange(value: string) {
+    setActiveFilter(value);
+    setCurrentPage(1);
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  }
 
   const stats = useMemo(() => {
     if (!clientes) return { total: 0, ativos: 0, volume: 0, inadimplencia: 0 };
@@ -67,6 +97,12 @@ export default function AdminClientesPage() {
     }
     return result;
   }, [clientes, activeFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredClientes.length / ITEMS_PER_PAGE);
+  const paginatedClientes = filteredClientes.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   const kpis = [
     {
@@ -136,12 +172,13 @@ export default function AdminClientesPage() {
             Gerencie os clientes cadastrados na plataforma
           </p>
         </div>
-        <Link href="/admin/clientes/novo" data-testid="link-novo-cliente">
-          <Button data-testid="button-novo-cliente">
+        <>
+          <Button onClick={() => setIsModalOpen(true)} data-testid="button-novo-cliente">
             <RiUserAddLine className="w-4 h-4 mr-2" />
             Novo Cliente
           </Button>
-        </Link>
+          <NovoClienteModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+        </>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -171,13 +208,13 @@ export default function AdminClientesPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <FilterChips options={filterOptions} activeValue={activeFilter} onSelect={setActiveFilter} />
+        <FilterChips options={filterOptions} activeValue={activeFilter} onSelect={handleFilterChange} />
         <div className="relative w-full sm:w-72">
           <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Buscar por nome, CPF/CNPJ..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
             data-testid="input-search-clientes"
           />
@@ -185,11 +222,53 @@ export default function AdminClientesPage() {
       </div>
 
       {filteredClientes.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredClientes.map((cliente) => (
-            <ClienteCard key={cliente.id} cliente={cliente} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedClientes.map((cliente) => (
+              <ClienteCard key={cliente.id} cliente={cliente} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }}
+                    aria-disabled={currentPage === 1}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+                {getPaginationRange(currentPage, totalPages).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === item}
+                        onClick={(e) => { e.preventDefault(); setCurrentPage(item); }}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }}
+                    aria-disabled={currentPage === totalPages}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       ) : (
         <div className="text-center py-16">
           <RiUserLine className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />

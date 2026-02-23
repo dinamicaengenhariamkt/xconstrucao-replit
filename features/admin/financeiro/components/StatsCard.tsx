@@ -24,7 +24,7 @@ export function StatsCard({ label, value, icon: Icon, iconBgColor, badge }: Stat
       }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="h-full transition-colors hover:border-primary/20">
+      <Card className="h-full">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <div className={cn('p-3 rounded-lg', iconBgColor)}>
             <Icon className="w-5 h-5" />

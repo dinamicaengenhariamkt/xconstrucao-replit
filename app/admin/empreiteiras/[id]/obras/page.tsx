@@ -19,8 +19,10 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const obraStatusConfig: Record<AdminEmpreiteiraObra['status'], { label: string; className: string }> = {
-  em_andamento: { label: 'Em andamento', className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
+  em_andamento: { label: 'Em execução', className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
+  em_proposta: { label: 'Em proposta', className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
   concluida: { label: 'Concluída', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
+  atrasada: { label: 'Atrasada', className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
   pausada: { label: 'Pausada', className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
   cancelada: { label: 'Cancelada', className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
 };

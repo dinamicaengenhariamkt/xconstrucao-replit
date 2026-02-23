@@ -1,25 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Badge } from '@shared/components/ui/badge';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { SearchModal, SearchResult } from '@shared/components/SearchModal';
 import {
   RiSearchLine,
   RiNotification3Line,
   RiSettings3Line,
   RiMenuLine,
+  RiRefreshLine,
 } from 'react-icons/ri';
+
+function useRelativeTime(date: Date | null): string {
+  const [label, setLabel] = useState('');
+
+  const compute = useCallback(() => {
+    if (!date) { setLabel(''); return; }
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (diff < 60) setLabel('agora mesmo');
+    else if (diff < 3600) setLabel(`há ${Math.floor(diff / 60)} min`);
+    else setLabel(`há ${Math.floor(diff / 3600)}h`);
+  }, [date]);
+
+  useEffect(() => {
+    compute();
+    const id = setInterval(compute, 30_000);
+    return () => clearInterval(id);
+  }, [compute]);
+
+  return label;
+}
 
 export function AdminTopbar() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(() => new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const relativeTime = useRelativeTime(lastRefreshedAt);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries();
+    setLastRefreshedAt(new Date());
+    setIsRefreshing(false);
+    setPopoverOpen(false);
+  }, [queryClient]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -75,6 +111,35 @@ export function AdminTopbar() {
             5
           </Badge>
         </div>
+
+        {/* Sincronizar dados */}
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+              aria-label="Sincronizar dados"
+            >
+              <RiRefreshLine className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-4" align="end">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Sincronização de dados</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              {lastRefreshedAt ? `Última atualização: ${relativeTime}` : 'Carregando dados...'}
+            </p>
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RiRefreshLine className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Atualizando...' : 'Sincronizar agora'}
+            </Button>
+          </PopoverContent>
+        </Popover>
 
         {/* Configurações */}
         <Button

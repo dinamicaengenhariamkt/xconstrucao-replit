@@ -1,8 +1,28 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 import type { AdminEmpreiteira, AdminEmpreiteiraObra } from '../types';
 import { mockAdminEmpreiteiras, mockAdminEmpreiteiraObras } from '../mocks';
 
 const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+
+export const novaEmpreiteiraSchema = z.object({
+  razaoSocial: z.string().min(3, 'Razão social deve ter pelo menos 3 caracteres'),
+  nomeFantasia: z.string().optional(),
+  cnpj: z.string().min(14, 'CNPJ inválido'),
+  inscricaoEstadual: z.string().optional(),
+  endereco: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+  responsavel: z.string().min(3, 'Nome do responsável deve ter pelo menos 3 caracteres'),
+  responsavelProfissao: z.string().min(1, 'Selecione a profissão'),
+  responsavelRegistro: z.string().min(3, 'Informe o número de registro (CREA/CAU)'),
+  email: z.string().email('E-mail inválido'),
+  telefone: z.string().min(10, 'Telefone inválido'),
+  site: z.string().optional(),
+  especialidades: z.array(z.string()).min(1, 'Selecione pelo menos uma especialidade'),
+});
+
+export type NovaEmpreiteiraFormData = z.infer<typeof novaEmpreiteiraSchema>;
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,
@@ -33,6 +53,24 @@ export function useAdminEmpreiteira(id: string) {
     },
     enabled: !!id,
     ...QUERY_CONFIG,
+  });
+}
+
+export function useCreateEmpreiteira() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: NovaEmpreiteiraFormData) => {
+      const res = await fetch('/api/admin/empreiteiras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Erro ao cadastrar empreiteira');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'empreiteiras'] });
+    },
   });
 }
 

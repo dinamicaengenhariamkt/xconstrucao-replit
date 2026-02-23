@@ -18,8 +18,20 @@ export interface AdminEmpreiteira {
   nota: number;
   totalObras: number;
   obrasEmAndamento: number;
+  obrasConcluidas?: number;
   valorTotalContratado: number;
   valorTotalRecebido: number;
+  // Dados cadastrais adicionais
+  inscricaoEstadual?: string;
+  bairro?: string;
+  cep?: string;
+  site?: string;
+  observacoes?: string;
+  // Responsável técnico
+  responsavelEmail?: string;
+  responsavelTelefone?: string;
+  responsavelRegistro?: string;
+  responsavelProfissao?: string;
 }
 
 export interface AdminEmpreiteiraObra {
@@ -27,7 +39,7 @@ export interface AdminEmpreiteiraObra {
   nome: string;
   codigo: string;
   cliente: string;
-  status: 'em_andamento' | 'concluida' | 'pausada' | 'cancelada';
+  status: 'em_andamento' | 'em_proposta' | 'concluida' | 'pausada' | 'cancelada' | 'atrasada';
   valorContratado: number;
   percentConcluido: number;
   dataInicio: string;

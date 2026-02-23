@@ -45,7 +45,7 @@ export function ClienteCard({ cliente }: ClienteCardProps) {
         }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="h-full rounded-2xl transition-colors hover:border-primary/20">
+        <Card className="h-full rounded-2xl">
           <CardContent className="p-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10" data-testid={`avatar-cliente-${cliente.id}`}>

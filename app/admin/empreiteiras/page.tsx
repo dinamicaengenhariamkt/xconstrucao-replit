@@ -12,6 +12,7 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { FilterChips } from '@features/shared/components/FilterChips';
 import { useAdminEmpreiteiras } from '@features/admin/empreiteiras/hooks/use-empreiteiras';
+import { NovaEmpreiteiraModal } from '@features/admin/empreiteiras/components/NovaEmpreiteiraModal';
 import {
   RiSearchLine,
   RiAddLine,
@@ -135,6 +136,7 @@ export default function AdminEmpreiteirasPage() {
   const { data: empreiteiras, isLoading } = useAdminEmpreiteiras();
   const [activeFilter, setActiveFilter] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const stats = useMemo(() => {
     if (!empreiteiras) return { total: 0, ativas: 0, obrasEmAndamento: 0, volume: 0 };
@@ -242,12 +244,13 @@ export default function AdminEmpreiteirasPage() {
             Gerencie as empreiteiras cadastradas na plataforma
           </p>
         </div>
-        <Link href="/admin/empreiteiras/nova" data-testid="link-nova-empreiteira">
-          <Button data-testid="button-nova-empreiteira">
+        <>
+          <Button onClick={() => setIsModalOpen(true)} data-testid="button-nova-empreiteira">
             <RiAddLine className="w-4 h-4 mr-2" />
             Nova Empreiteira
           </Button>
-        </Link>
+          <NovaEmpreiteiraModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+        </>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

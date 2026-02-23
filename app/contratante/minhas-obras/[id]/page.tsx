@@ -155,7 +155,7 @@ function KPICard({ icon: Icon, label, value, color, bgColor }: { icon: React.Ele
   );
 }
 
-function TabVisaoGeral({ obra, progressColor }: { obra: any; progressColor: string }) {
+function TabVisaoGeral({ obra, progressColor }: { obra: any; progressColor: 'success' | 'warning' | 'error' | 'info' | 'primary' }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" data-testid="tab-content-visao-geral">
       <div className="lg:col-span-2 space-y-6">
@@ -204,7 +204,7 @@ function TabVisaoGeral({ obra, progressColor }: { obra: any; progressColor: stri
   );
 }
 
-function TabEtapas({ obra, progressColor }: { obra: any; progressColor: string }) {
+function TabEtapas({ obra, progressColor }: { obra: any; progressColor: 'success' | 'warning' | 'error' | 'info' | 'primary' }) {
   return (
     <div className="space-y-6" data-testid="tab-content-etapas">
       {obra.etapas.map((etapa: any) => (

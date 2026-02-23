@@ -1,4 +1,10 @@
-import type { AdminCliente, AdminClienteObra } from '../types';
+import type {
+  AdminCliente,
+  AdminClienteObra,
+  ClienteFinanceiro,
+  ClienteDocumento,
+  ClienteAtividade,
+} from '../types';
 
 export const mockAdminClientes: AdminCliente[] = [
   {
@@ -141,8 +147,9 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       valorContratado: 650_000,
       percentConcluido: 45,
       dataInicio: '2024-04-01',
-      previsaoFim: '2024-12-15',
+      previsaoFim: '2025-12-15',
       empreiteira: 'MRV Serviços',
+      localizacao: 'São Paulo, SP',
     },
     {
       id: 'obr-002',
@@ -154,6 +161,7 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       dataInicio: '2023-06-01',
       previsaoFim: '2024-02-28',
       empreiteira: 'Andrade Construções',
+      localizacao: 'Barueri, SP',
     },
     {
       id: 'obr-003',
@@ -163,8 +171,9 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       valorContratado: 400_000,
       percentConcluido: 20,
       dataInicio: '2024-07-01',
-      previsaoFim: '2025-03-30',
+      previsaoFim: '2025-09-30',
       empreiteira: 'Costa & Oliveira',
+      localizacao: 'São Paulo, SP',
     },
   ],
   'cli-002': [
@@ -178,6 +187,7 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       dataInicio: '2023-09-15',
       previsaoFim: '2025-06-30',
       empreiteira: 'Ponto Alto Engenharia',
+      localizacao: 'Rio de Janeiro, RJ',
     },
     {
       id: 'obr-005',
@@ -189,6 +199,7 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       dataInicio: '2024-02-01',
       previsaoFim: '2026-08-31',
       empreiteira: 'Nova Estrutura Eng.',
+      localizacao: 'Niterói, RJ',
     },
   ],
   'cli-004': [
@@ -202,6 +213,7 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       dataInicio: '2023-12-01',
       previsaoFim: '2025-04-30',
       empreiteira: 'MRV Serviços',
+      localizacao: 'Curitiba, PR',
     },
     {
       id: 'obr-007',
@@ -213,6 +225,161 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
       dataInicio: '2024-01-15',
       previsaoFim: '2024-09-30',
       empreiteira: 'Costa & Oliveira',
+      localizacao: 'Curitiba, PR',
+    },
+  ],
+};
+
+export const mockAdminClienteFinanceiro: Record<string, ClienteFinanceiro> = {
+  'cli-001': {
+    totalPago: 1_200_000,
+    saldoPendente: 650_000,
+    proximoVencimento: '2026-03-15',
+    valorProximoVencimento: 85_000,
+    pagamentos: [
+      {
+        id: 'pag-001',
+        data: '2025-01-15',
+        descricao: 'Parcela 3 - Reforma Residencial Vila Mariana',
+        valor: 85_000,
+        status: 'pago',
+      },
+      {
+        id: 'pag-002',
+        data: '2024-12-10',
+        descricao: 'Parcela Final - Construção Casa Alphaville',
+        valor: 200_000,
+        status: 'pago',
+      },
+      {
+        id: 'pag-003',
+        data: '2025-11-15',
+        descricao: 'Parcela 2 - Reforma Residencial Vila Mariana',
+        valor: 85_000,
+        status: 'pago',
+      },
+      {
+        id: 'pag-004',
+        data: '2026-03-15',
+        descricao: 'Parcela 4 - Reforma Residencial Vila Mariana',
+        valor: 85_000,
+        status: 'pendente',
+      },
+    ],
+  },
+  'cli-002': {
+    totalPago: 9_375_000,
+    saldoPendente: 3_125_000,
+    proximoVencimento: '2026-04-01',
+    valorProximoVencimento: 520_000,
+    pagamentos: [
+      {
+        id: 'pag-005',
+        data: '2026-01-20',
+        descricao: 'Parcela 8 - Edifício Residencial Aurora',
+        valor: 420_000,
+        status: 'pago',
+      },
+      {
+        id: 'pag-006',
+        data: '2025-12-20',
+        descricao: 'Parcela 7 - Edifício Residencial Aurora',
+        valor: 420_000,
+        status: 'pago',
+      },
+      {
+        id: 'pag-007',
+        data: '2026-04-01',
+        descricao: 'Parcela 9 - Edifício Residencial Aurora',
+        valor: 420_000,
+        status: 'pendente',
+      },
+      {
+        id: 'pag-008',
+        data: '2026-03-15',
+        descricao: 'Parcela 3 - Condomínio Jardim das Flores',
+        valor: 100_000,
+        status: 'atrasado',
+      },
+    ],
+  },
+};
+
+export const mockAdminClienteDocumentos: Record<string, ClienteDocumento[]> = {
+  'cli-001': [
+    { id: 'doc-001', nome: 'RG do Titular', tipo: 'pdf', dataEnvio: '2024-03-15' },
+    { id: 'doc-002', nome: 'Comprovante de Residência', tipo: 'pdf', dataEnvio: '2024-03-15' },
+    { id: 'doc-003', nome: 'Foto do Terreno', tipo: 'imagem', dataEnvio: '2024-04-02' },
+    { id: 'doc-004', nome: 'CPF', tipo: 'imagem', dataEnvio: '2024-03-15' },
+  ],
+  'cli-002': [
+    { id: 'doc-005', nome: 'Contrato Social', tipo: 'pdf', dataEnvio: '2024-01-10' },
+    { id: 'doc-006', nome: 'Comprovante de Endereço', tipo: 'pdf', dataEnvio: '2024-01-10' },
+    { id: 'doc-007', nome: 'RG do Representante', tipo: 'imagem', dataEnvio: '2024-01-11' },
+    { id: 'doc-008', nome: 'CNPJ', tipo: 'pdf', dataEnvio: '2024-01-10' },
+    { id: 'doc-009', nome: 'Alvará de Funcionamento', tipo: 'pdf', dataEnvio: '2024-01-12' },
+  ],
+};
+
+export const mockAdminClienteAtividades: Record<string, ClienteAtividade[]> = {
+  'cli-001': [
+    {
+      id: 'atv-001',
+      tipo: 'login',
+      titulo: 'Login realizado',
+      descricao: 'Acesso à plataforma via navegador',
+      dataHora: '2026-02-22T14:32:00',
+    },
+    {
+      id: 'atv-002',
+      tipo: 'obra_atualizada',
+      titulo: 'Obra atualizada',
+      descricao: 'Progresso da "Reforma Residencial Vila Mariana" atualizado para 45%',
+      dataHora: '2026-02-21T09:15:00',
+    },
+    {
+      id: 'atv-003',
+      tipo: 'pagamento',
+      titulo: 'Pagamento aprovado',
+      descricao: 'Parcela 3 - Reforma Residencial Vila Mariana no valor de R$ 85.000',
+      dataHora: '2026-01-15T16:45:00',
+    },
+    {
+      id: 'atv-004',
+      tipo: 'documento',
+      titulo: 'Documento enviado',
+      descricao: 'Foto do terreno adicionada à obra',
+      dataHora: '2026-01-10T11:20:00',
+    },
+    {
+      id: 'atv-005',
+      tipo: 'obra_concluida',
+      titulo: 'Obra concluída',
+      descricao: '"Construção Casa Alphaville" marcada como concluída',
+      dataHora: '2024-12-10T10:00:00',
+    },
+  ],
+  'cli-002': [
+    {
+      id: 'atv-006',
+      tipo: 'login',
+      titulo: 'Login realizado',
+      descricao: 'Acesso à plataforma via aplicativo móvel',
+      dataHora: '2026-02-20T08:10:00',
+    },
+    {
+      id: 'atv-007',
+      tipo: 'pagamento',
+      titulo: 'Pagamento aprovado',
+      descricao: 'Parcela 8 - Edifício Residencial Aurora no valor de R$ 420.000',
+      dataHora: '2026-01-20T15:30:00',
+    },
+    {
+      id: 'atv-008',
+      tipo: 'obra_atualizada',
+      titulo: 'Obra atualizada',
+      descricao: 'Progresso do "Edifício Residencial Aurora" atualizado para 72%',
+      dataHora: '2026-01-18T10:00:00',
     },
   ],
 };

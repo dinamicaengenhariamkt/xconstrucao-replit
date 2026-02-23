@@ -1,41 +1,50 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
-import { Button } from '@shared/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
-import { useAdminEmpreiteira } from '@features/admin/empreiteiras/hooks/use-empreiteiras';
+import { Textarea } from '@shared/components/ui/textarea';
+import { EmpreiteiraObrasSection } from '@features/admin/empreiteiras/components/EmpreiteiraObrasSection';
+import {
+  useAdminEmpreiteira,
+  useAdminEmpreiteiraObras,
+} from '@features/admin/empreiteiras/hooks/use-empreiteiras';
 import {
   RiArrowLeftLine,
+  RiArrowRightSLine,
   RiMailLine,
   RiPhoneLine,
   RiIdCardLine,
-  RiMapPinLine,
   RiCalendarLine,
-  RiUserLine,
-  RiBriefcaseLine,
-  RiMoneyDollarCircleLine,
-  RiWalletLine,
-  RiBuilding2Line,
-  RiStarFill,
-  RiStarLine,
+  RiEdit2Line,
+  RiLockPasswordLine,
+  RiIndeterminateCircleLine,
+  RiMapPinLine,
+  RiSaveLine,
   RiHammerLine,
+  RiMoneyDollarCircleLine,
+  RiCheckboxCircleLine,
+  RiStarFill,
+  RiBuilding2Line,
+  RiGlobalLine,
+  RiMedalLine,
+  RiUserStarLine,
 } from 'react-icons/ri';
 import type { EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-const statusConfig: Record<EmpreiteiraStatus, { label: string; className: string }> = {
-  ativa: { label: 'Ativa', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
-  inativa: { label: 'Inativa', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-  suspensa: { label: 'Suspensa', className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
-  pendente: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-};
+const formatDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString('pt-BR');
 
 function getInitials(name: string) {
   return name
@@ -47,61 +56,142 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-function StarRating({ nota }: { nota: number }) {
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    if (i <= Math.round(nota)) {
-      stars.push(<RiStarFill key={i} className="w-4 h-4 text-amber-400" />);
-    } else {
-      stars.push(<RiStarLine key={i} className="w-4 h-4 text-gray-300 dark:text-gray-600" />);
-    }
-  }
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<EmpreiteiraStatus, { label: string; className: string }> = {
+  ativa: {
+    label: 'Ativa',
+    className:
+      'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+  },
+  inativa: {
+    label: 'Inativa',
+    className:
+      'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+  },
+  suspensa: {
+    label: 'Suspensa',
+    className:
+      'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+  },
+  pendente: {
+    label: 'Pendente',
+    className:
+      'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+  },
+};
+
+const KPI_HOVER = {
+  whileHover: {
+    scale: 1.01 as number,
+    boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
+  },
+  transition: { duration: 0.2 },
+} as const;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function LabelValue({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-1">
-      {stars}
-      <span className="text-sm font-bold text-gray-900 dark:text-white ml-1">{nota.toFixed(1)}</span>
+    <div>
+      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">
+        {label}
+      </p>
+      <p className="text-sm text-gray-900 dark:text-white">{value}</p>
     </div>
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function AdminEmpreiteiraDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { data: empreiteira, isLoading } = useAdminEmpreiteira(id);
 
-  if (isLoading) {
+  const { data: empreiteira, isLoading: loadingEmpreiteira } = useAdminEmpreiteira(id);
+  const { data: obras = [], isLoading: loadingObras } = useAdminEmpreiteiraObras(id);
+
+  const kpis = useMemo(() => {
+    if (!empreiteira) return [];
+
+    const obrasConcluidas =
+      empreiteira.obrasConcluidas ?? obras.filter((o) => o.status === 'concluida').length;
+
+    const notaFormatted =
+      empreiteira.nota > 0
+        ? `${empreiteira.nota.toFixed(1).replace('.', ',')} / 5,0`
+        : '— / 5,0';
+
+    return [
+      {
+        label: 'Obras Ativas',
+        value: String(empreiteira.obrasEmAndamento),
+        sublabel: '+2 nos últimos 3 meses',
+        icon: RiHammerLine,
+        iconBg: 'bg-primary/10 dark:bg-primary/20',
+        iconColor: 'text-primary',
+      },
+      {
+        label: 'Volume Contratado',
+        value: formatCurrency(empreiteira.valorTotalContratado),
+        sublabel: 'Obras ativas e em execução',
+        icon: RiMoneyDollarCircleLine,
+        iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+        iconColor: 'text-emerald-600 dark:text-emerald-400',
+      },
+      {
+        label: 'Obras Concluídas',
+        value: String(obrasConcluidas),
+        sublabel: 'Nos últimos 24 meses',
+        icon: RiCheckboxCircleLine,
+        iconBg: 'bg-blue-50 dark:bg-blue-900/20',
+        iconColor: 'text-blue-600 dark:text-blue-400',
+      },
+      {
+        label: 'Índice de Desempenho',
+        value: notaFormatted,
+        sublabel: 'Média de avaliações dos contratantes',
+        icon: RiStarFill,
+        iconBg: 'bg-amber-50 dark:bg-amber-900/20',
+        iconColor: 'text-amber-500 dark:text-amber-400',
+      },
+    ];
+  }, [empreiteira, obras]);
+
+  // ─── Loading ──────────────────────────────────────────────────────────────
+
+  if (loadingEmpreiteira) {
     return (
       <div className="p-6 md:p-10 space-y-8">
-        <Skeleton className="h-9 w-32" />
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-16 w-16 rounded-full" />
-          <div>
-            <Skeleton className="h-7 w-56" />
-            <Skeleton className="h-5 w-36 mt-2" />
-          </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-40" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-2xl" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Skeleton className="h-52 rounded-3xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
+            <Skeleton key={i} className="h-28 rounded-3xl" />
           ))}
         </div>
+        <Skeleton className="h-64 rounded-3xl" />
+        <Skeleton className="h-52 rounded-3xl" />
+        <Skeleton className="h-96 rounded-3xl" />
       </div>
     );
   }
 
+  // ─── Not found ────────────────────────────────────────────────────────────
+
   if (!empreiteira) {
     return (
       <div className="p-6 md:p-10 space-y-8">
-        <Link href="/admin/empreiteiras" data-testid="link-back-empreiteiras">
-          <Button variant="ghost" size="sm" data-testid="button-back-empreiteiras">
-            <RiArrowLeftLine className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+        <Link
+          href="/admin/empreiteiras"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
+          data-testid="link-back-empreiteiras"
+        >
+          <RiArrowLeftLine className="w-4 h-4" />
+          Voltar para Empreiteiras
         </Link>
         <div className="text-center py-16">
           <RiBuilding2Line className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -111,172 +201,323 @@ export default function AdminEmpreiteiraDetailPage() {
     );
   }
 
-  const status = statusConfig[empreiteira.status];
+  const status = STATUS_CONFIG[empreiteira.status];
 
-  const infoItems = [
-    { icon: RiIdCardLine, label: 'CNPJ', value: empreiteira.cnpj },
-    { icon: RiMailLine, label: 'Email', value: empreiteira.email },
-    { icon: RiPhoneLine, label: 'Telefone', value: empreiteira.telefone },
-    { icon: RiUserLine, label: 'Responsável', value: empreiteira.responsavel },
-    { icon: RiMapPinLine, label: 'Endereço', value: `${empreiteira.endereco}, ${empreiteira.cidade} - ${empreiteira.estado}` },
-    { icon: RiCalendarLine, label: 'Data Cadastro', value: new Date(empreiteira.dataCadastro).toLocaleDateString('pt-BR') },
-  ];
-
-  const kpis = [
-    { icon: RiBriefcaseLine, label: 'Total Obras', value: String(empreiteira.totalObras), iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
-    { icon: RiHammerLine, label: 'Em Andamento', value: String(empreiteira.obrasEmAndamento), iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' },
-    { icon: RiMoneyDollarCircleLine, label: 'Valor Contratado', value: formatCurrency(empreiteira.valorTotalContratado), iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20' },
-    { icon: RiWalletLine, label: 'Valor Recebido', value: formatCurrency(empreiteira.valorTotalRecebido), iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' },
-  ];
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 md:p-10 space-y-8" data-testid="admin-empreiteira-detail-page">
-      <Link href="/admin/empreiteiras" data-testid="link-back-empreiteiras">
-        <Button variant="ghost" size="sm" data-testid="button-back-empreiteiras">
-          <RiArrowLeftLine className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-      </Link>
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <Avatar className="h-16 w-16" data-testid="avatar-empreiteira-detail">
-          {empreiteira.avatarUrl && <AvatarImage src={empreiteira.avatarUrl} alt={empreiteira.razaoSocial} />}
-          <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold">
-            {getInitials(empreiteira.nomeFantasia)}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">{empreiteira.razaoSocial}</h1>
-            <Badge
-              className={cn('rounded-full text-[10px] font-bold px-2.5 py-0.5 no-default-hover-elevate no-default-active-elevate', status.className)}
-              data-testid="badge-status-detail"
-            >
-              {status.label}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">{empreiteira.nomeFantasia}</p>
+      {/* ① Breadcrumb */}
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/admin/empreiteiras"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
+          data-testid="link-back-empreiteiras"
+        >
+          <RiArrowLeftLine className="w-4 h-4" />
+          Voltar para Empreiteiras
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm">
+          <Link href="/admin/empreiteiras" className="text-muted-foreground hover:text-primary transition-colors">
+            Empreiteiras
+          </Link>
+          <RiArrowRightSLine className="w-4 h-4 text-gray-400" />
+          <span className="font-bold text-gray-900 dark:text-white">{empreiteira.razaoSocial}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {infoItems.map((item) => (
-          <Card key={item.label} className="rounded-2xl" data-testid={`info-${item.label.toLowerCase().replace(/[\s/]/g, '-')}`}>
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-muted-foreground">
-                <item.icon className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{item.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* ② Hero Card */}
+      <Card className="rounded-3xl" data-testid="card-hero-empreiteira">
+        <CardContent className="p-8">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">Especialidades</p>
-          <div className="flex flex-wrap gap-1.5">
-            {empreiteira.especialidades.map((esp) => (
-              <Badge
-                key={esp}
-                variant="outline"
-                className="text-xs px-2.5 py-0.5 rounded-full no-default-hover-elevate no-default-active-elevate"
-                data-testid={`badge-especialidade-detail-${esp}`}
-              >
-                {esp}
-              </Badge>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">Avaliação</p>
-          <StarRating nota={empreiteira.nota} />
-        </div>
-      </div>
+            {/* Avatar + Dados */}
+            <div className="flex flex-col sm:flex-row gap-6">
+              <Avatar className="h-20 w-20 flex-shrink-0" data-testid="avatar-empreiteira-detail">
+                {empreiteira.avatarUrl && (
+                  <AvatarImage src={empreiteira.avatarUrl} alt={empreiteira.razaoSocial} />
+                )}
+                <AvatarFallback className="bg-primary text-white text-2xl font-bold rounded-full">
+                  {getInitials(empreiteira.nomeFantasia || empreiteira.razaoSocial)}
+                </AvatarFallback>
+              </Avatar>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.label} className="rounded-2xl" data-testid={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className={cn('p-2 rounded-lg', kpi.iconBg)}>
-                  <kpi.icon className="w-4 h-4" />
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    {empreiteira.razaoSocial}
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1">{empreiteira.nomeFantasia}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">{kpi.label}</p>
+
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiIdCardLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>CNPJ: {empreiteira.cnpj}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiHammerLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{empreiteira.especialidades.join(' · ')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiMapPinLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{empreiteira.cidade} - {empreiteira.estado}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiCalendarLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>Cadastrado em: {formatDate(empreiteira.dataCadastro)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-1">
+                  <Badge
+                    className={cn(
+                      'inline-flex rounded-full text-xs font-bold px-3 py-1 no-default-hover-elevate no-default-active-elevate',
+                      status.className,
+                    )}
+                    data-testid="badge-status-detail"
+                  >
+                    {status.label}
+                  </Badge>
+                </div>
               </div>
-              <p className="text-xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
 
-      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-800">
-        <Link href={`/admin/empreiteiras/${id}`} data-testid="tab-cadastro">
-          <Button
-            variant="ghost"
-            className="rounded-none border-b-2 border-primary font-bold text-primary"
-            data-testid="button-tab-cadastro"
-          >
-            Cadastro
-          </Button>
-        </Link>
-        <Link href={`/admin/empreiteiras/${id}/obras`} data-testid="tab-obras">
-          <Button variant="ghost" className="rounded-none text-muted-foreground" data-testid="button-tab-obras">
-            Obras
-          </Button>
-        </Link>
-      </div>
-
-      <Card className="rounded-2xl" data-testid="card-cadastro-details">
-        <CardContent className="p-6">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Dados do Cadastro</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground">Razão Social</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.razaoSocial}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Nome Fantasia</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.nomeFantasia}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">CNPJ</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.cnpj}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Email</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.email}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Telefone</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.telefone}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Responsável</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{empreiteira.responsavel}</p>
-            </div>
-            <div className="sm:col-span-2">
-              <p className="text-xs text-muted-foreground">Endereço completo</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {empreiteira.endereco}, {empreiteira.cidade} - {empreiteira.estado}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Data de Cadastro</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {new Date(empreiteira.dataCadastro).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Status</p>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">{status.label}</p>
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 lg:flex-shrink-0">
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                data-testid="button-editar-dados"
+              >
+                <RiEdit2Line className="w-4 h-4" />
+                Editar Dados
+              </button>
+              <button
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40"
+                data-testid="button-bloquear"
+              >
+                <RiIndeterminateCircleLine className="w-4 h-4" />
+                Bloquear Empreiteira
+              </button>
+              <button
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                data-testid="button-reset-acesso"
+              >
+                <RiLockPasswordLine className="w-4 h-4" />
+                Resetar Acesso
+              </button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* ③ KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpis.map((kpi) => (
+          <motion.div
+            key={kpi.label}
+            className="rounded-3xl overflow-visible"
+            {...KPI_HOVER}
+          >
+            <Card
+              className="h-full rounded-3xl"
+              data-testid={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0 pr-3">
+                    <p className="text-sm text-muted-foreground font-medium">{kpi.label}</p>
+                    <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-2 leading-tight tabular-nums">
+                      {kpi.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium mt-1 truncate">{kpi.sublabel}</p>
+                  </div>
+                  <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0', kpi.iconBg)}>
+                    <kpi.icon className={cn('w-6 h-6', kpi.iconColor)} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ④ Dados Cadastrais e Endereço */}
+      <Card className="rounded-3xl" data-testid="card-dados-cadastrais">
+        <CardContent className="p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <RiBuilding2Line className="w-6 h-6 text-primary" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Dados Cadastrais e Endereço
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Esquerda: Dados da empresa */}
+            <div className="flex flex-col gap-4">
+              <LabelValue label="Razão Social" value={empreiteira.razaoSocial} />
+              <LabelValue label="Nome Fantasia" value={empreiteira.nomeFantasia} />
+              <LabelValue label="CNPJ" value={empreiteira.cnpj} />
+              <LabelValue label="Inscrição Estadual" value={empreiteira.inscricaoEstadual ?? '—'} />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-2">
+                  Especialidades
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {empreiteira.especialidades.map((esp) => (
+                    <Badge
+                      key={esp}
+                      variant="outline"
+                      className="rounded-full text-xs px-2.5 py-0.5 no-default-hover-elevate no-default-active-elevate"
+                      data-testid={`badge-especialidade-detail-${esp}`}
+                    >
+                      {esp}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Direita: Endereço e contato */}
+            <div className="flex flex-col gap-4">
+              <LabelValue
+                label="Endereço"
+                value={
+                  empreiteira.bairro
+                    ? `${empreiteira.endereco}, ${empreiteira.bairro}`
+                    : empreiteira.endereco
+                }
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <LabelValue label="Cidade" value={empreiteira.cidade} />
+                <LabelValue label="Estado" value={empreiteira.estado} />
+              </div>
+              <LabelValue label="CEP" value={empreiteira.cep ?? '—'} />
+              <LabelValue label="E-mail da empresa" value={empreiteira.email} />
+              <LabelValue label="Telefone comercial" value={empreiteira.telefone} />
+              <div>
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">
+                  Site
+                </p>
+                {empreiteira.site ? (
+                  <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                    <RiGlobalLine className="w-4 h-4 flex-shrink-0" />
+                    <span>{empreiteira.site.replace(/^https?:\/\//, '')}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-900 dark:text-white">—</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Observações internas */}
+          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">
+              Observações internas
+            </p>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              Visível apenas para administradores da plataforma
+            </p>
+            <Textarea
+              className="h-32 bg-gray-50 dark:bg-gray-800/50 resize-none text-sm"
+              placeholder="Adicione observações internas sobre esta empreiteira..."
+              defaultValue={empreiteira.observacoes ?? ''}
+              data-testid="textarea-observacoes"
+            />
+            <div className="flex justify-end mt-4">
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                data-testid="button-salvar-observacoes"
+              >
+                <RiSaveLine className="w-4 h-4" />
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ⑤ Responsável Técnico */}
+      <Card className="rounded-3xl" data-testid="card-responsavel-tecnico">
+        <CardContent className="p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <RiUserStarLine className="w-6 h-6 text-primary" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Responsável Técnico
+            </h2>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Avatar */}
+            <Avatar className="h-16 w-16 flex-shrink-0">
+              <AvatarFallback className="bg-blue-600 text-white text-lg font-bold rounded-full">
+                {getInitials(empreiteira.responsavel)}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Dados do responsável */}
+            <div className="flex flex-col gap-3 flex-1">
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {empreiteira.responsavel}
+                  </h3>
+                  {empreiteira.responsavelProfissao && (
+                    <Badge
+                      variant="outline"
+                      className="rounded-full text-xs px-2.5 py-0.5 no-default-hover-elevate no-default-active-elevate"
+                    >
+                      {empreiteira.responsavelProfissao}
+                    </Badge>
+                  )}
+                </div>
+                {empreiteira.responsavelRegistro && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    <RiMedalLine className="w-4 h-4 flex-shrink-0" />
+                    <span>{empreiteira.responsavelRegistro}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                {empreiteira.responsavelEmail && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiMailLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{empreiteira.responsavelEmail}</span>
+                  </div>
+                )}
+                {empreiteira.responsavelTelefone && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <RiPhoneLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span>{empreiteira.responsavelTelefone}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <Badge className="rounded-full text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 no-default-hover-elevate no-default-active-elevate">
+                  Ativo na plataforma
+                </Badge>
+                {empreiteira.obrasEmAndamento > 0 && (
+                  <Badge className="rounded-full text-xs px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 no-default-hover-elevate no-default-active-elevate">
+                    Responsável por {empreiteira.obrasEmAndamento} obras em andamento
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ⑥ Obras desta empreiteira */}
+      <EmpreiteiraObrasSection
+        empreiteiraId={id}
+        obras={obras}
+        isLoading={loadingObras}
+      />
+
     </div>
   );
 }
