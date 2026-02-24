@@ -23,5 +23,5 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
 
 export const ADMIN_BOTTOM_NAV_ITEMS: NavItem[] = [
   { title: 'Perguntas Frequentes', url: '/admin/faq', icon: RiQuestionLine },
-  { title: 'Configurações', url: '/admin/config', icon: RiSettings3Line },
+  { title: 'Configurações', url: '/admin/configuracoes', icon: RiSettings3Line },
 ];

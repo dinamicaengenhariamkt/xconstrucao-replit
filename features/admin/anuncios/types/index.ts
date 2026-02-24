@@ -1,26 +1,61 @@
-export type AnuncioStatus = 'ativo' | 'pausado' | 'expirado' | 'rascunho';
-export type AnuncioTipo = 'banner' | 'destaque' | 'notificacao' | 'popup';
+export type AnuncioStatus = 'ativa' | 'pausada' | 'expirada' | 'agendada';
+export type AnuncioZonaStatus = 'ativo' | 'vazio';
+export type AnuncioZonaId =
+  | 'sidebar-sup-contratante'
+  | 'sidebar-inf-contratante'
+  | 'sidebar-sup-empreiteiro'
+  | 'sidebar-inf-empreiteiro'
+  | 'banner-dashboard-contratante'
+  | 'banner-dashboard-empreiteiro'
+  | 'banner-qa';
 
-export interface Anuncio {
+export interface AnuncioKpi {
+  receitaAnuncios: number;
+  receitaCrescimentoPercent: number;
+  campanhasAtivas: number;
+  impressoes: number;
+  cliques: number;
+  ctrMedio: number;
+  anunciantesAtivos: number;
+  campanhasExpirando: number;
+}
+
+export interface ZonaAnuncio {
+  id: AnuncioZonaId;
+  nome: string;
+  descricao: string;
+  icone: 'web' | 'dashboard' | 'help';
+  status: AnuncioZonaStatus;
+  anuncioAtual?: string;
+}
+
+export interface Campanha {
   id: string;
   titulo: string;
-  descricao: string;
-  tipo: AnuncioTipo;
-  status: AnuncioStatus;
+  subtitulo: string;
+  anunciante: string;
+  anuncianteEmail: string;
+  zona: string;
+  zonaId: AnuncioZonaId;
   dataInicio: string;
   dataFim: string;
   impressoes: number;
   cliques: number;
   ctr: number;
-  imagemUrl?: string;
-  publicoAlvo: string;
-  criadorPor: string;
+  receita: number;
+  status: AnuncioStatus;
 }
 
-export interface AnuncioResumo {
-  totalAnuncios: number;
-  ativos: number;
-  impressoesTotais: number;
-  cliquesTotais: number;
-  ctrMedio: number;
+export interface Anunciante {
+  id: string;
+  nome: string;
+  sigla: string;
+  corBg: string;
+  corTexto: string;
+  contato: string;
+  email: string;
+  telefone: string;
+  campanhasAtivas: number;
+  receitaTotal: number;
+  status: 'ativo' | 'inativo';
 }

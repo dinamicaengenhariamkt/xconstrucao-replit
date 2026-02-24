@@ -2,9 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { FilterChips } from '@features/shared/components/FilterChips';
-import { FAQHero } from '@features/empreiteiro/faq/components/FAQHero';
-import { FAQCategory } from '@features/empreiteiro/faq/components/FAQCategory';
-import { FAQSkeleton } from '@features/empreiteiro/faq/components/FAQSkeleton';
+import { FAQHero } from '@features/shared/faq/FAQHero';
+import { FAQAccordionItem } from '@features/shared/faq/FAQAccordionItem';
+import { FAQCategoryGroup } from '@features/shared/faq/FAQCategoryGroup';
+import { FAQSkeleton } from '@features/shared/faq/FAQSkeleton';
+import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { useFAQ } from '@features/empreiteiro/faq/hooks/use-faq';
 import { FAQ_CATEGORIES } from '@features/empreiteiro/faq/constants';
 import type { FilterChipOption } from '@features/shared/types';
@@ -13,6 +15,7 @@ export default function FAQPage() {
   const { data: items, isLoading } = useFAQ();
   const [activeCategory, setActiveCategory] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
 
   const categoryOptions: FilterChipOption[] = useMemo(() => {
     if (!items) return [];
@@ -54,19 +57,29 @@ export default function FAQPage() {
 
   return (
     <div className="p-10 flex flex-col gap-8">
-      <FAQHero searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <FAQHero
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        data-testid="input-search-faq"
+      />
       <FilterChips options={categoryOptions} activeValue={activeCategory} onSelect={setActiveCategory} />
       <div className="flex flex-col gap-6">
         {Object.entries(groupedItems).map(([category, categoryItems]) => (
-          <FAQCategory key={category} title={FAQ_CATEGORIES[category] || category} items={categoryItems} />
+          <FAQCategoryGroup key={category} title={FAQ_CATEGORIES[category] || category}>
+            {categoryItems.map((item) => (
+              <FAQAccordionItem
+                key={item.id}
+                id={item.id}
+                question={item.question}
+                isOpen={openItemId === item.id}
+                onToggle={() => setOpenItemId(openItemId === item.id ? null : item.id)}
+              >
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{item.answer}</p>
+              </FAQAccordionItem>
+            ))}
+          </FAQCategoryGroup>
         ))}
-        {filteredItems.length === 0 && (
-          <div className="text-center py-16">
-            <span className="material-symbols-outlined text-5xl text-gray-300 mb-4 block">search_off</span>
-            <h3 className="text-lg font-bold text-gray-500">Nenhuma pergunta encontrada</h3>
-            <p className="text-sm text-gray-400 mt-1">Tente alterar os filtros ou a busca.</p>
-          </div>
-        )}
+        {filteredItems.length === 0 && <FAQEmptyState />}
       </div>
     </div>
   );

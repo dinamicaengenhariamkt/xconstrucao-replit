@@ -17,6 +17,9 @@ export const useThemeStore = create<ThemeState>()(
           theme: state.theme === "light" ? "dark" : "light",
         })),
     }),
-    { name: "xconstrucao-theme" }
+    {
+      name: "xconstrucao-theme",
+      skipHydration: true,
+    }
   )
 );
