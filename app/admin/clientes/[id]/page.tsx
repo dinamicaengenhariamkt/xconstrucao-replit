@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -16,6 +16,9 @@ import { ClienteObrasTab } from '@features/admin/clientes/components/ClienteObra
 import { ClienteFinanceiroTab } from '@features/admin/clientes/components/ClienteFinanceiroTab';
 import { ClienteDocumentosTab } from '@features/admin/clientes/components/ClienteDocumentosTab';
 import { ClienteHistoricoTab } from '@features/admin/clientes/components/ClienteHistoricoTab';
+import { EditarClienteModal } from '@features/admin/clientes/components/EditarClienteModal';
+import { ResetarSenhaModal } from '@features/admin/clientes/components/ResetarSenhaModal';
+import { BloquearClienteModal } from '@features/admin/clientes/components/BloquearClienteModal';
 import {
   useAdminCliente,
   useAdminClienteObras,
@@ -104,6 +107,10 @@ const TABS = ['obras', 'financeiro', 'documentos', 'historico'] as const;
 export default function AdminClienteDetailPage() {
   const params = useParams();
   const id = params.id as string;
+
+  const [editarOpen, setEditarOpen] = useState(false);
+  const [resetarOpen, setResetarOpen] = useState(false);
+  const [bloquearOpen, setBloquearOpen] = useState(false);
 
   const { data: cliente, isLoading: loadingCliente } = useAdminCliente(id);
   const { data: obras = [], isLoading: loadingObras } = useAdminClienteObras(id);
@@ -277,6 +284,7 @@ export default function AdminClienteDetailPage() {
             <div className="flex flex-wrap gap-3 lg:flex-shrink-0">
               <button
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                onClick={() => setEditarOpen(true)}
                 data-testid="button-editar-dados"
               >
                 <RiEdit2Line className="w-4 h-4" />
@@ -284,6 +292,7 @@ export default function AdminClienteDetailPage() {
               </button>
               <button
                 className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                onClick={() => setResetarOpen(true)}
                 data-testid="button-reset-senha"
               >
                 <RiLockPasswordLine className="w-4 h-4" />
@@ -296,6 +305,7 @@ export default function AdminClienteDetailPage() {
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40'
                     : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40',
                 )}
+                onClick={() => setBloquearOpen(true)}
                 data-testid="button-bloquear"
               >
                 <RiIndeterminateCircleLine className="w-4 h-4" />
@@ -436,6 +446,25 @@ export default function AdminClienteDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modais */}
+      <EditarClienteModal
+        open={editarOpen}
+        onOpenChange={setEditarOpen}
+        cliente={cliente}
+      />
+      <ResetarSenhaModal
+        open={resetarOpen}
+        onOpenChange={setResetarOpen}
+        clienteId={cliente.id}
+        nomeCliente={cliente.nome}
+        emailCliente={cliente.email}
+      />
+      <BloquearClienteModal
+        open={bloquearOpen}
+        onOpenChange={setBloquearOpen}
+        cliente={cliente}
+      />
 
     </div>
   );

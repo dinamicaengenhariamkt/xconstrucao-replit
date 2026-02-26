@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import { spawn } from "child_process";
 
 const nextProcess = spawn("npx", ["next", "dev", "-p", "5000", "-H", "0.0.0.0"], {

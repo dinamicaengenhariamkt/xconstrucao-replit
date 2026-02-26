@@ -70,7 +70,7 @@
   --color-brand-bg-dark: #1C1F22;
   --color-brand-surface-dark: #2A2D30;
 
-  --font-sans: "Manrope", sans-serif;
+  --font-sans: var(--font-manrope), sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
 

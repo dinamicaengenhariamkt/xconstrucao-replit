@@ -5,7 +5,13 @@ import { cn } from '@shared/lib/utils';
 import { FilterChips } from '@features/shared/components/FilterChips';
 import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { useAdminFAQ } from '@features/admin/faq/hooks/use-faq';
-import { ADMIN_FAQ_CATEGORIES, ADMIN_FAQ_CATEGORY_META } from '@features/admin/faq/constants';
+import {
+  ADMIN_FAQ_CATEGORIES,
+  ADMIN_FAQ_CATEGORY_META,
+  ADMIN_FAQ_VISAO_LABELS,
+  ADMIN_FAQ_VISAO_COLORS,
+} from '@features/admin/faq/constants';
+import { NovaPerguntaModal } from '@features/admin/faq/components/NovaPerguntaModal';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
@@ -22,6 +28,7 @@ import {
   RiWalletLine,
   RiBuildingLine,
   RiSettings3Line,
+  RiEditLine,
 } from 'react-icons/ri';
 import type { FilterChipOption } from '@features/shared/types';
 import type { AdminFAQItem } from '@features/admin/faq/types';
@@ -127,10 +134,12 @@ function AdminFAQAccordion({
   item,
   isOpen,
   onToggle,
+  onEdit,
 }: {
   item: AdminFAQItem;
   isOpen: boolean;
   onToggle: () => void;
+  onEdit: () => void;
 }) {
   return (
     <div
@@ -171,6 +180,16 @@ function AdminFAQAccordion({
             >
               {item.ativo ? 'Ativo' : 'Inativo'}
             </Badge>
+            <Badge
+              variant="secondary"
+              className={cn(
+                'no-default-hover-elevate no-default-active-elevate rounded-full text-xs',
+                ADMIN_FAQ_VISAO_COLORS[item.visao]
+              )}
+              data-testid={`badge-visao-${item.id}`}
+            >
+              {ADMIN_FAQ_VISAO_LABELS[item.visao]}
+            </Badge>
           </div>
         </div>
         <RiArrowDownSLine
@@ -183,13 +202,24 @@ function AdminFAQAccordion({
       {isOpen && (
         <div className="px-5 pb-5 border-t border-gray-100 dark:border-gray-800 pt-4">
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{item.answer}</p>
-          <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <RiCalendarLine className="w-3 h-3" />
-              <span>Atualizado em {formatDate(item.atualizadoEm)}</span>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <RiCalendarLine className="w-3 h-3" />
+                <span>Atualizado em {formatDate(item.atualizadoEm)}</span>
+              </div>
+              <span>Ordem: {item.ordem}</span>
+              <span>Criado em: {formatDate(item.criadoEm)}</span>
             </div>
-            <span>Ordem: {item.ordem}</span>
-            <span>Criado em: {formatDate(item.criadoEm)}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              data-testid={`button-editar-${item.id}`}
+            >
+              <RiEditLine className="w-3.5 h-3.5 mr-1.5" />
+              Editar
+            </Button>
           </div>
         </div>
       )}
@@ -200,8 +230,11 @@ function AdminFAQAccordion({
 export default function AdminFAQPage() {
   const { data: items, isLoading } = useAdminFAQ();
   const [activeCategory, setActiveCategory] = useState('todas');
+  const [activeVisao, setActiveVisao] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<AdminFAQItem | null>(null);
 
   const categoryOptions: FilterChipOption[] = useMemo(() => {
     if (!items) return [];
@@ -215,11 +248,40 @@ export default function AdminFAQPage() {
     ];
   }, [items]);
 
+  const visaoOptions: FilterChipOption[] = useMemo(() => {
+    if (!items) return [];
+    return [
+      { label: 'Todas', value: 'todas', count: items.length },
+      {
+        label: 'Contratante',
+        value: 'contratante',
+        count: items.filter((i) => i.visao === 'contratante' || i.visao === 'ambos').length,
+      },
+      {
+        label: 'Empreiteiro',
+        value: 'empreiteiro',
+        count: items.filter((i) => i.visao === 'empreiteiro' || i.visao === 'ambos').length,
+      },
+      {
+        label: 'Ambas',
+        value: 'ambos',
+        count: items.filter((i) => i.visao === 'ambos').length,
+      },
+    ];
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     if (!items) return [];
     let result = items;
     if (activeCategory !== 'todas') {
       result = result.filter((i) => i.category === activeCategory);
+    }
+    if (activeVisao !== 'todas') {
+      result = result.filter((i) =>
+        activeVisao === 'ambos'
+          ? i.visao === 'ambos'
+          : i.visao === activeVisao || i.visao === 'ambos'
+      );
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -228,7 +290,7 @@ export default function AdminFAQPage() {
       );
     }
     return result;
-  }, [items, activeCategory, searchQuery]);
+  }, [items, activeCategory, activeVisao, searchQuery]);
 
   const groupedItems = useMemo(() => {
     const groups: Record<string, AdminFAQItem[]> = {};
@@ -239,7 +301,17 @@ export default function AdminFAQPage() {
     return groups;
   }, [filteredItems]);
 
-  const showGrid = activeCategory === 'todas' && !searchQuery.trim();
+  const showGrid = activeCategory === 'todas' && activeVisao === 'todas' && !searchQuery.trim();
+
+  const handleOpenEdit = (item: AdminFAQItem) => {
+    setEditItem(item);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenNew = () => {
+    setEditItem(null);
+    setIsModalOpen(true);
+  };
 
   if (isLoading) {
     return <FAQPageSkeleton />;
@@ -249,7 +321,7 @@ export default function AdminFAQPage() {
     <div className="p-10 flex flex-col gap-10" data-testid="admin-faq-page">
       {/* Botão Nova Pergunta */}
       <div className="flex justify-end">
-        <Button data-testid="button-nova-pergunta">
+        <Button onClick={handleOpenNew} data-testid="button-nova-pergunta">
           <RiAddLine className="w-4 h-4 mr-2" />
           Nova Pergunta
         </Button>
@@ -278,12 +350,16 @@ export default function AdminFAQPage() {
         </div>
       </div>
 
-      {/* FilterChips centralizados */}
-      <div className="flex justify-center">
+      {/* Filtros centralizados */}
+      <div className="flex flex-col items-center gap-3">
         <FilterChips options={categoryOptions} activeValue={activeCategory} onSelect={setActiveCategory} />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 font-medium">Visão:</span>
+          <FilterChips options={visaoOptions} activeValue={activeVisao} onSelect={setActiveVisao} />
+        </div>
       </div>
 
-      {/* Grid de categorias (visível apenas em "Todas" sem busca) */}
+      {/* Grid de categorias (visível apenas em "Todas" sem filtros/busca) */}
       {showGrid && items && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Object.entries(ADMIN_FAQ_CATEGORIES).map(([key, label]) => (
@@ -310,6 +386,7 @@ export default function AdminFAQPage() {
                   item={item}
                   isOpen={openItemId === item.id}
                   onToggle={() => setOpenItemId(openItemId === item.id ? null : item.id)}
+                  onEdit={() => handleOpenEdit(item)}
                 />
               ))}
             </div>
@@ -317,6 +394,12 @@ export default function AdminFAQPage() {
         ))}
         {filteredItems.length === 0 && <FAQEmptyState />}
       </div>
+
+      <NovaPerguntaModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        editItem={editItem}
+      />
     </div>
   );
 }

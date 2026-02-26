@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["pg", "bcryptjs"],
   allowedDevOrigins: devOrigins,
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        aggregateTimeout: 500,
+        ignored: /\.next/,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

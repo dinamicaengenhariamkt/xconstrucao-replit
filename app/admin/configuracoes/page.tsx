@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   RiSettings3Line,
   RiBellLine,
@@ -18,7 +19,9 @@ import {
   RiSmartphoneLine,
   RiCheckLine,
   RiAlertLine,
+  RiUser3Line,
 } from 'react-icons/ri';
+import { useAuth } from '@features/auth/hooks/use-auth';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -32,14 +35,17 @@ import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 
 /* ── Types ── */
-type Section = 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
+type Section = 'perfil' | 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
+
+const VALID_SECTIONS: Section[] = ['perfil', 'geral', 'notificacoes', 'plataforma', 'seguranca', 'integracoes'];
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: 'geral',        label: 'Geral',         icon: RiSettings3Line },
-  { id: 'notificacoes', label: 'Notificações',   icon: RiBellLine },
-  { id: 'plataforma',   label: 'Plataforma',     icon: RiToggleLine },
-  { id: 'seguranca',    label: 'Segurança',      icon: RiShieldLine },
-  { id: 'integracoes',  label: 'Integrações',    icon: RiPlugLine },
+  { id: 'perfil',       label: 'Perfil',         icon: RiUser3Line },
+  { id: 'geral',        label: 'Geral',           icon: RiSettings3Line },
+  { id: 'notificacoes', label: 'Notificações',    icon: RiBellLine },
+  { id: 'plataforma',   label: 'Plataforma',      icon: RiToggleLine },
+  { id: 'seguranca',    label: 'Segurança',       icon: RiShieldLine },
+  { id: 'integracoes',  label: 'Integrações',     icon: RiPlugLine },
 ];
 
 /* ── Helpers ── */
@@ -115,6 +121,129 @@ function SelectField({
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SECTION: Perfil
+───────────────────────────────────────────── */
+function SecaoPerfil() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [dados, setDados] = useState({
+    nome: user?.name ?? '',
+    email: user?.email ?? '',
+    telefone: '',
+  });
+
+  const [senha, setSenha] = useState({
+    atual: '',
+    nova: '',
+    confirmar: '',
+  });
+
+  const senhaError = senha.nova && senha.confirmar && senha.nova !== senha.confirmar;
+  const senhaValida = senha.atual && senha.nova && senha.confirmar && !senhaError;
+
+  const setDado = (key: keyof typeof dados) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setDados((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setSenha((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleSaveDados = () => {
+    toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+  };
+
+  const handleAlterarSenha = () => {
+    if (!senhaValida) return;
+    toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
+    setSenha({ atual: '', nova: '', confirmar: '' });
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Dados pessoais */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-0">
+          <SectionTitle>Dados pessoais</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-4 flex flex-col gap-5">
+          <FieldRow label="Nome completo">
+            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" />
+          </FieldRow>
+          <FieldRow label="E-mail" description="Usado para login e comunicações da plataforma.">
+            <Input type="email" value={dados.email} onChange={setDado('email')} placeholder="seu@email.com" />
+          </FieldRow>
+          <FieldRow label="Telefone" description="Número de contato para suporte e autenticação.">
+            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" />
+          </FieldRow>
+          <FieldRow label="Cargo" description="Definido pelo sistema. Contate o suporte para alterar.">
+            <Input value="Administrador" disabled className="opacity-60 cursor-not-allowed" />
+          </FieldRow>
+          <div className="flex justify-end">
+            <button
+              onClick={handleSaveDados}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+            >
+              <RiSave3Line className="w-4 h-4" />
+              Salvar dados
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Segurança da conta */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-0">
+          <SectionTitle>Segurança da conta</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-4 flex flex-col gap-5">
+          <FieldRow label="Senha atual">
+            <Input
+              type="password"
+              value={senha.atual}
+              onChange={setSenhaField('atual')}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </FieldRow>
+          <FieldRow label="Nova senha" description="Mínimo de 8 caracteres.">
+            <Input
+              type="password"
+              value={senha.nova}
+              onChange={setSenhaField('nova')}
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+          </FieldRow>
+          <FieldRow label="Confirmar nova senha">
+            <Input
+              type="password"
+              value={senha.confirmar}
+              onChange={setSenhaField('confirmar')}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              className={cn(senhaError ? 'border-red-400 focus-visible:ring-red-400' : '')}
+            />
+            {senhaError && (
+              <p className="text-xs text-red-500 mt-1">As senhas não coincidem.</p>
+            )}
+          </FieldRow>
+          <div className="flex justify-end">
+            <button
+              onClick={handleAlterarSenha}
+              disabled={!senhaValida}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RiLockPasswordLine className="w-4 h-4" />
+              Alterar senha
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -838,6 +967,7 @@ function SecaoIntegracoes() {
 ───────────────────────────────────────────── */
 
 const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
+  perfil:       SecaoPerfil,
   geral:        SecaoGeral,
   notificacoes: SecaoNotificacoes,
   plataforma:   SecaoPlataforma,
@@ -845,9 +975,28 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   integracoes:  SecaoIntegracoes,
 };
 
-export default function AdminConfiguracoesPage() {
-  const [activeSection, setActiveSection] = useState<Section>('geral');
+/* ── SearchParams reader (needs Suspense) ── */
+function SearchParamsReader({ onSection }: { onSection: (s: Section) => void }) {
+  const searchParams = useSearchParams();
+  const stableOnSection = useCallback(onSection, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const tab = searchParams.get('tab') as Section | null;
+    if (tab && VALID_SECTIONS.includes(tab)) {
+      stableOnSection(tab);
+    }
+  }, [searchParams, stableOnSection]);
+
+  return null;
+}
+
+function AdminConfiguracoesInner({
+  activeSection,
+  setActiveSection,
+}: {
+  activeSection: Section;
+  setActiveSection: (s: Section) => void;
+}) {
   const SectionComponent = SECTION_COMPONENTS[activeSection];
 
   return (
@@ -920,5 +1069,18 @@ export default function AdminConfiguracoesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminConfiguracoesPage() {
+  const [activeSection, setActiveSection] = useState<Section>('geral');
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <SearchParamsReader onSection={setActiveSection} />
+      </Suspense>
+      <AdminConfiguracoesInner activeSection={activeSection} setActiveSection={setActiveSection} />
+    </>
   );
 }

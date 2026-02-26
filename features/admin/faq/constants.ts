@@ -14,6 +14,18 @@ export const ADMIN_FAQ_CATEGORIES: Record<string, string> = {
   configuracoes: 'Configurações da Plataforma',
 };
 
+export const ADMIN_FAQ_VISAO_LABELS: Record<string, string> = {
+  contratante: 'Contratante',
+  empreiteiro: 'Empreiteiro',
+  ambos: 'Ambas as visões',
+};
+
+export const ADMIN_FAQ_VISAO_COLORS: Record<string, string> = {
+  contratante: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  empreiteiro: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  ambos: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+};
+
 export const ADMIN_FAQ_CATEGORY_META: Record<string, {
   description: string;
   iconBg: string;

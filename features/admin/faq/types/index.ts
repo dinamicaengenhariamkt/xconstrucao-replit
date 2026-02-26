@@ -1,8 +1,11 @@
+export type FAQVisao = 'contratante' | 'empreiteiro' | 'ambos';
+
 export interface AdminFAQItem {
   id: string;
   question: string;
   answer: string;
   category: string;
+  visao: FAQVisao;
   ordem: number;
   ativo: boolean;
   criadoEm: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -11,6 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avata
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Textarea } from '@shared/components/ui/textarea';
 import { EmpreiteiraObrasSection } from '@features/admin/empreiteiras/components/EmpreiteiraObrasSection';
+import { EditarEmpreiteiraModal } from '@features/admin/empreiteiras/components/EditarEmpreiteiraModal';
+import { ResetarAcessoModal } from '@features/admin/empreiteiras/components/ResetarAcessoModal';
+import { BloquearEmpreiteiraModal } from '@features/admin/empreiteiras/components/BloquearEmpreiteiraModal';
 import {
   useAdminEmpreiteira,
   useAdminEmpreiteiraObras,
@@ -107,6 +110,10 @@ function LabelValue({ label, value }: { label: string; value: string }) {
 export default function AdminEmpreiteiraDetailPage() {
   const params = useParams();
   const id = params.id as string;
+
+  const [editarOpen, setEditarOpen] = useState(false);
+  const [resetarOpen, setResetarOpen] = useState(false);
+  const [bloquearOpen, setBloquearOpen] = useState(false);
 
   const { data: empreiteira, isLoading: loadingEmpreiteira } = useAdminEmpreiteira(id);
   const { data: obras = [], isLoading: loadingObras } = useAdminEmpreiteiraObras(id);
@@ -288,20 +295,30 @@ export default function AdminEmpreiteiraDetailPage() {
             <div className="flex flex-wrap gap-3 lg:flex-shrink-0">
               <button
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                onClick={() => setEditarOpen(true)}
                 data-testid="button-editar-dados"
               >
                 <RiEdit2Line className="w-4 h-4" />
                 Editar Dados
               </button>
               <button
-                className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40"
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer',
+                  empreiteira.status === 'suspensa' || empreiteira.status === 'inativa'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40'
+                    : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40',
+                )}
+                onClick={() => setBloquearOpen(true)}
                 data-testid="button-bloquear"
               >
                 <RiIndeterminateCircleLine className="w-4 h-4" />
-                Bloquear Empreiteira
+                {empreiteira.status === 'suspensa' || empreiteira.status === 'inativa'
+                  ? 'Reativar Empreiteira'
+                  : 'Bloquear Empreiteira'}
               </button>
               <button
                 className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/40"
+                onClick={() => setResetarOpen(true)}
                 data-testid="button-reset-acesso"
               >
                 <RiLockPasswordLine className="w-4 h-4" />
@@ -516,6 +533,25 @@ export default function AdminEmpreiteiraDetailPage() {
         empreiteiraId={id}
         obras={obras}
         isLoading={loadingObras}
+      />
+
+      {/* Modais */}
+      <EditarEmpreiteiraModal
+        open={editarOpen}
+        onOpenChange={setEditarOpen}
+        empreiteira={empreiteira}
+      />
+      <ResetarAcessoModal
+        open={resetarOpen}
+        onOpenChange={setResetarOpen}
+        empreiteiraId={empreiteira.id}
+        nomeEmpreiteira={empreiteira.razaoSocial}
+        emailEmpreiteira={empreiteira.email}
+      />
+      <BloquearEmpreiteiraModal
+        open={bloquearOpen}
+        onOpenChange={setBloquearOpen}
+        empreiteira={empreiteira}
       />
 
     </div>

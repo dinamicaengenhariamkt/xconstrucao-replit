@@ -139,3 +139,84 @@ export function useAdminClienteAtividades(id: string) {
     ...QUERY_CONFIG,
   });
 }
+
+export const editarClienteSchema = z.object({
+  tipo: z.enum(['pessoa_fisica', 'pessoa_juridica']),
+  nome: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
+  cpfCnpj: z.string().min(11, 'CPF/CNPJ inválido'),
+  email: z.string().email('E-mail inválido'),
+  telefone: z.string().min(10, 'Telefone inválido'),
+  endereco: z.string().optional(),
+  cidade: z.string().optional(),
+  estado: z.string().optional(),
+});
+
+export type EditarClienteFormData = z.infer<typeof editarClienteSchema>;
+
+export function useUpdateCliente(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditarClienteFormData) => {
+      if (ENABLE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+        return { ...data, id };
+      }
+      const res = await fetch(`/api/admin/clientes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Erro ao atualizar cliente');
+      return res.json();
+    },
+    onSuccess: (_result, variables) => {
+      queryClient.setQueryData<AdminCliente | undefined>(
+        ['admin', 'clientes', id],
+        (old) => (old ? { ...old, ...variables } : old),
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clientes'] });
+    },
+  });
+}
+
+export function useBloquearCliente() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, novoStatus }: { id: string; novoStatus: AdminCliente['status'] }) => {
+      if (ENABLE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+        return { id, status: novoStatus };
+      }
+      const res = await fetch(`/api/admin/clientes/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: novoStatus }),
+      });
+      if (!res.ok) throw new Error('Erro ao atualizar status do cliente');
+      return res.json();
+    },
+    onSuccess: (_result, { id, novoStatus }) => {
+      queryClient.setQueryData<AdminCliente | undefined>(
+        ['admin', 'clientes', id],
+        (old) => (old ? { ...old, status: novoStatus } : old),
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clientes'] });
+    },
+  });
+}
+
+export function useResetarSenhaCliente() {
+  return useMutation({
+    mutationFn: async (_id: string) => {
+      if (ENABLE_MOCK) {
+        await new Promise((r) => setTimeout(r, 800));
+        return { success: true };
+      }
+      const res = await fetch(`/api/admin/clientes/${_id}/reset-senha`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Erro ao resetar senha');
+      return res.json();
+    },
+  });
+}

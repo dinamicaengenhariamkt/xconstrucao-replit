@@ -1,0 +1,58 @@
+import type { AdminNotification } from '../types';
+
+export const mockAdminNotifications: AdminNotification[] = [
+  {
+    id: 'notif-1',
+    titulo: 'Obra com risco financeiro',
+    descricao: 'A obra "Residencial Parque Verde" está com saldo insuficiente para o próximo pagamento.',
+    tipo: 'alerta',
+    lida: false,
+    criadoEm: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    href: '/admin/obras',
+  },
+  {
+    id: 'notif-2',
+    titulo: 'Nova empreiteira aguardando aprovação',
+    descricao: 'ConstrutEx Ltda enviou documentos para análise e verificação cadastral.',
+    tipo: 'info',
+    lida: false,
+    criadoEm: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
+    href: '/admin/empreiteiras',
+  },
+  {
+    id: 'notif-3',
+    titulo: 'Lembrete: medição atrasada',
+    descricao: 'A medição do contrato CT-2025-089 está pendente há 7 dias sem aprovação do cliente.',
+    tipo: 'lembrete',
+    lida: false,
+    criadoEm: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    href: '/admin/obras',
+  },
+  {
+    id: 'notif-4',
+    titulo: 'Pagamento liberado com sucesso',
+    descricao: 'R$ 48.750,00 liberado para Engenharia Solar S.A. referente à medição #12.',
+    tipo: 'sucesso',
+    lida: false,
+    criadoEm: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    href: '/admin/financeiro',
+  },
+  {
+    id: 'notif-5',
+    titulo: 'Lembrete: CNPJ próximo do vencimento',
+    descricao: 'O alvará de funcionamento da empreiteira TopBuild Construções vence em 15 dias.',
+    tipo: 'lembrete',
+    lida: true,
+    criadoEm: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    href: '/admin/empreiteiras',
+  },
+  {
+    id: 'notif-6',
+    titulo: 'Novo cliente cadastrado',
+    descricao: 'Carlos Henrique Mota concluiu o cadastro e está aguardando validação.',
+    tipo: 'info',
+    lida: true,
+    criadoEm: new Date(Date.now() - 1.5 * 24 * 60 * 60 * 1000).toISOString(),
+    href: '/admin/clientes',
+  },
+];
