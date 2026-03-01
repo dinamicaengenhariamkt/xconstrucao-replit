@@ -121,4 +121,23 @@ export const mockPerfilStatusBlocked: PerfilStatus = {
     { id: '4', titulo: 'Avaliacao minima', descricao: 'Necessario mais 2 avaliacoes', resolvido: false },
   ],
   motivoBloqueio: 'Voce nao pode se candidatar a novas obras no momento.',
+  motivosBloqueio: [
+    {
+      tipo: 'volume_obras',
+      atual: 5,
+      limite: 3,
+    },
+    {
+      tipo: 'atrasos',
+      obras: [
+        { nome: 'Residencia Moema', diasAtraso: 18 },
+        { nome: 'Galpao Logistico', diasAtraso: 32 },
+      ],
+    },
+    {
+      tipo: 'score',
+      atual: 62,
+      minimo: 70,
+    },
+  ],
 };

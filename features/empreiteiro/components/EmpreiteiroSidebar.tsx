@@ -117,7 +117,10 @@ export function EmpreiteiroSidebar() {
           <p className="text-[10px] text-gray-500 mb-3">
             Obtenha acesso a relatórios avançados de IA.
           </p>
-          <Button className="w-full py-2 bg-primary text-white text-[11px] font-bold rounded-lg uppercase tracking-wider">
+          <Button
+            className="w-full py-2 bg-primary text-white text-[11px] font-bold rounded-lg uppercase tracking-wider"
+            onClick={() => router.push('/empreiteiro/planos')}
+          >
             Ver Planos
           </Button>
         </div>

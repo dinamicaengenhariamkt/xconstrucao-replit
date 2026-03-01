@@ -35,7 +35,12 @@ export default function EmpreiteiroDashboardPage() {
         </div>
       </div>
 
-      <ExportBanner />
+      <ExportBanner
+        stats={statsData!}
+        financial={financialData!}
+        activities={activitiesData!}
+        efficiency={mockEfficiencyData}
+      />
     </div>
   );
 }

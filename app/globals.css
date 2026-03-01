@@ -248,6 +248,16 @@
   }
 }
 
+button:not(:disabled),
+a,
+select,
+label,
+input[type="checkbox"],
+input[type="radio"],
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
 .landing-page {
   --primary: var(--brand-primary);
   --primary-foreground: 0 0% 98%;

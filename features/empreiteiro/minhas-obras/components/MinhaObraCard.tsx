@@ -1,15 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
-import { StatusBadge } from '@features/shared/components/StatusBadge';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
-import { STATUS_BORDER_COLORS, STATUS_BADGE_VARIANTS, STATUS_LABELS, PROGRESS_COLORS } from '../constants';
+import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '../constants';
 import type { MinhaObraCardProps } from '../types';
 
 export function MinhaObraCard({ obra }: MinhaObraCardProps) {
   const borderColor = STATUS_BORDER_COLORS[obra.status] || 'border-l-gray-300';
-  const badgeVariant = (STATUS_BADGE_VARIANTS[obra.status] || 'neutral') as 'success' | 'warning' | 'error' | 'info' | 'primary' | 'neutral';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as 'success' | 'warning' | 'error' | 'info' | 'primary';
 
   const formatCurrency = (value: number): string => {
@@ -18,20 +17,29 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
 
   return (
     <Link href={`/empreiteiro/minhas-obras/${obra.id}`} data-testid={`obra-card-${obra.id}`}>
-      <div className={cn(
-        'group bg-white dark:bg-gray-900 rounded-3xl overflow-hidden',
-        'shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-gray-50 dark:border-gray-800',
-        'border-l-4 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)]',
-        borderColor
-      )}>
-        <div className="relative aspect-[16/9] overflow-hidden">
+      <motion.div
+        whileHover={{ y: -8, boxShadow: '0 20px 50px rgba(0,0,0,0.10)' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        className={cn(
+          'group bg-white dark:bg-gray-900 rounded-3xl',
+          'shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-gray-50 dark:border-gray-800',
+          'border-l-4',
+          borderColor
+        )}
+      >
+        <div className="relative aspect-[16/9] overflow-hidden rounded-t-3xl">
           <div
             className="w-full h-full bg-cover bg-center grayscale contrast-[1.1] group-hover:grayscale-0 group-hover:contrast-100 transition-[filter] duration-300"
             style={{ backgroundImage: `url('${obra.imagemUrl}')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
-            <StatusBadge label={STATUS_LABELS[obra.status] || obra.status} variant={badgeVariant} size="sm" />
+            <span className={cn(
+              'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
+              STATUS_BADGE_CLASSES[obra.status] || 'bg-gray-800/80 text-white'
+            )}>
+              {STATUS_LABELS[obra.status] || obra.status}
+            </span>
           </div>
         </div>
 
@@ -73,8 +81,12 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
               <p className="text-[10px] text-gray-400">Contratante</p>
             </div>
           </div>
+
+          <span className="block w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors bg-primary/10 text-primary hover:bg-primary/20">
+            Ver detalhes
+          </span>
         </div>
-      </div>
+      </motion.div>
     </Link>
   );
 }

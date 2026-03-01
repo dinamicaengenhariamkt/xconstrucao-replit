@@ -1,25 +1,87 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Badge } from '@shared/components/ui/badge';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@shared/components/ui/dropdown-menu';
 import { SearchModal, SearchResult } from '@shared/components/SearchModal';
-import { RiSearchLine, RiNotificationLine, RiSettings3Line, RiMenuLine } from 'react-icons/ri';
+import {
+  RiSearchLine,
+  RiNotification3Line,
+  RiSettings3Line,
+  RiMenuLine,
+  RiUserLine,
+  RiLogoutBoxRLine,
+  RiCheckDoubleLine,
+  RiAlarmLine,
+  RiAlertLine,
+  RiInformationLine,
+  RiCheckboxCircleLine,
+  RiArrowRightSLine,
+  RiBookmarkLine,
+} from 'react-icons/ri';
+import { useEmpreiteiroNotifications } from '@features/empreiteiro/notifications/hooks/use-notifications';
+import { cn } from '@shared/lib/utils';
+import type { NotificacaoTipo } from '@features/empreiteiro/notifications/types';
+
+const NOTIF_ICON: Record<NotificacaoTipo, React.ElementType> = {
+  lembrete: RiAlarmLine,
+  alerta: RiAlertLine,
+  info: RiInformationLine,
+  sucesso: RiCheckboxCircleLine,
+};
+
+const NOTIF_ICON_COLOR: Record<NotificacaoTipo, string> = {
+  lembrete: 'text-amber-500',
+  alerta: 'text-red-500',
+  info: 'text-blue-500',
+  sucesso: 'text-green-500',
+};
+
+const NOTIF_DOT_COLOR: Record<NotificacaoTipo, string> = {
+  lembrete: 'bg-amber-400',
+  alerta: 'bg-red-500',
+  info: 'bg-blue-500',
+  sucesso: 'bg-green-500',
+};
+
+function formatNotifTime(isoDate: string): string {
+  const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+  return `há ${Math.floor(diff / 86400)}d`;
+}
 
 export function EmpreiteiroTopbar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const { topbarNotifications: notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } = useEmpreiteiroNotifications();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    // TODO: Implementar lógica de busca específica do empreiteiro
-    // Buscar obras, documentos, propostas, etc.
     setSearchResults([]);
   };
 
@@ -60,48 +122,164 @@ export function EmpreiteiroTopbar() {
       {/* Actions */}
       <div className="flex items-center gap-3">
         {/* Notificações */}
-        <div className="relative">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-          >
-            <RiNotificationLine className="w-5 h-5" />
-          </Button>
-          <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] border-2 border-background">
-            3
-          </Badge>
-        </div>
+        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+          <div className="relative">
+            <PopoverTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+                aria-label="Notificações"
+              >
+                <RiNotification3Line className="w-5 h-5" />
+              </Button>
+            </PopoverTrigger>
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] border-2 border-background pointer-events-none">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </div>
+          <PopoverContent className="w-96 p-0" align="end">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900 dark:text-white">Notificações</span>
+                {unreadCount > 0 && (
+                  <Badge className="h-5 px-1.5 bg-red-500 text-white text-[10px] rounded-full">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </div>
+              {unreadCount > 0 && (
+                <button
+                  onClick={marcarTodasComoLidas}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  <RiCheckDoubleLine className="w-3.5 h-3.5" />
+                  Marcar todas como lidas
+                </button>
+              )}
+            </div>
 
-        {/* Configurações */}
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-        >
-          <RiSettings3Line className="w-5 h-5" />
-        </Button>
+            {/* Lista */}
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {notifications.map((notif) => {
+                const Icon = NOTIF_ICON[notif.tipo];
+                const iconColor = NOTIF_ICON_COLOR[notif.tipo];
+                const dotColor = NOTIF_DOT_COLOR[notif.tipo];
+                const timeLabel = formatNotifTime(notif.criadoEm);
+                return (
+                  <button
+                    key={notif.id}
+                    onClick={() => {
+                      marcarComoLida(notif.id);
+                      router.push(notif.href);
+                      setNotifOpen(false);
+                    }}
+                    className={cn(
+                      'w-full text-left px-4 py-3 flex items-start gap-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60',
+                      !notif.lida
+                        ? 'bg-primary/[0.04] dark:bg-primary/10'
+                        : 'bg-white dark:bg-gray-900'
+                    )}
+                  >
+                    {/* Dot não lida */}
+                    <div className="shrink-0 mt-1 w-4 flex justify-center">
+                      {!notif.lida && (
+                        <span className={cn('w-2 h-2 rounded-full mt-0.5', dotColor)} />
+                      )}
+                    </div>
+
+                    {/* Ícone tipo */}
+                    <div className="shrink-0 mt-0.5">
+                      <Icon className={cn('w-4 h-4', iconColor)} />
+                    </div>
+
+                    {/* Conteúdo */}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        'text-sm leading-snug',
+                        !notif.lida
+                          ? 'font-semibold text-gray-900 dark:text-white'
+                          : 'font-medium text-gray-700 dark:text-gray-300'
+                      )}>
+                        {notif.titulo}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug line-clamp-2">
+                        {notif.descricao}
+                      </p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                        {timeLabel}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-2.5">
+              <button
+                onClick={() => { router.push('/empreiteiro/notificacoes'); setNotifOpen(false); }}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors w-full justify-center"
+              >
+                Ver todas as notificações
+                <RiArrowRightSLine className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {/* Separator */}
         <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
 
-        {/* User Info */}
-        {user && (
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
-                {user.name}
-              </p>
-              <p className="text-[11px] text-gray-500 font-medium capitalize">Empreiteiro</p>
+        {/* User Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-3 cursor-pointer rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors outline-none">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
+                  {user?.name ?? 'Empreiteiro'}
+                </p>
+                <p className="text-[11px] text-gray-500 font-medium capitalize">Empreiteiro</p>
+              </div>
+              <Avatar className="w-10 h-10 border border-border-light">
+                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-bold">
+                  {user?.name?.slice(0, 2).toUpperCase() ?? 'EM'}
+                </AvatarFallback>
+              </Avatar>
             </div>
-            <Avatar className="w-10 h-10 border border-border-light">
-              {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
-              <AvatarFallback className="bg-primary text-primary-foreground text-sm font-bold">
-                {user.name?.slice(0, 2).toUpperCase() || 'E'}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
+              <span className="text-sm font-semibold">{user?.name ?? 'Empreiteiro'}</span>
+              <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/empreiteiro/configuracoes?tab=perfil')}>
+              <RiUserLine className="w-4 h-4 mr-2" />
+              Meu perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/empreiteiro/obras-salvas')}>
+              <RiBookmarkLine className="w-4 h-4 mr-2" />
+              Obras Salvas
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/empreiteiro/configuracoes')}>
+              <RiSettings3Line className="w-4 h-4 mr-2" />
+              Configurações
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <RiLogoutBoxRLine className="w-4 h-4 mr-2" />
+              Sair
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Modal de Busca (Mobile) */}

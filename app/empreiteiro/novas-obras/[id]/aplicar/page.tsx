@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, ChangeEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import { ENABLE_MOCK } from '@features/empreiteiro/novas-obras/constants';
+import { useTermosStore } from '@features/empreiteiro/termos/store/termos-store';
 
 interface Atividade {
   id: string;
   descricao: string;
   valor: string;
   observacoes: string;
+}
+
+interface Anexo {
+  id: string;
+  name: string;
+  size: string;
 }
 
 function generateId() {
@@ -41,8 +48,13 @@ export default function AplicarPage() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataTermino, setDataTermino] = useState('');
   const [observacoesPrazo, setObservacoesPrazo] = useState('');
+  const [observacoesFinanceiras, setObservacoesFinanceiras] = useState('');
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { acceptAll } = useTermosStore();
 
   const addAtividade = useCallback(() => {
     setAtividades(prev => [...prev, { id: generateId(), descricao: '', valor: '', observacoes: '' }]);
@@ -56,10 +68,24 @@ export default function AplicarPage() {
     setAtividades(prev => prev.map(a => a.id === atividadeId ? { ...a, [field]: value } : a));
   }, []);
 
+  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const valid = files.filter(f => f.size <= 10 * 1024 * 1024);
+    const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    setAnexos(prev => [...prev, ...valid.map(f => ({ id: `${f.name}-${Date.now()}`, name: f.name, size: formatSize(f.size) }))]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  const removeAnexo = useCallback((anexoId: string) => {
+    setAnexos(prev => prev.filter(a => a.id !== anexoId));
+  }, []);
+
   const totalProposta = atividades.reduce((sum, a) => sum + parseCurrencyToNumber(a.valor), 0);
 
   const handleSubmit = async () => {
+    if (!aceitouTermos) return;
     setIsSubmitting(true);
+    acceptAll();
     try {
       if (ENABLE_MOCK) {
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -75,6 +101,7 @@ export default function AplicarPage() {
             dataTermino: dataTermino || null,
             descricao: atividades.filter(a => a.descricao).map(a => a.descricao).join('; '),
             observacoesPrazo: observacoesPrazo || null,
+            observacoesFinanceiras: observacoesFinanceiras || null,
             atividades: JSON.stringify(atividades.filter(a => a.descricao)),
           }),
         });
@@ -321,28 +348,164 @@ export default function AplicarPage() {
         </div>
       </motion.div>
 
-      {totalProposta > 0 && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-br from-primary/5 to-white dark:from-primary/10 dark:to-gray-900 p-8 rounded-xl border-l-4 border-l-primary shadow-sm" data-testid="bloco-resumo-financeiro">
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Resumo Financeiro</h3>
-            <p className="text-sm text-gray-500">Valor total da proposta</p>
-          </div>
-          <div className="space-y-3 mb-6">
-            {atividades.filter(a => a.descricao && parseCurrencyToNumber(a.valor) > 0).map((a, i) => (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }} className="bg-gradient-to-br from-primary/5 to-white dark:from-primary/10 dark:to-gray-900 p-8 rounded-xl border-l-4 border-l-primary shadow-sm" data-testid="bloco-resumo-financeiro">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Resumo Financeiro</h3>
+          <p className="text-sm text-gray-500">Valor total da proposta</p>
+        </div>
+        <div className="space-y-3 mb-6">
+          {atividades.filter(a => a.descricao && parseCurrencyToNumber(a.valor) > 0).length === 0 ? (
+            <p className="text-sm text-gray-400 italic">Nenhuma atividade com valor informado ainda.</p>
+          ) : (
+            atividades.filter(a => a.descricao && parseCurrencyToNumber(a.valor) > 0).map((a, i) => (
               <div key={a.id} className="flex items-center justify-between text-sm">
                 <span className="text-gray-700 dark:text-gray-300 font-medium">Atividade {i + 1}: {a.descricao}</span>
                 <span className="text-gray-900 dark:text-white font-semibold">{formatCurrency(parseCurrencyToNumber(a.valor))}</span>
               </div>
+            ))
+          )}
+        </div>
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mb-6">
+          <span className="text-base font-bold text-gray-900 dark:text-white">Valor Total da Proposta:</span>
+          <span className="text-2xl font-extrabold text-primary" data-testid="text-total-proposta">{formatCurrency(totalProposta)}</span>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Observações financeiras (opcional)
+          </label>
+          <textarea
+            placeholder="Ex.: Condições de pagamento, reajustes..."
+            rows={2}
+            value={observacoesFinanceiras}
+            onChange={(e) => setObservacoesFinanceiras(e.target.value)}
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-gray-400 resize-none"
+            data-testid="input-obs-financeiras"
+          />
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 shadow-sm" data-testid="bloco-documentos">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Documentos Adicionais <span className="text-gray-400 font-normal text-base">(opcional)</span></h3>
+          <p className="text-sm text-gray-500">Anexe portfólio, certificações ou referências</p>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png"
+          className="hidden"
+          onChange={handleFileChange}
+          data-testid="input-file"
+        />
+
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer mb-6"
+          data-testid="upload-zone"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+              <span className="material-symbols-outlined text-gray-400 text-2xl">upload_file</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Clique para anexar ou arraste arquivos</p>
+              <p className="text-xs text-gray-400 mt-1">Formatos aceitos: PDF, JPG, PNG (máx. 10 MB por arquivo)</p>
+            </div>
+          </div>
+        </div>
+
+        {anexos.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Arquivos anexados:</p>
+            {anexos.map((anexo) => (
+              <div key={anexo.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                    <span className="material-symbols-outlined text-red-600 text-lg">description</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{anexo.name}</p>
+                    <p className="text-xs text-gray-500">{anexo.size}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeAnexo(anexo.id)}
+                  className="text-red-500 hover:text-red-700 transition-colors p-1"
+                  data-testid={`button-remove-anexo-${anexo.id}`}
+                >
+                  <span className="material-symbols-outlined text-xl">delete</span>
+                </button>
+              </div>
             ))}
           </div>
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-lg font-bold text-gray-900 dark:text-white">TOTAL DA PROPOSTA</span>
-            <span className="text-2xl font-extrabold text-primary" data-testid="text-total-proposta">{formatCurrency(totalProposta)}</span>
-          </div>
-        </motion.div>
-      )}
+        )}
+      </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex items-center justify-end gap-4 pt-4">
+      {/* Confirmação e Termos */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-6"
+        data-testid="bloco-confirmacao"
+      >
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-1">Confirmação de Candidatura</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+          Você está se candidatando para <strong className="text-gray-700 dark:text-gray-300">{obra.titulo}</strong>
+          {' '}· {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(obra.orcamento)}
+          {' '}· {obra.prazo}
+        </p>
+
+        <ul className="flex flex-col gap-2 mb-5">
+          {[
+            'As informações desta proposta são verdadeiras e precisas.',
+            'Possuo as qualificações, experiência e licenças necessárias para executar esta obra.',
+            'Comprometo-me com o prazo e valores apresentados nesta candidatura.',
+            'Estou ciente de que informações falsas podem resultar em suspensão da conta.',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span className="material-symbols-outlined text-green-500 text-base leading-none mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <div className="mt-0.5 flex-shrink-0">
+            <div
+              className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors ${
+                aceitouTermos ? 'bg-primary border-primary' : 'border-gray-300 dark:border-gray-600'
+              }`}
+            >
+              {aceitouTermos && (
+                <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'FILL' 1", fontSize: '12px' }}>check</span>
+              )}
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            className="sr-only"
+            checked={aceitouTermos}
+            onChange={(e) => setAceitouTermos(e.target.checked)}
+            data-testid="checkbox-termos-candidatura"
+          />
+          <span className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+            Confirmo que li e aceito os{' '}
+            <a href="/termos" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">
+              Termos de Uso
+            </a>{' '}
+            e a{' '}
+            <a href="/politica-privacidade" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">
+              Política de Privacidade
+            </a>
+            {', '}e entendo as responsabilidades desta candidatura.
+          </span>
+        </label>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex items-center justify-end gap-4 pt-4">
         <Link
           href={`/empreiteiro/novas-obras/${id}`}
           className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors font-medium text-sm"
@@ -352,7 +515,7 @@ export default function AplicarPage() {
         </Link>
         <button
           onClick={handleSubmit}
-          disabled={isSubmitting || atividades.every(a => !a.descricao)}
+          disabled={isSubmitting || atividades.every(a => !a.descricao) || !aceitouTermos}
           className="px-8 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="button-enviar-proposta"
         >

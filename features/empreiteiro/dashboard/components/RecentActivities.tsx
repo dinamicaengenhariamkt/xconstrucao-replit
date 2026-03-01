@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { ActivityItem } from './ActivityItem';
@@ -34,7 +35,9 @@ export function RecentActivities({ activities, efficiency }: RecentActivitiesPro
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Atividades Recentes
         </CardTitle>
-        <button className="text-xs font-bold text-primary hover:underline">Ver todas</button>
+        <Link href="/empreiteiro/dashboard/atividades-recentes" className="text-xs font-bold text-primary hover:underline">
+          Ver todas
+        </Link>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
         <ScrollArea className="h-full max-h-[500px] pr-4">

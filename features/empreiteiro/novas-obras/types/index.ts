@@ -14,6 +14,7 @@ export interface NovaObra {
     nome: string;
     iniciais: string;
     cor: string;
+    email?: string;
   };
   destaque: boolean;
   applicationStatus: ApplicationStatus;
@@ -28,11 +29,31 @@ export interface Pendencia {
   resolvido: boolean;
 }
 
+export interface MotivoVolumeObras {
+  tipo: 'volume_obras';
+  atual: number;
+  limite: number;
+}
+
+export interface MotivoAtrasos {
+  tipo: 'atrasos';
+  obras: { nome: string; diasAtraso: number }[];
+}
+
+export interface MotivoScore {
+  tipo: 'score';
+  atual: number;
+  minimo: number;
+}
+
+export type MotivoBloqueio = MotivoVolumeObras | MotivoAtrasos | MotivoScore;
+
 export interface PerfilStatus {
   isBlocked: boolean;
   completionPercentage: number;
   pendencias: Pendencia[];
   motivoBloqueio: string;
+  motivosBloqueio?: MotivoBloqueio[];
 }
 
 export interface NovaObraCardProps {
@@ -54,7 +75,21 @@ export interface ObraEtapa {
   nome: string;
   descricao: string;
   prazo: string;
+  icone?: string;
   status: 'pendente' | 'em_andamento' | 'concluida';
+}
+
+export interface SinapiBreakdown {
+  etapa: string;
+  valor: number;
+}
+
+export interface SinapiData {
+  custoPorM2: number;
+  referenciaMes: string;
+  regiao: string;
+  statusVsSinapi: 'acima' | 'dentro' | 'abaixo';
+  breakdown: SinapiBreakdown[];
 }
 
 export interface ObraDocumento {
@@ -68,14 +103,20 @@ export interface ObraDocumento {
 export interface ObraDetalhe extends NovaObra {
   areaTotal: string;
   tipoObra: string;
-  etapas: ObraEtapa[];
-  documentos: ObraDocumento[];
-  requisitos: string[];
+  inicioPrevisto?: string;
+  situacaoProjeto?: string;
+  observacoes?: string;
   localizacao: {
     cidade: string;
     estado: string;
     bairro: string;
+    rua?: string;
+    cep?: string;
   };
+  sinapi?: SinapiData;
+  etapas: ObraEtapa[];
+  documentos: ObraDocumento[];
+  requisitos: string[];
 }
 
 export interface ObraDetalheHeroProps {

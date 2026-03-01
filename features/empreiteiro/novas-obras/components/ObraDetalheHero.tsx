@@ -66,7 +66,7 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Início Previsto</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">{obra.prazo.split(' ')[0] || 'A definir'}</p>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">{obra.inicioPrevisto ?? 'A definir'}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

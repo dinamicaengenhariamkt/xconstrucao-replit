@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { cn } from '@shared/lib/utils';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { FilterChips } from '@features/shared/components/FilterChips';
 import { NovasObrasGrid } from '@features/empreiteiro/novas-obras/components/NovasObrasGrid';
@@ -52,13 +53,17 @@ export default function NovasObrasPage() {
         {isBlocked && perfilStatus && (
           <BlockedBanner perfilStatus={perfilStatus} />
         )}
-        <FilterChips
-          options={filterOptions}
-          activeValue={activeFilter}
-          onSelect={setActiveFilter}
-        />
+        <div className={cn(isBlocked && 'opacity-50 pointer-events-none')}>
+          <FilterChips
+            options={filterOptions}
+            activeValue={activeFilter}
+            onSelect={setActiveFilter}
+          />
+        </div>
       </div>
-      <NovasObrasGrid obras={filteredObras} isBlocked={isBlocked} />
+      <div className={cn(isBlocked && 'opacity-40 pointer-events-none')}>
+        <NovasObrasGrid obras={filteredObras} isBlocked={isBlocked} />
+      </div>
     </div>
   );
 }

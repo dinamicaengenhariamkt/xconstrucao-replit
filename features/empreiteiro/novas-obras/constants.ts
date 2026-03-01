@@ -16,3 +16,9 @@ export const COMPLEXIDADE_BADGE_VARIANTS: Record<string, string> = {
   media: 'warning',
   alta: 'error',
 };
+
+export const COMPLEXIDADE_BADGE_CLASSES: Record<string, string> = {
+  baixa: 'bg-green-600/90 text-white',
+  media: 'bg-amber-500/90 text-white',
+  alta:  'bg-red-500/90 text-white',
+};

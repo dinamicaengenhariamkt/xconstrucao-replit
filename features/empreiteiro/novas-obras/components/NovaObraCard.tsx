@@ -2,12 +2,10 @@
 
 import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
-import { StatusBadge } from '@features/shared/components/StatusBadge';
-import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_VARIANTS } from '../constants';
+import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
 
 export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
-  const badgeVariant = (COMPLEXIDADE_BADGE_VARIANTS[obra.complexidade] || 'neutral') as 'success' | 'warning' | 'error' | 'info' | 'primary' | 'neutral';
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
@@ -28,7 +26,12 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute top-4 left-4">
-              <StatusBadge label={COMPLEXIDADE_LABELS[obra.complexidade] || obra.complexidade} variant={badgeVariant} size="sm" />
+              <span className={cn(
+                'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
+                COMPLEXIDADE_BADGE_CLASSES[obra.complexidade] || 'bg-gray-800/80 text-white'
+              )}>
+                {COMPLEXIDADE_LABELS[obra.complexidade] || obra.complexidade}
+              </span>
             </div>
             {obra.destaque && (
               <div className="absolute top-4 right-4 flex items-center gap-1 bg-amber-400/90 text-amber-900 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
@@ -75,19 +78,17 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
               </div>
             </div>
 
-            <Link
-              href={isBlocked ? '#' : `/empreiteiro/novas-obras/${obra.id}`}
+            <span
               className={cn(
-                'w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors',
+                'block w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors',
                 isBlocked
                   ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 cursor-not-allowed'
                   : 'bg-primary/10 text-primary hover:bg-primary/20'
               )}
               data-testid={`ver-detalhes-${obra.id}`}
-              onClick={(e) => isBlocked && e.preventDefault()}
             >
               Ver detalhes
-            </Link>
+            </span>
           </div>
         </div>
       </Link>

@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ObraDetalheHero } from '@features/empreiteiro/novas-obras/components/ObraDetalheHero';
 import { ObraDetalheContent } from '@features/empreiteiro/novas-obras/components/ObraDetalheContent';
 import { ObraDetalheSidebar } from '@features/empreiteiro/novas-obras/components/ObraDetalheSidebar';
+import { CompartilharModal } from '@features/empreiteiro/novas-obras/components/CompartilharModal';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
+import { useObrasSalvasStore } from '@features/empreiteiro/novas-obras/store/obras-salvas-store';
 
 export default function ObraDetalhePage() {
   const params = useParams();
   const id = params.id as string;
   const { data: obra, isLoading } = useObraDetalhe(id);
+  const [showShare, setShowShare] = useState(false);
+  const { toggleSave, isSaved } = useObrasSalvasStore();
 
   if (isLoading) {
     return (
@@ -101,6 +106,74 @@ export default function ObraDetalhePage() {
           <ObraDetalheSidebar obra={obra} onApply={() => {}} isApplying={false} />
         </div>
       </motion.div>
+
+      {/* CTA Dark — Pronto para se candidatar? */}
+      {showCtaBanner && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gradient-to-r from-primary to-gray-700 rounded-2xl p-8 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <svg height="100%" width="100%" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern height="40" id="grid-cta-dark" patternUnits="userSpaceOnUse" width="40">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect fill="url(#grid-cta-dark)" height="100%" width="100%" />
+            </svg>
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-white text-3xl">check_circle</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-extrabold text-white">Pronto para se candidatar?</h3>
+                <p className="text-white/80 text-sm mt-1">Sua candidatura será analisada pelo contratante em até 48 horas.</p>
+              </div>
+            </div>
+            <Link
+              href={`/empreiteiro/novas-obras/${obra.id}/aplicar`}
+              className="px-8 py-4 bg-white text-primary rounded-xl font-extrabold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all w-fit flex-shrink-0"
+            >
+              Aplicar para esta obra
+              <span className="material-symbols-outlined">arrow_forward</span>
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Ações secundárias */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 border-t border-gray-100 dark:border-gray-800">
+          <Link href="/empreiteiro/novas-obras" className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors">
+            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="text-sm font-medium">Voltar para Novas Obras</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => toggleSave(obra.id)}
+              className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors ${
+                isSaved(obra.id)
+                  ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: isSaved(obra.id) ? "'FILL' 1" : "'FILL' 0" }}>
+                bookmark
+              </span>
+              {isSaved(obra.id) ? 'Obra Salva' : 'Salvar Obra'}
+            </button>
+            <button
+              onClick={() => setShowShare(true)}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              <span className="material-symbols-outlined">share</span>
+              Compartilhar
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      <CompartilharModal open={showShare} onClose={() => setShowShare(false)} obraTitulo={obra.titulo} />
     </div>
   );
 }
