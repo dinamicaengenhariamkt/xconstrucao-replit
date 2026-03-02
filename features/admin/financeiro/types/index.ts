@@ -2,9 +2,16 @@ import type { IconType } from 'react-icons';
 
 export type PeriodoSeletor = '30dias' | '3meses' | '12meses' | 'personalizado';
 
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
+
 export interface WelcomeSectionProps {
   periodo: PeriodoSeletor;
   onPeriodoChange: (p: PeriodoSeletor) => void;
+  customRange?: DateRange;
+  onCustomRangeChange: (range: DateRange | undefined) => void;
 }
 
 export interface AdminFinanceiroDashboardStats {
@@ -71,6 +78,39 @@ export interface ObraAtencao {
   valorPago: number;
   percentConcluido: number;
   situacao: SituacaoKey;
+}
+
+export type MedicaoStatus = 'pago' | 'pendente' | 'atrasado' | 'em_analise';
+
+export interface AdminMedicao {
+  id: string;
+  numero: number;
+  periodo: string;
+  valorMedicao: number;
+  valorPago: number;
+  status: MedicaoStatus;
+  dataVencimento: string;
+  dataPagamento?: string;
+}
+
+export interface AdminHistoricoItem {
+  id: string;
+  tipo: 'pagamento' | 'medicao' | 'aditivo' | 'alerta';
+  titulo: string;
+  descricao: string;
+  valor?: number;
+  data: string;
+}
+
+export interface AdminObraFinanceiroDetalhe extends ObraAtencao {
+  endereco: string;
+  tipo: string;
+  dataInicio: string;
+  dataPrevisaoFim: string;
+  aditivos: number;
+  valorTotal: number;
+  medicoes: AdminMedicao[];
+  historico: AdminHistoricoItem[];
 }
 
 export interface TopCliente {

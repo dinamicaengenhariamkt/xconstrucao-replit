@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { formatCompactCurrency, formatCurrency } from '@features/admin/financeiro/utils';
 import { ADMIN_DASHBOARD_COLORS } from '@features/admin/financeiro/constants';
 import { useCaixaChartData } from '../hooks/use-caixa';
+import type { CaixaPeriodo } from '../types';
 
 const MINIMO_SEGURANCA = 500_000;
 
@@ -35,8 +36,12 @@ function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) 
   );
 }
 
-export function CaixaChart() {
-  const { data: chartData } = useCaixaChartData();
+interface CaixaChartProps {
+  periodo: CaixaPeriodo;
+}
+
+export function CaixaChart({ periodo }: CaixaChartProps) {
+  const { data: chartData } = useCaixaChartData(periodo);
 
   if (!chartData) return null;
 

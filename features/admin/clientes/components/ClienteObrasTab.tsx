@@ -41,9 +41,10 @@ const formatDate = (dateStr: string) =>
 interface ClienteObrasTabProps {
   obras: AdminClienteObra[];
   isLoading: boolean;
+  onEditObra?: (obra: AdminClienteObra) => void;
 }
 
-export function ClienteObrasTab({ obras, isLoading }: ClienteObrasTabProps) {
+export function ClienteObrasTab({ obras, isLoading, onEditObra }: ClienteObrasTabProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -127,6 +128,7 @@ export function ClienteObrasTab({ obras, isLoading }: ClienteObrasTabProps) {
                       </button>
                     </Link>
                     <button
+                      onClick={() => onEditObra?.(obra)}
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-primary dark:hover:text-white transition-colors cursor-pointer"
                       title="Editar"
                     >

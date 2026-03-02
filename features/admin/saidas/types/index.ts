@@ -1,4 +1,10 @@
 export type SaidaPeriodo = '7dias' | '30dias' | '3meses' | '12meses' | 'personalizado';
+
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
+
 export type SaidaTipo = 'pagamento_medicao' | 'reembolso' | 'custo_operacional';
 export type SaidaDestinoPerfil = 'empreiteira' | 'cliente' | 'outro';
 export type SaidaStatus = 'pago' | 'agendado' | 'pendente_aprovacao' | 'atrasado';

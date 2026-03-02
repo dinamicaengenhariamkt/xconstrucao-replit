@@ -11,9 +11,9 @@ import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopE
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { ExportBanner } from '@features/admin/financeiro/components/ExportBanner';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
-import { mockDashboardStats } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
+import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
 import {
-  mockPaymentEvolutionData,
+  getPaymentEvolutionByPeriodo,
   mockStatusDistributionData,
 } from '@features/admin/financeiro/mocks/financial-data.mock';
 import {
@@ -23,16 +23,22 @@ import {
   mockReceitasPlataforma,
   mockTotalReceitas,
 } from '@features/admin/financeiro/mocks/obras.mock';
-import type { PeriodoSeletor } from '@features/admin/financeiro/types';
+import type { PeriodoSeletor, DateRange } from '@features/admin/financeiro/types';
 
 export default function AdminFinanceiroPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<PeriodoSeletor>('30dias');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  function handlePeriodoChange(p: PeriodoSeletor) {
+    if (p !== 'personalizado') setCustomRange(undefined);
+    setPeriodo(p);
+  }
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -41,14 +47,19 @@ export default function AdminFinanceiroPage() {
   return (
     <div className="space-y-8 p-6 md:p-10">
       {/* Bloco 1: Header + Seletor de período */}
-      <WelcomeSection periodo={periodo} onPeriodoChange={setPeriodo} />
+      <WelcomeSection
+        periodo={periodo}
+        onPeriodoChange={handlePeriodoChange}
+        customRange={customRange}
+        onCustomRangeChange={setCustomRange}
+      />
 
       {/* Bloco 2: KPI Cards */}
-      <StatsGridContainer data={mockDashboardStats} />
+      <StatsGridContainer data={mockStatsByPeriodo[periodo]} />
 
       {/* Bloco 3: Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <PaymentsEvolutionChart data={mockPaymentEvolutionData} />
+        <PaymentsEvolutionChart data={getPaymentEvolutionByPeriodo(periodo)} />
         <StatusDistributionChart data={mockStatusDistributionData} totalObras={42} />
       </div>
 

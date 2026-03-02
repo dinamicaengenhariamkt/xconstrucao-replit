@@ -530,7 +530,6 @@ export default function AdminEmpreiteiraDetailPage() {
 
       {/* ⑥ Obras desta empreiteira */}
       <EmpreiteiraObrasSection
-        empreiteiraId={id}
         obras={obras}
         isLoading={loadingObras}
       />

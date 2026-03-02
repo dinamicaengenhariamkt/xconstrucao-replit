@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -17,6 +17,8 @@ import { ClienteFinanceiroTab } from '@features/admin/clientes/components/Client
 import { ClienteDocumentosTab } from '@features/admin/clientes/components/ClienteDocumentosTab';
 import { ClienteHistoricoTab } from '@features/admin/clientes/components/ClienteHistoricoTab';
 import { EditarClienteModal } from '@features/admin/clientes/components/EditarClienteModal';
+import { EditarObraModal } from '@features/admin/clientes/components/EditarObraModal';
+import { AdicionarDocumentoModal } from '@features/admin/clientes/components/AdicionarDocumentoModal';
 import { ResetarSenhaModal } from '@features/admin/clientes/components/ResetarSenhaModal';
 import { BloquearClienteModal } from '@features/admin/clientes/components/BloquearClienteModal';
 import {
@@ -38,6 +40,7 @@ import {
   RiIndeterminateCircleLine,
   RiMapPinLine,
   RiSaveLine,
+  RiLoaderLine,
   RiHammerLine,
   RiMoneyDollarCircleLine,
   RiCheckboxCircleLine,
@@ -45,7 +48,8 @@ import {
   RiUserLine,
   RiBuilding2Line,
 } from 'react-icons/ri';
-import type { ClienteStatus } from '@features/admin/clientes/types';
+import { useToast } from '@shared/hooks/use-toast';
+import type { ClienteStatus, ClienteAtividade, AdminClienteObra, ClienteDocumento } from '@features/admin/clientes/types';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -108,9 +112,19 @@ export default function AdminClienteDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
+  const { toast } = useToast();
   const [editarOpen, setEditarOpen] = useState(false);
   const [resetarOpen, setResetarOpen] = useState(false);
   const [bloquearOpen, setBloquearOpen] = useState(false);
+  const [obsValue, setObsValue] = useState<string | null>(null);
+  const [isSavingObs, setIsSavingObs] = useState(false);
+  const [localAtividades, setLocalAtividades] = useState<ClienteAtividade[]>([]);
+  const [editarObraOpen, setEditarObraOpen] = useState(false);
+  const [editingObra, setEditingObra] = useState<AdminClienteObra | null>(null);
+  const [obraOverrides, setObraOverrides] = useState<Record<string, AdminClienteObra>>({});
+  const [addDocumentoOpen, setAddDocumentoOpen] = useState(false);
+  const [addedDocumentos, setAddedDocumentos] = useState<ClienteDocumento[]>([]);
+  const [deletedDocumentoIds, setDeletedDocumentoIds] = useState<string[]>([]);
 
   const { data: cliente, isLoading: loadingCliente } = useAdminCliente(id);
   const { data: obras = [], isLoading: loadingObras } = useAdminClienteObras(id);
@@ -118,10 +132,53 @@ export default function AdminClienteDetailPage() {
   const { data: documentos = [], isLoading: loadingDocumentos } = useAdminClienteDocumentos(id);
   const { data: atividades = [], isLoading: loadingAtividades } = useAdminClienteAtividades(id);
 
+  const allAtividades = [...localAtividades, ...atividades];
+  const obrasComOverrides = obras.map((o) => obraOverrides[o.id] ?? o);
+  const allDocumentos = [
+    ...addedDocumentos,
+    ...documentos.filter((d) => !deletedDocumentoIds.includes(d.id)),
+  ];
+
+  function handleEditObraClick(obra: AdminClienteObra) {
+    setEditingObra(obra);
+    setEditarObraOpen(true);
+  }
+
+  function handleSaveObra(updated: AdminClienteObra) {
+    setObraOverrides((prev) => ({ ...prev, [updated.id]: updated }));
+  }
+
+  function handleAddDocumento(doc: ClienteDocumento) {
+    setAddedDocumentos((prev) => [doc, ...prev]);
+  }
+
+  function handleDeleteDocumento(id: string) {
+    setAddedDocumentos((prev) => prev.filter((d) => d.id !== id));
+    setDeletedDocumentoIds((prev) => [...prev, id]);
+  }
+
+  const handleSalvarObservacoes = useCallback(async () => {
+    setIsSavingObs(true);
+    await new Promise((r) => setTimeout(r, 800));
+    const saved = obsValue ?? '';
+    setIsSavingObs(false);
+    setLocalAtividades((prev) => [
+      {
+        id: `nota-${Date.now()}`,
+        tipo: 'nota' as const,
+        titulo: 'Observação atualizada',
+        descricao: saved.length > 80 ? `${saved.slice(0, 80)}...` : saved || 'Observação removida.',
+        dataHora: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    toast({ title: 'Observações salvas', description: 'Alterações registradas com sucesso.' });
+  }, [obsValue, toast]);
+
   const kpis = useMemo(() => {
     const obrasAtivas = obras.filter((o) => o.status === 'em_andamento').length;
     const obrasConcluidas = obras.filter((o) => o.status === 'concluida').length;
-    const ultimaAtividade = atividades[0];
+    const ultimaAtividade = allAtividades[0];
 
     return [
       {
@@ -157,7 +214,7 @@ export default function AdminClienteDetailPage() {
         iconColor: 'text-amber-600 dark:text-amber-400',
       },
     ];
-  }, [obras, atividades, cliente]);
+  }, [obras, allAtividades, cliente]);
 
   if (loadingCliente) {
     return (
@@ -372,16 +429,25 @@ export default function AdminClienteDetailPage() {
             </TabsList>
 
             <TabsContent value="obras" className="mt-0">
-              <ClienteObrasTab obras={obras} isLoading={loadingObras} />
+              <ClienteObrasTab
+                obras={obrasComOverrides}
+                isLoading={loadingObras}
+                onEditObra={handleEditObraClick}
+              />
             </TabsContent>
             <TabsContent value="financeiro" className="mt-0">
               <ClienteFinanceiroTab financeiro={financeiro} isLoading={loadingFinanceiro} />
             </TabsContent>
             <TabsContent value="documentos" className="mt-0">
-              <ClienteDocumentosTab documentos={documentos} isLoading={loadingDocumentos} />
+              <ClienteDocumentosTab
+                documentos={allDocumentos}
+                isLoading={loadingDocumentos}
+                onAddDocumento={() => setAddDocumentoOpen(true)}
+                onDeleteDocumento={handleDeleteDocumento}
+              />
             </TabsContent>
             <TabsContent value="historico" className="mt-0">
-              <ClienteHistoricoTab atividades={atividades} isLoading={loadingAtividades} />
+              <ClienteHistoricoTab atividades={allAtividades} isLoading={loadingAtividades} />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -430,16 +496,28 @@ export default function AdminClienteDetailPage() {
               <Textarea
                 className="h-32 bg-gray-50 dark:bg-gray-800/50 resize-none text-sm"
                 placeholder="Adicione observações sobre este cliente..."
-                defaultValue=""
+                value={obsValue ?? (cliente.observacoes ?? '')}
+                onChange={(e) => setObsValue(e.target.value)}
                 data-testid="textarea-observacoes"
               />
               <div className="flex justify-end mt-4">
                 <button
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                  onClick={handleSalvarObservacoes}
+                  disabled={isSavingObs || (obsValue ?? (cliente.observacoes ?? '')) === (cliente.observacoes ?? '')}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-salvar-observacoes"
                 >
-                  <RiSaveLine className="w-4 h-4" />
-                  Salvar Alterações
+                  {isSavingObs ? (
+                    <>
+                      <RiLoaderLine className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <RiSaveLine className="w-4 h-4" />
+                      Salvar Alterações
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -464,6 +542,19 @@ export default function AdminClienteDetailPage() {
         open={bloquearOpen}
         onOpenChange={setBloquearOpen}
         cliente={cliente}
+      />
+      {editingObra && (
+        <EditarObraModal
+          open={editarObraOpen}
+          onOpenChange={setEditarObraOpen}
+          obra={editingObra}
+          onSave={handleSaveObra}
+        />
+      )}
+      <AdicionarDocumentoModal
+        open={addDocumentoOpen}
+        onOpenChange={setAddDocumentoOpen}
+        onSave={handleAddDocumento}
       />
 
     </div>

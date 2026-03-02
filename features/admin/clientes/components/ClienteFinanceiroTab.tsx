@@ -3,7 +3,11 @@
 import { cn } from '@shared/lib/utils';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { RiDownload2Line, RiLineChartLine } from 'react-icons/ri';
-import type { ClienteFinanceiro, PagamentoStatus } from '../types';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
+import type { ClienteFinanceiro, ClientePagamento, PagamentoStatus } from '../types';
 
 const PAGAMENTO_STATUS_CONFIG: Record<PagamentoStatus, { label: string; className: string }> = {
   pago: {
@@ -26,12 +30,50 @@ const formatCurrency = (value: number) =>
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('pt-BR');
 
+function buildChartData(pagamentos: ClientePagamento[]) {
+  const map: Record<string, { mes: string; recebido: number; aReceber: number }> = {};
+  for (const p of pagamentos) {
+    const date = new Date(p.data);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const label = date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    if (!map[key]) map[key] = { mes: label, recebido: 0, aReceber: 0 };
+    if (p.status === 'pago') map[key].recebido += p.valor;
+    else map[key].aReceber += p.valor;
+  }
+  return Object.entries(map)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+}
+
 interface ClienteFinanceiroTabProps {
   financeiro: ClienteFinanceiro | undefined;
   isLoading: boolean;
 }
 
 export function ClienteFinanceiroTab({ financeiro, isLoading }: ClienteFinanceiroTabProps) {
+  function handleDownloadComprovante(pagamento: ClientePagamento) {
+    import('jspdf').then(({ default: jsPDF }) => {
+      const doc = new jsPDF({ unit: 'mm', format: 'a5' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('COMPROVANTE DE PAGAMENTO', 74, 20, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`ID: ${pagamento.id}`,                       14, 38);
+      doc.text(`Data: ${formatDate(pagamento.data)}`,       14, 46);
+      doc.text(`Descrição: ${pagamento.descricao}`,         14, 54);
+      doc.text(`Valor: ${formatCurrency(pagamento.valor)}`, 14, 62);
+      doc.text(`Status: Pago`,                              14, 70);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Gerado em ${new Date().toLocaleDateString('pt-BR')}`,
+        74, 130, { align: 'center' },
+      );
+      doc.save(`comprovante-${pagamento.id}.pdf`);
+    });
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -94,13 +136,30 @@ export function ClienteFinanceiroTab({ financeiro, isLoading }: ClienteFinanceir
         </div>
       </div>
 
-      {/* Chart placeholder */}
-      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-8 flex items-center justify-center min-h-[180px]">
-        <div className="text-center">
-          <RiLineChartLine className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto" />
-          <p className="text-sm text-muted-foreground mt-2">Gráfico de Entradas vs Saídas</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Em breve</p>
-        </div>
+      {/* Chart */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6">
+        <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
+          Entradas vs A Receber
+        </h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={buildChartData(financeiro.pagamentos)} barGap={4}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+            <XAxis dataKey="mes" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              formatter={(value: number) => formatCurrency(value)}
+              contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+            />
+            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+            <Bar dataKey="recebido" name="Recebido"  fill="#10b981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="aReceber" name="A receber" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Payment history */}
@@ -143,6 +202,7 @@ export function ClienteFinanceiroTab({ financeiro, isLoading }: ClienteFinanceir
                     <td className="py-4 px-4 text-right">
                       {pagamento.status === 'pago' ? (
                         <button
+                          onClick={() => handleDownloadComprovante(pagamento)}
                           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-primary dark:hover:text-white transition-colors cursor-pointer"
                           title="Baixar comprovante"
                         >

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
 import type { ObrasAtencaoTableProps, ProgressBarProps } from '../types';
 import { SITUACAO_CONFIG } from '../constants';
@@ -101,12 +102,12 @@ export function ObrasAtencaoTable({ obras }: ObrasAtencaoTableProps) {
                     </span>
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <a
-                      href="#"
+                    <Link
+                      href={`/admin/financeiro/obras/${obra.id}`}
                       className="text-sm font-bold text-[#1E88E5] hover:underline"
                     >
                       Ver detalhes
-                    </a>
+                    </Link>
                   </td>
                 </tr>
               );

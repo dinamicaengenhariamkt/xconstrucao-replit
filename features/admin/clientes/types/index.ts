@@ -16,6 +16,7 @@ export interface AdminCliente {
   totalObras: number;
   valorTotalContratado: number;
   valorTotalPago: number;
+  observacoes?: string;
 }
 
 export interface AdminClienteObra {
@@ -38,7 +39,8 @@ export type AtividadeTipo =
   | 'obra_atualizada'
   | 'pagamento'
   | 'documento'
-  | 'obra_concluida';
+  | 'obra_concluida'
+  | 'nota';
 
 export interface ClientePagamento {
   id: string;
@@ -61,6 +63,7 @@ export interface ClienteDocumento {
   nome: string;
   tipo: DocumentoTipo;
   dataEnvio: string;
+  url?: string;
 }
 
 export interface ClienteAtividade {

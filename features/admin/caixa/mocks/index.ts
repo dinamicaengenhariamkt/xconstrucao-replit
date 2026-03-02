@@ -26,6 +26,7 @@ import type {
   FluxoItem,
   CaixaChartPoint,
 } from '../types';
+import type { CaixaPeriodo, CaixaPeriodoMacro } from '../types';
 
 // ─── Resumo legado ────────────────────────────────────────────────────────────
 
@@ -36,24 +37,86 @@ export const mockCaixaResumo: CaixaResumo = {
   previsaoProximoMes: 2_730_000,
 };
 
-// ─── KPI Data (6 cards principais) ───────────────────────────────────────────
+// ─── KPI Data por período ─────────────────────────────────────────────────────
 
-export const mockCaixaKpis: CaixaKpiData = {
-  saldoDisponivel: 2_450_000,
-  entradasPeriodo: 1_280_000,
-  saidasPeriodo: 980_000,
-  resultadoPeriodo: 300_000,
-  saldoProjetado: 2_730_000,
-  diasCaixa: 42,
-  entradasVariacao: '+12,4% vs. anterior',
-  saidasVariacao: '-8,2% vs. anterior',
-  resultadoLabel: 'Superávit',
-  saldoProjetadoLabel: 'Fim do período',
-  diasCaixaLabel: 'Média 30 dias',
-  saldoAtualizadoEm: '26/06 14:32',
+export const mockCaixaKpisByPeriodo: Record<CaixaPeriodo, CaixaKpiData> = {
+  '7dias': {
+    saldoDisponivel: 2_450_000,
+    entradasPeriodo: 200_440,
+    saidasPeriodo: 126_700,
+    resultadoPeriodo: 73_740,
+    saldoProjetado: 2_510_000,
+    diasCaixa: 8,
+    entradasVariacao: '+3,2% vs. anterior',
+    saidasVariacao: '+18,5% vs. anterior',
+    resultadoLabel: 'Superávit',
+    saldoProjetadoLabel: 'Fim do período',
+    diasCaixaLabel: 'Média 7 dias',
+    saldoAtualizadoEm: '01/03 09:15',
+  },
+  '30dias': {
+    saldoDisponivel: 2_450_000,
+    entradasPeriodo: 1_280_000,
+    saidasPeriodo: 980_000,
+    resultadoPeriodo: 300_000,
+    saldoProjetado: 2_730_000,
+    diasCaixa: 42,
+    entradasVariacao: '+12,4% vs. anterior',
+    saidasVariacao: '-8,2% vs. anterior',
+    resultadoLabel: 'Superávit',
+    saldoProjetadoLabel: 'Fim do período',
+    diasCaixaLabel: 'Média 30 dias',
+    saldoAtualizadoEm: '01/03 09:15',
+  },
+  '90dias': {
+    saldoDisponivel: 2_450_000,
+    entradasPeriodo: 3_840_000,
+    saidasPeriodo: 2_910_000,
+    resultadoPeriodo: 930_000,
+    saldoProjetado: 3_120_000,
+    diasCaixa: 42,
+    entradasVariacao: '+8,7% vs. anterior',
+    saidasVariacao: '-3,1% vs. anterior',
+    resultadoLabel: 'Superávit',
+    saldoProjetadoLabel: 'Fim do período',
+    diasCaixaLabel: 'Média 90 dias',
+    saldoAtualizadoEm: '01/03 09:15',
+  },
+  'anoAtual': {
+    saldoDisponivel: 2_450_000,
+    entradasPeriodo: 2_560_000,
+    saidasPeriodo: 1_960_000,
+    resultadoPeriodo: 600_000,
+    saldoProjetado: 4_850_000,
+    diasCaixa: 45,
+    entradasVariacao: '+15,3% vs. anterior',
+    saidasVariacao: '-2,4% vs. anterior',
+    resultadoLabel: 'Superávit',
+    saldoProjetadoLabel: 'Projeção dez/26',
+    diasCaixaLabel: 'Média no ano',
+    saldoAtualizadoEm: '01/03 09:15',
+  },
+  'personalizado': {
+    saldoDisponivel: 2_450_000,
+    entradasPeriodo: 1_280_000,
+    saidasPeriodo: 980_000,
+    resultadoPeriodo: 300_000,
+    saldoProjetado: 2_730_000,
+    diasCaixa: 42,
+    entradasVariacao: 'Período personalizado',
+    saidasVariacao: 'Período personalizado',
+    resultadoLabel: 'Superávit',
+    saldoProjetadoLabel: 'Fim do período',
+    diasCaixaLabel: 'No período',
+    saldoAtualizadoEm: '01/03 09:15',
+  },
 };
 
-// ─── Movimentações ────────────────────────────────────────────────────────────
+// ─── Movimentações (datas atualizadas para filtro por período funcionar) ──────
+// Referência: hoje = 2026-03-01
+// 7dias  → mov-001 a mov-005 (5 itens, dentro dos últimos 7 dias)
+// 30dias → mov-001 a mov-009 (9 itens, dentro dos últimos 30 dias)
+// 90dias/anoAtual → todos os 10 itens
 
 export const mockMovimentacoes: Movimentacao[] = [
   {
@@ -61,7 +124,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Medição Obra Residencial Alphaville',
     valor: 185_000,
-    data: '2026-02-20',
+    data: '2026-02-28',
     categoria: 'Medição',
     referencia: 'MED-2026-0045',
     status: 'confirmado',
@@ -71,7 +134,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Pagamento Empreiteira Silva & Filhos',
     valor: 92_500,
-    data: '2026-02-19',
+    data: '2026-02-27',
     categoria: 'Pagamento Empreiteira',
     referencia: 'PAG-2026-0112',
     status: 'confirmado',
@@ -81,7 +144,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Taxa de administração - Contrato #1847',
     valor: 12_450,
-    data: '2026-02-18',
+    data: '2026-02-26',
     categoria: 'Taxa',
     referencia: 'TX-2026-0033',
     status: 'confirmado',
@@ -91,7 +154,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Compra de materiais - Cimento e Aço',
     valor: 34_200,
-    data: '2026-02-17',
+    data: '2026-02-25',
     categoria: 'Material',
     referencia: 'MAT-2026-0089',
     status: 'pendente',
@@ -101,7 +164,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Assinatura Plano Premium - Cliente ABC',
     valor: 2_990,
-    data: '2026-02-16',
+    data: '2026-02-24',
     categoria: 'Assinatura',
     referencia: 'ASS-2026-0021',
     status: 'confirmado',
@@ -111,7 +174,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Impostos retidos - INSS e ISS',
     valor: 28_750,
-    data: '2026-02-15',
+    data: '2026-02-20',
     categoria: 'Impostos',
     referencia: 'IMP-2026-0007',
     status: 'confirmado',
@@ -121,7 +184,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Multa contratual - Atraso entrega',
     valor: 15_000,
-    data: '2026-02-14',
+    data: '2026-02-18',
     categoria: 'Multa',
     referencia: 'MLT-2026-0003',
     status: 'pendente',
@@ -131,7 +194,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Despesas operacionais - Escritório',
     valor: 8_900,
-    data: '2026-02-13',
+    data: '2026-02-15',
     categoria: 'Operacional',
     referencia: 'OPE-2026-0045',
     status: 'confirmado',
@@ -141,7 +204,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Medição Obra Comercial Centro',
     valor: 320_000,
-    data: '2026-02-12',
+    data: '2026-02-10',
     categoria: 'Medição',
     referencia: 'MED-2026-0044',
     status: 'cancelado',
@@ -151,7 +214,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Pagamento Empreiteira Construtora Norte',
     valor: 156_800,
-    data: '2026-02-11',
+    data: '2026-01-25',
     categoria: 'Pagamento Empreiteira',
     referencia: 'PAG-2026-0111',
     status: 'pendente',
@@ -332,9 +395,78 @@ export const mockImpactoFinanceiro: ImpactoItem[] = [
   },
 ];
 
-// ─── Fluxo Resumo (5 mini-stats) ─────────────────────────────────────────────
+// ─── Itens de Impacto Financeiro por período ─────────────────────────────────
 
-export const mockFluxoResumo: FluxoItem[] = [
+const makeImpacto = (
+  rendimento: string, rendimentoDetail: string,
+  erosao: string, erosaoDetail: string,
+  incc: string, inccDetail: string,
+  dolar: string, dolarDetail: string,
+  bitcoin: string, bitcoinDetail: string,
+  riscoBrasil: string, riscoBrasilDetail: string,
+): ImpactoItem[] => [
+  { id: 'rendimento', icon: RiSaveLine, bgClass: 'bg-[#22846D]/5', iconBgClass: 'bg-[#22846D]/10', iconColorClass: 'text-[#22846D]', label: 'Rendimento Projetado (Selic/CDI)', value: rendimento, valueClass: 'text-[#22846D]', detail: rendimentoDetail },
+  { id: 'erosao', icon: RiArrowRightDownLine, bgClass: 'bg-red-500/5', iconBgClass: 'bg-red-500/10', iconColorClass: 'text-red-600', label: 'Erosão por Inflação (IPCA)', value: erosao, valueClass: 'text-red-600', detail: erosaoDetail },
+  { id: 'incc', icon: RiToolsLine, bgClass: 'bg-amber-500/5', iconBgClass: 'bg-amber-500/10', iconColorClass: 'text-amber-500', label: 'Impacto INCC (custo obras)', value: incc, valueClass: 'text-amber-500', detail: inccDetail },
+  { id: 'dolar', icon: RiExchangeLine, bgClass: 'bg-[#22846D]/5', iconBgClass: 'bg-[#22846D]/10', iconColorClass: 'text-[#22846D]', label: 'Dólar (hedge cambial)', value: dolar, valueClass: 'text-[#22846D]', detail: dolarDetail },
+  { id: 'bitcoin', icon: RiCoinLine, bgClass: 'bg-amber-500/5', iconBgClass: 'bg-amber-500/10', iconColorClass: 'text-amber-500', label: 'Bitcoin (hedge e diversificação)', value: bitcoin, valueClass: 'text-amber-500', detail: bitcoinDetail },
+  { id: 'risco-brasil', icon: RiFlagLine, bgClass: 'bg-blue-500/5', iconBgClass: 'bg-blue-500/10', iconColorClass: 'text-blue-600', label: 'Risco Brasil', value: riscoBrasil, valueClass: 'text-blue-600', detail: riscoBrasilDetail },
+];
+
+export const mockImpactoFinanceiroByPeriodo: Record<CaixaPeriodoMacro, ImpactoItem[]> = {
+  '7dias': makeImpacto(
+    '+R$ 5,3k a 6,4k', 'Rendimento bruto estimado nos últimos 7 dias',
+    '-R$ 2k', 'Perda estimada de poder de compra em 7 dias',
+    '+0,09% custo', 'Variação INCC no período de 7 dias',
+    '+0,2% potencial', 'Ganho potencial estimado em 7 dias',
+    'Alta volatilidade', 'Período curto — não recomendado para análise',
+    '185 pts', 'CDS 5 anos — sem variação relevante em 7 dias',
+  ),
+  '30dias': makeImpacto(
+    '+R$ 280k a 330k', 'Rendimento bruto sobre saldo médio aplicado',
+    '-R$ 104k', 'Perda do poder de compra sobre o saldo parado',
+    '+6% custo', 'Impacto indireto em margens das obras',
+    '+9% ganho potencial', 'Ganho potencial se parte do caixa em moeda estrangeira',
+    '+120% ou -50%', 'Alta volatilidade — potencial hedge de risco sistêmico',
+    '185 pts', 'Afeta custo de crédito e confiança do investidor',
+  ),
+  '90dias': makeImpacto(
+    '+R$ 840k a 990k', 'Rendimento bruto acumulado em 90 dias',
+    '-R$ 312k', 'Erosão inflacionária acumulada no trimestre',
+    '+1,6% custo', 'Variação INCC acumulada no trimestre',
+    '+2,3% potencial', 'Ganho potencial acumulado em 90 dias',
+    '+120% ou -50%', 'Alta volatilidade — potencial hedge de risco sistêmico',
+    '185 pts', 'Mantido estável no trimestre',
+  ),
+  'anoAtual': makeImpacto(
+    '+R$ 280k a 330k', 'Projeção de rendimento anualizado sobre o saldo',
+    '-R$ 104k', 'Projeção de erosão inflacionária anual (IPCA 4,23%)',
+    '+6% custo', 'Reajuste INCC esperado no ano em andamento',
+    '+9% ganho potencial', 'Variação cambial acumulada no ano corrente',
+    '+120% ou -50%', 'Desempenho BTC no ano atual — alta volatilidade',
+    '185 pts', 'Média do risco-país no ano corrente',
+  ),
+  'personalizado': makeImpacto(
+    '+R$ 280k a 330k', 'Rendimento bruto sobre saldo médio aplicado',
+    '-R$ 104k', 'Perda do poder de compra sobre o saldo parado',
+    '+6% custo', 'Impacto indireto em margens das obras',
+    '+9% ganho potencial', 'Ganho potencial se parte do caixa em moeda estrangeira',
+    '+120% ou -50%', 'Alta volatilidade — potencial hedge de risco sistêmico',
+    '185 pts', 'Afeta custo de crédito e confiança do investidor',
+  ),
+  'futuro': makeImpacto(
+    '+R$ 340k a 400k', 'Projeção de rendimento para os próximos 12 meses',
+    '-R$ 120k', 'Erosão inflacionária projetada (IPCA estimado 4,8%)',
+    '+6,5% custo', 'Projeção de reajuste INCC para o próximo período',
+    '+12% potencial', 'Projeção de valorização cambial baseada em tendência',
+    '+150% ou -60%', 'Estimativa especulativa — alto risco e alta variância',
+    '190 pts', 'Projeção de risco-país para os próximos trimestres',
+  ),
+};
+
+// ─── Fluxo Resumo por período ─────────────────────────────────────────────────
+
+const makeFluxo = (entradas: string, saidas: string, saldo: string, maiorEntrada: string, maiorSaida: string): FluxoItem[] => [
   {
     id: 'entradas',
     icon: RiArrowDownLine,
@@ -342,7 +474,7 @@ export const mockFluxoResumo: FluxoItem[] = [
     iconBgClass: 'bg-[#22846D]/10',
     iconColorClass: 'text-[#22846D]',
     label: 'Total de entradas',
-    value: 'R$ 1.280.000',
+    value: entradas,
     valueClass: 'text-gray-900 dark:text-gray-100',
   },
   {
@@ -352,7 +484,7 @@ export const mockFluxoResumo: FluxoItem[] = [
     iconBgClass: 'bg-red-500/10',
     iconColorClass: 'text-red-600',
     label: 'Total de saídas',
-    value: 'R$ 980.000',
+    value: saidas,
     valueClass: 'text-gray-900 dark:text-gray-100',
   },
   {
@@ -362,7 +494,7 @@ export const mockFluxoResumo: FluxoItem[] = [
     iconBgClass: 'bg-[#22846D]/10',
     iconColorClass: 'text-[#22846D]',
     label: 'Saldo líquido',
-    value: '+ R$ 300.000',
+    value: saldo,
     valueClass: 'text-[#22846D]',
   },
   {
@@ -372,7 +504,7 @@ export const mockFluxoResumo: FluxoItem[] = [
     iconBgClass: 'bg-blue-500/10',
     iconColorClass: 'text-blue-600',
     label: 'Maior dia de entrada',
-    value: '12/06 — R$ 320.000',
+    value: maiorEntrada,
     valueClass: 'text-gray-900 dark:text-gray-100',
   },
   {
@@ -382,14 +514,22 @@ export const mockFluxoResumo: FluxoItem[] = [
     iconBgClass: 'bg-amber-500/10',
     iconColorClass: 'text-amber-500',
     label: 'Maior dia de saída',
-    value: '18/06 — R$ 215.000',
+    value: maiorSaida,
     valueClass: 'text-gray-900 dark:text-gray-100',
   },
 ];
 
-// ─── Dados do Gráfico (30 dias) ───────────────────────────────────────────────
+export const mockFluxoResumoByPeriodo: Record<CaixaPeriodo, FluxoItem[]> = {
+  '7dias':       makeFluxo('R$ 200.440',   'R$ 126.700',   '+ R$ 73.740',   '28/02 — R$ 185.000', '27/02 — R$ 92.500'),
+  '30dias':      makeFluxo('R$ 1.280.000', 'R$ 980.000',   '+ R$ 300.000',  '10/02 — R$ 320.000', '25/01 — R$ 156.800'),
+  '90dias':      makeFluxo('R$ 3.840.000', 'R$ 2.910.000', '+ R$ 930.000',  '10/02 — R$ 320.000', 'Dez/25 — R$ 412.000'),
+  'anoAtual':    makeFluxo('R$ 2.560.000', 'R$ 1.960.000', '+ R$ 600.000',  '10/02 — R$ 320.000', '25/01 — R$ 156.800'),
+  'personalizado': makeFluxo('R$ 1.280.000', 'R$ 980.000', '+ R$ 300.000',  '10/02 — R$ 320.000', '25/01 — R$ 156.800'),
+};
 
-export const mockCaixaChartData: CaixaChartPoint[] = [
+// ─── Dados do Gráfico por período ─────────────────────────────────────────────
+
+const chartData30dias: CaixaChartPoint[] = [
   { dia: '01', saldo: 2_150_000 },
   { dia: '02', saldo: 2_165_000 },
   { dia: '03', saldo: 2_320_000 },
@@ -421,3 +561,60 @@ export const mockCaixaChartData: CaixaChartPoint[] = [
   { dia: '29', projecao: 2_620_000 },
   { dia: '30', projecao: 2_730_000 },
 ];
+
+const chartData7dias: CaixaChartPoint[] = [
+  { dia: 'Seg', saldo: 2_390_000 },
+  { dia: 'Ter', saldo: 2_420_000 },
+  { dia: 'Qua', saldo: 2_408_000 },
+  { dia: 'Qui', saldo: 2_435_000 },
+  { dia: 'Sex', saldo: 2_450_000 },
+  { dia: 'Sáb', saldo: 2_450_000, projecao: 2_450_000 },
+  { dia: 'Dom', projecao: 2_490_000 },
+];
+
+const chartData90dias: CaixaChartPoint[] = [
+  { dia: 'Sem 1',  saldo: 1_820_000 },
+  { dia: 'Sem 2',  saldo: 1_960_000 },
+  { dia: 'Sem 3',  saldo: 1_880_000 },
+  { dia: 'Sem 4',  saldo: 2_050_000 },
+  { dia: 'Sem 5',  saldo: 1_990_000 },
+  { dia: 'Sem 6',  saldo: 2_120_000 },
+  { dia: 'Sem 7',  saldo: 2_080_000 },
+  { dia: 'Sem 8',  saldo: 2_230_000 },
+  { dia: 'Sem 9',  saldo: 2_180_000 },
+  { dia: 'Sem 10', saldo: 2_350_000 },
+  { dia: 'Sem 11', saldo: 2_420_000 },
+  { dia: 'Sem 12', saldo: 2_450_000, projecao: 2_450_000 },
+  { dia: 'Sem 13', projecao: 3_120_000 },
+];
+
+const chartDataAnoAtual: CaixaChartPoint[] = [
+  { dia: 'Jan', saldo: 2_150_000 },
+  { dia: 'Fev', saldo: 2_450_000, projecao: 2_450_000 },
+  { dia: 'Mar', projecao: 2_730_000 },
+  { dia: 'Abr', projecao: 2_980_000 },
+  { dia: 'Mai', projecao: 3_150_000 },
+  { dia: 'Jun', projecao: 3_420_000 },
+  { dia: 'Jul', projecao: 3_680_000 },
+  { dia: 'Ago', projecao: 3_850_000 },
+  { dia: 'Set', projecao: 4_100_000 },
+  { dia: 'Out', projecao: 4_320_000 },
+  { dia: 'Nov', projecao: 4_580_000 },
+  { dia: 'Dez', projecao: 4_850_000 },
+];
+
+export function getCaixaChartDataByPeriodo(periodo: CaixaPeriodo): CaixaChartPoint[] {
+  switch (periodo) {
+    case '7dias':      return chartData7dias;
+    case '30dias':     return chartData30dias;
+    case '90dias':     return chartData90dias;
+    case 'anoAtual':   return chartDataAnoAtual;
+    case 'personalizado': return chartData30dias;
+  }
+}
+
+// ─── Export legado (compatibilidade) ─────────────────────────────────────────
+
+export const mockCaixaKpis: CaixaKpiData = mockCaixaKpisByPeriodo['30dias'];
+export const mockFluxoResumo: FluxoItem[] = mockFluxoResumoByPeriodo['30dias'];
+export const mockCaixaChartData: CaixaChartPoint[] = chartData30dias;

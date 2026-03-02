@@ -1,4 +1,9 @@
 export type EntradaPeriodo = '7dias' | '30dias' | '3meses' | '12meses' | 'personalizado';
+
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
 export type EntradaTipoReceita = 'taxa_medicao' | 'assinatura' | 'outros_servicos';
 export type EntradaOrigem = 'cliente' | 'empreiteira' | 'outros';
 export type EntradaStatus = 'recebido' | 'pendente' | 'em_processamento';

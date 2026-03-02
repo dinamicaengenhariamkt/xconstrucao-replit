@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   RiMoneyDollarCircleLine,
@@ -23,9 +23,19 @@ import {
   RiProhibitedLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
+  RiPlayCircleLine,
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { Button } from '@shared/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@shared/components/ui/dialog';
 import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/admin/financeiro/components/StatsCard';
 import { VincularZonaModal } from '@features/admin/anuncios/components/VincularZonaModal';
@@ -38,6 +48,7 @@ import {
   useAnunciantes,
 } from '@features/admin/anuncios/hooks/use-anuncios';
 import type { AnuncioStatus, ZonaAnuncio, Campanha, Anunciante } from '@features/admin/anuncios/types';
+import type { EditarAnuncianteFormData } from '@features/admin/anuncios/schemas';
 
 const PAGE_SIZE = 20;
 
@@ -130,6 +141,10 @@ export default function AdminAnunciosPage() {
   const { data: campanhas, isLoading: loadingCampanhas } = useCampanhas();
   const { data: anunciantes, isLoading: loadingAnunciantes } = useAnunciantes();
 
+  const [localCampanhas, setLocalCampanhas] = useState<Campanha[]>([]);
+  const [localAnunciantes, setLocalAnunciantes] = useState<Anunciante[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [novoAnuncianteOpen, setNovoAnuncianteOpen] = useState(false);
   const [selectedZona, setSelectedZona] = useState<ZonaAnuncio | null>(null);
   const [selectedCampanha, setSelectedCampanha] = useState<Campanha | null>(null);
   const [campanhaMode, setCampanhaMode] = useState<'view' | 'edit'>('view');
@@ -140,11 +155,53 @@ export default function AdminAnunciosPage() {
   const [filterZona, setFilterZona] = useState('');
   const [pageCampanha, setPageCampanha] = useState(1);
 
+  useEffect(() => { if (campanhas) setLocalCampanhas(campanhas); }, [campanhas]);
+  useEffect(() => { if (anunciantes) setLocalAnunciantes(anunciantes); }, [anunciantes]);
+
+  function handlePausar(c: Campanha) {
+    setLocalCampanhas(prev =>
+      prev.map(x => x.id === c.id
+        ? { ...x, status: x.status === 'pausada' ? 'ativa' : 'pausada' }
+        : x
+      )
+    );
+  }
+
+  function handleDelete(id: string) {
+    setLocalCampanhas(prev => prev.filter(x => x.id !== id));
+    setConfirmDeleteId(null);
+  }
+
+  function handleToggleAnuncianteStatus(a: Anunciante) {
+    setLocalAnunciantes(prev =>
+      prev.map(x => x.id === a.id
+        ? { ...x, status: x.status === 'ativo' ? 'inativo' : 'ativo' }
+        : x
+      )
+    );
+  }
+
+  function handleCreateAnunciante(data: EditarAnuncianteFormData) {
+    const newAnunciante: Anunciante = {
+      id: `anunc-${Date.now()}`,
+      nome: data.nome,
+      sigla: data.sigla,
+      corBg: 'bg-blue-50',
+      corTexto: 'text-blue-600',
+      contato: data.contato,
+      email: data.email,
+      telefone: data.telefone,
+      campanhasAtivas: 0,
+      receitaTotal: 0,
+      status: data.status,
+    };
+    setLocalAnunciantes(prev => [...prev, newAnunciante]);
+  }
+
   const isLoading = loadingKpi || loadingZonas || loadingCampanhas || loadingAnunciantes;
 
   const filteredCampanhas = useMemo(() => {
-    if (!campanhas) return [];
-    return campanhas.filter((c) => {
+    return localCampanhas.filter((c) => {
       const matchSearch =
         !searchCampanha ||
         c.titulo.toLowerCase().includes(searchCampanha.toLowerCase()) ||
@@ -153,7 +210,7 @@ export default function AdminAnunciosPage() {
       const matchZona = !filterZona || c.zonaId.includes(filterZona);
       return matchSearch && matchStatus && matchZona;
     });
-  }, [campanhas, searchCampanha, filterStatus, filterZona]);
+  }, [localCampanhas, searchCampanha, filterStatus, filterZona]);
 
   const totalPagesCampanha = Math.max(1, Math.ceil(filteredCampanhas.length / PAGE_SIZE));
   const paginatedCampanhas = filteredCampanhas.slice(
@@ -361,6 +418,8 @@ export default function AdminAnunciosPage() {
                   campanha={c}
                   onView={(camp) => { setSelectedCampanha(camp); setCampanhaMode('view'); }}
                   onEdit={(camp) => { setSelectedCampanha(camp); setCampanhaMode('edit'); }}
+                  onPausar={handlePausar}
+                  onDelete={(camp) => setConfirmDeleteId(camp.id)}
                 />
               ))}
               {paginatedCampanhas.length === 0 && (
@@ -417,7 +476,10 @@ export default function AdminAnunciosPage() {
             Empresas parceiras com campanhas na plataforma
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-primary text-sm font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+        <button
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-primary text-sm font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          onClick={() => setNovoAnuncianteOpen(true)}
+        >
           <RiAddLine className="w-4 h-4" />
           Cadastrar novo anunciante
         </button>
@@ -442,12 +504,13 @@ export default function AdminAnunciosPage() {
               </tr>
             </thead>
             <tbody>
-              {(anunciantes ?? []).map((a) => (
+              {localAnunciantes.map((a) => (
                 <AnuncianteRow
                   key={a.id}
                   anunciante={a}
                   onView={(anunc) => { setSelectedAnunciante(anunc); setAnuncianteMode('view'); }}
                   onEdit={(anunc) => { setSelectedAnunciante(anunc); setAnuncianteMode('edit'); }}
+                  onToggleStatus={handleToggleAnuncianteStatus}
                 />
               ))}
             </tbody>
@@ -471,8 +534,36 @@ export default function AdminAnunciosPage() {
       <AnuncianteModal
         anunciante={selectedAnunciante}
         initialMode={anuncianteMode}
-        onOpenChange={(open) => { if (!open) setSelectedAnunciante(null); }}
+        isNew={novoAnuncianteOpen}
+        onSave={handleCreateAnunciante}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedAnunciante(null);
+            setNovoAnuncianteOpen(false);
+          }
+        }}
       />
+
+      {/* Confirmação de exclusão de campanha */}
+      <Dialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir campanha</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDeleteId(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -565,12 +656,17 @@ function CampanhaRow({
   campanha: c,
   onView,
   onEdit,
+  onPausar,
+  onDelete,
 }: {
   campanha: Campanha;
   onView: (c: Campanha) => void;
   onEdit: (c: Campanha) => void;
+  onPausar: (c: Campanha) => void;
+  onDelete: (c: Campanha) => void;
 }) {
   const isExpirada = c.status === 'expirada';
+  const isPausada = c.status === 'pausada';
   return (
     <tr className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
       <td className="py-4 px-6">
@@ -638,10 +734,19 @@ function CampanhaRow({
             >
               <RiFileCopyLine className="w-5 h-5" />
             </button>
+          ) : isPausada ? (
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-[#22846D] transition-colors"
+              title="Retomar"
+              onClick={() => onPausar(c)}
+            >
+              <RiPlayCircleLine className="w-5 h-5" />
+            </button>
           ) : (
             <button
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-amber-600 transition-colors"
               title="Pausar"
+              onClick={() => onPausar(c)}
             >
               <RiPauseCircleLine className="w-5 h-5" />
             </button>
@@ -649,6 +754,7 @@ function CampanhaRow({
           <button
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-red-600 transition-colors"
             title="Excluir"
+            onClick={() => onDelete(c)}
           >
             <RiDeleteBinLine className="w-5 h-5" />
           </button>
@@ -662,10 +768,12 @@ function AnuncianteRow({
   anunciante: a,
   onView,
   onEdit,
+  onToggleStatus,
 }: {
   anunciante: Anunciante;
   onView: (a: Anunciante) => void;
   onEdit: (a: Anunciante) => void;
+  onToggleStatus: (a: Anunciante) => void;
 }) {
   return (
     <tr className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
@@ -725,12 +833,23 @@ function AnuncianteRow({
           >
             <RiEditLine className="w-5 h-5" />
           </button>
-          <button
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-red-600 transition-colors"
-            title="Desativar"
-          >
-            <RiProhibitedLine className="w-5 h-5" />
-          </button>
+          {a.status === 'inativo' ? (
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-[#22846D] transition-colors"
+              title="Reativar"
+              onClick={() => onToggleStatus(a)}
+            >
+              <RiPlayCircleLine className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-red-600 transition-colors"
+              title="Desativar"
+              onClick={() => onToggleStatus(a)}
+            >
+              <RiProhibitedLine className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </td>
     </tr>

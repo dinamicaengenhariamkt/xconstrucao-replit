@@ -81,10 +81,10 @@ export function useAdminClienteObras(id: string) {
 }
 
 export function useAdminClienteFinanceiro(id: string) {
-  return useQuery<ClienteFinanceiro | undefined>({
+  return useQuery<ClienteFinanceiro | null>({
     queryKey: ['admin', 'clientes', id, 'financeiro'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClienteFinanceiro[id];
+      if (ENABLE_MOCK) return mockAdminClienteFinanceiro[id] ?? null;
       const res = await fetch(`/api/admin/clientes/${id}/financeiro`);
       if (!res.ok) throw new Error('Erro ao buscar financeiro do cliente');
       return res.json();

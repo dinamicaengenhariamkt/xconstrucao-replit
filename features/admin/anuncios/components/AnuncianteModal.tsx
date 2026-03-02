@@ -11,6 +11,7 @@ import {
   RiBarChartLine,
   RiPhoneLine,
   RiMailLine,
+  RiAddLine,
 } from 'react-icons/ri';
 import {
   Dialog,
@@ -44,14 +45,18 @@ interface AnuncianteModalProps {
   anunciante: Anunciante | null;
   initialMode?: 'view' | 'edit';
   onOpenChange: (open: boolean) => void;
+  isNew?: boolean;
+  onSave?: (data: EditarAnuncianteFormData) => void;
 }
 
 export function AnuncianteModal({
   anunciante,
   initialMode = 'view',
   onOpenChange,
+  isNew = false,
+  onSave,
 }: AnuncianteModalProps) {
-  const isOpen = anunciante !== null;
+  const isOpen = anunciante !== null || isNew;
   const [mode, setMode] = useState<'view' | 'edit'>(initialMode);
 
   const form = useForm<EditarAnuncianteFormData>({
@@ -67,29 +72,35 @@ export function AnuncianteModal({
   });
 
   useEffect(() => {
-    setMode(initialMode);
-    if (anunciante) {
-      form.reset({
-        nome:     anunciante.nome,
-        sigla:    anunciante.sigla,
-        contato:  anunciante.contato,
-        email:    anunciante.email,
-        telefone: anunciante.telefone,
-        status:   anunciante.status,
-      });
+    if (isNew) {
+      setMode('edit');
+      form.reset({ nome: '', sigla: '', contato: '', email: '', telefone: '', status: 'ativo' });
+    } else {
+      setMode(initialMode);
+      if (anunciante) {
+        form.reset({
+          nome:     anunciante.nome,
+          sigla:    anunciante.sigla,
+          contato:  anunciante.contato,
+          email:    anunciante.email,
+          telefone: anunciante.telefone,
+          status:   anunciante.status,
+        });
+      }
     }
-  }, [anunciante, initialMode, form]);
+  }, [anunciante, initialMode, isNew, form]);
 
   const handleClose = () => {
     form.reset();
     onOpenChange(false);
   };
 
-  const onSubmit = (_data: EditarAnuncianteFormData) => {
+  const onSubmit = (data: EditarAnuncianteFormData) => {
+    onSave?.(data);
     handleClose();
   };
 
-  if (!anunciante) return null;
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -104,30 +115,44 @@ export function AnuncianteModal({
               <div
                 className={cn(
                   'w-12 h-12 rounded-xl flex items-center justify-center shrink-0',
-                  mode === 'edit' ? 'bg-primary/5' : anunciante.corBg
+                  isNew
+                    ? 'bg-primary/5'
+                    : mode === 'edit'
+                    ? 'bg-primary/5'
+                    : anunciante?.corBg ?? 'bg-gray-100'
                 )}
               >
-                {mode === 'edit' ? (
+                {isNew ? (
+                  <RiAddLine className="w-6 h-6 text-primary" />
+                ) : mode === 'edit' ? (
                   <RiEditLine className="w-6 h-6 text-primary" />
                 ) : (
-                  <span className={cn('text-sm font-bold', anunciante.corTexto)}>
-                    {anunciante.sigla}
+                  <span className={cn('text-sm font-bold', anunciante?.corTexto)}>
+                    {anunciante?.sigla}
                   </span>
                 )}
               </div>
               <div className="min-w-0">
                 <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white truncate">
-                  {mode === 'edit' ? 'Editar anunciante' : anunciante.nome}
+                  {isNew
+                    ? 'Novo anunciante'
+                    : mode === 'edit'
+                    ? 'Editar anunciante'
+                    : anunciante?.nome ?? ''}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-gray-500 mt-0.5">
-                  {mode === 'edit' ? anunciante.nome : (
+                  {isNew ? (
+                    'Preencha os dados do novo anunciante'
+                  ) : mode === 'edit' ? (
+                    anunciante?.nome
+                  ) : (
                     <span className={cn(
                       'inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold',
-                      anunciante.status === 'ativo'
+                      anunciante?.status === 'ativo'
                         ? 'bg-[#22846D]/10 text-[#22846D]'
                         : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                     )}>
-                      {anunciante.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      {anunciante?.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </span>
                   )}
                 </DialogDescription>
@@ -139,7 +164,7 @@ export function AnuncianteModal({
         {/* Body */}
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-6 flex flex-col gap-6">
-            {mode === 'view' ? (
+            {mode === 'view' && anunciante ? (
               <>
                 {/* Contato */}
                 <div>
@@ -185,7 +210,7 @@ export function AnuncianteModal({
                 </div>
               </>
             ) : (
-              /* Edit form */
+              /* Edit / Create form */
               <Form {...form}>
                 <form
                   id="form-editar-anunciante"
@@ -332,7 +357,26 @@ export function AnuncianteModal({
 
         {/* Footer */}
         <DialogFooter className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-row justify-end gap-3">
-          {mode === 'view' ? (
+          {isNew ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleClose}
+                data-testid="button-cancelar-anunciante"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="form-editar-anunciante"
+                data-testid="button-criar-anunciante"
+              >
+                <RiAddLine className="w-4 h-4 mr-2" />
+                Criar anunciante
+              </Button>
+            </>
+          ) : mode === 'view' ? (
             <>
               <Button
                 type="button"

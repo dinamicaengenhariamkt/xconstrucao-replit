@@ -9,6 +9,7 @@ import {
   RiFileUploadLine,
   RiCheckboxCircleLine,
   RiHistoryLine,
+  RiStickyNoteLine,
 } from 'react-icons/ri';
 import type { ClienteAtividade, AtividadeTipo } from '../types';
 
@@ -37,6 +38,10 @@ const ATIVIDADE_CONFIG: Record<AtividadeTipo, AtividadeConfig> = {
   obra_concluida: {
     icon: RiCheckboxCircleLine,
     bgColor: 'bg-gray-800 dark:bg-gray-600',
+  },
+  nota: {
+    icon: RiStickyNoteLine,
+    bgColor: 'bg-gray-400 dark:bg-gray-600',
   },
 };
 

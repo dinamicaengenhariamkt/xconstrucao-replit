@@ -1,9 +1,24 @@
 'use client';
 
-import { RiDownloadLine } from 'react-icons/ri';
+import { useState } from 'react';
+import { RiDownloadLine, RiLoaderLine } from 'react-icons/ri';
 import { Button } from '@shared/components/ui/button';
+import { useToast } from '@shared/hooks/use-toast';
 
 export function ExportBanner() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { toast } = useToast();
+
+  async function handleGerar() {
+    setIsGenerating(true);
+    await new Promise((r) => setTimeout(r, 1500));
+    setIsGenerating(false);
+    toast({
+      title: 'Relatório em desenvolvimento',
+      description: 'Esta funcionalidade estará disponível em breve.',
+    });
+  }
+
   return (
     <div className="bg-primary rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
       {/* Background grid pattern */}
@@ -28,9 +43,22 @@ export function ExportBanner() {
         </p>
       </div>
 
-      <Button className="relative z-10 px-8 py-3 bg-white text-primary font-extrabold rounded-xl hover:bg-gray-50 transition-colors shadow-xl flex items-center gap-2">
-        <RiDownloadLine className="w-4 h-4" />
-        Gerar Relatório
+      <Button
+        onClick={handleGerar}
+        disabled={isGenerating}
+        className="relative z-10 px-8 py-3 bg-white text-primary font-extrabold rounded-xl hover:bg-gray-50 transition-colors shadow-xl flex items-center gap-2 disabled:opacity-80"
+      >
+        {isGenerating ? (
+          <>
+            <RiLoaderLine className="w-4 h-4 animate-spin" />
+            Gerando...
+          </>
+        ) : (
+          <>
+            <RiDownloadLine className="w-4 h-4" />
+            Gerar Relatório
+          </>
+        )}
       </Button>
     </div>
   );

@@ -11,6 +11,11 @@ export interface PeriodoOption<T extends string = CaixaPeriodo> {
   icon?: IconType;
 }
 
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
+
 // ─── Resumo / KPI ─────────────────────────────────────────────────────────────
 
 /** Dados brutos do caixa (usado pelo resumo existente) */

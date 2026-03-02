@@ -9,15 +9,21 @@ import { IndicadoresEconomicosSection } from '@features/admin/caixa/components/I
 import { CaixaChart } from '@features/admin/caixa/components/CaixaChart';
 import { FluxoResumo } from '@features/admin/caixa/components/FluxoResumo';
 import { MovimentacoesTable } from '@features/admin/caixa/components/MovimentacoesTable';
-import type { CaixaPeriodo } from '@features/admin/caixa/types';
+import type { CaixaPeriodo, DateRange } from '@features/admin/caixa/types';
 
 export default function AdminCaixaPage() {
   const [periodo, setPeriodo] = useState<CaixaPeriodo>('30dias');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
 
-  const { isLoading: isLoadingKpis } = useCaixaKpis();
+  function handlePeriodoChange(p: CaixaPeriodo) {
+    if (p !== 'personalizado') setCustomRange(undefined);
+    setPeriodo(p);
+  }
+
+  const { isLoading: isLoadingKpis } = useCaixaKpis(periodo);
   const { isLoading: isLoadingIndicadores } = useIndicadoresEconomicos();
-  const { isLoading: isLoadingChart } = useCaixaChartData();
-  const { isLoading: isLoadingMovs } = useMovimentacoes();
+  const { isLoading: isLoadingChart } = useCaixaChartData(periodo);
+  const { isLoading: isLoadingMovs } = useMovimentacoes(periodo, customRange);
 
   const isLoading =
     isLoadingKpis || isLoadingIndicadores || isLoadingChart || isLoadingMovs;
@@ -28,12 +34,17 @@ export default function AdminCaixaPage() {
 
   return (
     <div className="p-6 md:p-10 space-y-8">
-      <WelcomeSection periodo={periodo} onPeriodoChange={setPeriodo} />
-      <KpiGridContainer />
+      <WelcomeSection
+        periodo={periodo}
+        onPeriodoChange={handlePeriodoChange}
+        customRange={customRange}
+        onCustomRangeChange={setCustomRange}
+      />
+      <KpiGridContainer periodo={periodo} />
       <IndicadoresEconomicosSection />
-      <CaixaChart />
-      <FluxoResumo />
-      <MovimentacoesTable />
+      <CaixaChart periodo={periodo} />
+      <FluxoResumo periodo={periodo} />
+      <MovimentacoesTable periodo={periodo} customRange={customRange} />
     </div>
   );
 }

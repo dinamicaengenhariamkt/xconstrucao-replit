@@ -13,7 +13,7 @@ import {
 import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '@features/admin/financeiro/utils';
 import { useMovimentacoes } from '../hooks/use-caixa';
-import type { Movimentacao } from '../types';
+import type { Movimentacao, CaixaPeriodo, DateRange } from '../types';
 
 const STATUS_CLASSES: Record<string, string> = {
   confirmado: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -73,8 +73,13 @@ function MovimentacaoRow({ mov }: { mov: Movimentacao }) {
   );
 }
 
-export function MovimentacoesTable() {
-  const { data: movimentacoes } = useMovimentacoes();
+interface MovimentacoesTableProps {
+  periodo: CaixaPeriodo;
+  customRange?: DateRange;
+}
+
+export function MovimentacoesTable({ periodo, customRange }: MovimentacoesTableProps) {
+  const { data: movimentacoes } = useMovimentacoes(periodo, customRange);
 
   return (
     <Card>

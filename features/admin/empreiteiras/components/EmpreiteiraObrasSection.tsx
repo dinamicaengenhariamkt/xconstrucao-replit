@@ -5,7 +5,7 @@ import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
-import { RiExternalLinkLine, RiHammerLine, RiArrowRightLine } from 'react-icons/ri';
+import { RiExternalLinkLine, RiHammerLine } from 'react-icons/ri';
 import type { AdminEmpreiteiraObra } from '../types';
 
 type ObraStatus = AdminEmpreiteiraObra['status'];
@@ -54,12 +54,11 @@ const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('pt-BR');
 
 interface EmpreiteiraObrasSectionProps {
-  empreiteiraId: string;
   obras: AdminEmpreiteiraObra[];
   isLoading: boolean;
 }
 
-export function EmpreiteiraObrasSection({ empreiteiraId, obras, isLoading }: EmpreiteiraObrasSectionProps) {
+export function EmpreiteiraObrasSection({ obras, isLoading }: EmpreiteiraObrasSectionProps) {
   const obrasEmAndamento = obras.filter((o) => o.status === 'em_andamento').length;
   const obrasConcluidas = obras.filter((o) => o.status === 'concluida').length;
 
@@ -67,26 +66,18 @@ export function EmpreiteiraObrasSection({ empreiteiraId, obras, isLoading }: Emp
     <Card className="rounded-3xl" data-testid="card-obras-empreiteira">
       <CardContent className="p-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div className="flex items-start gap-3">
-            <RiHammerLine className="w-6 h-6 text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Obras desta empreiteira
-              </h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                <span className="font-semibold text-gray-700 dark:text-gray-300">{obrasEmAndamento}</span> obras em andamento{' '}
-                ·{' '}
-                <span className="font-semibold text-gray-700 dark:text-gray-300">{obrasConcluidas}</span> obras concluídas
-              </p>
-            </div>
+        <div className="flex items-start gap-3 mb-6">
+          <RiHammerLine className="w-6 h-6 text-primary mt-0.5 flex-shrink-0" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Obras desta empreiteira
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">{obrasEmAndamento}</span> obras em andamento{' '}
+              ·{' '}
+              <span className="font-semibold text-gray-700 dark:text-gray-300">{obrasConcluidas}</span> obras concluídas
+            </p>
           </div>
-          <Link href={`/admin/empreiteiras/${empreiteiraId}/obras`}>
-            <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-primary text-sm font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer whitespace-nowrap">
-              Ver todas as obras
-              <RiArrowRightLine className="w-4 h-4" />
-            </button>
-          </Link>
         </div>
 
         {/* Loading state */}

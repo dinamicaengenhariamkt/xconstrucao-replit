@@ -11,9 +11,14 @@ import {
 import { StatsGrid } from '@features/admin/financeiro/components/StatsGrid';
 import { formatCurrency } from '@features/admin/financeiro/utils';
 import { useCaixaKpis } from '../hooks/use-caixa';
+import type { CaixaPeriodo } from '../types';
 
-export function KpiGridContainer() {
-  const { data: kpis } = useCaixaKpis();
+interface KpiGridContainerProps {
+  periodo: CaixaPeriodo;
+}
+
+export function KpiGridContainer({ periodo }: KpiGridContainerProps) {
+  const { data: kpis } = useCaixaKpis(periodo);
 
   if (!kpis) return null;
 

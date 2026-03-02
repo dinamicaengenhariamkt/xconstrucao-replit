@@ -22,6 +22,7 @@ export const mockAdminClientes: AdminCliente[] = [
     totalObras: 3,
     valorTotalContratado: 1_850_000,
     valorTotalPago: 1_200_000,
+    observacoes: 'Cliente prioritário — preferência por comunicação via WhatsApp. Pontual nos pagamentos. Aguardando retomada da obra obr-003 após liberação de orçamento.',
   },
   {
     id: 'cli-002',
@@ -232,39 +233,21 @@ export const mockAdminClienteObras: Record<string, AdminClienteObra[]> = {
 
 export const mockAdminClienteFinanceiro: Record<string, ClienteFinanceiro> = {
   'cli-001': {
-    totalPago: 1_200_000,
-    saldoPendente: 650_000,
+    totalPago: 840_000,
+    saldoPendente: 170_000,
     proximoVencimento: '2026-03-15',
     valorProximoVencimento: 85_000,
     pagamentos: [
-      {
-        id: 'pag-001',
-        data: '2025-01-15',
-        descricao: 'Parcela 3 - Reforma Residencial Vila Mariana',
-        valor: 85_000,
-        status: 'pago',
-      },
-      {
-        id: 'pag-002',
-        data: '2024-12-10',
-        descricao: 'Parcela Final - Construção Casa Alphaville',
-        valor: 200_000,
-        status: 'pago',
-      },
-      {
-        id: 'pag-003',
-        data: '2025-11-15',
-        descricao: 'Parcela 2 - Reforma Residencial Vila Mariana',
-        valor: 85_000,
-        status: 'pago',
-      },
-      {
-        id: 'pag-004',
-        data: '2026-03-15',
-        descricao: 'Parcela 4 - Reforma Residencial Vila Mariana',
-        valor: 85_000,
-        status: 'pendente',
-      },
+      { id: 'pag-001', data: '2024-06-10', descricao: 'Sinal - Reforma Residencial Vila Mariana',      valor: 130_000, status: 'pago' },
+      { id: 'pag-002', data: '2024-08-15', descricao: 'Parcela 1 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-003', data: '2024-09-20', descricao: 'Parcela Final - Construção Casa Alphaville',    valor: 200_000, status: 'pago' },
+      { id: 'pag-004', data: '2024-10-10', descricao: 'Parcela 2 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-005', data: '2024-12-15', descricao: 'Parcela 3 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-006', data: '2025-01-15', descricao: 'Parcela 4 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-007', data: '2025-03-15', descricao: 'Parcela 5 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-008', data: '2025-05-15', descricao: 'Parcela 6 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pago' },
+      { id: 'pag-009', data: '2026-01-15', descricao: 'Parcela 7 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'atrasado' },
+      { id: 'pag-010', data: '2026-03-15', descricao: 'Parcela 8 - Reforma Residencial Vila Mariana',  valor:  85_000, status: 'pendente' },
     ],
   },
   'cli-002': {

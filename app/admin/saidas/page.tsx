@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import {
   RiArrowDownLine,
@@ -12,6 +14,9 @@ import {
   RiSearchLine,
   RiCalendarLine,
 } from 'react-icons/ri';
+import type { DateRange as DayPickerRange } from 'react-day-picker';
+import { Calendar } from '@shared/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -33,6 +38,7 @@ import type {
   SaidaDestinoPerfil,
   Saida,
   SaidaFutura,
+  DateRange,
 } from '@features/admin/saidas/types';
 import {
   useSaidaKpi,
@@ -115,6 +121,15 @@ const periodOptions: { value: SaidaPeriodo; label: string }[] = [
 
 const PAGE_SIZE = 20;
 
+// ─── Custom range label ──────────────────────────────────────────────────────
+
+function formatRange(range: DateRange | undefined): string {
+  if (!range) return 'Personalizado';
+  const from = format(range.from, 'dd/MM', { locale: ptBR });
+  const to = range.to ? format(range.to, 'dd/MM', { locale: ptBR }) : '...';
+  return `${from} – ${to}`;
+}
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function SaidasSkeleton() {
@@ -159,6 +174,8 @@ function SaidasSkeleton() {
 
 export default function AdminSaidasPage() {
   const [periodo, setPeriodo] = useState<SaidaPeriodo>('30dias');
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [tipoFilter, setTipoFilter] = useState<string>('todos');
   const [destinoFilter, setDestinoFilter] = useState<string>('todos');
   const [tabelaTipoFilter, setTabelaTipoFilter] = useState<string>('todas');
@@ -166,8 +183,21 @@ export default function AdminSaidasPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
+  function handleDayPickerSelect(range: DayPickerRange | undefined) {
+    if (!range?.from) { setCustomRange(undefined); return; }
+    setCustomRange({ from: range.from, to: range.to });
+    if (range.from && range.to) setPopoverOpen(false);
+  }
+
+  function handlePeriodoChange(p: SaidaPeriodo) {
+    if (p !== 'personalizado') setCustomRange(undefined);
+    setPeriodo(p);
+    setPage(1);
+    if (p === 'personalizado') setPopoverOpen(true);
+  }
+
   const { data: kpi, isLoading: isLoadingKpi } = useSaidaKpi(periodo);
-  const { data: saidas, isLoading: isLoadingSaidas } = useSaidas(periodo);
+  const { data: saidas, isLoading: isLoadingSaidas } = useSaidas(periodo, customRange);
   const { data: chartData, isLoading: isLoadingChart } = useSaidaChart(periodo);
   const { data: futuras, isLoading: isLoadingFuturas } = useSaidasFuturas();
 
@@ -282,24 +312,45 @@ export default function AdminSaidasPage() {
           </div>
 
           {/* Seletor de período */}
-          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-            {periodOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => { setPeriodo(opt.value); setPage(1); }}
-                className={cn(
-                  'px-4 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1',
-                  periodo === opt.value
-                    ? 'bg-primary text-white font-bold shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
-                )}
-              >
-                {opt.value === 'personalizado' && (
-                  <RiCalendarLine className="w-4 h-4" />
-                )}
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap">
+            {periodOptions.map((opt) => {
+              const isActive = periodo === opt.value;
+              const isPersonalizado = opt.value === 'personalizado';
+
+              const button = (
+                <button
+                  key={opt.value}
+                  onClick={() => handlePeriodoChange(opt.value)}
+                  className={cn(
+                    'px-4 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                    isActive
+                      ? 'bg-primary text-white font-bold shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
+                  )}
+                >
+                  {isPersonalizado && <RiCalendarLine className="w-3.5 h-3.5 shrink-0" />}
+                  {isPersonalizado && isActive ? formatRange(customRange) : opt.label}
+                </button>
+              );
+
+              if (!isPersonalizado) return button;
+
+              return (
+                <Popover key={opt.value} open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>{button}</PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      selected={customRange as DayPickerRange | undefined}
+                      onSelect={handleDayPickerSelect}
+                      disabled={{ after: new Date() }}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
           </div>
         </div>
 

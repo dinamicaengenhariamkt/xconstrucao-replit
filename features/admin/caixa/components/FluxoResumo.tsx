@@ -4,10 +4,15 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
 import { ANIMATION_CONFIG } from '@features/admin/financeiro/constants';
-import { mockFluxoResumo } from '../mocks';
+import { mockFluxoResumoByPeriodo } from '../mocks';
+import type { CaixaPeriodo } from '../types';
 
-export function FluxoResumo() {
-  const items = mockFluxoResumo;
+interface FluxoResumoProps {
+  periodo: CaixaPeriodo;
+}
+
+export function FluxoResumo({ periodo }: FluxoResumoProps) {
+  const items = mockFluxoResumoByPeriodo[periodo];
 
   return (
     <Card>
