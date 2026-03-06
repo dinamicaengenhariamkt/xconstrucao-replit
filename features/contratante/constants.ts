@@ -19,5 +19,5 @@ export const CONTRATANTE_NAV_ITEMS: NavItem[] = [
 
 export const CONTRATANTE_BOTTOM_NAV_ITEMS: NavItem[] = [
   { title: 'Perguntas Frequentes', url: '/contratante/faq', icon: RiQuestionLine },
-  { title: 'Configurações', url: '/contratante/config', icon: RiSettings3Line },
+  { title: 'Configurações', url: '/contratante/configuracoes', icon: RiSettings3Line },
 ];

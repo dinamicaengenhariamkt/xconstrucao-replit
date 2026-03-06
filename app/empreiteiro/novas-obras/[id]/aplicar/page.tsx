@@ -170,7 +170,7 @@ export default function AplicarPage() {
   };
 
   return (
-    <div className="p-10 flex flex-col gap-8">
+    <div className="px-10 pt-10 pb-6 flex flex-col gap-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
         <Link href={`/empreiteiro/novas-obras/${id}`} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors" data-testid="link-back">
           <span className="material-symbols-outlined text-lg">arrow_back</span>Voltar

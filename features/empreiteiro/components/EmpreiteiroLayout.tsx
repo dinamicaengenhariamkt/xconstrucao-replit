@@ -17,7 +17,7 @@ export function EmpreiteiroLayout({ children }: EmpreiteiroLayoutProps) {
         <EmpreiteiroSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <EmpreiteiroTopbar />
-          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
+          <main className="flex-1 min-h-0 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}
           </main>
         </div>

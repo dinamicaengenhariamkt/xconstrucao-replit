@@ -27,9 +27,26 @@ export interface ObraContratanteDetalhe extends ObraContratante {
   tarefasConcluidas: number;
   tarefasTotal: number;
   etapas: EtapaObra[];
+  tarefas: TarefaContratante[];
+  timeline: TimelineEventContratante[];
+  ocorrencias: OcorrenciaContratante[];
   equipe: MembroEquipe[];
   financeiro: RegistroFinanceiro[];
   fotos: FotoObra[];
+}
+
+export interface TarefaContratante {
+  id: string;
+  titulo: string;
+  etapa: string;
+  responsavel: string;
+  prazo: string;
+  status: 'pendente' | 'em_andamento' | 'bloqueado' | 'concluido';
+  prioridade: 'alta' | 'media' | 'baixa';
+  progresso?: number;
+  bloqueioMotivo?: string;
+  bloqueioInfo?: string;
+  descricao?: string;
 }
 
 export interface EtapaObra {
@@ -64,7 +81,34 @@ export interface FotoObra {
   url: string;
   data: string;
   etapa?: string;
+  fase?: 'antes' | 'durante' | 'agora';
+  tag?: string;
+  enviadaAoContratante?: boolean;
 }
+
+export interface TimelineEventContratante {
+  id: string;
+  tipo: 'progresso' | 'tarefa' | 'documento' | 'problema' | 'nota';
+  titulo: string;
+  descricao: string;
+  autor: string;
+  data: string;
+}
+
+export interface OcorrenciaContratante {
+  id: string;
+  titulo: string;
+  descricao: string;
+  gravidade: 'critico' | 'medio' | 'baixo';
+  status: 'aberta' | 'resolvida';
+  responsavel: string;
+  dataAbertura: string;
+  dataResolucao?: string;
+  resolvidoPor?: string;
+  fotoUrl?: string;
+}
+
+export type ProgressColor = 'success' | 'warning' | 'error' | 'info' | 'primary';
 
 export interface ObraContratanteCardProps {
   obra: ObraContratante;

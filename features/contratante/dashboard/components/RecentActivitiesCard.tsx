@@ -31,7 +31,7 @@ export function RecentActivitiesCard({ activities }: RecentActivitiesCardProps) 
     <Card className="border-border-light dark:border-gray-800">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
-          Atualizações Recentes
+          Atividades Recentes
         </CardTitle>
         <button className="text-xs font-bold text-primary hover:underline">Ver todas</button>
       </CardHeader>

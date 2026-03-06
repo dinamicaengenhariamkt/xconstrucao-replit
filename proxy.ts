@@ -16,7 +16,7 @@ import type { NextRequest } from "next/server";
  * - Frontend: validação + UX (useAuth redireciona usuários não autenticados)
  * - Backend: validação final (APIs rejeitam requests com tokens inválidos)
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const pathname = request.nextUrl.pathname;
 
