@@ -15,7 +15,8 @@ import { CronogramaSection } from '@features/empreiteiro/minhas-obras/components
 import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/components/OcorrenciasSection';
 import { FinanceiroSection } from '@features/empreiteiro/minhas-obras/components/FinanceiroSection';
 import { EquipeSection } from '@features/empreiteiro/minhas-obras/components/EquipeSection';
-import { RelatoriosSection } from '@features/empreiteiro/minhas-obras/components/RelatoriosSection';
+import { ContatoContratanteCard } from '@features/empreiteiro/minhas-obras/components/ContatoContratanteCard';
+import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { AdicionarAtualizacaoModal } from '@features/empreiteiro/minhas-obras/components/AdicionarAtualizacaoModal';
 import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
 import { cn } from '@shared/lib/utils';
@@ -377,10 +378,17 @@ export default function MinhaObraDetalhePage() {
         <EquipeSection obra={obra} />
       </motion.div>
 
-      {/* BLOCO 13: Relatórios e Exportações */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <RelatoriosSection obra={obra} />
+      {/* BLOCO 13: Contato do Contratante */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40 }}>
+        <ContatoContratanteCard contratante={obra.contratante} obraId={obra.id} obraTitulo={obra.titulo} />
       </motion.div>
+
+      {/* BLOCO 15: Localização */}
+      {obra.localizacao && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+          <LocalizacaoCard localizacao={obra.localizacao} />
+        </motion.div>
+      )}
 
       <AdicionarAtualizacaoModal
         open={showAtualizacao}

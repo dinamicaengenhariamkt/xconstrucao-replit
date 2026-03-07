@@ -14,6 +14,8 @@ export interface ObraContratante {
     nome: string;
     iniciais: string;
     cor: string;
+    email?: string;
+    telefone?: string;
   };
   tipo: string;
   candidaturas?: number;
@@ -33,6 +35,14 @@ export interface ObraContratanteDetalhe extends ObraContratante {
   equipe: MembroEquipe[];
   financeiro: RegistroFinanceiro[];
   fotos: FotoObra[];
+  localizacao?: {
+    cidade: string;
+    estado: string;
+    bairro: string;
+    rua: string;
+    cep: string;
+  };
+  candidaturasLista?: CandidaturaRecebida[];
 }
 
 export interface TarefaContratante {
@@ -106,6 +116,15 @@ export interface OcorrenciaContratante {
   dataResolucao?: string;
   resolvidoPor?: string;
   fotoUrl?: string;
+}
+
+export interface CandidaturaRecebida {
+  id: string;
+  empreiteiro: { nome: string; iniciais: string; cor: string; empresa?: string; };
+  valorProposto: number;
+  prazoMeses: number;
+  dataEnvio: string;
+  status: 'em_analise' | 'aprovado' | 'rejeitado';
 }
 
 export type ProgressColor = 'success' | 'warning' | 'error' | 'info' | 'primary';

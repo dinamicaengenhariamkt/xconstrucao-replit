@@ -97,6 +97,22 @@ export const mockNovasObras: NovaObra[] = [
     dataPublicacao: '4 dias atras',
     candidaturas: 7,
   },
+  {
+    id: 'edificio-solar',
+    titulo: 'Edifício Residencial Solar',
+    endereco: 'Rua Augusta, 500 - São Paulo, SP',
+    imagemUrl: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600',
+    tipo: 'Residencial',
+    complexidade: 'alta',
+    orcamento: 3500000,
+    prazo: '30 meses',
+    descricao: 'Edifício residencial de alto padrão com 18 andares, 2 subsolos de garagem, piscina, academia e salão de festas. Projeto aprovado e documentação regularizada.',
+    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500', email: 'carlos.mendes@email.com' },
+    destaque: true,
+    applicationStatus: 'nao_aplicado',
+    dataPublicacao: 'Há 2 dias',
+    candidaturas: 4,
+  },
 ];
 
 export const mockPerfilStatus: PerfilStatus = {

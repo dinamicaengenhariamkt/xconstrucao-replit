@@ -14,6 +14,9 @@ import { TabEquipe } from '@features/contratante/minhas-obras/components/TabEqui
 import { TabFotos } from '@features/contratante/minhas-obras/components/TabFotos';
 import { TabTimeline } from '@features/contratante/minhas-obras/components/TabTimeline';
 import { TabOcorrencias } from '@features/contratante/minhas-obras/components/TabOcorrencias';
+import { ContatoEmpreiteiroCard } from '@features/contratante/minhas-obras/components/ContatoEmpreiteiroCard';
+import { CandidaturasCard } from '@features/contratante/minhas-obras/components/CandidaturasCard';
+import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
   RiArrowLeftLine,
@@ -86,6 +89,7 @@ export default function ObraDetalhePage() {
     );
   }
 
+  const semEmpreiteiro = obra.empreiteiro.nome === 'Aguardando';
   const badgeVariant = (STATUS_BADGE_VARIANTS[obra.status] || 'neutral') as 'success' | 'warning' | 'error' | 'info' | 'primary' | 'neutral';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as ProgressColor;
   const progressBarColor = PROGRESS_BAR_COLORS[progressColor] || 'bg-primary';
@@ -165,15 +169,27 @@ export default function ObraDetalhePage() {
                   <p className="text-white/60 text-xs">Orçamento Total</p>
                   <p className="text-2xl font-extrabold text-white">{formatCurrency(obra.orcamento)}</p>
                 </div>
-                <div className="flex items-center gap-2 text-white/90">
-                  <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0', obra.empreiteiro.cor)}>
-                    {obra.empreiteiro.iniciais}
+                {semEmpreiteiro ? (
+                  <div className="flex items-center gap-2 text-white/90">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20 shrink-0">
+                      <span className="material-symbols-outlined text-white text-base">groups</span>
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Candidaturas</p>
+                      <p className="font-bold text-sm">{obra.candidaturas} propostas recebidas</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white/60 text-xs">Empreiteiro</p>
-                    <p className="font-bold text-sm">{obra.empreiteiro.nome}</p>
+                ) : (
+                  <div className="flex items-center gap-2 text-white/90">
+                    <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0', obra.empreiteiro.cor)}>
+                      {obra.empreiteiro.iniciais}
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Empreiteiro</p>
+                      <p className="font-bold text-sm">{obra.empreiteiro.nome}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -206,67 +222,133 @@ export default function ObraDetalhePage() {
         transition={{ delay: 0.15 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {/* Valor Pago */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-success/30 transition-all" data-testid="kpi-valor-pago">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-success/10 text-success rounded-lg">
-              <RiMoneyDollarCircleLine className="w-5 h-5" />
+        {semEmpreiteiro ? (
+          <>
+            {/* Candidaturas Recebidas */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-primary/30 transition-all">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
+                  <RiTeamLine className="w-5 h-5" />
+                </div>
+                <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded-full">Em análise</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Candidaturas</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.candidaturas ?? 0}</p>
+              </div>
+              <p className="text-xs text-gray-500">propostas recebidas</p>
             </div>
-            <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Pago</span>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Valor Pago</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.valorPago)}</p>
-          </div>
-          <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
-            <div className="h-full bg-success rounded-full" style={{ width: `${pagoPct}%` }} />
-          </div>
-        </div>
 
-        {/* Valor Restante */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-warning/30 transition-all" data-testid="kpi-valor-restante">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-warning/10 text-warning rounded-lg">
-              <RiMoneyDollarCircleLine className="w-5 h-5" />
+            {/* Orçamento Disponível */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-success/30 transition-all">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-success/10 text-success rounded-lg">
+                  <RiMoneyDollarCircleLine className="w-5 h-5" />
+                </div>
+                <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Total</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Orçamento Disponível</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.orcamento)}</p>
+              </div>
+              <p className="text-xs text-gray-500">valor total da obra</p>
             </div>
-            <span className="text-warning text-xs font-bold bg-warning/10 px-2 py-1 rounded-full">Restante</span>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Valor Restante</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.valorRestante)}</p>
-          </div>
-          <p className="text-xs text-gray-500">a liberar</p>
-        </div>
 
-        {/* Tarefas */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-info/30 transition-all" data-testid="kpi-tarefas">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-info/10 text-info rounded-lg">
-              <RiCheckboxCircleLine className="w-5 h-5" />
+            {/* Início Previsto */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-info/30 transition-all">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-info/10 text-info rounded-lg">
+                  <RiCalendarLine className="w-5 h-5" />
+                </div>
+                <span className="text-info text-xs font-bold bg-info/10 px-2 py-1 rounded-full">Planejado</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Início Previsto</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.dataInicio}</p>
+              </div>
+              <p className="text-xs text-gray-500">data de início da obra</p>
             </div>
-            <span className="text-info text-xs font-bold bg-info/10 px-2 py-1 rounded-full">{obra.tarefasTotal} total</span>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tarefas</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.tarefasConcluidas}/{obra.tarefasTotal}</p>
-          </div>
-          <p className="text-xs text-gray-500">{obra.tarefasTotal - obra.tarefasConcluidas} pendentes</p>
-        </div>
 
-        {/* Dias Restantes */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-primary/30 transition-all" data-testid="kpi-dias-restantes">
-          <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
-              <RiTimeLine className="w-5 h-5" />
+            {/* Prazo Final */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-warning/30 transition-all">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-warning/10 text-warning rounded-lg">
+                  <RiTimeLine className="w-5 h-5" />
+                </div>
+                <span className="text-warning text-xs font-bold bg-warning/10 px-2 py-1 rounded-full">Entrega</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Prazo Final</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.dataPrevisaoFim}</p>
+              </div>
+              <p className="text-xs text-gray-500">previsão de conclusão</p>
             </div>
-            <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded-full">Prazo</span>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Dias Restantes</p>
-            <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.diasRestantes}</p>
-          </div>
-          <p className="text-xs text-gray-500">dias para conclusão</p>
-        </div>
+          </>
+        ) : (
+          <>
+            {/* Valor Pago */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-success/30 transition-all" data-testid="kpi-valor-pago">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-success/10 text-success rounded-lg">
+                  <RiMoneyDollarCircleLine className="w-5 h-5" />
+                </div>
+                <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Pago</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Valor Pago</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.valorPago)}</p>
+              </div>
+              <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
+                <div className="h-full bg-success rounded-full" style={{ width: `${pagoPct}%` }} />
+              </div>
+            </div>
+
+            {/* Valor Restante */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-warning/30 transition-all" data-testid="kpi-valor-restante">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-warning/10 text-warning rounded-lg">
+                  <RiMoneyDollarCircleLine className="w-5 h-5" />
+                </div>
+                <span className="text-warning text-xs font-bold bg-warning/10 px-2 py-1 rounded-full">Restante</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Valor Restante</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.valorRestante)}</p>
+              </div>
+              <p className="text-xs text-gray-500">a liberar</p>
+            </div>
+
+            {/* Tarefas */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-info/30 transition-all" data-testid="kpi-tarefas">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-info/10 text-info rounded-lg">
+                  <RiCheckboxCircleLine className="w-5 h-5" />
+                </div>
+                <span className="text-info text-xs font-bold bg-info/10 px-2 py-1 rounded-full">{obra.tarefasTotal} total</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tarefas</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.tarefasConcluidas}/{obra.tarefasTotal}</p>
+              </div>
+              <p className="text-xs text-gray-500">{obra.tarefasTotal - obra.tarefasConcluidas} pendentes</p>
+            </div>
+
+            {/* Dias Restantes */}
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-primary/30 transition-all" data-testid="kpi-dias-restantes">
+              <div className="flex justify-between items-start">
+                <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
+                  <RiTimeLine className="w-5 h-5" />
+                </div>
+                <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded-full">Prazo</span>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Dias Restantes</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.diasRestantes}</p>
+              </div>
+              <p className="text-xs text-gray-500">dias para conclusão</p>
+            </div>
+          </>
+        )}
       </motion.div>
 
       {/* Tabs card */}
@@ -317,6 +399,22 @@ export default function ObraDetalhePage() {
           </AnimatePresence>
         </div>
       </motion.div>
+
+      {/* Contato do Empreiteiro / Candidaturas */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        {semEmpreiteiro && obra.candidaturasLista && obra.candidaturasLista.length > 0 ? (
+          <CandidaturasCard candidaturas={obra.candidaturasLista} obraOrcamento={obra.orcamento} />
+        ) : !semEmpreiteiro ? (
+          <ContatoEmpreiteiroCard empreiteiro={obra.empreiteiro} obraId={obra.id} obraTitulo={obra.titulo} />
+        ) : null}
+      </motion.div>
+
+      {/* Localização da Obra */}
+      {obra.localizacao && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.30 }}>
+          <LocalizacaoCard localizacao={obra.localizacao} />
+        </motion.div>
+      )}
 
     </div>
   );

@@ -11,7 +11,7 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
     orcamento: 420000,
     dataInicio: '15/03/2025',
     dataPrevisaoFim: '20/12/2025',
-    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500' },
+    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500', email: 'carlos.mendes@email.com' },
     tipo: 'Residencial',
     valorPago: 189000,
     aReceber: 231000,
@@ -202,6 +202,13 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
       { id: 'eq3', nome: 'João Pedro', iniciais: 'JP', cor: 'bg-amber-500', papel: 'Mestre de Obras', tipo: 'mestre' as const, telefone: '(11) 97654-3210', ativo: true },
       { id: 'eq4', nome: 'Equipe Elétrica', iniciais: 'EE', cor: 'bg-purple-500', papel: 'Equipe Elétrica', tipo: 'equipe' as const, membros: 'Pedro, Marco, Ana', ativo: true },
     ],
+    localizacao: {
+      cidade: 'Campinas',
+      estado: 'SP',
+      bairro: 'Parque das Flores',
+      rua: 'Rua das Orquídeas, 450',
+      cep: '13080-000',
+    },
   },
   // ID '2' = mesma obra que o contratante vê em /contratante/minhas-obras/1
   // "Residência Jardim Europa" — perspectiva do empreiteiro Silva & Costa Eng.

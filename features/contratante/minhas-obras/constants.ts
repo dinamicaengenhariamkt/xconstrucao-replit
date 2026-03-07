@@ -36,3 +36,11 @@ export const PROGRESS_COLORS: Record<string, string> = {
   planejamento: 'info',
   finalizada: 'success',
 };
+
+export const STATUS_BADGE_CLASSES: Record<string, string> = {
+  em_execucao:    'bg-primary/90 text-white',
+  com_atrasos:    'bg-red-500/90 text-white',
+  com_pendencias: 'bg-amber-500/90 text-white',
+  planejamento:   'bg-blue-500/90 text-white',
+  finalizada:     'bg-green-600/90 text-white',
+};

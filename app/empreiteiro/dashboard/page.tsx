@@ -4,7 +4,6 @@ import { WelcomeSection } from '@features/empreiteiro/dashboard/components/Welco
 import { StatsGridContainer } from '@features/empreiteiro/dashboard/components/StatsGrid.container';
 import { FinancialOverview } from '@features/empreiteiro/dashboard/components/FinancialOverview';
 import { RecentActivities } from '@features/empreiteiro/dashboard/components/RecentActivities';
-import { ExportBanner } from '@features/empreiteiro/dashboard/components/ExportBanner';
 import { DashboardSkeleton } from '@features/empreiteiro/dashboard/components/DashboardSkeleton';
 import { mockEfficiencyData } from '@features/empreiteiro/dashboard/mocks/activities.mock';
 import { useDashboardStats } from '@features/empreiteiro/dashboard/hooks/use-dashboard-stats';
@@ -35,12 +34,6 @@ export default function EmpreiteiroDashboardPage() {
         </div>
       </div>
 
-      <ExportBanner
-        stats={statsData!}
-        financial={financialData!}
-        activities={activitiesData!}
-        efficiency={mockEfficiencyData}
-      />
     </div>
   );
 }

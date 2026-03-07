@@ -3,15 +3,13 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
-import { StatusBadge } from '@features/shared/components/StatusBadge';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
-import { STATUS_BORDER_COLORS, STATUS_BADGE_VARIANTS, STATUS_LABELS, PROGRESS_COLORS } from '../constants';
+import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '../constants';
 import type { ObraContratanteCardProps } from '../types';
 import { RiMapPinLine, RiCalendarLine } from 'react-icons/ri';
 
 export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
   const borderColor = STATUS_BORDER_COLORS[obra.status] || 'border-l-gray-300';
-  const badgeVariant = (STATUS_BADGE_VARIANTS[obra.status] || 'neutral') as 'success' | 'warning' | 'error' | 'info' | 'primary' | 'neutral';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as 'success' | 'warning' | 'error' | 'info' | 'primary';
 
   const formatCurrency = (value: number): string => {
@@ -24,20 +22,25 @@ export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
         whileHover={{ y: -8, boxShadow: '0 20px 50px rgba(0,0,0,0.10)' }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className={cn(
-          'group bg-white dark:bg-gray-900 rounded-3xl overflow-hidden',
+          'group bg-white dark:bg-gray-900 rounded-3xl',
           'shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-gray-50 dark:border-gray-800',
           'border-l-4',
           borderColor
         )}
       >
-        <div className="relative aspect-[16/9] overflow-hidden">
+        <div className="relative aspect-[16/9] overflow-hidden rounded-t-3xl">
           <div
             className="w-full h-full bg-cover bg-center grayscale contrast-[1.1] group-hover:grayscale-0 group-hover:contrast-100 transition-[filter] duration-300"
             style={{ backgroundImage: `url('${obra.imagemUrl}')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
-            <StatusBadge label={STATUS_LABELS[obra.status] || obra.status} variant={badgeVariant} size="sm" />
+            <span className={cn(
+              'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
+              STATUS_BADGE_CLASSES[obra.status] || 'bg-gray-800/80 text-white'
+            )}>
+              {STATUS_LABELS[obra.status] || obra.status}
+            </span>
           </div>
           {obra.candidaturas && obra.candidaturas > 0 && (
             <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-3 py-1">

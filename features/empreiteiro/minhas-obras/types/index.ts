@@ -14,6 +14,7 @@ export interface MinhaObra {
     nome: string;
     iniciais: string;
     cor: string;
+    email?: string;
   };
   tipo: string;
 }
@@ -36,6 +37,13 @@ export interface MinhaObraDetalhe extends MinhaObra {
   ocorrencias: ObraOcorrencia[];
   financeiro: ObraFinanceiro;
   equipe: MembroEquipe[];
+  localizacao?: {
+    cidade: string;
+    estado: string;
+    bairro: string;
+    rua: string;
+    cep: string;
+  };
 }
 
 export interface MinhaObraEtapa {

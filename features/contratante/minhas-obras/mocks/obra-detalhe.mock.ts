@@ -1,11 +1,18 @@
-import type { ObraContratanteDetalhe } from '../types';
+import type { ObraContratanteDetalhe, CandidaturaRecebida } from '../types';
 import { mockObrasContratante } from './minhas-obras.mock';
+
+const mockCandidaturasObra5: CandidaturaRecebida[] = [
+  { id: 'c1', empreiteiro: { nome: 'Construtora Horizonte', iniciais: 'CH', cor: 'bg-blue-500', empresa: 'Horizonte Engenharia Ltda.' }, valorProposto: 3200000, prazoMeses: 28, dataEnvio: 'Há 2 dias', status: 'em_analise' },
+  { id: 'c2', empreiteiro: { nome: 'João Ferreira', iniciais: 'JF', cor: 'bg-amber-500', empresa: 'JF Construções' }, valorProposto: 3450000, prazoMeses: 26, dataEnvio: 'Há 3 dias', status: 'em_analise' },
+  { id: 'c3', empreiteiro: { nome: 'Grupo Edificar', iniciais: 'GE', cor: 'bg-green-600', empresa: 'Edificar Construção Civil' }, valorProposto: 3100000, prazoMeses: 30, dataEnvio: 'Há 4 dias', status: 'em_analise' },
+  { id: 'c4', empreiteiro: { nome: 'Paulo Maia', iniciais: 'PM', cor: 'bg-purple-500', empresa: 'Maia Obras e Projetos' }, valorProposto: 3380000, prazoMeses: 27, dataEnvio: 'Há 5 dias', status: 'em_analise' },
+];
 
 const detalhesMap: Record<string, Partial<ObraContratanteDetalhe>> = {
   '1': {
     descricao: 'Construção de residência de alto padrão com 3 pavimentos, piscina e área gourmet completa.',
-    valorPago: 348000,
-    valorRestante: 232000,
+    valorPago: 189000,
+    valorRestante: 231000,
     diasRestantes: 185,
     tarefasConcluidas: 28,
     tarefasTotal: 45,
@@ -96,6 +103,72 @@ const detalhesMap: Record<string, Partial<ObraContratanteDetalhe>> = {
       { id: 'p5', url: 'https://images.unsplash.com/photo-1590274853856-f22d5ee3d228?w=400', data: 'Há 7 dias', etapa: 'Fundação', fase: 'antes' as const, tag: 'Fundação', enviadaAoContratante: true },
       { id: 'p6', url: 'https://images.unsplash.com/photo-1600573472591-ee6b68d14c68?w=400', data: 'Há 10 dias', etapa: 'Fundação', fase: 'antes' as const, tag: 'Fundação', enviadaAoContratante: false },
     ],
+    localizacao: {
+      cidade: 'Campinas',
+      estado: 'SP',
+      bairro: 'Parque das Flores',
+      rua: 'Rua das Orquídeas, 450',
+      cep: '13080-000',
+    },
+  },
+  '5': {
+    descricao: 'Edifício residencial de alto padrão com 18 andares, 2 subsolos de garagem, área de lazer completa com piscina, academia e salão de festas. Projeto aprovado e documentação regularizada.',
+    valorPago: 0,
+    valorRestante: 3500000,
+    diasRestantes: 665,
+    tarefasConcluidas: 0,
+    tarefasTotal: 0,
+    etapas: [
+      {
+        id: 'e1', nome: 'Fundação e Estrutura', progresso: 0,
+        tarefas: [
+          { id: 't1', titulo: 'Sondagem e estudos do solo', concluida: false },
+          { id: 't2', titulo: 'Escavação e contenção', concluida: false },
+          { id: 't3', titulo: 'Execução das fundações', concluida: false },
+          { id: 't4', titulo: 'Estrutura de concreto armado', concluida: false },
+        ],
+      },
+      {
+        id: 'e2', nome: 'Alvenaria e Vedação', progresso: 0,
+        tarefas: [
+          { id: 't5', titulo: 'Alvenaria dos subsolos', concluida: false },
+          { id: 't6', titulo: 'Alvenaria dos andares tipo', concluida: false },
+          { id: 't7', titulo: 'Fachada e vedações externas', concluida: false },
+        ],
+      },
+      {
+        id: 'e3', nome: 'Instalações', progresso: 0,
+        tarefas: [
+          { id: 't8', titulo: 'Instalações hidráulicas e sanitárias', concluida: false },
+          { id: 't9', titulo: 'Instalações elétricas e SPDA', concluida: false },
+          { id: 't10', titulo: 'Sistema de ar condicionado central', concluida: false },
+          { id: 't11', titulo: 'Elevadores e escadas rolantes', concluida: false },
+        ],
+      },
+      {
+        id: 'e4', nome: 'Acabamento', progresso: 0,
+        tarefas: [
+          { id: 't12', titulo: 'Revestimentos e pisos', concluida: false },
+          { id: 't13', titulo: 'Pintura interna e externa', concluida: false },
+          { id: 't14', titulo: 'Área de lazer e paisagismo', concluida: false },
+          { id: 't15', titulo: 'Vistoria final e entrega', concluida: false },
+        ],
+      },
+    ],
+    tarefas: [],
+    equipe: [],
+    financeiro: [],
+    timeline: [],
+    ocorrencias: [],
+    fotos: [],
+    localizacao: {
+      cidade: 'São Paulo',
+      estado: 'SP',
+      bairro: 'Consolação',
+      rua: 'Rua Augusta, 500',
+      cep: '01305-000',
+    },
+    candidaturasLista: mockCandidaturasObra5,
   },
 };
 
@@ -120,5 +193,7 @@ export function getObraContratanteDetalheMock(id: string): ObraContratanteDetalh
     equipe: extra.equipe || [],
     financeiro: extra.financeiro || [],
     fotos: extra.fotos || [],
+    localizacao: extra.localizacao,
+    candidaturasLista: extra.candidaturasLista,
   };
 }
