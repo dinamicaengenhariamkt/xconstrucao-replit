@@ -140,4 +140,5 @@ export const mockPagamentosKPI: PagamentosKPI = {
   totalSaidas: 620000,
   saldo: 230000,
   pendentes: 145000,
+  totalContratado: 1375000,
 };

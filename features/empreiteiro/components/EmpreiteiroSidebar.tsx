@@ -35,6 +35,8 @@ export function EmpreiteiroSidebar() {
     router.push('/');
   }, [logout, router]);
 
+  const PLANO_ATUAL_ID = 'profissional'; // 'basico' | 'profissional' | 'enterprise'
+
   const isActive = (url: string): boolean => {
     if (url === '/empreiteiro/dashboard') return pathname === url;
     return pathname.startsWith(url);
@@ -111,19 +113,21 @@ export function EmpreiteiroSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        {/* CTA Upgrade */}
-        <div className="bg-primary/5 rounded-xl p-4 mb-4">
-          <p className="text-xs font-bold text-primary mb-1">Upgrade de Plano</p>
-          <p className="text-[10px] text-gray-500 mb-3">
-            Obtenha acesso a relatórios avançados de IA.
-          </p>
-          <Button
-            className="w-full py-2 bg-primary text-white text-[11px] font-bold rounded-lg uppercase tracking-wider"
-            onClick={() => router.push('/empreiteiro/planos')}
-          >
-            Ver Planos
-          </Button>
-        </div>
+        {/* CTA Upgrade — exibido apenas no plano gratuito (basico) */}
+        {PLANO_ATUAL_ID === 'basico' && (
+          <div className="bg-primary/5 rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold text-primary mb-1">Upgrade de Plano</p>
+            <p className="text-[10px] text-gray-500 mb-3">
+              Obtenha acesso a relatórios avançados de IA.
+            </p>
+            <Button
+              className="w-full py-2 bg-primary text-white text-[11px] font-bold rounded-lg uppercase tracking-wider"
+              onClick={() => router.push('/empreiteiro/planos')}
+            >
+              Ver Planos
+            </Button>
+          </div>
+        )}
 
         <SidebarMenu>
           {EMPREITEIRO_BOTTOM_NAV_ITEMS.map((item) => (

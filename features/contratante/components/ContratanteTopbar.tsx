@@ -50,6 +50,8 @@ const NOTIF_ICON_COLOR: Record<NotificacaoTipo, string> = {
   sucesso: 'text-green-500',
 };
 
+const PLANO_ATUAL = { label: 'Empresarial' } as const;
+
 const NOTIF_DOT_COLOR: Record<NotificacaoTipo, string> = {
   lembrete: 'bg-amber-400',
   alerta: 'bg-red-500',
@@ -244,6 +246,9 @@ export function ContratanteTopbar() {
                   {user?.name ?? 'Contratante'}
                 </p>
                 <p className="text-[11px] text-gray-500 font-medium">Contratante</p>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  {PLANO_ATUAL.label}
+                </span>
               </div>
               <Avatar className="w-10 h-10 border border-border-light">
                 {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
@@ -257,6 +262,9 @@ export function ContratanteTopbar() {
             <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
               <span className="text-sm font-semibold">{user?.name ?? 'Contratante'}</span>
               <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full self-start mt-0.5">
+                {PLANO_ATUAL.label}
+              </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/contratante/configuracoes?tab=perfil')}>

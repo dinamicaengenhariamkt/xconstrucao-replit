@@ -15,4 +15,5 @@ export interface PagamentosKPI {
   totalSaidas: number;
   saldo: number;
   pendentes: number;
+  totalContratado: number;
 }

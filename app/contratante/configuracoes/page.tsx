@@ -12,8 +12,9 @@ import {
   RiBuildingLine,
   RiStarLine,
   RiExternalLinkLine,
-  RiMoneyDollarCircleLine,
   RiCheckboxCircleLine,
+  RiCheckLine,
+  RiBankCardLine,
   RiFileTextLine,
   RiShieldCheckLine,
   RiAlertLine,
@@ -45,9 +46,9 @@ import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 
 /* ── Types ── */
-type Section = 'perfil' | 'empresa' | 'notificacoes' | 'privacidade' | 'plano' | 'pagamentos';
+type Section = 'perfil' | 'empresa' | 'notificacoes' | 'privacidade' | 'plano';
 
-const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'notificacoes', 'privacidade', 'plano', 'pagamentos'];
+const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'notificacoes', 'privacidade', 'plano'];
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'perfil',       label: 'Perfil',        icon: RiUser3Line },
@@ -55,7 +56,6 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'notificacoes', label: 'Notificações',  icon: RiBellLine },
   { id: 'privacidade',  label: 'Privacidade',   icon: RiShieldLine },
   { id: 'plano',        label: 'Plano & Uso',   icon: RiStarLine },
-  { id: 'pagamentos',   label: 'Pagamentos',    icon: RiMoneyDollarCircleLine },
 ];
 
 /* ── Helpers ── */
@@ -631,10 +631,25 @@ function SecaoPrivacidade() {
 /* ─────────────────────────────────────────────
    SECTION: Plano
 ───────────────────────────────────────────── */
+const PLANO_FEATURES = [
+  '10 obras publicadas simultâneas',
+  'Propostas ilimitadas por obra',
+  'Acesso completo ao diretório de empreiteiros',
+  'Contratos digitais',
+  'Gestão de medições',
+  'Relatórios de obra',
+  'Análises com IA',
+  'Suporte prioritário',
+  'Exportação de relatórios',
+];
+
 const PLAN_USAGE = [
-  { label: 'Obras abertas', current: 3, max: 10 },
-  { label: 'Empreiteiros contratados', current: 7, max: 20 },
-  { label: 'Documentos gerados', current: 15, max: 50 },
+  { label: 'Obras abertas',            current: 3,  max: 10 },
+  { label: 'Empreiteiros contratados', current: 7,  max: 20 },
+  { label: 'Documentos gerados',       current: 15, max: 50 },
+  { label: 'Contratos ativos',         current: 2,  max: 10 },
+  { label: 'Medições no mês',          current: 5,  max: 30 },
+  { label: 'Relatórios exportados',    current: 8,  max: 20 },
 ];
 
 function UsageMeterBadge({ current, max }: { current: number; max: number }) {
@@ -648,6 +663,7 @@ function SecaoPlano() {
   const router = useRouter();
   return (
     <div className="flex flex-col gap-6">
+      {/* Card 1: Plano atual + billing */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center justify-between">
@@ -656,25 +672,55 @@ function SecaoPlano() {
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-2 flex flex-col gap-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Plano Empresarial</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Renovação em 15/07/2026</p>
+              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">Plano Empresarial</p>
+              <div className="flex items-center gap-2 mt-2">
+                <RiBankCardLine className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">R$ 149<span className="text-xs font-normal text-muted-foreground">/mês</span></span>
+                <span className="text-muted-foreground text-xs">•</span>
+                <span className="text-xs text-muted-foreground">Renovação em 15 de julho de 2026</span>
+              </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => router.push('/contratante/planos')}>
-              Ver planos disponíveis
-              <RiExternalLinkLine className="w-3.5 h-3.5 ml-1.5" />
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" className="text-xs">
+                Gerenciar assinatura
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => router.push('/contratante/planos')}>
+                Ver outros planos
+                <RiExternalLinkLine className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Card 2: Recursos incluídos */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Recursos incluídos no plano</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            {PLANO_FEATURES.map((feat) => (
+              <div key={feat} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-[#22846D]/10 flex items-center justify-center shrink-0">
+                  <RiCheckLine className="w-3 h-3 text-[#22846D]" />
+                </div>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{feat}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card 3: Uso do plano */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Uso do plano</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {PLAN_USAGE.map((item) => (
               <div
                 key={item.label}
@@ -707,32 +753,6 @@ function SecaoPlano() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION: Pagamentos
-───────────────────────────────────────────── */
-function SecaoPagamentos() {
-  const router = useRouter();
-  return (
-    <div className="flex flex-col gap-6">
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagamentos</p>
-        </CardHeader>
-        <CardContent className="p-6 pt-2 flex flex-col gap-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Acesse seu histórico de pagamentos, notas fiscais e contratos financeiros das suas obras.
-          </p>
-          <Button onClick={() => router.push('/contratante/pagamentos')} className="w-fit">
-            <RiMoneyDollarCircleLine className="w-4 h-4 mr-2" />
-            Ver pagamentos
-            <RiExternalLinkLine className="w-3.5 h-3.5 ml-2" />
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────
    PAGE ROOT
 ───────────────────────────────────────────── */
 const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
@@ -741,7 +761,6 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   notificacoes: SecaoNotificacoes,
   privacidade:  SecaoPrivacidade,
   plano:        SecaoPlano,
-  pagamentos:   SecaoPagamentos,
 };
 
 function SearchParamsReader({ onSection }: { onSection: (s: Section) => void }) {

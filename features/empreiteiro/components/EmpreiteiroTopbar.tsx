@@ -51,6 +51,8 @@ const NOTIF_ICON_COLOR: Record<NotificacaoTipo, string> = {
   sucesso: 'text-green-500',
 };
 
+const PLANO_ATUAL = { label: 'Profissional' } as const;
+
 const NOTIF_DOT_COLOR: Record<NotificacaoTipo, string> = {
   lembrete: 'bg-amber-400',
   alerta: 'bg-red-500',
@@ -243,6 +245,9 @@ export function EmpreiteiroTopbar() {
                   {user?.name ?? 'Empreiteiro'}
                 </p>
                 <p className="text-[11px] text-gray-500 font-medium capitalize">Empreiteiro</p>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  {PLANO_ATUAL.label}
+                </span>
               </div>
               <Avatar className="w-10 h-10 border border-border-light">
                 {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
@@ -256,6 +261,9 @@ export function EmpreiteiroTopbar() {
             <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
               <span className="text-sm font-semibold">{user?.name ?? 'Empreiteiro'}</span>
               <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full self-start mt-0.5">
+                {PLANO_ATUAL.label}
+              </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/empreiteiro/configuracoes?tab=perfil')}>
