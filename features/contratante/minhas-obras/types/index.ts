@@ -118,13 +118,27 @@ export interface OcorrenciaContratante {
   fotoUrl?: string;
 }
 
+export interface AtividadeProposta {
+  id: string;
+  descricao: string;
+  valor: number;
+  observacoes?: string;
+}
+
 export interface CandidaturaRecebida {
   id: string;
-  empreiteiro: { nome: string; iniciais: string; cor: string; empresa?: string; };
+  empreiteiro: { nome: string; iniciais: string; cor: string; empresa?: string; telefone?: string; avaliacao?: number; };
   valorProposto: number;
   prazoMeses: number;
   dataEnvio: string;
   status: 'em_analise' | 'aprovado' | 'rejeitado';
+  // Detalhes da proposta
+  descricao?: string;
+  atividades?: AtividadeProposta[];
+  observacoesPrazo?: string;
+  observacoesFinanceiras?: string;
+  dataInicio?: string;
+  dataTermino?: string;
 }
 
 export type ProgressColor = 'success' | 'warning' | 'error' | 'info' | 'primary';

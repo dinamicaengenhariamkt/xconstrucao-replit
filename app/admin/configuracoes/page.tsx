@@ -451,18 +451,6 @@ function SecaoNotificacoes() {
    SECTION: Plataforma
 ───────────────────────────────────────────── */
 
-const PLAN_LIMITS = [
-  { label: 'Clientes ativos', current: 47, max: 100 },
-  { label: 'Obras ativas', current: 23, max: 50 },
-  { label: 'Admins', current: 2, max: 5 },
-];
-
-function PlanMeterBadge({ current, max }: { current: number; max: number }) {
-  const pct = current / max;
-  if (pct > 0.95) return <Badge className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-0 text-xs">{current}/{max}</Badge>;
-  if (pct > 0.8)  return <Badge className="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-0 text-xs">{current}/{max}</Badge>;
-  return <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">{current}/{max}</Badge>;
-}
 
 function SecaoPlataforma() {
   const { toast } = useToast();
@@ -533,50 +521,6 @@ function SecaoPlataforma() {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-2">
-          <SectionTitle>Limites do plano atual</SectionTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-            {PLAN_LIMITS.map((item) => (
-              <div
-                key={item.label}
-                className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
-              >
-                <p className="text-xs text-gray-400">{item.label}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{item.current}</p>
-                  <PlanMeterBadge current={item.current} max={item.max} />
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      item.current / item.max > 0.95 ? 'bg-red-500' :
-                      item.current / item.max > 0.8 ? 'bg-amber-400' :
-                      'bg-[#22846D]'
-                    )}
-                    style={{ width: `${Math.min(100, (item.current / item.max) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">máx. {item.max}</p>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Plano Business</p>
-              <p className="text-xs text-muted-foreground">Renovação em 15/03/2026</p>
-            </div>
-            <Button variant="ghost" size="sm">
-              Ver detalhes do plano
-              <RiExternalLinkLine className="w-3.5 h-3.5 ml-1.5" />
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
