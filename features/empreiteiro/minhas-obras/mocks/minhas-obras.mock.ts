@@ -24,7 +24,7 @@ export const mockMinhasObras: MinhaObra[] = [
     orcamento: 1850000,
     dataInicio: '10/01/2025',
     dataPrevisaoFim: '30/06/2026',
-    contratante: { nome: 'Ana Ferreira', iniciais: 'AF', cor: 'bg-amber-500' },
+    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500' },
     tipo: 'Comercial',
   },
   {
@@ -37,7 +37,7 @@ export const mockMinhasObras: MinhaObra[] = [
     orcamento: 180000,
     dataInicio: '01/06/2025',
     dataPrevisaoFim: '15/09/2025',
-    contratante: { nome: 'Roberto Lima', iniciais: 'RL', cor: 'bg-green-600' },
+    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500' },
     tipo: 'Comercial',
   },
   {
@@ -50,7 +50,7 @@ export const mockMinhasObras: MinhaObra[] = [
     orcamento: 650000,
     dataInicio: '20/08/2024',
     dataPrevisaoFim: '15/02/2025',
-    contratante: { nome: 'Maria Clara Santos', iniciais: 'MC', cor: 'bg-purple-500' },
+    contratante: { nome: 'Carlos Mendes', iniciais: 'CM', cor: 'bg-blue-500' },
     tipo: 'Residencial',
   },
 ];

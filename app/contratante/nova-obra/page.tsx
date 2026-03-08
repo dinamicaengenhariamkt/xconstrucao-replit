@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { RiFileUploadLine, RiSaveLine, RiSendPlaneLine } from 'react-icons/ri';
+import { RiFileUploadLine, RiSendPlaneLine } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@shared/components/ui/select';
 import { cn } from '@shared/lib/utils';
-import { novaObraSchema, TIPOS_OBRA } from '@features/contratante/nova-obra/types';
+import { novaObraSchema, TIPOS_OBRA, COMPLEXIDADES } from '@features/contratante/nova-obra/types';
 import type { NovaObraFormData } from '@features/contratante/nova-obra/types';
 
 const ESTADOS_BR = [
@@ -41,6 +41,7 @@ export default function NovaObraPage() {
     defaultValues: {
       nome: '',
       tipo: '',
+      complexidade: undefined,
       descricao: '',
       cep: '',
       endereco: '',
@@ -57,13 +58,6 @@ export default function NovaObraPage() {
     toast({
       title: 'Obra publicada com sucesso!',
       description: 'Sua obra foi publicada e está disponível para empreiteiros.',
-    });
-  }
-
-  function handleSalvarRascunho() {
-    toast({
-      title: 'Rascunho salvo com sucesso!',
-      description: 'Você pode continuar editando a qualquer momento.',
     });
   }
 
@@ -118,6 +112,37 @@ export default function NovaObraPage() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="complexidade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">Complexidade</FormLabel>
+                      <FormControl>
+                        <div className="grid grid-cols-3 gap-3">
+                          {COMPLEXIDADES.map((c) => (
+                            <button
+                              key={c.value}
+                              type="button"
+                              onClick={() => field.onChange(c.value)}
+                              data-testid={`btn-complexidade-${c.value}`}
+                              className={cn(
+                                'rounded-xl border-2 p-3 text-left transition-all cursor-pointer',
+                                field.value === c.value
+                                  ? c.selectedClass
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              )}
+                            >
+                              <p className="text-sm font-bold">{c.label}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{c.descricao}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -273,10 +298,6 @@ export default function NovaObraPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Button type="button" variant="outline" data-testid="button-cancelar" onClick={handleCancelar}>
               Cancelar
-            </Button>
-            <Button type="button" variant="outline" data-testid="button-salvar-rascunho" onClick={handleSalvarRascunho}>
-              <RiSaveLine className="mr-2 h-4 w-4" />
-              Salvar Rascunho
             </Button>
             <Button type="submit" data-testid="button-publicar">
               <RiSendPlaneLine className="mr-2 h-4 w-4" />
