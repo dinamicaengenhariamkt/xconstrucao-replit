@@ -3,17 +3,14 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
-import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '../constants';
+import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
 import type { MinhaObraCardProps } from '../types';
 
 export function MinhaObraCard({ obra }: MinhaObraCardProps) {
   const borderColor = STATUS_BORDER_COLORS[obra.status] || 'border-l-gray-300';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as 'success' | 'warning' | 'error' | 'info' | 'primary';
-
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-  };
 
   return (
     <Link href={`/empreiteiro/minhas-obras/${obra.id}`} data-testid={`obra-card-${obra.id}`}>

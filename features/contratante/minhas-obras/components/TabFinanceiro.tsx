@@ -2,14 +2,11 @@
 
 import { useState } from 'react';
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ObraContratanteDetalhe, ObraMedicaoContratante } from '../types';
 
 interface TabFinanceiroProps {
   obra: ObraContratanteDetalhe;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 }
 
 const STATUS_CONFIG: Record<ObraMedicaoContratante['status'], { label: string; badge: string; rowBorder?: string }> = {

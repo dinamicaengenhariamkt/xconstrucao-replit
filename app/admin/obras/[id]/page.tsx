@@ -27,6 +27,7 @@ import {
 } from 'react-icons/ri';
 import { getMockObraDetalhe } from '@features/admin/obras/mocks';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 const KPI_HOVER = {
   whileHover: {
@@ -91,14 +92,6 @@ const HISTORICO_COLOR: Record<AdminObraHistoricoItem['tipo'], string> = {
   alerta: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   nota: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 
 function ProgressBar({ percent, color }: { percent: number; color: string }) {
   return (

@@ -30,6 +30,7 @@ import {
   RiUserLine,
 } from 'react-icons/ri';
 import type { FilterChipOption } from '@features/shared/types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -39,9 +40,6 @@ function getPaginationRange(current: number, total: number): (number | 'ellipsis
   if (current >= total - 3) return [1, 'ellipsis', total - 4, total - 3, total - 2, total - 1, total];
   return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
 }
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 export default function AdminClientesPage() {
   const { data: clientes, isLoading } = useAdminClientes();

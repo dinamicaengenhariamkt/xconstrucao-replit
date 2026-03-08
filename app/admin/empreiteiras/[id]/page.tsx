@@ -40,11 +40,9 @@ import {
   RiUserStarLine,
 } from 'react-icons/ri';
 import type { EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('pt-BR');

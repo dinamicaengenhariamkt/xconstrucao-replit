@@ -13,6 +13,7 @@ import {
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import type { PagamentoContratante } from '../types';
+import { formatCurrencyCompact } from '@shared/lib/formatters';
 
 const MONTH_LABELS: Record<string, string> = {
   '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
@@ -26,11 +27,6 @@ const chartConfig = {
   planejado: { label: 'Planejado', color: '#9ca3af' },
 };
 
-const formatCurrencyShort = (value: number) => {
-  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}k`;
-  return `R$ ${value}`;
-};
 
 interface PagamentosEvolutionChartProps {
   pagamentos: PagamentoContratante[];
@@ -106,7 +102,7 @@ export function PagamentosEvolutionChart({ pagamentos }: PagamentosEvolutionChar
                 tickLine={false}
               />
               <YAxis
-                tickFormatter={formatCurrencyShort}
+                tickFormatter={formatCurrencyCompact}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}

@@ -6,7 +6,7 @@ import { FilterChips } from '@features/shared/components/FilterChips';
 import { MinhasObrasGrid } from '@features/empreiteiro/minhas-obras/components/MinhasObrasGrid';
 import { MinhasObrasSkeleton } from '@features/empreiteiro/minhas-obras/components/MinhasObrasSkeleton';
 import { useMinhasObras } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
-import { STATUS_LABELS } from '@features/empreiteiro/minhas-obras/constants';
+import { STATUS_LABELS } from '@shared/constants/status';
 import type { FilterChipOption } from '@features/shared/types';
 import type { MinhaObra } from '@features/empreiteiro/minhas-obras/types';
 

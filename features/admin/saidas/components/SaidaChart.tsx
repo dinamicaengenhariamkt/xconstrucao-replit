@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import type { SaidaChartPoint, SaidaInsight } from '../types';
+import { formatCurrencyCompact, formatCurrency } from '@shared/lib/formatters';
 
 const CHART_HEIGHT = 240;
 const BAR_WIDTH = 40;
@@ -13,20 +14,6 @@ const COLORS = {
   outros: '#333333',
 };
 
-function formatCurrencyCompact(value: number): string {
-  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1).replace('.', ',')}M`;
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}K`;
-  return `R$ ${value}`;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 interface SaidaChartProps {
   data?: SaidaChartPoint[];

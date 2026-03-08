@@ -10,14 +10,7 @@ import {
   TableRow,
 } from '@shared/components/ui/table';
 import type { EntradaTopItem } from '../types';
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+import { formatCurrency } from '@shared/lib/formatters';
 
 interface TopTableProps {
   title: string;

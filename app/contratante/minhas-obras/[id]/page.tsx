@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { useObraContratanteDetalhe } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
-import { STATUS_LABELS, STATUS_BADGE_VARIANTS, PROGRESS_COLORS } from '@features/contratante/minhas-obras/constants';
+import { STATUS_LABELS, STATUS_BADGE_VARIANTS, PROGRESS_COLORS } from '@shared/constants/status';
 import { TabVisaoGeral } from '@features/contratante/minhas-obras/components/TabVisaoGeral';
 import { TabEtapas } from '@features/contratante/minhas-obras/components/TabEtapas';
 import { TabFinanceiro } from '@features/contratante/minhas-obras/components/TabFinanceiro';
@@ -32,6 +32,7 @@ import {
   RiAlertLine,
   RiHistoryLine,
 } from 'react-icons/ri';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
 
 type ObraTab = 'visao-geral' | 'etapas' | 'timeline' | 'ocorrencias' | 'financeiro' | 'equipe' | 'fotos';
@@ -53,10 +54,6 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   info: 'bg-blue-500',
   success: 'bg-green-500',
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-}
 
 export default function ObraDetalhePage() {
   const params = useParams();

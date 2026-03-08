@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { useChatStore } from '@features/empreiteiro/xchat/store/chat-store';
 import type { ObraDetalhe } from '../types';
 
@@ -64,9 +65,6 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
   }, [obra, addEphemeralConversation, sendMessage, router]);
 
   const addressLocked = !['aprovado', 'em_execucao'].includes(obra.applicationStatus ?? '');
-
-  const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 
   const acabamento = obra.complexidade === 'alta' ? 'Alto Padrão' : obra.complexidade === 'media' ? 'Médio Padrão' : 'Padrão';
 

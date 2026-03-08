@@ -50,9 +50,7 @@ import {
 } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import type { ClienteStatus, ClienteAtividade, AdminClienteObra, ClienteDocumento } from '@features/admin/clientes/types';
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+import { formatCurrency } from '@shared/lib/formatters';
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; className: string }> = {
   ativo: {

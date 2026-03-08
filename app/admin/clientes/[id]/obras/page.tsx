@@ -14,9 +14,7 @@ import {
   RiBuilding2Line,
 } from 'react-icons/ri';
 import type { AdminClienteObra } from '@features/admin/clientes/types';
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+import { formatCurrency } from '@shared/lib/formatters';
 
 const obraStatusConfig: Record<AdminClienteObra['status'], { label: string; className: string }> = {
   em_andamento: { label: 'Em andamento', className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },

@@ -2,14 +2,11 @@
 
 import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
 
 export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
-
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-  };
 
   return (
     <div className="relative" data-testid={`nova-obra-card-${obra.id}`}>

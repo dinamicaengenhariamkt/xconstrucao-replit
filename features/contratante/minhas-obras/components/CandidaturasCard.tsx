@@ -9,15 +9,12 @@ import {
   DialogTitle,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { CandidaturaRecebida } from '../types';
 
 interface CandidaturasCardProps {
   candidaturas: CandidaturaRecebida[];
   obraOrcamento: number;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 }
 
 const STATUS_LABELS: Record<CandidaturaRecebida['status'], string> = {

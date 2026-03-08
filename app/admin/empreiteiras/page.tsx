@@ -26,8 +26,7 @@ import {
 import type { FilterChipOption } from '@features/shared/types';
 import type { AdminEmpreiteira, EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+import { formatCurrency } from '@shared/lib/formatters';
 
 const statusConfig: Record<EmpreiteiraStatus, { label: string; className: string }> = {
   ativa: { label: 'Ativa', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },

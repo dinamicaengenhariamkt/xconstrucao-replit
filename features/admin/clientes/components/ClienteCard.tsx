@@ -8,15 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avata
 import { cn } from '@shared/lib/utils';
 import { RiBriefcaseLine } from 'react-icons/ri';
 import type { AdminCliente, ClienteStatus } from '../types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 const statusConfig: Record<ClienteStatus, { label: string; className: string }> = {
   ativo: { label: 'Ativo', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
   inativo: { label: 'Inativo', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
   pendente: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
 };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 function getInitials(name: string) {
   return name

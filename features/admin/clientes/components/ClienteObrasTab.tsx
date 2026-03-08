@@ -6,6 +6,7 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import { RiExternalLinkLine, RiEdit2Line, RiBriefcaseLine } from 'react-icons/ri';
 import type { AdminClienteObra } from '../types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 type ObraStatus = AdminClienteObra['status'];
 
@@ -31,9 +32,6 @@ const STATUS_CONFIG: Record<ObraStatus, { label: string; className: string; prog
     progressColor: 'error',
   },
 };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('pt-BR');

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
 import type { EntradaChartPoint, EntradaInsight } from '../types';
+import { formatCurrencyCompact, formatCurrency } from '@shared/lib/formatters';
 
 const CHART_HEIGHT = 240;
 const BAR_WIDTH = 40;
@@ -14,20 +15,6 @@ const COLORS = {
   outros: '#F5A623',
 };
 
-function formatCurrencyCompact(value: number): string {
-  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1).replace('.', ',')}M`;
-  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}K`;
-  return `R$ ${value}`;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 interface EntradaChartProps {
   data?: EntradaChartPoint[];

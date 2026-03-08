@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import { ENABLE_MOCK } from '@features/empreiteiro/novas-obras/constants';
 import { useTermosStore } from '@features/empreiteiro/termos/store/termos-store';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 interface Atividade {
   id: string;
@@ -164,10 +165,6 @@ export default function AplicarPage() {
       </div>
     );
   }
-
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
 
   return (
     <div className="px-10 pt-10 pb-6 flex flex-col gap-8">

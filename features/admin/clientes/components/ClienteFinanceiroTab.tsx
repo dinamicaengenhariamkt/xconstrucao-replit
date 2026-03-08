@@ -8,6 +8,7 @@ import {
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import type { ClienteFinanceiro, ClientePagamento, PagamentoStatus } from '../types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 const PAGAMENTO_STATUS_CONFIG: Record<PagamentoStatus, { label: string; className: string }> = {
   pago: {
@@ -23,9 +24,6 @@ const PAGAMENTO_STATUS_CONFIG: Record<PagamentoStatus, { label: string; classNam
     className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
   },
 };
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const formatDate = (dateStr: string) =>
   new Date(dateStr).toLocaleDateString('pt-BR');

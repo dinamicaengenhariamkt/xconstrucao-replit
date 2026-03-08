@@ -46,16 +46,9 @@ import {
   useSaidaChart,
   useSaidasFuturas,
 } from '@features/admin/saidas/hooks/use-saidas';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 // ─── Formatting ───────────────────────────────────────────────────────────────
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);

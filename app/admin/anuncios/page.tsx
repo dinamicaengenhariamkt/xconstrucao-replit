@@ -49,16 +49,9 @@ import {
 } from '@features/admin/anuncios/hooks/use-anuncios';
 import type { AnuncioStatus, ZonaAnuncio, Campanha, Anunciante } from '@features/admin/anuncios/types';
 import type { EditarAnuncianteFormData } from '@features/admin/anuncios/schemas';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 const PAGE_SIZE = 20;
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat('pt-BR').format(value);

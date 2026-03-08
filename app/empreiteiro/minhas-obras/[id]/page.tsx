@@ -5,7 +5,7 @@ import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMinhaObraDetalhe } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
-import { STATUS_LABELS, PROGRESS_COLORS } from '@features/empreiteiro/minhas-obras/constants';
+import { STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
 import { TaskManagerSection } from '@features/empreiteiro/minhas-obras/components/TaskManagerSection';
 import { ChecklistsSection } from '@features/empreiteiro/minhas-obras/components/ChecklistsSection';
 import { TimelineSection } from '@features/empreiteiro/minhas-obras/components/TimelineSection';
@@ -20,6 +20,7 @@ import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { AdicionarAtualizacaoModal } from '@features/empreiteiro/minhas-obras/components/AdicionarAtualizacaoModal';
 import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -36,10 +37,6 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   info: 'bg-blue-500',
   success: 'bg-green-500',
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-}
 
 type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias';
 

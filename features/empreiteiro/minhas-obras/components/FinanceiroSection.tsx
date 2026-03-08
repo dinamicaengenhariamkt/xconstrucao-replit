@@ -1,11 +1,8 @@
 'use client';
 
 import { cn } from '@shared/lib/utils';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ObraFinanceiro, ObraMedicao } from '../types';
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-}
 
 const MEDICAO_BADGE: Record<ObraMedicao['status'], { label: string; classes: string; rowBorder?: string }> = {
   aprovada: { label: 'Aprovada', classes: 'text-success bg-success/10' },

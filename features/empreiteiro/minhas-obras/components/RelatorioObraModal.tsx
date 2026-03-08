@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { Button } from '@shared/components/ui/button';
 import type { MinhaObraDetalhe } from '../types';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,14 +42,6 @@ const OCORRENCIA_SEVERIDADE: Record<string, string> = {
   medio: 'Médio',
   baixo: 'Baixo',
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function hoje(): string {
   return new Date().toLocaleDateString('pt-BR', {

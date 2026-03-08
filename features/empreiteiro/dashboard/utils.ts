@@ -4,18 +4,7 @@
 
 import type { ActivityType } from './types';
 import { FORMAT_CONFIG, ACTIVITY_COLORS } from './constants';
-
-/**
- * Formata valor monetário em Real brasileiro
- */
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat(FORMAT_CONFIG.currency.locale, {
-    style: 'currency',
-    currency: FORMAT_CONFIG.currency.currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+export { formatCurrency } from '@shared/lib/formatters';
 
 /**
  * Formata valor monetário de forma compacta (K, M)

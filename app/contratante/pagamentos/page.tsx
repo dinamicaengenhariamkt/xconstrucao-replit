@@ -19,8 +19,7 @@ import { usePagamentos, usePagamentosKPI } from '@features/contratante/pagamento
 import { PAGAMENTO_STATUS_LABELS, PAGAMENTO_STATUS_COLORS } from '@features/contratante/pagamentos/constants';
 import type { PagamentoContratante } from '@features/contratante/pagamentos/types';
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+import { formatCurrency } from '@shared/lib/formatters';
 
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-');

@@ -2,11 +2,9 @@
 
 import type { ObraDetalheHeroProps } from '../types';
 import { COMPLEXIDADE_LABELS } from '../constants';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-  };
 
   const complexidadeColors: Record<string, string> = {
     baixa: 'text-success',

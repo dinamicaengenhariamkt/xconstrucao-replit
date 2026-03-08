@@ -6,7 +6,7 @@ import { FilterChips } from '@features/shared/components/FilterChips';
 import { ObrasContratanteGrid } from '@features/contratante/minhas-obras/components/ObrasContratanteGrid';
 import { ObrasContratanteSkeleton } from '@features/contratante/minhas-obras/components/ObrasContratanteSkeleton';
 import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
-import { STATUS_LABELS } from '@features/contratante/minhas-obras/constants';
+import { STATUS_LABELS } from '@shared/constants/status';
 import type { FilterChipOption } from '@features/shared/types';
 import type { ObraContratante } from '@features/contratante/minhas-obras/types';
 

@@ -18,16 +18,9 @@ import type {
   ActivityType,
   EfficiencyData,
 } from '../types';
+import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function hoje(): string {
   return new Date().toLocaleDateString('pt-BR', {
