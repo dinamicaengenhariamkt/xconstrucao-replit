@@ -8,12 +8,14 @@ import { ChatInput } from '@features/contratante/xchat/components/ChatInput';
 import { EmptyChat } from '@features/contratante/xchat/components/EmptyChat';
 import { useContratanteConversations, useContratanteMessages } from '@features/contratante/xchat/hooks/use-chat';
 import { useContratanteChatStore } from '@features/contratante/xchat/store/chat-store';
-import type { ContratanteMessageAttachment } from '@features/contratante/xchat/types';
+import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
+import type { ContratanteMessageAttachment, ContratanteObraPickerItem } from '@features/contratante/xchat/types';
 
 export default function ContratanteChatPage() {
   const { data: conversations, isLoading: convLoading } = useContratanteConversations();
   const { selectedConversationId, localMessages, sendMessage } = useContratanteChatStore();
   const { data: serverMessages, isLoading: msgLoading } = useContratanteMessages(selectedConversationId);
+  const { data: obrasData } = useObrasContratante();
 
   const selectedConversation = conversations?.find((c) => c.id === selectedConversationId) ?? null;
 
@@ -23,6 +25,18 @@ export default function ContratanteChatPage() {
     const local = selectedConversationId ? (localMessages[selectedConversationId] ?? []) : [];
     return [...server, ...local];
   }, [serverMessages, localMessages, selectedConversationId]);
+
+  const obras: ContratanteObraPickerItem[] = useMemo(
+    () =>
+      (obrasData ?? []).map((o) => ({
+        id: o.id,
+        titulo: o.titulo,
+        endereco: o.endereco,
+        status: o.status,
+        progresso: o.progresso,
+      })),
+    [obrasData],
+  );
 
   const handleSend = (content: string, attachment?: ContratanteMessageAttachment) => {
     if (!selectedConversationId) return;
@@ -64,7 +78,7 @@ export default function ContratanteChatPage() {
           <>
             <ChatHeader conversation={selectedConversation} />
             <MessageArea messages={allMessages} isLoading={msgLoading} />
-            <ChatInput onSend={handleSend} />
+            <ChatInput onSend={handleSend} obras={obras} />
           </>
         ) : (
           <EmptyChat />

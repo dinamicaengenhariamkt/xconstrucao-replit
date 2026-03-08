@@ -1,16 +1,27 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { ContratanteMessageAttachment } from '../types';
-import { IconAttachFile, IconSend } from '@shared/components/icons';
+import { ObraPickerSheet } from './ObraPickerSheet';
+import type { ContratanteMessageAttachment, ContratanteObraRefAttachment, ContratanteObraPickerItem } from '../types';
+import { IconHomeWork, IconClose, IconAttachFile, IconSend } from '@shared/components/icons';
+
+const STATUS_LABEL: Record<string, string> = {
+  em_execucao: 'Em execução',
+  com_atrasos: 'Com atrasos',
+  com_pendencias: 'Com pendências',
+  planejamento: 'Planejamento',
+  finalizada: 'Finalizada',
+};
 
 interface ChatInputProps {
   onSend: (content: string, attachment?: ContratanteMessageAttachment) => void;
   disabled?: boolean;
+  obras?: ContratanteObraPickerItem[];
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
   const [message, setMessage] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<ContratanteObraRefAttachment | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -21,12 +32,14 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [message]);
 
-  const canSend = !disabled && message.trim().length > 0;
+  const canSend = !disabled && (message.trim().length > 0 || pendingAttachment !== null);
 
   const handleSend = () => {
     if (!canSend) return;
-    onSend(message.trim());
+    const attachment: ContratanteMessageAttachment | undefined = pendingAttachment ?? undefined;
+    onSend(message.trim(), attachment);
     setMessage('');
+    setPendingAttachment(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -41,15 +54,49 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   return (
     <div className="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+      {/* Obra reference preview */}
+      {pendingAttachment && (
+        <div className="mx-4 mt-3 flex items-center gap-2 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl px-3 py-2">
+          <IconHomeWork className="text-base text-primary" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-primary truncate">{pendingAttachment.obraNome}</p>
+            <p className="text-[10px] text-gray-500 truncate">
+              {STATUS_LABEL[pendingAttachment.obraStatus] ?? pendingAttachment.obraStatus} ·{' '}
+              {pendingAttachment.progresso}%
+            </p>
+          </div>
+          <button
+            onClick={() => setPendingAttachment(null)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
+            aria-label="Remover referência"
+          >
+            <IconClose className="text-base" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-2 p-3">
-        {/* Attach button (disabled — obra picker not available for contratante yet) */}
-        <button
-          disabled
-          className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-300 dark:text-gray-700"
-          aria-label="Referenciar obra"
-        >
-          <IconAttachFile className="text-xl" />
-        </button>
+        {/* Attach button */}
+        {obras.length > 0 ? (
+          <ObraPickerSheet obras={obras} onSelect={setPendingAttachment}>
+            <button
+              disabled={disabled}
+              className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:text-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors disabled:opacity-40"
+              aria-label="Referenciar obra"
+              title="Referenciar obra"
+            >
+              <IconAttachFile className="text-xl" />
+            </button>
+          </ObraPickerSheet>
+        ) : (
+          <button
+            disabled
+            className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-300 dark:text-gray-700"
+            aria-label="Referenciar obra"
+          >
+            <IconAttachFile className="text-xl" />
+          </button>
+        )}
 
         {/* Textarea */}
         <textarea

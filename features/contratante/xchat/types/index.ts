@@ -9,6 +9,12 @@ export interface ContratanteObraRefAttachment {
 
 export type ContratanteMessageAttachment = ContratanteObraRefAttachment;
 
+export interface ContratanteChatInputProps {
+  onSend: (content: string, attachment?: ContratanteMessageAttachment) => void;
+  disabled?: boolean;
+  obras?: ContratanteObraPickerItem[];
+}
+
 export interface ContratanteObraPickerItem {
   id: string;
   titulo: string;
