@@ -34,6 +34,7 @@ import {
 } from 'react-icons/ri';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
+import { IconGroups } from '@shared/components/icons';
 
 type ObraTab = 'visao-geral' | 'etapas' | 'timeline' | 'ocorrencias' | 'financeiro' | 'equipe' | 'fotos';
 
@@ -169,7 +170,7 @@ export default function ObraDetalhePage() {
                 {semEmpreiteiro ? (
                   <div className="flex items-center gap-2 text-white/90">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20 shrink-0">
-                      <span className="material-symbols-outlined text-white text-base">groups</span>
+                      <IconGroups className="text-white text-base" />
                     </div>
                     <div>
                       <p className="text-white/60 text-xs">Candidaturas</p>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
 import type { ContratanteConversation } from '../types';
+import { IconHomeWork } from '@shared/components/icons';
 
 interface ChatHeaderProps {
   conversation: ContratanteConversation | null;
@@ -47,7 +48,7 @@ export function ChatHeader({ conversation }: ChatHeaderProps) {
           href={`/contratante/minhas-obras/${conversation.obraId}`}
           className="flex-shrink-0 flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors px-3 py-1.5 rounded-lg hover:bg-primary/5"
         >
-          <span className="material-symbols-outlined text-sm leading-none">home_work</span>
+          <IconHomeWork className="text-sm leading-none" />
           Ver obra
         </Link>
       )}

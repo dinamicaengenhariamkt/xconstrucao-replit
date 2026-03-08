@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { ContratanteMessageAttachment } from '../types';
+import { IconAttachFile, IconSend } from '@shared/components/icons';
 
 interface ChatInputProps {
   onSend: (content: string, attachment?: ContratanteMessageAttachment) => void;
@@ -47,7 +48,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-300 dark:text-gray-700"
           aria-label="Referenciar obra"
         >
-          <span className="material-symbols-outlined text-xl">attach_file</span>
+          <IconAttachFile className="text-xl" />
         </button>
 
         {/* Textarea */}
@@ -72,7 +73,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
           data-testid="button-send-message"
           aria-label="Enviar mensagem"
         >
-          <span className="material-symbols-outlined text-lg">send</span>
+          <IconSend className="text-lg" />
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { IconShield, IconVerified, IconDashboardCustomize, IconTarget, IconHub, IconBolt, IconCalculate, IconTableChart } from '@shared/components/icons';
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 
@@ -129,9 +130,7 @@ export default function HomePage() {
                 className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
-                  shield
-                </span>
+                <IconShield className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">Segurança e agilidade</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
@@ -144,9 +143,7 @@ export default function HomePage() {
                 className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
-                  target
-                </span>
+                <IconTarget className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">
                     Precisão digital e previsibilidade
@@ -161,9 +158,7 @@ export default function HomePage() {
                 className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
-                  hub
-                </span>
+                <IconHub className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">Conexão xconstrução</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
@@ -176,9 +171,7 @@ export default function HomePage() {
                 className="bg-[#333333] text-white rounded-2xl p-10 flex flex-col min-h-[300px] md:col-span-2"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-5xl mb-6">
-                  verified
-                </span>
+                <IconVerified className="text-5xl mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">
                     Profissionais com Responsabilidade Técnica e portfólio validado
@@ -193,9 +186,7 @@ export default function HomePage() {
                 className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-6">
-                  bolt
-                </span>
+                <IconBolt className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">
                     Gestão ágil e monitorada
@@ -381,9 +372,7 @@ export default function HomePage() {
               className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col justify-between min-h-[300px]"
               style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
             >
-              <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-4">
-                dashboard_customize
-              </span>
+              <IconDashboardCustomize className="text-5xl text-[#333333] dark:text-white mb-4" />
               <div>
                 <h3 className="text-2xl font-extrabold mb-3">
                   xgestão inteligente
@@ -406,9 +395,7 @@ export default function HomePage() {
               className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col justify-between min-h-[300px]"
               style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
             >
-              <span className="material-symbols-outlined text-5xl text-[#333333] dark:text-white mb-4">
-                calculate
-              </span>
+              <IconCalculate className="text-5xl text-[#333333] dark:text-white mb-4" />
               <div>
                 <h3 className="text-2xl font-extrabold mb-3">
                   Comece com xgestão inteligente
@@ -430,9 +417,7 @@ export default function HomePage() {
               className="bg-[#333333] text-white rounded-2xl p-10 flex flex-col justify-center items-center text-center min-h-[160px] md:col-span-2"
               style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
             >
-              <span className="material-symbols-outlined text-4xl mb-3">
-                table_chart
-              </span>
+              <IconTableChart className="text-4xl mb-3" />
               <h3 className="text-xl font-bold mb-2">
                 SINAPI em Todos os Planos
               </h3>

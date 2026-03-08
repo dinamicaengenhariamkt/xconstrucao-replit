@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
 import type { MessageBubbleProps } from '../types';
+import { IconHomeWork, IconArrowForward, IconDone, IconDoneAll } from '@shared/components/icons';
 
 const STATUS_LABEL: Record<string, string> = {
   em_execucao: 'Em execução',
@@ -59,9 +60,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           >
             {/* Card header */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-inherit">
-              <span className="material-symbols-outlined text-base leading-none opacity-70">
-                home_work
-              </span>
+              <IconHomeWork className="text-base leading-none opacity-70" />
               <span
                 className={cn(
                   'text-[11px] font-semibold uppercase tracking-wide',
@@ -138,9 +137,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 )}
               >
                 Ver obra
-                <span className="material-symbols-outlined text-sm leading-none">
-                  arrow_forward
-                </span>
+                <IconArrowForward className="text-sm leading-none" />
               </Link>
             </div>
           </div>
@@ -155,9 +152,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         >
           <span className="text-[10px]">{timestamp}</span>
           {message.isOwn && message.status && (
-            <span className="material-symbols-outlined text-[13px] leading-none">
-              {message.status === 'read' ? 'done_all' : 'done'}
-            </span>
+            message.status === 'read' ? (
+              <IconDoneAll className="text-[13px] leading-none" />
+            ) : (
+              <IconDone className="text-[13px] leading-none" />
+            )
           )}
         </div>
       </div>

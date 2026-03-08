@@ -31,6 +31,7 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import type { ObraDocumento } from '../types';
+import { IconEditDocument } from '@shared/components/icons';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ export function EditarDocumentoModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">edit_document</span>
+              <IconEditDocument className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">

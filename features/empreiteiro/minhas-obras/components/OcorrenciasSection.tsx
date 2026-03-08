@@ -23,6 +23,7 @@ import { Button } from '@shared/components/ui/button';
 import type { ObraOcorrencia, MinhaObraDetalhe } from '../types';
 import { NovaOcorrenciaModal } from './NovaOcorrenciaModal';
 import { ResolverOcorrenciaModal } from './ResolverOcorrenciaModal';
+import { IconCheckCircle, IconMoreVert, IconEdit, IconRestartAlt, IconDelete, IconTaskAlt, IconPerson, IconEvent, IconTimer, IconCheck, IconAdd } from '@shared/components/icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,7 +98,7 @@ function OcorrenciaCard({
             <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200 relative">
               <img className="w-full h-full object-cover" src={ocorrencia.fotoUrl} alt="Foto" />
               <div className="absolute inset-0 bg-success/50 flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-3xl">check_circle</span>
+                <IconCheckCircle className="text-white text-3xl" />
               </div>
             </div>
           )}
@@ -113,16 +114,16 @@ function OcorrenciaCard({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0 cursor-pointer">
-                      <span className="material-symbols-outlined text-base text-gray-400">more_vert</span>
+                      <IconMoreVert className="text-base text-gray-400" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => onEditar(ocorrencia)} className="cursor-pointer">
-                      <span className="material-symbols-outlined text-sm mr-2">edit</span>
+                      <IconEdit className="text-sm mr-2" />
                       Editar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onReabrir(ocorrencia)} className="cursor-pointer">
-                      <span className="material-symbols-outlined text-sm mr-2">restart_alt</span>
+                      <IconRestartAlt className="text-sm mr-2" />
                       Reabrir ocorrência
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -130,7 +131,7 @@ function OcorrenciaCard({
                       onClick={() => onExcluir(ocorrencia)}
                       className="cursor-pointer text-red-600 focus:text-red-600 dark:text-red-400"
                     >
-                      <span className="material-symbols-outlined text-sm mr-2">delete</span>
+                      <IconDelete className="text-sm mr-2" />
                       Excluir
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -175,16 +176,16 @@ function OcorrenciaCard({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0 cursor-pointer">
-                    <span className="material-symbols-outlined text-base text-gray-400">more_vert</span>
+                    <IconMoreVert className="text-base text-gray-400" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem onClick={() => onEditar(ocorrencia)} className="cursor-pointer">
-                    <span className="material-symbols-outlined text-sm mr-2">edit</span>
+                    <IconEdit className="text-sm mr-2" />
                     Editar
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onResolver(ocorrencia)} className="cursor-pointer">
-                    <span className="material-symbols-outlined text-sm mr-2">task_alt</span>
+                    <IconTaskAlt className="text-sm mr-2" />
                     Marcar como resolvida
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -192,7 +193,7 @@ function OcorrenciaCard({
                     onClick={() => onExcluir(ocorrencia)}
                     className="cursor-pointer text-red-600 focus:text-red-600 dark:text-red-400"
                   >
-                    <span className="material-symbols-outlined text-sm mr-2">delete</span>
+                    <IconDelete className="text-sm mr-2" />
                     Excluir
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -202,16 +203,16 @@ function OcorrenciaCard({
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{ocorrencia.descricao}</p>
           <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-3">
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">person</span>
+              <IconPerson className="text-sm" />
               Resp: {ocorrencia.responsavel}
             </span>
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">event</span>
+              <IconEvent className="text-sm" />
               Aberto: {ocorrencia.dataAbertura}
             </span>
             {ocorrencia.prazo && (
               <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-medium">
-                <span className="material-symbols-outlined text-sm">timer</span>
+                <IconTimer className="text-sm" />
                 Prazo: {ocorrencia.prazo}
               </span>
             )}
@@ -228,7 +229,7 @@ function OcorrenciaCard({
                 onClick={() => onResolver(ocorrencia)}
                 className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">check</span>
+                <IconCheck className="text-sm" />
                 Marcar resolvido
               </button>
             </div>
@@ -350,7 +351,7 @@ export function OcorrenciasSection({ obra }: OcorrenciasSectionProps) {
             size="sm"
             className="bg-red-500 hover:bg-red-600 text-white w-fit"
           >
-            <span className="material-symbols-outlined text-sm mr-1">add</span>
+            <IconAdd className="text-sm mr-1" />
             Reportar Problema
           </Button>
         </div>
@@ -393,7 +394,7 @@ export function OcorrenciasSection({ obra }: OcorrenciasSectionProps) {
         {/* Cards */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">check_circle</span>
+            <IconCheckCircle className="text-4xl text-gray-300 mb-3" />
             <p className="text-sm font-semibold text-gray-500">Nenhuma ocorrência encontrada</p>
             <p className="text-xs text-gray-400 mt-1">
               {activeFilter === 'todos' && !obraFinalizada

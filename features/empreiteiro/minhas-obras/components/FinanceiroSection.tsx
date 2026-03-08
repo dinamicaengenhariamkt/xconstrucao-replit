@@ -3,6 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ObraFinanceiro, ObraMedicao } from '../types';
+import { IconLock, IconCheckCircle } from '@shared/components/icons';
 
 const MEDICAO_BADGE: Record<ObraMedicao['status'], { label: string; classes: string; rowBorder?: string }> = {
   aprovada: { label: 'Aprovada', classes: 'text-success bg-success/10' },
@@ -29,7 +30,7 @@ export function FinanceiroSection({ financeiro }: FinanceiroSectionProps) {
           <p className="text-sm text-gray-500">Visão gerencial de valores (somente leitura)</p>
         </div>
         <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">lock</span>
+          <IconLock className="text-sm" />
           Visualização
         </span>
       </div>
@@ -116,7 +117,7 @@ export function FinanceiroSection({ financeiro }: FinanceiroSectionProps) {
       {financeiro.percentualRecebido >= financeiro.percentualExecutado - 5 && (
         <div className="mt-6 p-4 bg-success/10 border border-success/30 rounded-xl flex items-start gap-3">
           <div className="p-2 bg-success/20 rounded-lg flex-shrink-0">
-            <span className="material-symbols-outlined text-success">check_circle</span>
+            <IconCheckCircle className="text-success" />
           </div>
           <div>
             <p className="text-sm font-bold text-success">Pagamentos em dia</p>

@@ -2,12 +2,13 @@
 
 import { NovaObraCard } from './NovaObraCard';
 import type { NovasObrasGridProps } from '../types';
+import { IconSearchOff } from '@shared/components/icons';
 
 export function NovasObrasGrid({ obras, isBlocked = false }: NovasObrasGridProps) {
   if (obras.length === 0) {
     return (
       <div className="text-center py-20" data-testid="empty-state-novas-obras">
-        <span className="material-symbols-outlined text-5xl text-gray-300 mb-4 block">search_off</span>
+        <IconSearchOff className="text-5xl text-gray-300 mb-4 block" />
         <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400">Nenhuma obra encontrada</h3>
         <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Tente alterar os filtros de busca.</p>
       </div>

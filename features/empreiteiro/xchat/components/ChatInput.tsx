@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ObraPickerSheet } from './ObraPickerSheet';
 import type { ChatInputProps, MessageAttachment, ObraRefAttachment } from '../types';
+import { IconHomeWork, IconClose, IconAttachFile, IconSend } from '@shared/components/icons';
 
 const STATUS_LABEL: Record<string, string> = {
   em_execucao: 'Em execução',
@@ -50,7 +51,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
       {/* Obra reference preview */}
       {pendingAttachment && (
         <div className="mx-4 mt-3 flex items-center gap-2 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl px-3 py-2">
-          <span className="material-symbols-outlined text-base text-primary">home_work</span>
+          <IconHomeWork className="text-base text-primary" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-primary truncate">{pendingAttachment.obraNome}</p>
             <p className="text-[10px] text-gray-500 truncate">
@@ -63,7 +64,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
             aria-label="Remover referência"
           >
-            <span className="material-symbols-outlined text-base">close</span>
+            <IconClose className="text-base" />
           </button>
         </div>
       )}
@@ -78,7 +79,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
               aria-label="Referenciar obra"
               title="Referenciar obra"
             >
-              <span className="material-symbols-outlined text-xl">attach_file</span>
+              <IconAttachFile className="text-xl" />
             </button>
           </ObraPickerSheet>
         ) : (
@@ -87,7 +88,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
             className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-300 dark:text-gray-700"
             aria-label="Referenciar obra"
           >
-            <span className="material-symbols-outlined text-xl">attach_file</span>
+            <IconAttachFile className="text-xl" />
           </button>
         )}
 
@@ -113,7 +114,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
           data-testid="button-send-message"
           aria-label="Enviar mensagem"
         >
-          <span className="material-symbols-outlined text-lg">send</span>
+          <IconSend className="text-lg" />
         </button>
       </div>
     </div>

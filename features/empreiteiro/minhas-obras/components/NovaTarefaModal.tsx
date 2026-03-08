@@ -25,6 +25,7 @@ import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraDetalhe, MinhaObraTarefa } from '../types';
+import { IconEdit, IconAddTask, IconSave } from '@shared/components/icons';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -187,9 +188,7 @@ export function NovaTarefaModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">
-                {isEdicao ? 'edit' : 'add_task'}
-              </span>
+              {isEdicao ? <IconEdit className="text-primary text-xl" /> : <IconAddTask className="text-primary text-xl" />}
             </div>
             <div>
               <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
@@ -462,9 +461,7 @@ export function NovaTarefaModal({
             Cancelar
           </Button>
           <Button type="submit" form="form-nova-tarefa">
-            <span className="material-symbols-outlined text-sm mr-1">
-              {isEdicao ? 'save' : 'add_task'}
-            </span>
+            {isEdicao ? <IconSave className="text-sm mr-1" /> : <IconAddTask className="text-sm mr-1" />}
             {isEdicao ? 'Salvar alterações' : 'Criar tarefa'}
           </Button>
         </DialogFooter>

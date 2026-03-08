@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@shared/lib/utils';
+import { IconLocationOn, IconMap, IconOpenInNew } from '@shared/components/icons';
 
 interface Localizacao {
   cidade: string;
@@ -24,7 +25,7 @@ export function LocalizacaoCard({ localizacao }: LocalizacaoCardProps) {
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
-          <span className="material-symbols-outlined text-primary">location_on</span>
+          <IconLocationOn className="text-primary" />
         </div>
         <div>
           <h2 className="text-base font-bold text-gray-900 dark:text-white">Localização da Obra</h2>
@@ -38,7 +39,7 @@ export function LocalizacaoCard({ localizacao }: LocalizacaoCardProps) {
           <div className="lg:col-span-2 aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative">
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
               <div className="text-center">
-                <span className="material-symbols-outlined text-gray-400 text-6xl">map</span>
+                <IconMap className="text-gray-400 text-6xl" />
                 <p className="text-sm text-gray-500 mt-2">Mapa da localização</p>
               </div>
             </div>
@@ -49,7 +50,7 @@ export function LocalizacaoCard({ localizacao }: LocalizacaoCardProps) {
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
-                  <span className="material-symbols-outlined text-primary">location_on</span>
+                  <IconLocationOn className="text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Endereço Completo</p>
@@ -67,7 +68,7 @@ export function LocalizacaoCard({ localizacao }: LocalizacaoCardProps) {
               onClick={handleOpenMaps}
               className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined">open_in_new</span>
+              <IconOpenInNew />
               Abrir no Google Maps
             </button>
           </div>

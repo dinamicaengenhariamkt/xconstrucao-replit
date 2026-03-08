@@ -5,6 +5,7 @@ import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
+import { IconStar, IconLocationOn, IconGroup, IconLock } from '@shared/components/icons';
 
 export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
 
@@ -32,7 +33,7 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
             </div>
             {obra.destaque && (
               <div className="absolute top-4 right-4 flex items-center gap-1 bg-amber-400/90 text-amber-900 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
-                <span className="material-symbols-outlined text-xs">star</span>
+                <IconStar className="text-xs" />
                 Destaque
               </div>
             )}
@@ -43,7 +44,7 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{obra.tipo}</p>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{obra.titulo}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm dark:text-gray-400">location_on</span>
+                <IconLocationOn className="text-sm dark:text-gray-400" />
                 {obra.endereco}
               </p>
             </div>
@@ -70,7 +71,7 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
                 </div>
               </div>
               <div className="flex items-center gap-1 text-gray-400">
-                <span className="material-symbols-outlined text-sm">group</span>
+                <IconGroup className="text-sm" />
                 <span className="text-xs font-semibold">{obra.candidaturas}</span>
               </div>
             </div>
@@ -93,7 +94,7 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
       {isBlocked && (
         <div className="absolute inset-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-[2px] rounded-3xl flex items-center justify-center z-10">
           <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-            <span className="material-symbols-outlined text-2xl text-gray-400">lock</span>
+            <IconLock className="text-2xl text-gray-400" />
           </div>
         </div>
       )}

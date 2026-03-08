@@ -24,6 +24,7 @@ import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist, MembroEquipe } from '../types';
+import { IconDraw } from '@shared/components/icons';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function AssinarChecklistModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <span className="material-symbols-outlined text-purple-600 text-xl">draw</span>
+              <IconDraw className="text-purple-600 text-xl" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
@@ -215,7 +216,7 @@ export function AssinarChecklistModal({
             form="form-assinar"
             className="bg-purple-600 hover:bg-purple-700 text-white border-0"
           >
-            <span className="material-symbols-outlined text-sm mr-1">draw</span>
+            <IconDraw className="text-sm mr-1" />
             Assinar checklist
           </Button>
         </DialogFooter>

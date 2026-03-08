@@ -6,6 +6,7 @@ import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
+import { IconLock, IconVisibility, IconVisibilityOff, IconPassword } from '@shared/components/icons';
 
 function ResetSenhaContent() {
   const [newPassword, setNewPassword] = useState("");
@@ -102,9 +103,7 @@ function ResetSenhaContent() {
           >
             <div className="flex justify-center mb-6">
               <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-3xl text-[#333333] dark:text-white">
-                  password
-                </span>
+                <IconPassword className="text-3xl text-[#333333] dark:text-white" />
               </div>
             </div>
 
@@ -119,9 +118,7 @@ function ResetSenhaContent() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Nova Senha</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                    lock
-                  </span>
+                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
@@ -135,9 +132,7 @@ function ResetSenhaContent() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    <span className="material-symbols-outlined text-lg">
-                      {showPassword ? "visibility_off" : "visibility"}
-                    </span>
+                    {showPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
                   </button>
                 </div>
               </div>
@@ -145,9 +140,7 @@ function ResetSenhaContent() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Confirmar Senha</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                    lock
-                  </span>
+                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
@@ -161,9 +154,7 @@ function ResetSenhaContent() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    <span className="material-symbols-outlined text-lg">
-                      {showConfirmPassword ? "visibility_off" : "visibility"}
-                    </span>
+                    {showConfirmPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
                   </button>
                 </div>
               </div>

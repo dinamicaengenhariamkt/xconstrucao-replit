@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
+import { IconMail, IconCheckCircle, IconLockReset } from '@shared/components/icons';
 
 export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState("");
@@ -94,9 +95,7 @@ export default function RecuperarSenhaPage() {
             >
               <div className="flex justify-center mb-6">
                 <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-3xl text-[#333333] dark:text-white">
-                    lock_reset
-                  </span>
+                  <IconLockReset className="text-3xl text-[#333333] dark:text-white" />
                 </div>
               </div>
 
@@ -114,9 +113,7 @@ export default function RecuperarSenhaPage() {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Email</label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                      mail
-                    </span>
+                    <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                     <input
                       type="email"
                       value={email}
@@ -160,9 +157,7 @@ export default function RecuperarSenhaPage() {
             >
               <div className="flex justify-center mb-6">
                 <div className="w-16 h-16 rounded-2xl bg-[#22846D]/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-3xl text-[#22846D]">
-                    check_circle
-                  </span>
+                  <IconCheckCircle className="text-3xl text-[#22846D]" />
                 </div>
               </div>
 

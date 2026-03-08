@@ -22,12 +22,14 @@ import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
 import { NovaAtividadeModal } from './NovaAtividadeModal';
 import type { MinhaObraDetalhe, ObraAtividade } from '../types';
+import { IconDownload, IconAdd, IconCalendarToday, IconAddCircle, IconMoreVert, IconEdit, IconTaskAlt, IconDelete, IconCheckCircle, IconPlayCircle, IconWarning, IconSchedule } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<ObraAtividade['status'], {
   rowBg: string;
-  icon: string;
+  Icon: ComponentType<{ className?: string }>;
   iconColor: string;
   textClass: string;
   barColor: string;
@@ -36,7 +38,7 @@ const STATUS_CONFIG: Record<ObraAtividade['status'], {
 }> = {
   concluido: {
     rowBg: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
-    icon: 'check_circle',
+    Icon: IconCheckCircle,
     iconColor: 'text-success',
     textClass: 'text-gray-500 line-through',
     barColor: 'bg-success',
@@ -45,7 +47,7 @@ const STATUS_CONFIG: Record<ObraAtividade['status'], {
   },
   em_andamento: {
     rowBg: 'bg-primary/5 dark:bg-primary/10',
-    icon: 'play_circle',
+    Icon: IconPlayCircle,
     iconColor: 'text-primary',
     textClass: 'text-gray-900 dark:text-white font-bold',
     barColor: 'bg-primary',
@@ -54,7 +56,7 @@ const STATUS_CONFIG: Record<ObraAtividade['status'], {
   },
   atrasado: {
     rowBg: 'bg-amber-50/50 dark:bg-amber-900/10',
-    icon: 'warning',
+    Icon: IconWarning,
     iconColor: 'text-amber-500',
     textClass: 'text-gray-900 dark:text-white font-bold',
     barColor: 'bg-amber-500',
@@ -63,7 +65,7 @@ const STATUS_CONFIG: Record<ObraAtividade['status'], {
   },
   pendente: {
     rowBg: 'hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors',
-    icon: 'schedule',
+    Icon: IconSchedule,
     iconColor: 'text-gray-400',
     textClass: 'text-gray-500',
     barColor: 'bg-gray-300',
@@ -181,7 +183,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
             onClick={() => exportarCSV(obra, atividades)}
             className="gap-2"
           >
-            <span className="material-symbols-outlined text-sm">download</span>
+            <IconDownload className="text-sm" />
             Exportar
           </Button>
           <Button
@@ -190,7 +192,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
             disabled={obraFinalizada}
             className="gap-2"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <IconAdd className="text-sm" />
             Nova Atividade
           </Button>
         </div>
@@ -219,13 +221,11 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       {atividades.length === 0 ? (
         <div className="py-16 text-center">
-          <span className="material-symbols-outlined text-5xl text-gray-300 block mb-3">
-            calendar_today
-          </span>
+          <IconCalendarToday className="text-5xl text-gray-300 block mb-3" />
           <p className="text-sm font-medium text-gray-500">Nenhuma atividade no cronograma</p>
           {!obraFinalizada && (
             <Button variant="ghost" size="sm" className="mt-3 gap-1 text-primary" onClick={handleNova}>
-              <span className="material-symbols-outlined text-sm">add_circle</span>
+              <IconAddCircle className="text-sm" />
               Adicionar atividade
             </Button>
           )}
@@ -255,9 +255,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
                     {/* Nome + descrição */}
                     <td className="py-4 px-4">
                       <div className="flex items-start gap-3">
-                        <span className={cn('material-symbols-outlined text-lg mt-0.5 shrink-0', config.iconColor)}>
-                          {config.icon}
-                        </span>
+                        <config.Icon className={cn('text-lg mt-0.5 shrink-0', config.iconColor)} />
                         <div>
                           <span className={cn('text-sm', config.textClass)}>{atividade.nome}</span>
                           {atividade.descricao && (
@@ -322,12 +320,12 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
                               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                               aria-label="Ações"
                             >
-                              <span className="material-symbols-outlined text-base">more_vert</span>
+                              <IconMoreVert className="text-base" />
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuItem onClick={() => handleEditar(atividade)} className="cursor-pointer">
-                              <span className="material-symbols-outlined text-sm mr-2">edit</span>
+                              <IconEdit className="text-sm mr-2" />
                               Editar
                             </DropdownMenuItem>
                             {atividade.status !== 'concluido' && (
@@ -335,7 +333,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
                                 onClick={() => handleConcluir(atividade)}
                                 className="cursor-pointer text-success focus:text-success"
                               >
-                                <span className="material-symbols-outlined text-sm mr-2">task_alt</span>
+                                <IconTaskAlt className="text-sm mr-2" />
                                 Marcar como Concluída
                               </DropdownMenuItem>
                             )}
@@ -344,7 +342,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
                               onClick={() => setModal({ type: 'excluir', atividade })}
                               className="cursor-pointer text-red-600 focus:text-red-600"
                             >
-                              <span className="material-symbols-outlined text-sm mr-2">delete</span>
+                              <IconDelete className="text-sm mr-2" />
                               Excluir
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -365,7 +363,7 @@ export function CronogramaSection({ obra }: CronogramaSectionProps) {
           onClick={handleNova}
           className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-500 hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span className="material-symbols-outlined text-lg">add_circle</span>
+          <IconAddCircle className="text-lg" />
           Adicionar atividade ao cronograma
         </button>
       )}

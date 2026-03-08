@@ -11,6 +11,7 @@ import {
 import { Button } from '@shared/components/ui/button';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { CandidaturaRecebida } from '../types';
+import { IconPhone, IconClose, IconCheck, IconCheckCircle, IconCancel, IconGroups, IconInfo, IconStar } from '@shared/components/icons';
 
 interface CandidaturasCardProps {
   candidaturas: CandidaturaRecebida[];
@@ -33,13 +34,10 @@ function StarRating({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((star) => (
-        <span
+        <IconStar
           key={star}
           className={cn('text-sm', star <= Math.round(value) ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600')}
-          style={{ fontFamily: 'material-symbols-outlined', fontVariationSettings: "'FILL' 1" }}
-        >
-          star
-        </span>
+        />
       ))}
       <span className="text-xs text-gray-500 ml-1">{value.toFixed(1)}</span>
     </div>
@@ -110,7 +108,7 @@ function PropostaModal({ candidatura, status, obraOrcamento, onAprovar, onRejeit
         {/* Contato */}
         {candidatura.empreiteiro.telefone && (
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <span className="material-symbols-outlined text-base text-gray-400">phone</span>
+            <IconPhone className="text-base text-gray-400" />
             {candidatura.empreiteiro.telefone}
             <span className="text-gray-300">·</span>
             <span className="text-[10px] text-gray-400">{candidatura.dataEnvio}</span>
@@ -173,14 +171,14 @@ function PropostaModal({ candidatura, status, obraOrcamento, onAprovar, onRejeit
               className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30"
               onClick={() => { onRejeitar(); onClose(); }}
             >
-              <span className="material-symbols-outlined text-base mr-1.5">close</span>
+              <IconClose className="text-base mr-1.5" />
               Rejeitar proposta
             </Button>
             <Button
               className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               onClick={() => { onAprovar(); onClose(); }}
             >
-              <span className="material-symbols-outlined text-base mr-1.5">check</span>
+              <IconCheck className="text-base mr-1.5" />
               Aprovar empreiteiro
             </Button>
           </div>
@@ -188,14 +186,14 @@ function PropostaModal({ candidatura, status, obraOrcamento, onAprovar, onRejeit
 
         {status === 'aprovado' && (
           <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-xl border border-green-200 dark:border-green-900/30">
-            <span className="material-symbols-outlined text-green-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <IconCheckCircle className="text-green-600 text-xl" />
             <p className="text-sm font-semibold text-green-700 dark:text-green-400">Proposta aprovada — empreiteiro selecionado para esta obra.</p>
           </div>
         )}
 
         {status === 'rejeitado' && (
           <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-            <span className="material-symbols-outlined text-gray-400 text-xl">cancel</span>
+            <IconCancel className="text-gray-400 text-xl" />
             <p className="text-sm text-gray-500">Esta proposta foi rejeitada.</p>
           </div>
         )}
@@ -226,7 +224,7 @@ export function CandidaturasCard({ candidaturas, obraOrcamento }: CandidaturasCa
         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary">groups</span>
+              <IconGroups className="text-primary" />
             </div>
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-white">Propostas Recebidas</h2>
@@ -278,7 +276,7 @@ export function CandidaturasCard({ candidaturas, obraOrcamento }: CandidaturasCa
                     )}
                     {candidatura.empreiteiro.avaliacao && (
                       <div className="flex items-center gap-0.5 mt-0.5">
-                        <span className="material-symbols-outlined text-amber-400 text-xs leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                        <IconStar className="text-amber-400 text-xs leading-none" />
                         <span className="text-[10px] text-gray-500">{candidatura.empreiteiro.avaliacao.toFixed(1)}</span>
                       </div>
                     )}
@@ -321,14 +319,14 @@ export function CandidaturasCard({ candidaturas, obraOrcamento }: CandidaturasCa
                         className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
                         title="Rejeitar"
                       >
-                        <span className="material-symbols-outlined text-base leading-none">close</span>
+                        <IconClose className="text-base leading-none" />
                       </button>
                       <button
                         onClick={() => handleAprovar(candidatura.id)}
                         className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition-colors"
                         title="Aprovar"
                       >
-                        <span className="material-symbols-outlined text-base leading-none">check</span>
+                        <IconCheck className="text-base leading-none" />
                       </button>
                     </>
                   )}
@@ -339,7 +337,7 @@ export function CandidaturasCard({ candidaturas, obraOrcamento }: CandidaturasCa
         </div>
 
         <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3">
-          <span className="material-symbols-outlined text-gray-400 text-base">info</span>
+          <IconInfo className="text-gray-400 text-base" />
           <p className="text-xs text-gray-500">
             Clique em <strong>Ver proposta</strong> para ver o detalhamento completo. Use os botões de aprovação para selecionar o empreiteiro ideal.
           </p>

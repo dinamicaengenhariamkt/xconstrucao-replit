@@ -23,19 +23,21 @@ import { cn } from '@shared/lib/utils';
 import type { MinhaObraDetalhe, ObraDocumento } from '../types';
 import { EnviarDocumentoModal } from './EnviarDocumentoModal';
 import { EditarDocumentoModal } from './EditarDocumentoModal';
+import type { ComponentType } from 'react';
+import { IconAutorenew, IconMoreVert, IconDownload, IconEdit, IconDelete, IconUploadFile, IconWarning, IconAdd, IconFolderOpen, IconDescription, IconEngineering, IconAnalytics, IconFactCheck, IconDomain, IconTaskAlt } from '@shared/components/icons';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const CATEGORIA_CONFIG: Record<
   ObraDocumento['categoria'],
-  { label: string; icone: string; iconeBg: string }
+  { label: string; Icon: ComponentType<{ className?: string }>; iconeBg: string }
 > = {
-  contrato:  { label: 'Contratos',         icone: 'description',  iconeBg: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
-  art_rrt:   { label: 'ART / RRT',         icone: 'engineering',  iconeBg: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
-  planta:    { label: 'Plantas e Projetos', icone: 'architecture', iconeBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-  relatorio: { label: 'Relatórios',        icone: 'insert_chart', iconeBg: 'bg-success/20 text-success dark:bg-success/10' },
-  alvara:    { label: 'Alvarás',           icone: 'gavel',        iconeBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
-  laudo:     { label: 'Laudos Técnicos',   icone: 'fact_check',   iconeBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+  contrato:  { label: 'Contratos',         Icon: IconDescription,  iconeBg: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+  art_rrt:   { label: 'ART / RRT',         Icon: IconEngineering,  iconeBg: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+  planta:    { label: 'Plantas e Projetos', Icon: IconAnalytics,   iconeBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+  relatorio: { label: 'Relatórios',        Icon: IconTaskAlt,      iconeBg: 'bg-success/20 text-success dark:bg-success/10' },
+  alvara:    { label: 'Alvarás',           Icon: IconDomain,       iconeBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
+  laudo:     { label: 'Laudos Técnicos',   Icon: IconFactCheck,    iconeBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
 };
 
 const CATEGORIAS_ORDEM: ObraDocumento['categoria'][] = [
@@ -94,7 +96,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
     >
       {/* Icon */}
       <div className={cn('p-2 rounded-lg flex-shrink-0', cfg.iconeBg)}>
-        <span className="material-symbols-outlined text-[20px]">{cfg.icone}</span>
+        <cfg.Icon className="text-[20px]" />
       </div>
 
       {/* Info */}
@@ -123,7 +125,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
             onClick={() => onAcao('renovar_confirm', doc)}
             className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
           >
-            <span className="material-symbols-outlined text-sm">autorenew</span>
+            <IconAutorenew className="text-sm" />
             Renovar
           </button>
         )}
@@ -136,7 +138,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
               aria-label="Ações do documento"
             >
-              <span className="material-symbols-outlined text-[18px]">more_vert</span>
+              <IconMoreVert className="text-[18px]" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
@@ -144,7 +146,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
               onClick={() => window.open('#', '_blank')}
               className="gap-2 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">download</span>
+              <IconDownload className="text-[16px]" />
               Download
             </DropdownMenuItem>
 
@@ -154,7 +156,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
                   onClick={() => onAcao('editar', doc)}
                   className="gap-2 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  <IconEdit className="text-[16px]" />
                   Editar
                 </DropdownMenuItem>
 
@@ -163,7 +165,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
                     onClick={() => onAcao('renovar_confirm', doc)}
                     className="gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
                   >
-                    <span className="material-symbols-outlined text-[16px]">autorenew</span>
+                    <IconAutorenew className="text-[16px]" />
                     Renovar
                   </DropdownMenuItem>
                 )}
@@ -174,7 +176,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
                   onClick={() => onAcao('excluir', doc)}
                   className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
                 >
-                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                  <IconDelete className="text-[16px]" />
                   Excluir
                 </DropdownMenuItem>
               </>
@@ -257,7 +259,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
             onClick={() => abrirModal('enviar', null)}
             className="gap-2 w-fit"
           >
-            <span className="material-symbols-outlined text-sm">upload_file</span>
+            <IconUploadFile className="text-sm" />
             Enviar Documento
           </Button>
         )}
@@ -266,7 +268,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
       {/* Alerta de vencimento */}
       {docsVencendo.length > 0 && (
         <div className="mb-5 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-          <span className="material-symbols-outlined text-amber-500 text-xl flex-shrink-0 mt-0.5">warning</span>
+          <IconWarning className="text-amber-500 text-xl flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
               {docsVencendo.length} documento{docsVencendo.length !== 1 ? 's' : ''} com validade próxima do vencimento
@@ -281,9 +283,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
       {/* Empty state */}
       {documentos.length === 0 && (
         <div className="text-center py-16">
-          <span className="material-symbols-outlined text-gray-300 dark:text-gray-600 text-6xl mb-3 block">
-            folder_open
-          </span>
+          <IconFolderOpen className="text-gray-300 dark:text-gray-600 text-6xl mb-3 block" />
           <p className="text-base font-semibold text-gray-500 dark:text-gray-400">
             Nenhum documento cadastrado
           </p>
@@ -292,7 +292,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
           </p>
           {!obraFinalizada && (
             <Button size="sm" onClick={() => abrirModal('enviar', null)} className="gap-2">
-              <span className="material-symbols-outlined text-sm">upload_file</span>
+              <IconUploadFile className="text-sm" />
               Enviar Documento
             </Button>
           )}
@@ -310,7 +310,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className={cn('p-1 rounded', cfg.iconeBg)}>
-                      <span className="material-symbols-outlined text-[16px]">{cfg.icone}</span>
+                      <cfg.Icon className="text-[16px]" />
                     </span>
                     <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">
                       {cfg.label}
@@ -325,7 +325,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
                       onClick={() => abrirModal('enviar', null, categoria)}
                       className="text-xs text-primary hover:text-primary/80 font-semibold flex items-center gap-0.5 cursor-pointer transition-colors"
                     >
-                      <span className="material-symbols-outlined text-sm">add</span>
+                      <IconAdd className="text-sm" />
                       Adicionar
                     </button>
                   )}

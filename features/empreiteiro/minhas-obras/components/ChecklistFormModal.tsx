@@ -25,6 +25,8 @@ import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist } from '../types';
+import { IconClose, IconAdd, IconHealthAndSafety, IconFactCheck, IconDomain, IconTaskAlt, IconEdit, IconPlaylistAdd, IconDragIndicator, IconSave } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -54,28 +56,28 @@ const TIPO_OPTIONS: {
   value: MinhaObraChecklist['tipo'];
   label: string;
   descricao: string;
-  icon: string;
+  Icon: ComponentType<{ className?: string }>;
   color: string;
 }[] = [
   {
     value: 'seguranca',
     label: 'Segurança',
     descricao: 'EPIs, isolamentos e verificações de segurança',
-    icon: 'health_and_safety',
+    Icon: IconHealthAndSafety,
     color: 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-600',
   },
   {
     value: 'diario',
     label: 'Diário',
     descricao: 'Registros e atividades do dia na obra',
-    icon: 'fact_check',
+    Icon: IconFactCheck,
     color: 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600',
   },
   {
     value: 'etapa',
     label: 'Etapa',
     descricao: 'Validação técnica de fase da obra (requer assinatura)',
-    icon: 'domain',
+    Icon: IconDomain,
     color: 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600',
   },
 ];
@@ -174,9 +176,13 @@ export function ChecklistFormModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">
-                {isCompleto ? 'task_alt' : isEdicao ? 'edit' : 'playlist_add'}
-              </span>
+              {isCompleto ? (
+                <IconTaskAlt className="text-primary text-xl" />
+              ) : isEdicao ? (
+                <IconEdit className="text-primary text-xl" />
+              ) : (
+                <IconPlaylistAdd className="text-primary text-xl" />
+              )}
             </div>
             <div>
               <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
@@ -244,7 +250,7 @@ export function ChecklistFormModal({
                                 onChange={() => !isCompleto && field.onChange(opt.value)}
                                 className="sr-only"
                               />
-                              <span className="material-symbols-outlined text-lg">{opt.icon}</span>
+                              <opt.Icon className="text-lg" />
                               <div>
                                 <p className="text-sm font-semibold">{opt.label}</p>
                                 <p className="text-xs text-gray-400">{opt.descricao}</p>
@@ -288,9 +294,7 @@ export function ChecklistFormModal({
                   <div className="flex flex-col gap-2">
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-sm text-gray-400">
-                          drag_indicator
-                        </span>
+                        <IconDragIndicator className="text-sm text-gray-400" />
                         <FormField
                           control={form.control}
                           name={`itens.${index}.titulo`}
@@ -322,7 +326,7 @@ export function ChecklistFormModal({
                             className="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer rounded"
                             aria-label="Remover item"
                           >
-                            <span className="material-symbols-outlined text-lg">close</span>
+                            <IconClose className="text-lg" />
                           </button>
                         )}
                       </div>
@@ -342,7 +346,7 @@ export function ChecklistFormModal({
                       }}
                       className="mt-3 w-full py-2 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-500 hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-sm">add</span>
+                      <IconAdd className="text-sm" />
                       Adicionar item
                     </button>
                   )}
@@ -359,9 +363,11 @@ export function ChecklistFormModal({
           </Button>
           {!isCompleto && (
             <Button type="submit" form="form-checklist">
-              <span className="material-symbols-outlined text-sm mr-1">
-                {isEdicao ? 'save' : 'playlist_add'}
-              </span>
+              {isEdicao ? (
+                <IconSave className="text-sm mr-1" />
+              ) : (
+                <IconPlaylistAdd className="text-sm mr-1" />
+              )}
               {isEdicao ? 'Salvar alterações' : 'Criar checklist'}
             </Button>
           )}

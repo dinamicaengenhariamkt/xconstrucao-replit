@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import type { ComponentType } from 'react';
 import { useToast } from '@shared/hooks/use-toast';
 import { RelatorioObraModal } from './RelatorioObraModal';
 import { CompartilharModal } from './CompartilharModal';
 import type { MinhaObraDetalhe } from '../types';
+import { IconDescription, IconPhotoLibrary, IconTrendingUp, IconChecklist, IconTableChart, IconShare, IconProgressActivity } from '@shared/components/icons';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -135,37 +137,37 @@ export function RelatoriosSection({ obra }: RelatoriosSectionProps) {
 
   // ─── Export card definitions ────────────────────────────────────────────────
 
-  const EXPORT_CARDS = [
+  const EXPORT_CARDS: { Icon: ComponentType<{ className?: string }>; label: string; description: string; onClick: () => void; loading?: boolean }[] = [
     {
-      icon: 'description',
+      Icon: IconDescription,
       label: 'Gerar Relatório PDF',
       description: 'Baixe um PDF completo da obra',
       onClick: () => setModal('pdf'),
     },
     {
-      icon: exportandoFotos ? 'progress_activity' : 'photo_library',
+      Icon: exportandoFotos ? IconProgressActivity : IconPhotoLibrary,
       label: exportandoFotos ? 'Exportando...' : 'Exportar Fotos',
       description: `${obra.fotos.length} foto(s) em ZIP`,
       onClick: handleExportarFotos,
       loading: exportandoFotos,
     },
     {
-      icon: 'trending_up',
+      Icon: IconTrendingUp,
       label: 'Exportar Progresso',
       description: `${obra.etapas.length} etapa(s) em CSV`,
       onClick: handleExportarProgresso,
     },
     {
-      icon: 'checklist',
+      Icon: IconChecklist,
       label: 'Exportar Tarefas',
       description: `${obra.tarefas.length} tarefa(s) em CSV`,
       onClick: handleExportarTarefas,
     },
   ];
 
-  const BOTTOM_ACTIONS = [
-    { icon: 'table_chart', label: 'Exportar para Excel', onClick: handleExportarExcel },
-    { icon: 'share', label: 'Compartilhar Link', onClick: () => setModal('compartilhar') },
+  const BOTTOM_ACTIONS: { Icon: ComponentType<{ className?: string }>; label: string; onClick: () => void }[] = [
+    { Icon: IconTableChart, label: 'Exportar para Excel', onClick: handleExportarExcel },
+    { Icon: IconShare, label: 'Compartilhar Link', onClick: () => setModal('compartilhar') },
   ];
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -195,16 +197,14 @@ export function RelatoriosSection({ obra }: RelatoriosSectionProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {EXPORT_CARDS.map((card) => (
               <button
-                key={card.icon}
+                key={card.label}
                 type="button"
                 onClick={card.onClick}
                 disabled={'loading' in card && card.loading}
                 className="flex flex-col items-center gap-3 p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 active:scale-95 transition-all group cursor-pointer text-center disabled:opacity-70 disabled:cursor-wait"
               >
                 <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                  <span className={`material-symbols-outlined text-white text-2xl ${'loading' in card && card.loading ? 'animate-spin' : ''}`}>
-                    {card.icon}
-                  </span>
+                  <card.Icon className={`text-white text-2xl ${'loading' in card && card.loading ? 'animate-spin' : ''}`} />
                 </div>
                 <div>
                   <span className="text-white text-sm font-bold block leading-tight">{card.label}</span>
@@ -223,7 +223,7 @@ export function RelatoriosSection({ obra }: RelatoriosSectionProps) {
                 onClick={action.onClick}
                 className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-white text-xs font-bold hover:bg-white/20 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">{action.icon}</span>
+                <action.Icon className="text-sm" />
                 {action.label}
               </button>
             ))}

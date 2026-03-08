@@ -27,6 +27,32 @@ import { Button } from '@shared/components/ui/button';
 import { UploadFotosModal } from './UploadFotosModal';
 import { EditarEtiquetaModal } from './EditarEtiquetaModal';
 import type { MinhaObraDetalhe, ObraFoto } from '../types';
+import {
+  IconSend,
+  IconAddAPhoto,
+  IconCompare,
+  IconClose,
+  IconPhotoLibrary,
+  IconZoomIn,
+  IconCheck,
+  IconMoreVert,
+  IconTimeline,
+  IconHistory,
+  IconPending,
+  IconCheckCircle,
+  IconBlock,
+  IconLabel,
+  IconMarkEmailUnread,
+  IconDelete,
+} from '@shared/components/icons';
+
+// ─── Icon lookup for fase options ─────────────────────────────────────────────
+const FASE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  history: IconHistory,
+  pending: IconPending,
+  check_circle: IconCheckCircle,
+  block: IconBlock,
+};
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -236,7 +262,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
               disabled={obraFinalizada || fotos.length === 0 || modoSelecao}
               className="px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <span className="material-symbols-outlined text-sm">send</span>
+              <IconSend className="text-sm" />
               Enviar ao Contratante
             </button>
             <button
@@ -244,7 +270,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
               disabled={obraFinalizada}
               className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <span className="material-symbols-outlined text-sm">add_a_photo</span>
+              <IconAddAPhoto className="text-sm" />
               Upload Múltiplo
             </button>
           </div>
@@ -253,9 +279,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
         {/* Empty state */}
         {fotos.length === 0 && (
           <div className="py-16 flex flex-col items-center gap-3 text-center">
-            <span className="material-symbols-outlined text-5xl text-gray-200 dark:text-gray-700">
-              photo_library
-            </span>
+            <IconPhotoLibrary className="text-5xl text-gray-200 dark:text-gray-700" />
             <p className="text-sm font-semibold text-gray-500">Nenhuma foto registrada</p>
             <p className="text-xs text-gray-400">
               Adicione fotos para acompanhar a evolução visual da obra.
@@ -265,7 +289,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                 onClick={() => openModal('upload')}
                 className="mt-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1.5 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">add_a_photo</span>
+                <IconAddAPhoto className="text-sm" />
                 Upload de Fotos
               </button>
             )}
@@ -314,7 +338,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                       disabled={selecionadas.size === 0}
                       onClick={() => openModal('enviar_confirm')}
                     >
-                      <span className="material-symbols-outlined text-sm mr-1">send</span>
+                      <IconSend className="text-sm mr-1" />
                       Enviar{selecionadas.size > 0 ? ` (${selecionadas.size})` : ''}
                     </Button>
                   </div>
@@ -358,9 +382,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                       {/* Normal mode hover */}
                       {!modoSelecao && (
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                          <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl">
-                            zoom_in
-                          </span>
+                          <IconZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl" />
                         </div>
                       )}
 
@@ -381,9 +403,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                             )}
                           >
                             {isSelecionada && (
-                              <span className="material-symbols-outlined text-white text-sm leading-none">
-                                check
-                              </span>
+                              <IconCheck className="text-white text-sm leading-none" />
                             )}
                           </div>
                         </div>
@@ -413,9 +433,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                     {/* Enviada indicator — bottom-right */}
                     {foto.enviadaAoContratante && (
                       <span className="absolute bottom-2 right-2 pointer-events-none">
-                        <span className="material-symbols-outlined text-white text-sm drop-shadow">
-                          send
-                        </span>
+                        <IconSend className="text-white text-sm drop-shadow" />
                       </span>
                     )}
 
@@ -429,17 +447,13 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                               className="w-7 h-7 flex items-center justify-center bg-black/40 hover:bg-black/60 rounded-lg text-white transition-colors cursor-pointer"
                               aria-label="Opções"
                             >
-                              <span className="material-symbols-outlined text-base leading-none">
-                                more_vert
-                              </span>
+                              <IconMoreVert className="text-base leading-none" />
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuSub>
                               <DropdownMenuSubTrigger>
-                                <span className="material-symbols-outlined text-base mr-2 text-gray-500">
-                                  timeline
-                                </span>
+                                <IconTimeline className="text-base mr-2 text-gray-500" />
                                 Definir fase
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
@@ -450,37 +464,35 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                                     { value: 'agora' as const, label: 'Agora', icon: 'check_circle' },
                                     { value: undefined, label: 'Sem fase', icon: 'block' },
                                   ] as const
-                                ).map((opt) => (
-                                  <DropdownMenuItem
-                                    key={String(opt.value)}
-                                    onClick={() => definirFase(foto.id, opt.value)}
-                                    className={cn(foto.fase === opt.value && 'bg-primary/5 text-primary')}
-                                  >
-                                    <span className="material-symbols-outlined text-base mr-2">
-                                      {opt.icon}
-                                    </span>
-                                    {opt.label}
-                                    {foto.fase === opt.value && (
-                                      <span className="material-symbols-outlined text-sm ml-auto text-primary">
-                                        check
-                                      </span>
-                                    )}
-                                  </DropdownMenuItem>
-                                ))}
+                                ).map((opt) => {
+                                  const FaseIcon = FASE_ICON_MAP[opt.icon];
+                                  return (
+                                    <DropdownMenuItem
+                                      key={String(opt.value)}
+                                      onClick={() => definirFase(foto.id, opt.value)}
+                                      className={cn(foto.fase === opt.value && 'bg-primary/5 text-primary')}
+                                    >
+                                      <FaseIcon className="text-base mr-2" />
+                                      {opt.label}
+                                      {foto.fase === opt.value && (
+                                        <IconCheck className="text-sm ml-auto text-primary" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  );
+                                })}
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
 
                             <DropdownMenuItem onClick={() => openModal('etiqueta', foto)}>
-                              <span className="material-symbols-outlined text-base mr-2 text-gray-500">
-                                label
-                              </span>
+                              <IconLabel className="text-base mr-2 text-gray-500" />
                               Editar etiqueta
                             </DropdownMenuItem>
 
                             <DropdownMenuItem onClick={() => toggleEnviada(foto.id)}>
-                              <span className="material-symbols-outlined text-base mr-2 text-gray-500">
-                                {foto.enviadaAoContratante ? 'mark_email_unread' : 'send'}
-                              </span>
+                              {foto.enviadaAoContratante
+                                ? <IconMarkEmailUnread className="text-base mr-2 text-gray-500" />
+                                : <IconSend className="text-base mr-2 text-gray-500" />
+                              }
                               {foto.enviadaAoContratante ? 'Cancelar envio' : 'Enviar ao contratante'}
                             </DropdownMenuItem>
 
@@ -490,9 +502,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                               onClick={() => openModal('excluir', foto)}
                               className="text-red-600 focus:text-red-600"
                             >
-                              <span className="material-symbols-outlined text-base mr-2">
-                                delete
-                              </span>
+                              <IconDelete className="text-base mr-2" />
                               Excluir foto
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -508,7 +518,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
             {fotoAntes && fotoDurante && fotoAgora && (
               <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                 <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">compare</span>
+                  <IconCompare className="text-primary" />
                   Comparativo de Evolução
                 </h4>
                 {!temFasesDefinidas && (
@@ -588,7 +598,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
                 </div>
                 {selectedFoto.enviadaAoContratante && (
                   <span className="text-xs text-white/70 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">send</span>
+                    <IconSend className="text-sm" />
                     Enviada
                   </span>
                 )}
@@ -598,7 +608,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
               onClick={() => setSelectedFoto(null)}
               className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-3xl">close</span>
+              <IconClose className="text-3xl" />
             </button>
           </motion.div>
         )}
@@ -638,7 +648,7 @@ export function FotoGallerySection({ obra }: FotoGallerySectionProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleEnviarConfirmar}>
-              <span className="material-symbols-outlined text-sm mr-1">send</span>
+              <IconSend className="text-sm mr-1" />
               Enviar
             </AlertDialogAction>
           </AlertDialogFooter>

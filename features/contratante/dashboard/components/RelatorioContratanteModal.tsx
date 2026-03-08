@@ -15,6 +15,7 @@ import { mockDashboardStats } from '../mocks/dashboard-stats.mock';
 import { mockValoresContratados } from '../mocks/evolution-data.mock';
 import { mockActivities } from '../mocks/activities.mock';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { IconAnalytics, IconConstruction, IconPayments, IconProgressActivity, IconDownload, IconApartment, IconHistory } from '@shared/components/icons';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,7 +92,7 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">analytics</span>
+              <IconAnalytics className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -124,12 +125,9 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: 'var(--primary, #2563eb)' }}
                     >
-                      <span
+                      <IconConstruction
                         style={{ color: 'white', fontSize: '20px' }}
-                        className="material-symbols-outlined"
-                      >
-                        construction
-                      </span>
+                      />
                     </div>
                     <span
                       style={{
@@ -180,12 +178,9 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
                     gap: '6px',
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
+                  <IconApartment
                     style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                  >
-                    apartment
-                  </span>
+                  />
                   Visão Geral das Obras
                 </h2>
                 <div
@@ -272,12 +267,9 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
                     gap: '6px',
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
+                  <IconPayments
                     style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                  >
-                    payments
-                  </span>
+                  />
                   Valores Contratados
                 </h2>
                 <div
@@ -369,12 +361,9 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
                       gap: '6px',
                     }}
                   >
-                    <span
-                      className="material-symbols-outlined"
+                    <IconHistory
                       style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                    >
-                      history
-                    </span>
+                    />
                     Atividades Recentes (últimas {recentActivities.length})
                   </h2>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -450,14 +439,12 @@ export function RelatorioContratanteModal({ open, onOpenChange }: RelatorioContr
           <Button type="button" size="sm" onClick={handleDownload} disabled={loading}>
             {loading ? (
               <>
-                <span className="material-symbols-outlined text-sm mr-1 animate-spin">
-                  progress_activity
-                </span>
+                <IconProgressActivity className="text-sm mr-1 animate-spin" />
                 Gerando...
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-sm mr-1">download</span>
+                <IconDownload className="text-sm mr-1" />
                 Baixar PDF
               </>
             )}

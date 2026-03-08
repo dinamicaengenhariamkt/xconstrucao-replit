@@ -17,13 +17,15 @@ import { getRedirectPathByRole } from "@features/auth/utils/redirect-by-role";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import React from 'react';
+import { IconMail, IconLock, IconBusiness, IconConstruction, IconAdminPanelSettings } from '@shared/components/icons';
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-const perfilConfig: Record<string, { icon: string; text: string }> = {
-  contratante: { icon: "business", text: "Contratante" },
-  empreiteiro: { icon: "construction", text: "Empreiteiro" },
-  administrador: { icon: "admin_panel_settings", text: "Administrador" },
+const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
+  contratante: { Icon: IconBusiness, text: "Contratante" },
+  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
+  administrador: { Icon: IconAdminPanelSettings, text: "Administrador" },
 };
 
 export default function LoginPage() {
@@ -96,9 +98,7 @@ export default function LoginPage() {
             {/* Badge de Perfil */}
             <div className="flex justify-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
-                <span className="material-symbols-outlined text-lg">
-                  {config.icon}
-                </span>
+                <config.Icon className="text-lg" />
                 <span data-testid="text-perfil-badge">{config.text}</span>
               </div>
             </div>
@@ -157,9 +157,7 @@ export default function LoginPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Email</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                    mail
-                  </span>
+                  <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="email"
                     placeholder="seu@email.com"
@@ -172,9 +170,7 @@ export default function LoginPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                    lock
-                  </span>
+                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="password"
                     placeholder="Sua senha"

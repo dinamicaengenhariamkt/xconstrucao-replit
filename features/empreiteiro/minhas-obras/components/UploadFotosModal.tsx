@@ -14,6 +14,7 @@ import { Input } from '@shared/components/ui/input';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { ObraFoto } from '../types';
+import { IconAddAPhoto, IconClose, IconUploadFile } from '@shared/components/icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ export function UploadFotosModal({ open, onOpenChange, onConfirmar }: UploadFoto
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">add_a_photo</span>
+              <IconAddAPhoto className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
@@ -133,9 +134,7 @@ export function UploadFotosModal({ open, onOpenChange, onConfirmar }: UploadFoto
               onDragOver={(e) => e.preventDefault()}
               className="p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer text-center"
             >
-              <span className="material-symbols-outlined text-gray-400 text-4xl mb-2 block">
-                cloud_upload
-              </span>
+              <IconUploadFile className="text-gray-400 text-4xl mb-2 block" />
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 Arraste fotos aqui ou clique para selecionar
               </p>
@@ -208,7 +207,7 @@ export function UploadFotosModal({ open, onOpenChange, onConfirmar }: UploadFoto
                       className="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer rounded self-start"
                       aria-label="Remover foto"
                     >
-                      <span className="material-symbols-outlined text-lg">close</span>
+                      <IconClose className="text-lg" />
                     </button>
                   </div>
                 ))}
@@ -227,7 +226,7 @@ export function UploadFotosModal({ open, onOpenChange, onConfirmar }: UploadFoto
             onClick={handleConfirmar}
             disabled={previews.length === 0}
           >
-            <span className="material-symbols-outlined text-sm mr-1">add_a_photo</span>
+            <IconAddAPhoto className="text-sm mr-1" />
             Adicionar {previews.length > 0 ? `${previews.length} foto${previews.length !== 1 ? 's' : ''}` : 'fotos'}
           </Button>
         </DialogFooter>

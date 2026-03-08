@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { cn } from '@shared/lib/utils';
+import { IconTimeline, IconPerson, IconTrendingUp, IconCheckCircle, IconDescription, IconWarning, IconStickyNote } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 export type TimelineTipo = 'progresso' | 'tarefa' | 'documento' | 'problema' | 'nota';
 
@@ -27,42 +29,42 @@ const TIPO_CONFIG: Record<TimelineTipo, {
   dotClass: string;
   badgeBg: string;
   badgeText: string;
-  icon: string;
+  Icon: ComponentType<{ className?: string }>;
 }> = {
   progresso: {
     label: 'Progresso',
     dotClass: 'bg-green-500',
     badgeBg: 'bg-green-100 dark:bg-green-900/30',
     badgeText: 'text-green-700 dark:text-green-400',
-    icon: 'trending_up',
+    Icon: IconTrendingUp,
   },
   tarefa: {
     label: 'Tarefa',
     dotClass: 'bg-blue-500',
     badgeBg: 'bg-blue-100 dark:bg-blue-900/30',
     badgeText: 'text-blue-700 dark:text-blue-400',
-    icon: 'check_circle',
+    Icon: IconCheckCircle,
   },
   documento: {
     label: 'Documento',
     dotClass: 'bg-purple-500',
     badgeBg: 'bg-purple-100 dark:bg-purple-900/30',
     badgeText: 'text-purple-700 dark:text-purple-400',
-    icon: 'description',
+    Icon: IconDescription,
   },
   problema: {
     label: 'Problema',
     dotClass: 'bg-amber-500',
     badgeBg: 'bg-amber-100 dark:bg-amber-900/30',
     badgeText: 'text-amber-700 dark:text-amber-400',
-    icon: 'warning',
+    Icon: IconWarning,
   },
   nota: {
     label: 'Nota',
     dotClass: 'bg-gray-400',
     badgeBg: 'bg-gray-100 dark:bg-gray-700',
     badgeText: 'text-gray-600 dark:text-gray-400',
-    icon: 'sticky_note_2',
+    Icon: IconStickyNote,
   },
 };
 
@@ -121,7 +123,7 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
       {/* Timeline list */}
       {filtered.length === 0 ? (
         <div className="text-center py-14">
-          <span className="material-symbols-outlined text-4xl text-gray-200 dark:text-gray-700">timeline</span>
+          <IconTimeline className="text-4xl text-gray-200 dark:text-gray-700" />
           <p className="text-sm font-semibold text-gray-500 mt-3">Nenhuma atualização encontrada</p>
           <p className="text-xs text-gray-400 mt-1">Sem eventos para o filtro selecionado.</p>
         </div>
@@ -152,7 +154,7 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
                           config.badgeBg,
                           config.badgeText
                         )}>
-                          <span className="material-symbols-outlined text-[12px]">{config.icon}</span>
+                          <config.Icon className="text-[12px]" />
                           {config.label}
                         </span>
                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -163,7 +165,7 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.descricao}</p>
                     <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px]">person</span>
+                      <IconPerson className="text-[12px]" />
                       {event.autor}
                     </p>
                   </div>

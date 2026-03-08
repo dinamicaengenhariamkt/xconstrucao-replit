@@ -10,6 +10,7 @@ import { ObraDetalheSidebar } from '@features/empreiteiro/novas-obras/components
 import { CompartilharModal } from '@features/empreiteiro/novas-obras/components/CompartilharModal';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import { useObrasSalvasStore } from '@features/empreiteiro/novas-obras/store/obras-salvas-store';
+import { IconArrowBack, IconChevronRight, IconCheckCircle, IconSend, IconArrowForward, IconBookmark, IconShare, IconConstruction } from '@shared/components/icons';
 
 export default function ObraDetalhePage() {
   const params = useParams();
@@ -38,7 +39,7 @@ export default function ObraDetalhePage() {
   if (!obra) {
     return (
       <div className="p-10 text-center py-20">
-        <span className="material-symbols-outlined text-5xl text-gray-300 block mb-4">construction</span>
+        <IconConstruction className="text-5xl text-gray-300 block mb-4" />
         <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
         <Link href="/empreiteiro/novas-obras" className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">Voltar para Novas Obras</Link>
       </div>
@@ -51,11 +52,11 @@ export default function ObraDetalhePage() {
     <div className="p-10 flex flex-col gap-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
         <Link href="/empreiteiro/novas-obras" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors" data-testid="link-back">
-          <span className="material-symbols-outlined text-lg">arrow_back</span>Voltar
+          <IconArrowBack className="text-lg" />Voltar
         </Link>
         <nav className="flex items-center gap-2 text-sm flex-wrap" data-testid="breadcrumb-nav">
           <Link href="/empreiteiro/novas-obras" className="text-gray-400 hover:text-primary transition-colors" data-testid="link-breadcrumb-novas-obras">Novas Obras</Link>
-          <span className="material-symbols-outlined text-gray-300 text-base">chevron_right</span>
+          <IconChevronRight className="text-gray-300 text-base" />
           <span className="text-primary font-semibold" data-testid="text-breadcrumb-title">{obra.titulo}</span>
         </nav>
       </motion.div>
@@ -79,7 +80,7 @@ export default function ObraDetalhePage() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-3xl">check_circle</span>
+                <IconCheckCircle className="text-white text-3xl" />
               </div>
               <div>
                 <h3 className="text-xl font-extrabold text-white">Interessado nesta obra?</h3>
@@ -91,7 +92,7 @@ export default function ObraDetalhePage() {
               className="px-8 py-3 bg-white text-primary font-bold text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 w-fit"
               data-testid="cta-apply-banner"
             >
-              <span className="material-symbols-outlined text-lg">send</span>
+              <IconSend className="text-lg" />
               Enviar Proposta
             </Link>
           </div>
@@ -123,7 +124,7 @@ export default function ObraDetalhePage() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-white text-3xl">check_circle</span>
+                <IconCheckCircle className="text-white text-3xl" />
               </div>
               <div>
                 <h3 className="text-xl font-extrabold text-white">Pronto para se candidatar?</h3>
@@ -135,7 +136,7 @@ export default function ObraDetalhePage() {
               className="px-8 py-4 bg-white text-primary rounded-xl font-extrabold text-base flex items-center gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all w-fit flex-shrink-0"
             >
               Aplicar para esta obra
-              <span className="material-symbols-outlined">arrow_forward</span>
+              <IconArrowForward />
             </Link>
           </div>
         </motion.div>
@@ -145,7 +146,7 @@ export default function ObraDetalhePage() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 border-t border-gray-100 dark:border-gray-800">
           <Link href="/empreiteiro/novas-obras" className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors">
-            <span className="material-symbols-outlined">arrow_back</span>
+            <IconArrowBack />
             <span className="text-sm font-medium">Voltar para Novas Obras</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -157,16 +158,14 @@ export default function ObraDetalhePage() {
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: isSaved(obra.id) ? "'FILL' 1" : "'FILL' 0" }}>
-                bookmark
-              </span>
+              <IconBookmark />
               {isSaved(obra.id) ? 'Obra Salva' : 'Salvar Obra'}
             </button>
             <button
               onClick={() => setShowShare(true)}
               className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
-              <span className="material-symbols-outlined">share</span>
+              <IconShare />
               Compartilhar
             </button>
           </div>

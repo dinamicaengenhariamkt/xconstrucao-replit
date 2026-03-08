@@ -19,6 +19,16 @@ import type {
   EfficiencyData,
 } from '../types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import {
+  IconAnalytics,
+  IconDownload,
+  IconConstruction,
+  IconApartment,
+  IconTrendingUp,
+  IconPayments,
+  IconHistory,
+  IconProgressActivity,
+} from '@shared/components/icons';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -122,7 +132,7 @@ export function RelatorioDashboardModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">analytics</span>
+              <IconAnalytics className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -155,12 +165,7 @@ export function RelatorioDashboardModal({
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: 'var(--primary, #2563eb)' }}
                     >
-                      <span
-                        style={{ color: 'white', fontSize: '20px' }}
-                        className="material-symbols-outlined"
-                      >
-                        construction
-                      </span>
+                      <IconConstruction style={{ color: 'white', fontSize: '20px' }} />
                     </div>
                     <span
                       style={{
@@ -211,12 +216,7 @@ export function RelatorioDashboardModal({
                     gap: '6px',
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                  >
-                    apartment
-                  </span>
+                  <IconApartment style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                   Visão Geral das Obras
                 </h2>
                 <div
@@ -303,12 +303,7 @@ export function RelatorioDashboardModal({
                     gap: '6px',
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                  >
-                    trending_up
-                  </span>
+                  <IconTrendingUp style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                   Indicadores de Desempenho
                 </h2>
                 <div
@@ -396,12 +391,7 @@ export function RelatorioDashboardModal({
                       gap: '6px',
                     }}
                   >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                    >
-                      payments
-                    </span>
+                    <IconPayments style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                     Fluxo de Caixa Mensal
                   </h2>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -489,12 +479,7 @@ export function RelatorioDashboardModal({
                       gap: '6px',
                     }}
                   >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}
-                    >
-                      history
-                    </span>
+                    <IconHistory style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                     Atividades Recentes (últimas {recentActivities.length})
                   </h2>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -573,14 +558,12 @@ export function RelatorioDashboardModal({
           <Button type="button" size="sm" onClick={handleDownload} disabled={loading}>
             {loading ? (
               <>
-                <span className="material-symbols-outlined text-sm mr-1 animate-spin">
-                  progress_activity
-                </span>
+                <IconProgressActivity className="text-sm mr-1 animate-spin" />
                 Gerando...
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-sm mr-1">download</span>
+                <IconDownload className="text-sm mr-1" />
                 Baixar PDF
               </>
             )}

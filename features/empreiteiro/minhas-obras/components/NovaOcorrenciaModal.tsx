@@ -31,6 +31,7 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import type { ObraOcorrencia } from '../types';
+import { IconEdit, IconWarning } from '@shared/components/icons';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -132,9 +133,11 @@ export function NovaOcorrenciaModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <span className="material-symbols-outlined text-red-500 text-xl">
-                {isEdit ? 'edit_note' : 'report_problem'}
-              </span>
+              {isEdit ? (
+                <IconEdit className="text-red-500 text-xl" />
+              ) : (
+                <IconWarning className="text-red-500 text-xl" />
+              )}
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">

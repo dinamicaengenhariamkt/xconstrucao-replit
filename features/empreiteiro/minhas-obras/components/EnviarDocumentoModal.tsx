@@ -32,6 +32,7 @@ import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
 import type { ObraDocumento } from '../types';
+import { IconUploadFile, IconCheckCircle, IconClose } from '@shared/components/icons';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -143,7 +144,7 @@ export function EnviarDocumentoModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">upload_file</span>
+              <IconUploadFile className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -175,7 +176,7 @@ export function EnviarDocumentoModal({
           >
             {arquivo ? (
               <div className="flex items-center justify-center gap-3">
-                <span className="material-symbols-outlined text-success text-3xl">check_circle</span>
+                <IconCheckCircle className="text-success text-3xl" />
                 <div className="text-left">
                   <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[200px]">
                     {arquivo.name}
@@ -188,14 +189,12 @@ export function EnviarDocumentoModal({
                   className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded cursor-pointer"
                   aria-label="Remover arquivo"
                 >
-                  <span className="material-symbols-outlined text-lg">close</span>
+                  <IconClose className="text-lg" />
                 </button>
               </div>
             ) : (
               <>
-                <span className="material-symbols-outlined text-gray-400 text-4xl mb-2 block">
-                  cloud_upload
-                </span>
+                <IconUploadFile className="text-gray-400 text-4xl mb-2 block" />
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                   {dragging ? 'Solte o arquivo aqui' : 'Arraste ou clique para selecionar'}
                 </p>
@@ -291,7 +290,7 @@ export function EnviarDocumentoModal({
             Cancelar
           </Button>
           <Button type="submit" form="form-documento">
-            <span className="material-symbols-outlined text-sm mr-1">upload_file</span>
+            <IconUploadFile className="text-sm mr-1" />
             Enviar Documento
           </Button>
         </DialogFooter>

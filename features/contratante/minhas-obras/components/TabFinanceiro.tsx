@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ObraContratanteDetalhe, ObraMedicaoContratante } from '../types';
+import { IconReceiptLong, IconCheck, IconClose } from '@shared/components/icons';
 
 interface TabFinanceiroProps {
   obra: ObraContratanteDetalhe;
@@ -111,7 +112,7 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
         {financeiro.medicoes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-gray-400 text-2xl">receipt_long</span>
+              <IconReceiptLong className="text-gray-400 text-2xl" />
             </div>
             <p className="text-sm font-semibold text-gray-500">Nenhuma medição enviada</p>
             <p className="text-xs text-gray-400 mt-1 max-w-xs">
@@ -168,7 +169,7 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-success hover:bg-success/90 transition-colors cursor-pointer"
                           data-testid={`btn-aprovar-${medicao.id}`}
                         >
-                          <span className="material-symbols-outlined text-sm">check</span>
+                          <IconCheck className="text-sm" />
                           Aprovar
                         </button>
                         <button
@@ -176,7 +177,7 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 transition-colors cursor-pointer"
                           data-testid={`btn-rejeitar-${medicao.id}`}
                         >
-                          <span className="material-symbols-outlined text-sm">close</span>
+                          <IconClose className="text-sm" />
                           Rejeitar
                         </button>
                       </div>

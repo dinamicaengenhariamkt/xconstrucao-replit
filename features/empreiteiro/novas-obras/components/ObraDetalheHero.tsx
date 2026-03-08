@@ -3,6 +3,7 @@
 import type { ObraDetalheHeroProps } from '../types';
 import { COMPLEXIDADE_LABELS } from '../constants';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { IconLocationOn, IconHome, IconSquareFoot, IconWorkspacePremium, IconCalendarMonth, IconSchedule, IconPayments, IconSignalCellularAlt } from '@shared/components/icons';
 
 export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
 
@@ -26,27 +27,27 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
               </span>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3" data-testid="text-obra-titulo">{obra.titulo}</h1>
               <div className="flex items-center gap-2 text-white/90 text-sm">
-                <span className="material-symbols-outlined text-lg">location_on</span>
+                <IconLocationOn className="text-lg" />
                 <span data-testid="text-obra-endereco">{obra.endereco}</span>
               </div>
             </div>
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2 text-white/90">
-                <span className="material-symbols-outlined text-lg">home</span>
+                <IconHome className="text-lg" />
                 <div>
                   <p className="text-white/60 text-xs">Tipo</p>
                   <p className="font-bold">{obra.tipoObra}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-white/90">
-                <span className="material-symbols-outlined text-lg">square_foot</span>
+                <IconSquareFoot className="text-lg" />
                 <div>
                   <p className="text-white/60 text-xs">Área</p>
                   <p className="font-bold">{obra.areaTotal}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-white/90">
-                <span className="material-symbols-outlined text-lg">workspace_premium</span>
+                <IconWorkspacePremium className="text-lg" />
                 <div>
                   <p className="text-white/60 text-xs">Acabamento</p>
                   <p className="font-bold">{obra.complexidade === 'alta' ? 'Alto Padrão' : obra.complexidade === 'media' ? 'Médio Padrão' : 'Padrão'}</p>
@@ -60,7 +61,7 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
       <div className="p-6 bg-gray-50/80 dark:bg-gray-800/50 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
-            <span className="material-symbols-outlined text-primary">calendar_month</span>
+            <IconCalendarMonth className="text-primary" />
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Início Previsto</p>
@@ -69,7 +70,7 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
         </div>
         <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg">
-            <span className="material-symbols-outlined text-primary">schedule</span>
+            <IconSchedule className="text-primary" />
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Duração</p>
@@ -78,7 +79,7 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
         </div>
         <div className="flex items-center gap-3">
           <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-lg">
-            <span className="material-symbols-outlined text-success">payments</span>
+            <IconPayments className="text-success" />
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Orçamento</p>
@@ -87,7 +88,7 @@ export function ObraDetalheHero({ obra }: ObraDetalheHeroProps) {
         </div>
         <div className="flex items-center gap-3">
           <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-            <span className="material-symbols-outlined text-amber-600">signal_cellular_alt</span>
+            <IconSignalCellularAlt className="text-amber-600" />
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">Complexidade</p>

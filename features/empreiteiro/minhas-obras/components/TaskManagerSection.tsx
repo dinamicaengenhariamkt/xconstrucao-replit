@@ -23,6 +23,7 @@ import { NovaTarefaModal } from './NovaTarefaModal';
 import { BloquearTarefaModal } from './BloquearTarefaModal';
 import { AtualizarProgressoModal } from './AtualizarProgressoModal';
 import type { MinhaObraDetalhe, MinhaObraTarefa } from '../types';
+import { IconBlock, IconPerson, IconEvent, IconAttachFile, IconMoreVert, IconEdit, IconPlayArrow, IconDataUsage, IconCheckCircle, IconLockOpen, IconUndo, IconContentCopy, IconDelete, IconAdd, IconTaskAlt, IconAddCircle } from '@shared/components/icons';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -123,22 +124,22 @@ function TaskRow({
 
         {isBloqueado && tarefa.bloqueioMotivo ? (
           <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
-            <span className="material-symbols-outlined text-sm">block</span>
+            <IconBlock className="text-sm" />
             <span>Bloqueado: {tarefa.bloqueioMotivo}</span>
           </div>
         ) : (
           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">person</span>
+              <IconPerson className="text-sm" />
               {tarefa.responsavel}
             </span>
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">event</span>
+              <IconEvent className="text-sm" />
               {tarefa.prazo}
             </span>
             {tarefa.anexos != null && tarefa.anexos > 0 && (
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">attach_file</span>
+                <IconAttachFile className="text-sm" />
                 {tarefa.anexos} {tarefa.anexos === 1 ? 'anexo' : 'anexos'}
               </span>
             )}
@@ -173,41 +174,41 @@ function TaskRow({
               className="p-1.5 text-gray-400 hover:text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label="Ações da tarefa"
             >
-              <span className="material-symbols-outlined text-lg">more_vert</span>
+              <IconMoreVert className="text-lg" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             {/* Editar — sempre disponível */}
             <DropdownMenuItem onClick={() => onEditar(tarefa)} className="cursor-pointer">
-              <span className="material-symbols-outlined text-sm mr-2 text-gray-500">edit</span>
+              <IconEdit className="text-sm mr-2 text-gray-500" />
               {isConcluido ? 'Ver / Editar detalhes' : 'Editar tarefa'}
             </DropdownMenuItem>
 
             {/* Ações de transição de status */}
             {isPendente && (
               <DropdownMenuItem onClick={() => onIniciar(tarefa)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-primary">play_arrow</span>
+                <IconPlayArrow className="text-sm mr-2 text-primary" />
                 Iniciar tarefa
               </DropdownMenuItem>
             )}
 
             {isEmAndamento && (
               <DropdownMenuItem onClick={() => onAtualizarProgresso(tarefa)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-primary">data_usage</span>
+                <IconDataUsage className="text-sm mr-2 text-primary" />
                 Atualizar progresso...
               </DropdownMenuItem>
             )}
 
             {(isPendente || isEmAndamento) && (
               <DropdownMenuItem onClick={() => onConcluir(tarefa)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-success">check_circle</span>
+                <IconCheckCircle className="text-sm mr-2 text-success" />
                 Marcar como concluída
               </DropdownMenuItem>
             )}
 
             {(isPendente || isEmAndamento) && (
               <DropdownMenuItem onClick={() => onBloquear(tarefa)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-amber-500">block</span>
+                <IconBlock className="text-sm mr-2 text-amber-500" />
                 Bloquear...
               </DropdownMenuItem>
             )}
@@ -215,11 +216,11 @@ function TaskRow({
             {isBloqueado && (
               <>
                 <DropdownMenuItem onClick={() => onDesbloquear(tarefa)} className="cursor-pointer">
-                  <span className="material-symbols-outlined text-sm mr-2 text-success">lock_open</span>
+                  <IconLockOpen className="text-sm mr-2 text-success" />
                   Desbloquear tarefa
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onConcluir(tarefa)} className="cursor-pointer">
-                  <span className="material-symbols-outlined text-sm mr-2 text-success">check_circle</span>
+                  <IconCheckCircle className="text-sm mr-2 text-success" />
                   Marcar como concluída
                 </DropdownMenuItem>
               </>
@@ -227,14 +228,14 @@ function TaskRow({
 
             {isConcluido && (
               <DropdownMenuItem onClick={() => onReabrir(tarefa)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-gray-500">undo</span>
+                <IconUndo className="text-sm mr-2 text-gray-500" />
                 Reabrir tarefa
               </DropdownMenuItem>
             )}
 
             {/* Duplicar — sempre disponível */}
             <DropdownMenuItem onClick={() => onDuplicar(tarefa)} className="cursor-pointer">
-              <span className="material-symbols-outlined text-sm mr-2 text-gray-500">content_copy</span>
+              <IconContentCopy className="text-sm mr-2 text-gray-500" />
               Duplicar tarefa
             </DropdownMenuItem>
 
@@ -245,7 +246,7 @@ function TaskRow({
               onClick={() => onExcluir(tarefa)}
               className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
             >
-              <span className="material-symbols-outlined text-sm mr-2">delete</span>
+              <IconDelete className="text-sm mr-2" />
               Excluir tarefa
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -427,7 +428,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
                 : 'bg-primary hover:bg-primary/90 cursor-pointer'
             )}
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <IconAdd className="text-sm" />
             Nova Tarefa
           </button>
         </div>
@@ -453,7 +454,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
         {/* Lista agrupada por etapa */}
         {Object.keys(etapaGroups).length === 0 ? (
           <div className="py-12 text-center text-gray-400 text-sm">
-            <span className="material-symbols-outlined text-4xl block mb-2 opacity-40">task_alt</span>
+            <IconTaskAlt className="text-4xl block mb-2 opacity-40" />
             Nenhuma tarefa encontrada
           </div>
         ) : (
@@ -485,7 +486,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
               : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-primary/40 hover:text-primary cursor-pointer'
           )}
         >
-          <span className="material-symbols-outlined text-lg">add_circle</span>
+          <IconAddCircle className="text-lg" />
           Adicionar nova tarefa
         </button>
       </div>

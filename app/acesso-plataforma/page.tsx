@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { IconBusiness, IconConstruction } from "@shared/components/icons";
 
 export default function AcessoPlataformaPage() {
   return (
@@ -30,9 +31,7 @@ export default function AcessoPlataformaPage() {
                 className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col items-center text-center"
                 data-testid="card-contratante"
               >
-                <span className="material-symbols-outlined text-6xl text-[#333333] dark:text-white mb-6">
-                  business
-                </span>
+                <IconBusiness className="text-6xl text-[#333333] dark:text-white mb-6" />
                 <h3 className="text-2xl font-bold mb-3">Contratante</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
                   Gerencie suas obras, acompanhe o progresso e controle
@@ -51,9 +50,7 @@ export default function AcessoPlataformaPage() {
                 className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col items-center text-center"
                 data-testid="card-empreiteiro"
               >
-                <span className="material-symbols-outlined text-6xl text-[#333333] dark:text-white mb-6">
-                  construction
-                </span>
+                <IconConstruction className="text-6xl text-[#333333] dark:text-white mb-6" />
                 <h3 className="text-2xl font-bold mb-3">Empreiteiro</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
                   Encontre novas oportunidades, gerencie projetos e envie

@@ -13,6 +13,8 @@ import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import type { TimelineEvent } from '../types';
+import { IconAddTask, IconPerson, IconCalendarToday, IconAdd, IconStickyNote, IconTrendingUp, IconTaskAlt, IconWarning, IconDescription } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,12 +28,12 @@ interface AdicionarAtualizacaoModalProps {
 
 // ─── Configs ──────────────────────────────────────────────────────────────────
 
-const TIPOS: { value: EventTipo; label: string; icon: string }[] = [
-  { value: 'nota', label: 'Nota', icon: 'sticky_note_2' },
-  { value: 'progresso', label: 'Progresso', icon: 'trending_up' },
-  { value: 'tarefa', label: 'Tarefa', icon: 'task_alt' },
-  { value: 'problema', label: 'Problema', icon: 'warning' },
-  { value: 'documento', label: 'Documento', icon: 'description' },
+const TIPOS: { value: EventTipo; label: string; Icon: ComponentType<{ className?: string }> }[] = [
+  { value: 'nota', label: 'Nota', Icon: IconStickyNote },
+  { value: 'progresso', label: 'Progresso', Icon: IconTrendingUp },
+  { value: 'tarefa', label: 'Tarefa', Icon: IconTaskAlt },
+  { value: 'problema', label: 'Problema', Icon: IconWarning },
+  { value: 'documento', label: 'Documento', Icon: IconDescription },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -83,7 +85,7 @@ export function AdicionarAtualizacaoModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">add_task</span>
+              <IconAddTask className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -114,7 +116,7 @@ export function AdicionarAtualizacaoModal({
                         : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-sm">{t.icon}</span>
+                    <t.Icon className="text-sm" />
                     {t.label}
                   </button>
                 ))}
@@ -152,11 +154,11 @@ export function AdicionarAtualizacaoModal({
             {/* Autor + Data (display only) */}
             <div className="flex gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="material-symbols-outlined text-sm">person</span>
+                <IconPerson className="text-sm" />
                 <span>Empreiteiro</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span className="material-symbols-outlined text-sm">calendar_today</span>
+                <IconCalendarToday className="text-sm" />
                 <span>{new Date().toLocaleDateString('pt-BR')}</span>
               </div>
             </div>
@@ -168,7 +170,7 @@ export function AdicionarAtualizacaoModal({
               Cancelar
             </Button>
             <Button type="submit" size="sm" disabled={!titulo.trim()}>
-              <span className="material-symbols-outlined text-sm mr-1">add</span>
+              <IconAdd className="text-sm mr-1" />
               Adicionar
             </Button>
           </DialogFooter>

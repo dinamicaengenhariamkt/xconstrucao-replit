@@ -3,6 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import type { BlockedBannerProps, MotivoBloqueio } from '../types';
+import { IconSchedule, IconLock, IconArrowDownward, IconDomain, IconStarHalf, IconShield, IconSupportAgent } from '@shared/components/icons';
 
 function MotivoCard({ motivo }: { motivo: MotivoBloqueio }) {
   if (motivo.tipo === 'volume_obras') {
@@ -11,7 +12,7 @@ function MotivoCard({ motivo }: { motivo: MotivoBloqueio }) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-800/40 p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-xl text-red-500">domain</span>
+            <IconDomain className="text-xl text-red-500" />
           </div>
           <div>
             <p className="text-sm font-bold text-gray-800 dark:text-white">Volume de Obras</p>
@@ -37,7 +38,7 @@ function MotivoCard({ motivo }: { motivo: MotivoBloqueio }) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-red-200 dark:border-red-800/40 p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-xl text-red-500">schedule</span>
+            <IconSchedule className="text-xl text-red-500" />
           </div>
           <div>
             <p className="text-sm font-bold text-gray-800 dark:text-white">Atrasos em Obras</p>
@@ -67,7 +68,7 @@ function MotivoCard({ motivo }: { motivo: MotivoBloqueio }) {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-800/40 p-6 flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-xl text-amber-500">star_half</span>
+            <IconStarHalf className="text-xl text-amber-500" />
           </div>
           <div>
             <p className="text-sm font-bold text-gray-800 dark:text-white">Score xconstrução</p>
@@ -106,7 +107,7 @@ export function BlockedBanner({ perfilStatus }: BlockedBannerProps) {
       {/* Alerta principal */}
       <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50 rounded-2xl p-6 flex items-start gap-4">
         <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
-          <span className="material-symbols-outlined text-2xl text-red-500">lock</span>
+          <IconLock className="text-2xl text-red-500" />
         </div>
         <div className="flex-1">
           <h3 className="text-base font-bold text-red-700 dark:text-red-400 mb-1">
@@ -121,7 +122,7 @@ export function BlockedBanner({ perfilStatus }: BlockedBannerProps) {
               className="inline-flex items-center gap-1.5 mt-3 text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 transition-colors"
             >
               <span>Entenda o motivo</span>
-              <span className="material-symbols-outlined text-base">arrow_downward</span>
+              <IconArrowDownward className="text-base" />
             </a>
           )}
         </div>
@@ -131,7 +132,7 @@ export function BlockedBanner({ perfilStatus }: BlockedBannerProps) {
       {motivos.length > 0 && (
         <div id="motivos-bloqueio" className="flex flex-col gap-6">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-2xl text-gray-400 dark:text-gray-500">shield</span>
+            <IconShield className="text-2xl text-gray-400 dark:text-gray-500" />
             <div>
               <h2 className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
                 Motivos do Bloqueio
@@ -152,7 +153,7 @@ export function BlockedBanner({ perfilStatus }: BlockedBannerProps) {
           <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-xl text-info">support_agent</span>
+                <IconSupportAgent className="text-xl text-info" />
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-800 dark:text-white">Precisa de ajuda?</p>

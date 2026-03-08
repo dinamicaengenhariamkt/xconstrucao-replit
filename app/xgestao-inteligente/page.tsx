@@ -5,40 +5,41 @@ import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
+import { IconDashboardCustomize, IconPrecisionManufacturing, IconMonitoring, IconPayments, IconGroups, IconDescription, IconAnalytics, IconTableChart, IconSmartToy, IconSecurity, IconDevices } from '@shared/components/icons';
 
 const features = [
   {
-    icon: "precision_manufacturing",
+    Icon: IconPrecisionManufacturing,
     title: "Orçamento Inteligente",
     description:
       "Crie orçamentos detalhados com base na tabela SINAPI, ajustando automaticamente os valores por região.",
   },
   {
-    icon: "monitoring",
+    Icon: IconMonitoring,
     title: "Controle de Obras",
     description:
       "Acompanhe o progresso de cada etapa com dashboards interativos e notificações em tempo real.",
   },
   {
-    icon: "payments",
+    Icon: IconPayments,
     title: "Gestão Financeira",
     description:
       "Controle entradas, saídas e fluxo de caixa com relatórios automatizados e alertas inteligentes.",
   },
   {
-    icon: "groups",
+    Icon: IconGroups,
     title: "Equipe & Fornecedores",
     description:
       "Gerencie equipes, fornecedores e documentação técnica em uma plataforma centralizada.",
   },
   {
-    icon: "description",
+    Icon: IconDescription,
     title: "Documentação Digital",
     description:
       "Armazene e gerencie contratos, projetos, ART/RRT e laudos técnicos de forma segura na nuvem.",
   },
   {
-    icon: "analytics",
+    Icon: IconAnalytics,
     title: "Relatórios & Análises",
     description:
       "Gere relatórios personalizados com gráficos e métricas para tomada de decisão estratégica.",
@@ -47,28 +48,28 @@ const features = [
 
 const differentials = [
   {
-    icon: "table_chart",
+    Icon: IconTableChart,
     title: "SINAPI Integrado",
     description:
       "Tabela SINAPI atualizada automaticamente em todos os planos, sem custos adicionais.",
     highlight: true,
   },
   {
-    icon: "smart_toy",
+    Icon: IconSmartToy,
     title: "IA para Construção",
     description:
       "Inteligência artificial aplicada para otimizar custos, prazos e recursos dos seus projetos.",
     highlight: false,
   },
   {
-    icon: "security",
+    Icon: IconSecurity,
     title: "Segurança Total",
     description:
       "Dados protegidos com criptografia de ponta e backups automáticos garantem a segurança das informações.",
     highlight: false,
   },
   {
-    icon: "devices",
+    Icon: IconDevices,
     title: "Multiplataforma",
     description:
       "Acesse de qualquer dispositivo — desktop, tablet ou smartphone — com sincronização em tempo real.",
@@ -108,7 +109,7 @@ export default function XGestaoInteligentePage() {
           {/* Content */}
           <div className="relative z-10 max-w-[1000px] w-full flex flex-col items-center text-center gap-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
-              <span className="material-symbols-outlined text-lg">dashboard_customize</span>
+              <IconDashboardCustomize className="text-lg" />
               <span>xgestão inteligente</span>
             </div>
             <h1
@@ -162,9 +163,7 @@ export default function XGestaoInteligentePage() {
                   className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-8 flex flex-col min-h-[200px]"
                   style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
                 >
-                  <span className="material-symbols-outlined text-4xl text-[#333333] dark:text-white mb-4">
-                    {feature.icon}
-                  </span>
+                  <feature.Icon className="text-4xl text-[#333333] dark:text-white mb-4" />
                   <h3 className="text-lg font-bold mb-2">{feature.title}</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
                     {feature.description}
@@ -199,13 +198,11 @@ export default function XGestaoInteligentePage() {
                   }`}
                   style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
                 >
-                  <span
-                    className={`material-symbols-outlined text-4xl mb-4 ${
+                  <diff.Icon
+                    className={`text-4xl mb-4 ${
                       diff.highlight ? "text-white" : "text-[#333333] dark:text-white"
                     }`}
-                  >
-                    {diff.icon}
-                  </span>
+                  />
                   <h3 className="text-lg font-bold mb-2">{diff.title}</h3>
                   <p
                     className={`text-sm leading-relaxed ${

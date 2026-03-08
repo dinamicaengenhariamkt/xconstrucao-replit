@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@shared/lib/utils';
 import { useChatStore } from '@features/empreiteiro/xchat/store/chat-store';
+import { IconPerson, IconMail, IconChat } from '@shared/components/icons';
 
 interface ContatoContratanteCardProps {
   contratante: {
@@ -42,7 +43,7 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
-          <span className="material-symbols-outlined text-primary">person</span>
+          <IconPerson className="text-primary" />
         </div>
         <div>
           <h2 className="text-base font-bold text-gray-900 dark:text-white">Contato do Contratante</h2>
@@ -65,7 +66,7 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
           {contratante.email && (
             <div className="flex-1">
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <span className="material-symbols-outlined text-gray-400">mail</span>
+                <IconMail className="text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">E-mail</p>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{contratante.email}</p>
@@ -79,7 +80,7 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
               onClick={handleEnviarMensagem}
               className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined">chat</span>
+              <IconChat />
               Enviar Mensagem
             </button>
             <span className="text-[10px] text-gray-400 font-medium">via xchat</span>

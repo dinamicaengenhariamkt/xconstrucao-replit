@@ -3,6 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import { useChatStore } from '../store/chat-store';
 import type { Conversation } from '../types';
+import { IconSearch } from '@shared/components/icons';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -45,9 +46,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
 
         {/* Search */}
         <div className="relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
-            search
-          </span>
+          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
           <input
             type="text"
             placeholder="Buscar conversas..."

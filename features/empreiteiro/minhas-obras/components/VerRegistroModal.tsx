@@ -12,6 +12,8 @@ import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist } from '../types';
+import type { ComponentType } from 'react';
+import { IconSchedule, IconCalendarToday, IconHealthAndSafety, IconFactCheck, IconDomain, IconCheckCircle, IconPending, IconRadioButtonUnchecked } from '@shared/components/icons';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -25,11 +27,11 @@ interface VerRegistroModalProps {
 
 const TIPO_CONFIG: Record<
   MinhaObraChecklist['tipo'],
-  { icon: string; iconBg: string; iconText: string; label: string }
+  { Icon: ComponentType<{ className?: string }>; iconBg: string; iconText: string; label: string }
 > = {
-  seguranca: { icon: 'health_and_safety', iconBg: 'bg-red-100 dark:bg-red-900/30', iconText: 'text-red-600', label: 'Segurança' },
-  diario: { icon: 'fact_check', iconBg: 'bg-blue-100 dark:bg-blue-900/30', iconText: 'text-blue-600', label: 'Diário de Obra' },
-  etapa: { icon: 'domain', iconBg: 'bg-purple-100 dark:bg-purple-900/30', iconText: 'text-purple-600', label: 'Validação de Etapa' },
+  seguranca: { Icon: IconHealthAndSafety, iconBg: 'bg-red-100 dark:bg-red-900/30', iconText: 'text-red-600', label: 'Segurança' },
+  diario: { Icon: IconFactCheck, iconBg: 'bg-blue-100 dark:bg-blue-900/30', iconText: 'text-blue-600', label: 'Diário de Obra' },
+  etapa: { Icon: IconDomain, iconBg: 'bg-purple-100 dark:bg-purple-900/30', iconText: 'text-purple-600', label: 'Validação de Etapa' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -50,9 +52,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-lg', config.iconBg)}>
-              <span className={cn('material-symbols-outlined text-xl', config.iconText)}>
-                {config.icon}
-              </span>
+              <config.Icon className={cn('text-xl', config.iconText)} />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
@@ -77,14 +77,11 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
               )}
             >
               <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'material-symbols-outlined text-xl',
-                    isCompleto ? 'text-success' : 'text-gray-400'
-                  )}
-                >
-                  {isCompleto ? 'check_circle' : 'pending'}
-                </span>
+                {isCompleto ? (
+                  <IconCheckCircle className="text-xl text-success" />
+                ) : (
+                  <IconPending className="text-xl text-gray-400" />
+                )}
                 <div>
                   <p className={cn('text-sm font-bold', isCompleto ? 'text-success' : 'text-gray-700 dark:text-gray-300')}>
                     {isCompleto ? 'Finalizado' : 'Em andamento'}
@@ -111,7 +108,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
               <div className="flex flex-col gap-3">
                 {checklist.completadoEm && (
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="material-symbols-outlined text-base text-gray-400">schedule</span>
+                    <IconSchedule className="text-base text-gray-400" />
                     <span className="text-gray-500">Finalizado às</span>
                     <span className="font-semibold text-gray-900 dark:text-white">{checklist.completadoEm}</span>
                   </div>
@@ -136,7 +133,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                     </div>
                     {checklist.assinadoEm && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm">calendar_today</span>
+                        <IconCalendarToday className="text-sm" />
                         {checklist.assinadoEm}
                       </p>
                     )}
@@ -161,14 +158,11 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                         : 'bg-gray-50 dark:bg-gray-800/50'
                     )}
                   >
-                    <span
-                      className={cn(
-                        'material-symbols-outlined text-base flex-shrink-0',
-                        item.concluida ? 'text-success' : 'text-gray-300'
-                      )}
-                    >
-                      {item.concluida ? 'check_circle' : 'radio_button_unchecked'}
-                    </span>
+                    {item.concluida ? (
+                      <IconCheckCircle className="text-base flex-shrink-0 text-success" />
+                    ) : (
+                      <IconRadioButtonUnchecked className="text-base flex-shrink-0 text-gray-300" />
+                    )}
                     <span
                       className={cn(
                         'text-sm',

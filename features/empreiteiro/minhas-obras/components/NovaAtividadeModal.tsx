@@ -32,6 +32,7 @@ import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import { Slider } from '@shared/components/ui/slider';
 import type { ObraAtividade } from '../types';
+import { IconCalendarMonth, IconAddTask } from '@shared/components/icons';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -150,9 +151,11 @@ export function NovaAtividadeModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">
-                {isEdit ? 'edit_calendar' : 'add_task'}
-              </span>
+              {isEdit ? (
+                <IconCalendarMonth className="text-primary text-xl" />
+              ) : (
+                <IconAddTask className="text-primary text-xl" />
+              )}
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">

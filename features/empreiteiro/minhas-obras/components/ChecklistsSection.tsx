@@ -23,6 +23,8 @@ import { ChecklistFormModal } from './ChecklistFormModal';
 import { AssinarChecklistModal } from './AssinarChecklistModal';
 import { VerRegistroModal } from './VerRegistroModal';
 import type { MinhaObraChecklist, MinhaObraDetalhe } from '../types';
+import { IconWarning, IconMoreVert, IconVisibility, IconEdit, IconContentCopy, IconDelete, IconDraw, IconCheckCircle, IconAdd, IconHealthAndSafety, IconFactCheck, IconDomain } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 // ─── Configurações visuais ────────────────────────────────────────────────────
 
@@ -37,7 +39,7 @@ const CHECKLIST_CONFIG: Record<
     itemHoverBg: string;
     footerBorder: string;
     actionBtn: string;
-    actionBtnIcon?: string;
+    ActionBtnIcon?: ComponentType<{ className?: string }>;
     actionBtnLabel: string;
   }
 > = {
@@ -72,15 +74,15 @@ const CHECKLIST_CONFIG: Record<
     itemHoverBg: 'hover:bg-purple-100/50 dark:hover:bg-purple-900/20',
     footerBorder: 'border-purple-200 dark:border-purple-800',
     actionBtn: 'bg-purple-600 text-white hover:bg-purple-700',
-    actionBtnIcon: 'draw',
+    ActionBtnIcon: IconDraw,
     actionBtnLabel: 'Assinar',
   },
 };
 
-const TIPO_ICON: Record<MinhaObraChecklist['tipo'], string> = {
-  seguranca: 'health_and_safety',
-  diario: 'fact_check',
-  etapa: 'domain',
+const TIPO_ICON: Record<MinhaObraChecklist['tipo'], ComponentType<{ className?: string }>> = {
+  seguranca: IconHealthAndSafety,
+  diario: IconFactCheck,
+  etapa: IconDomain,
 };
 
 const STATUS_BADGE: Record<MinhaObraChecklist['status'], { label: string; classes: string }> = {
@@ -182,7 +184,7 @@ function ChecklistCard({
       {/* Aviso inline: itens pendentes ao tentar assinar */}
       {avisoAssinar && (
         <div className="absolute top-3 left-3 right-3 z-10 bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 rounded-lg px-3 py-2 flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 font-medium shadow-sm">
-          <span className="material-symbols-outlined text-sm">warning</span>
+          <IconWarning className="text-sm" />
           Conclua {pendentesCount === 1 ? 'o item pendente' : `os ${pendentesCount} itens pendentes`} antes de assinar
         </div>
       )}
@@ -191,7 +193,7 @@ function ChecklistCard({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className={cn('p-2 rounded-lg flex-shrink-0', config.iconBg)}>
-            <span className="material-symbols-outlined">{TIPO_ICON[checklist.tipo]}</span>
+            {(() => { const TipoIcon = TIPO_ICON[checklist.tipo]; return <TipoIcon className="" />; })()}
           </div>
           <div>
             <h4 className="text-sm font-bold text-gray-900 dark:text-white">{checklist.nome}</h4>
@@ -216,13 +218,13 @@ function ChecklistCard({
                 className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded"
                 aria-label="Opções do checklist"
               >
-                <span className="material-symbols-outlined text-base">more_vert</span>
+                <IconMoreVert className="text-base" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               {isCompleto ? (
                 <DropdownMenuItem onClick={() => onVerRegistro(checklist)} className="cursor-pointer">
-                  <span className="material-symbols-outlined text-sm mr-2 text-gray-500">visibility</span>
+                  <IconVisibility className="text-sm mr-2 text-gray-500" />
                   Ver registro
                 </DropdownMenuItem>
               ) : (
@@ -231,12 +233,12 @@ function ChecklistCard({
                   className="cursor-pointer"
                   disabled={obraFinalizada}
                 >
-                  <span className="material-symbols-outlined text-sm mr-2 text-gray-500">edit</span>
+                  <IconEdit className="text-sm mr-2 text-gray-500" />
                   Editar checklist
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={() => onDuplicar(checklist)} className="cursor-pointer">
-                <span className="material-symbols-outlined text-sm mr-2 text-gray-500">content_copy</span>
+                <IconContentCopy className="text-sm mr-2 text-gray-500" />
                 Duplicar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -245,7 +247,7 @@ function ChecklistCard({
                 className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
                 disabled={obraFinalizada}
               >
-                <span className="material-symbols-outlined text-sm mr-2">delete</span>
+                <IconDelete className="text-sm mr-2" />
                 Excluir
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -304,12 +306,12 @@ function ChecklistCard({
       <div className={cn('flex items-center justify-between pt-4 border-t', config.footerBorder)}>
         {isCompleto && checklist.assinadoPor ? (
           <span className="text-xs text-success font-medium flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">draw</span>
+            <IconDraw className="text-sm" />
             Assinado por {checklist.assinadoPor}
           </span>
         ) : isCompleto && checklist.completadoEm ? (
           <span className="text-xs text-success font-medium flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">check_circle</span>
+            <IconCheckCircle className="text-sm" />
             Concluído às {checklist.completadoEm}
           </span>
         ) : (
@@ -328,8 +330,8 @@ function ChecklistCard({
               : config.actionBtn + ' cursor-pointer'
           )}
         >
-          {config.actionBtnIcon && !isCompleto && (
-            <span className="material-symbols-outlined text-sm">{config.actionBtnIcon}</span>
+          {config.ActionBtnIcon && !isCompleto && (
+            <config.ActionBtnIcon className="text-sm" />
           )}
           {checklist.tipo === 'diario'
             ? 'Ver registro'
@@ -490,7 +492,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
                 : 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'
             )}
           >
-            <span className="material-symbols-outlined text-sm">add</span>
+            <IconAdd className="text-sm" />
             Novo Checklist
           </button>
         </div>
@@ -498,9 +500,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
         {/* Empty state */}
         {checklists.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-4 text-center">
-            <span className="material-symbols-outlined text-5xl text-gray-200 dark:text-gray-700">
-              fact_check
-            </span>
+            <IconFactCheck className="text-5xl text-gray-200 dark:text-gray-700" />
             <div>
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Nenhum checklist cadastrado
@@ -514,7 +514,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
                 onClick={() => openModal('novo')}
                 className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-sm">add</span>
+                <IconAdd className="text-sm" />
                 Novo Checklist
               </button>
             )}

@@ -3,6 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import type { ObraContratanteDetalhe, ProgressColor, TimelineEventContratante } from '../types';
+import { IconArrowForward, IconWarning } from '@shared/components/icons';
 
 const TIPO_DOT: Record<TimelineEventContratante['tipo'], string> = {
   progresso: 'bg-green-500',
@@ -64,7 +65,7 @@ export function TabVisaoGeral({ obra, progressColor, onNavigateToTimeline }: Tab
                   className="text-xs text-primary font-semibold hover:underline cursor-pointer flex items-center gap-1"
                 >
                   Ver todas
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  <IconArrowForward className="text-[14px]" />
                 </button>
               )}
             </div>
@@ -112,7 +113,7 @@ export function TabVisaoGeral({ obra, progressColor, onNavigateToTimeline }: Tab
 
         {ocorrenciasAbertas > 0 && (
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-800/40 flex items-start gap-3">
-            <span className="material-symbols-outlined text-amber-500 text-xl shrink-0 mt-0.5">warning</span>
+            <IconWarning className="text-amber-500 text-xl shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-amber-700 dark:text-amber-400">
                 {ocorrenciasAbertas} ocorrência{ocorrenciasAbertas !== 1 ? 's' : ''} em aberto

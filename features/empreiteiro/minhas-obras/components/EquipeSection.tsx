@@ -22,6 +22,7 @@ import {
 import { AdicionarMembroModal } from './AdicionarMembroModal';
 import { PermissoesMembroModal } from './PermissoesMembroModal';
 import type { MembroEquipe, MinhaObraDetalhe } from '../types';
+import { IconMoreVert, IconEdit, IconKey, IconPersonRemove, IconEngineering, IconCall, IconMail, IconGroup, IconPersonAdd, IconPersonOff, IconPersonCheck } from '@shared/components/icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,27 +89,29 @@ function MembroCard({
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 aria-label="Ações"
               >
-                <span className="material-symbols-outlined text-base">more_vert</span>
+                <IconMoreVert className="text-base" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => onEditar(membro)}>
-                <span className="material-symbols-outlined text-sm mr-2">edit</span>
+                <IconEdit className="text-sm mr-2" />
                 Editar
               </DropdownMenuItem>
 
               {membro.tipo === 'engenheiro' && (
                 <DropdownMenuItem onClick={() => onPermissoes(membro)}>
-                  <span className="material-symbols-outlined text-sm mr-2">key</span>
+                  <IconKey className="text-sm mr-2" />
                   Permissões
                 </DropdownMenuItem>
               )}
 
               {(membro.tipo === 'mestre' || membro.tipo === 'equipe') && (
                 <DropdownMenuItem onClick={() => onToggleAtivo(membro)}>
-                  <span className="material-symbols-outlined text-sm mr-2">
-                    {membro.ativo ? 'person_off' : 'person_check'}
-                  </span>
+                  {membro.ativo ? (
+                    <IconPersonOff className="text-sm mr-2" />
+                  ) : (
+                    <IconPersonCheck className="text-sm mr-2" />
+                  )}
                   {membro.ativo ? 'Desativar' : 'Ativar'}
                 </DropdownMenuItem>
               )}
@@ -118,7 +121,7 @@ function MembroCard({
                 onClick={() => onRemover(membro)}
                 className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
               >
-                <span className="material-symbols-outlined text-sm mr-2">person_remove</span>
+                <IconPersonRemove className="text-sm mr-2" />
                 Remover
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -162,25 +165,25 @@ function MembroCard({
       <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
         {membro.registro && (
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-gray-400 text-sm">engineering</span>
+            <IconEngineering className="text-gray-400 text-sm" />
             {membro.registro}
           </div>
         )}
         {membro.telefone && (
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-gray-400 text-sm">call</span>
+            <IconCall className="text-gray-400 text-sm" />
             {membro.telefone}
           </div>
         )}
         {membro.email && (
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-gray-400 text-sm">mail</span>
+            <IconMail className="text-gray-400 text-sm" />
             <span className="truncate">{membro.email}</span>
           </div>
         )}
         {membro.membros && (
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-gray-400 text-sm">group</span>
+            <IconGroup className="text-gray-400 text-sm" />
             <span className="truncate">{membro.membros}</span>
           </div>
         )}
@@ -275,7 +278,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
             onClick={() => openModal('novo')}
             className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
-            <span className="material-symbols-outlined text-sm">person_add</span>
+            <IconPersonAdd className="text-sm" />
             Adicionar Membro
           </button>
         </div>
@@ -302,7 +305,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
               className="p-5 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer min-h-[120px]"
             >
               <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                <span className="material-symbols-outlined text-gray-400 text-2xl">person_add</span>
+                <IconPersonAdd className="text-gray-400 text-2xl" />
               </div>
               <span className="text-sm font-semibold text-gray-500">Adicionar Membro</span>
             </button>
@@ -312,7 +315,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
         {/* Empty state */}
         {membros.length === 0 && (
           <div className="text-center py-16">
-            <span className="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-700">group</span>
+            <IconGroup className="text-4xl text-gray-300 dark:text-gray-700" />
             <p className="text-sm font-medium text-gray-400 mt-2">Nenhum membro na equipe</p>
             {!obraFinalizada && (
               <button

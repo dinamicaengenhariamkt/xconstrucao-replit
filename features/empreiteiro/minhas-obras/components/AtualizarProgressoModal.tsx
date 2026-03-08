@@ -11,6 +11,7 @@ import {
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
 import type { MinhaObraTarefa } from '../types';
+import { IconDataUsage, IconCheck } from '@shared/components/icons';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export function AtualizarProgressoModal({
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">data_usage</span>
+              <IconDataUsage className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
@@ -116,7 +117,7 @@ export function AtualizarProgressoModal({
             Cancelar
           </Button>
           <Button type="button" onClick={handleConfirmar}>
-            <span className="material-symbols-outlined text-sm mr-1">check</span>
+            <IconCheck className="text-sm mr-1" />
             Salvar progresso
           </Button>
         </DialogFooter>

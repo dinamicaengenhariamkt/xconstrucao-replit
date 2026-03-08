@@ -21,6 +21,8 @@ import { AdicionarAtualizacaoModal } from '@features/empreiteiro/minhas-obras/co
 import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import React from 'react';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconPhotoCamera, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction } from '@shared/components/icons';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -40,14 +42,14 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
 
 type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias';
 
-const TABS: { key: ObraTab; label: string; icon: string }[] = [
-  { key: 'tarefas', label: 'Tarefas', icon: 'task_alt' },
-  { key: 'checklists', label: 'Checklists', icon: 'fact_check' },
-  { key: 'timeline', label: 'Timeline', icon: 'timeline' },
-  { key: 'fotos', label: 'Fotos', icon: 'photo_library' },
-  { key: 'documentos', label: 'Documentos', icon: 'folder_open' },
-  { key: 'cronograma', label: 'Cronograma', icon: 'calendar_month' },
-  { key: 'ocorrencias', label: 'Ocorrências', icon: 'warning' },
+const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'tarefas', label: 'Tarefas', Icon: IconTaskAlt },
+  { key: 'checklists', label: 'Checklists', Icon: IconFactCheck },
+  { key: 'timeline', label: 'Timeline', Icon: IconTimeline },
+  { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
+  { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
+  { key: 'cronograma', label: 'Cronograma', Icon: IconCalendarMonth },
+  { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
 ];
 
 export default function MinhaObraDetalhePage() {
@@ -86,7 +88,7 @@ export default function MinhaObraDetalhePage() {
   if (!obra) {
     return (
       <div className="p-10 text-center py-20">
-        <span className="material-symbols-outlined text-5xl text-gray-300 block mb-4">construction</span>
+        <IconConstruction className="text-5xl text-gray-300 block mb-4" />
         <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
         <Link href="/empreiteiro/minhas-obras" className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">
           Voltar para Minhas Obras
@@ -109,14 +111,14 @@ export default function MinhaObraDetalhePage() {
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
           data-testid="link-back"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          <IconArrowBack className="text-lg" />
           Voltar
         </Link>
         <nav className="flex items-center gap-2 text-sm flex-wrap">
           <Link href="/empreiteiro/minhas-obras" className="text-gray-400 hover:text-primary transition-colors">
             Minhas Obras
           </Link>
-          <span className="material-symbols-outlined text-gray-300 text-base">chevron_right</span>
+          <IconChevronRight className="text-gray-300 text-base" />
           <span className="text-primary font-semibold" data-testid="text-breadcrumb-title">{obra.titulo}</span>
         </nav>
       </motion.div>
@@ -147,7 +149,7 @@ export default function MinhaObraDetalhePage() {
             onClick={() => fileInputRef.current?.click()}
             className="absolute top-4 right-4 px-4 py-2 bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-sm">photo_camera</span>
+            <IconPhotoCamera className="text-sm" />
             Alterar foto de capa
           </button>
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
@@ -163,20 +165,20 @@ export default function MinhaObraDetalhePage() {
                   {obra.titulo}
                 </h1>
                 <div className="flex items-center gap-2 text-white/90 text-sm">
-                  <span className="material-symbols-outlined text-lg">location_on</span>
+                  <IconLocationOn className="text-lg" />
                   <span>{obra.endereco}</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="flex items-center gap-2 text-white/90">
-                  <span className="material-symbols-outlined text-lg">event</span>
+                  <IconEvent className="text-lg" />
                   <div>
                     <p className="text-white/60 text-xs">Entrega prevista</p>
                     <p className="font-bold text-sm">{obra.dataPrevisaoFim}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-white/90">
-                  <span className="material-symbols-outlined text-lg">groups</span>
+                  <IconGroups className="text-lg" />
                   <div>
                     <p className="text-white/60 text-xs">Contratante</p>
                     <div className="flex items-center gap-2">
@@ -191,7 +193,7 @@ export default function MinhaObraDetalhePage() {
                   onClick={() => setShowAtualizacao(true)}
                   className="px-5 py-2 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-lg">add_task</span>
+                  <IconAddTask className="text-lg" />
                   Adicionar Atualização
                 </button>
               </div>
@@ -230,7 +232,7 @@ export default function MinhaObraDetalhePage() {
         <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-success/30 transition-all">
           <div className="flex justify-between items-start">
             <div className="p-2.5 bg-success/10 text-success rounded-lg">
-              <span className="material-symbols-outlined">check_circle</span>
+              <IconCheckCircle />
             </div>
             <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Atual</span>
           </div>
@@ -250,7 +252,7 @@ export default function MinhaObraDetalhePage() {
         )}>
           <div className="flex justify-between items-start">
             <div className={cn('p-2.5 rounded-lg', obra.diasAtraso > 0 ? 'bg-amber-50 text-amber-600' : 'bg-success/10 text-success')}>
-              <span className="material-symbols-outlined">schedule</span>
+              <IconSchedule />
             </div>
             {obra.diasAtraso > 0 && (
               <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">Alerta</span>
@@ -269,7 +271,7 @@ export default function MinhaObraDetalhePage() {
         <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-purple-300 transition-all">
           <div className="flex justify-between items-start">
             <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg">
-              <span className="material-symbols-outlined">task_alt</span>
+              <IconTaskAlt />
             </div>
             <span className="text-purple-600 text-xs font-bold bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
               {obra.tarefasTotal} total
@@ -286,7 +288,7 @@ export default function MinhaObraDetalhePage() {
         <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-red-300 transition-all">
           <div className="flex justify-between items-start">
             <div className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
-              <span className="material-symbols-outlined">error_outline</span>
+              <IconErrorOutline />
             </div>
             {obra.problemasAbertos > 0 && (
               <span className="text-red-600 text-xs font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full">Atenção</span>
@@ -305,7 +307,7 @@ export default function MinhaObraDetalhePage() {
         <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-blue-300 transition-all">
           <div className="flex justify-between items-start">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
-              <span className="material-symbols-outlined">groups</span>
+              <IconGroups />
             </div>
             <span className="text-blue-600 text-xs font-bold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">Hoje</span>
           </div>
@@ -337,7 +339,7 @@ export default function MinhaObraDetalhePage() {
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
               )}
             >
-              <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+              <tab.Icon className="text-[18px]" />
               {tab.label}
             </button>
           ))}

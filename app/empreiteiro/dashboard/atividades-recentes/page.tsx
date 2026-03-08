@@ -12,6 +12,7 @@ import {
 } from 'react-icons/ri';
 import type { IconType } from 'react-icons';
 import { cn } from '@shared/lib/utils';
+import { IconOpenInNew, IconExpandMore } from '@shared/components/icons';
 import { useRecentActivities } from '@features/empreiteiro/dashboard/hooks/use-recent-activities';
 import { getRelativeTime } from '@features/empreiteiro/dashboard/utils';
 import type { Activity, ActivityType } from '@features/empreiteiro/dashboard/types';
@@ -90,7 +91,7 @@ function ActivityRow({ activity }: { activity: Activity }) {
             href={`/empreiteiro/minhas-obras/${activity.obraId}`}
             className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-semibold text-primary hover:underline"
           >
-            <span className="material-symbols-outlined text-xs">open_in_new</span>
+            <IconOpenInNew className="text-xs" />
             {activity.obraNome}
           </Link>
         )}
@@ -214,7 +215,7 @@ export default function AtividadesRecentesPage() {
               onClick={() => setVisibleCount((c) => c + LOAD_MORE_SIZE)}
               className="w-full py-2 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-lg">expand_more</span>
+              <IconExpandMore className="text-lg" />
               Carregar mais {Math.min(LOAD_MORE_SIZE, filtered.length - visibleCount)} atividades
             </button>
           </div>

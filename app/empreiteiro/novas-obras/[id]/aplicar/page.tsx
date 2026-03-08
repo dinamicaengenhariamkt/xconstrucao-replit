@@ -8,6 +8,7 @@ import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-nova
 import { ENABLE_MOCK } from '@features/empreiteiro/novas-obras/constants';
 import { useTermosStore } from '@features/empreiteiro/termos/store/termos-store';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { IconArrowBack, IconChevronRight, IconCheckCircle, IconCheck, IconSend, IconDelete, IconAddCircle, IconUploadFile, IconDescription, IconConstruction, IconLocationOn, IconHomeRepairService, IconStraighten, IconAttachMoney, IconSchedule, IconSignalCellularAlt } from '@shared/components/icons';
 
 interface Atividade {
   id: string;
@@ -133,7 +134,7 @@ export default function AplicarPage() {
   if (!obra) {
     return (
       <div className="p-10 text-center py-20">
-        <span className="material-symbols-outlined text-5xl text-gray-300 block mb-4">construction</span>
+        <IconConstruction className="text-5xl text-gray-300 block mb-4" />
         <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
         <Link href="/empreiteiro/novas-obras" className="text-primary font-semibold mt-2 inline-block">Voltar para Novas Obras</Link>
       </div>
@@ -149,7 +150,7 @@ export default function AplicarPage() {
           className="max-w-lg mx-auto text-center py-20"
         >
           <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-success text-5xl">check_circle</span>
+            <IconCheckCircle className="text-success text-5xl" />
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3" data-testid="text-success-title">Proposta Enviada!</h2>
           <p className="text-gray-500 mb-8">Sua candidatura para <strong>{obra.titulo}</strong> foi enviada com sucesso. Você será notificado quando o contratante avaliar sua proposta.</p>
@@ -170,13 +171,13 @@ export default function AplicarPage() {
     <div className="px-10 pt-10 pb-6 flex flex-col gap-8">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
         <Link href={`/empreiteiro/novas-obras/${id}`} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors" data-testid="link-back">
-          <span className="material-symbols-outlined text-lg">arrow_back</span>Voltar
+          <IconArrowBack className="text-lg" />Voltar
         </Link>
         <nav className="flex items-center gap-2 text-sm flex-wrap">
           <Link href="/empreiteiro/novas-obras" className="text-gray-400 hover:text-primary transition-colors">Novas Obras</Link>
-          <span className="material-symbols-outlined text-gray-300 text-base">chevron_right</span>
+          <IconChevronRight className="text-gray-300 text-base" />
           <Link href={`/empreiteiro/novas-obras/${id}`} className="text-gray-400 hover:text-primary transition-colors">{obra.titulo}</Link>
-          <span className="material-symbols-outlined text-gray-300 text-base">chevron_right</span>
+          <IconChevronRight className="text-gray-300 text-base" />
           <span className="text-primary font-semibold">Aplicar</span>
         </nav>
       </motion.div>
@@ -191,15 +192,15 @@ export default function AplicarPage() {
         <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">Resumo da Obra</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { icon: 'location_on', label: 'Local', value: obra.endereco },
-            { icon: 'home_repair_service', label: 'Tipo', value: obra.tipoObra },
-            { icon: 'straighten', label: 'Área', value: obra.areaTotal },
-            { icon: 'attach_money', label: 'Orçamento', value: formatCurrency(obra.orcamento) },
-            { icon: 'schedule', label: 'Duração', value: obra.prazo },
-            { icon: 'signal_cellular_alt', label: 'Complexidade', value: obra.complexidade === 'alta' ? 'Alta' : obra.complexidade === 'media' ? 'Média' : 'Baixa' },
+            { Icon: IconLocationOn, label: 'Local', value: obra.endereco },
+            { Icon: IconHomeRepairService, label: 'Tipo', value: obra.tipoObra },
+            { Icon: IconStraighten, label: 'Área', value: obra.areaTotal },
+            { Icon: IconAttachMoney, label: 'Orçamento', value: formatCurrency(obra.orcamento) },
+            { Icon: IconSchedule, label: 'Duração', value: obra.prazo },
+            { Icon: IconSignalCellularAlt, label: 'Complexidade', value: obra.complexidade === 'alta' ? 'Alta' : obra.complexidade === 'media' ? 'Média' : 'Baixa' },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-gray-400 text-lg">{item.icon}</span>
+              <item.Icon className="text-gray-400 text-lg" />
               <div>
                 <p className="text-[10px] text-gray-400 uppercase tracking-wider">{item.label}</p>
                 <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">{item.value}</p>
@@ -231,7 +232,7 @@ export default function AplicarPage() {
                   <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Atividade {index + 1}</h4>
                   {atividades.length > 1 && (
                     <button onClick={() => removeAtividade(atividade.id)} className="text-red-500 hover:text-red-700 transition-colors p-1" data-testid={`button-remove-atividade-${index}`}>
-                      <span className="material-symbols-outlined text-xl">delete</span>
+                      <IconDelete className="text-xl" />
                     </button>
                   )}
                 </div>
@@ -280,7 +281,7 @@ export default function AplicarPage() {
             className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 flex items-center justify-center gap-2 text-gray-500 hover:border-primary/40 hover:text-primary transition-colors"
             data-testid="button-add-atividade"
           >
-            <span className="material-symbols-outlined">add_circle</span>
+            <IconAddCircle />
             <span className="text-sm font-semibold">+ Adicionar atividade</span>
           </button>
         </div>
@@ -404,7 +405,7 @@ export default function AplicarPage() {
         >
           <div className="flex flex-col items-center gap-3">
             <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined text-gray-400 text-2xl">upload_file</span>
+              <IconUploadFile className="text-gray-400 text-2xl" />
             </div>
             <div>
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Clique para anexar ou arraste arquivos</p>
@@ -420,7 +421,7 @@ export default function AplicarPage() {
               <div key={anexo.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                    <span className="material-symbols-outlined text-red-600 text-lg">description</span>
+                    <IconDescription className="text-red-600 text-lg" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{anexo.name}</p>
@@ -432,7 +433,7 @@ export default function AplicarPage() {
                   className="text-red-500 hover:text-red-700 transition-colors p-1"
                   data-testid={`button-remove-anexo-${anexo.id}`}
                 >
-                  <span className="material-symbols-outlined text-xl">delete</span>
+                  <IconDelete className="text-xl" />
                 </button>
               </div>
             ))}
@@ -463,7 +464,7 @@ export default function AplicarPage() {
             'Estou ciente de que informações falsas podem resultar em suspensão da conta.',
           ].map((item) => (
             <li key={item} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <span className="material-symbols-outlined text-green-500 text-base leading-none mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              <IconCheckCircle className="text-green-500 text-base leading-none mt-0.5" />
               {item}
             </li>
           ))}
@@ -477,7 +478,7 @@ export default function AplicarPage() {
               }`}
             >
               {aceitouTermos && (
-                <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'FILL' 1", fontSize: '12px' }}>check</span>
+                <IconCheck className="text-white text-xs" style={{ fontSize: '12px' }} />
               )}
             </div>
           </div>
@@ -516,7 +517,7 @@ export default function AplicarPage() {
           className="px-8 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="button-enviar-proposta"
         >
-          <span className="material-symbols-outlined text-lg">send</span>
+          <IconSend className="text-lg" />
           {isSubmitting ? 'Enviando...' : 'Enviar proposta'}
         </button>
       </motion.div>

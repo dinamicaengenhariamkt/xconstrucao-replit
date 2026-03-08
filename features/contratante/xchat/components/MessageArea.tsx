@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@shared/lib/utils';
 import type { ContratanteMessage } from '../types';
+import { IconHomeWork } from '@shared/components/icons';
 
 const STATUS_LABEL: Record<string, string> = {
   em_execucao: 'Em execução',
@@ -51,7 +52,7 @@ export function MessageArea({ messages, isLoading }: MessageAreaProps) {
                     : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300',
                 )}
               >
-                <span className="material-symbols-outlined text-base leading-none">home_work</span>
+                <IconHomeWork className="text-base leading-none" />
                 <div className="min-w-0">
                   <p className="font-semibold truncate">{msg.attachment.obraNome}</p>
                   <p className="text-[10px] text-gray-500 truncate">

@@ -3,6 +3,7 @@
 // Prevent static generation for auth pages (use dynamic hooks)
 export const dynamic = 'force-dynamic'
 
+import React from 'react';
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -15,12 +16,13 @@ import { useAuth } from "@features/auth/hooks/use-auth";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { IconPerson, IconMail, IconAlternateEmail, IconPhone, IconLock, IconBusiness, IconConstruction } from '@shared/components/icons';
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
-const perfilConfig: Record<string, { icon: string; text: string }> = {
-  contratante: { icon: "business", text: "Contratante" },
-  empreiteiro: { icon: "construction", text: "Empreiteiro" },
+const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
+  contratante: { Icon: IconBusiness, text: "Contratante" },
+  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
 };
 
 export default function CadastroPage() {
@@ -102,9 +104,7 @@ export default function CadastroPage() {
             {/* Badge de Perfil */}
             <div className="flex justify-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
-                <span className="material-symbols-outlined text-lg">
-                  {config.icon}
-                </span>
+                <config.Icon className="text-lg" />
                 <span data-testid="text-perfil-badge">{config.text}</span>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function CadastroPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Nome completo</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">person</span>
+                  <IconPerson className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="text"
                     placeholder="Seu nome completo"
@@ -162,7 +162,7 @@ export default function CadastroPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Email</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
+                  <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="email"
                     placeholder="seu@email.com"
@@ -175,7 +175,7 @@ export default function CadastroPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Usuário</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">alternate_email</span>
+                  <IconAlternateEmail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="text"
                     placeholder="Seu nome de usuário"
@@ -188,7 +188,7 @@ export default function CadastroPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Telefone</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">phone</span>
+                  <IconPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="tel"
                     placeholder="(11) 99999-9999"
@@ -201,7 +201,7 @@ export default function CadastroPage() {
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
+                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="password"
                     placeholder="Mínimo 6 caracteres"

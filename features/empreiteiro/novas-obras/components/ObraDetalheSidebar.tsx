@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { cn } from '@shared/lib/utils';
 import type { ObraDetalheSidebarProps } from '../types';
+import { IconCheckCircle, IconVerified } from '@shared/components/icons';
 
 export function ObraDetalheSidebar({ obra, onApply, isApplying }: ObraDetalheSidebarProps) {
   const isApplied = obra.applicationStatus === 'aplicado';
@@ -14,7 +15,7 @@ export function ObraDetalheSidebar({ obra, onApply, isApplying }: ObraDetalheSid
         {isApplied ? (
           <div className="text-center">
             <div className="w-14 h-14 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-success text-3xl">check_circle</span>
+              <IconCheckCircle className="text-success text-3xl" />
             </div>
             <h3 className="font-bold text-gray-900 dark:text-white mb-1">Candidatura Enviada</h3>
             <p className="text-sm text-gray-500">Sua candidatura foi enviada com sucesso. Aguarde o retorno do contratante.</p>
@@ -22,7 +23,7 @@ export function ObraDetalheSidebar({ obra, onApply, isApplying }: ObraDetalheSid
         ) : isAccepted ? (
           <div className="text-center">
             <div className="w-14 h-14 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="material-symbols-outlined text-success text-3xl">verified</span>
+              <IconVerified className="text-success text-3xl" />
             </div>
             <h3 className="font-bold text-success mb-1">Candidatura Aceita!</h3>
             <p className="text-sm text-gray-500">Parabéns! Sua candidatura foi aceita pelo contratante.</p>

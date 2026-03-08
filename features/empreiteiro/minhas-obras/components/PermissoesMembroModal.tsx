@@ -12,6 +12,8 @@ import {
 import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
 import type { MembroEquipe } from '../types';
+import { IconKey, IconCheckCircle, IconSave, IconVisibility, IconEdit, IconAdminPanelSettings } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -21,7 +23,7 @@ const PERMISSAO_OPTIONS: {
   value: Permissao;
   label: string;
   descricao: string;
-  icon: string;
+  Icon: ComponentType<{ className?: string }>;
   color: string;
   bg: string;
   border: string;
@@ -30,7 +32,7 @@ const PERMISSAO_OPTIONS: {
     value: 'visualizar',
     label: 'Visualizar',
     descricao: 'Pode ver informações, documentos e relatórios da obra',
-    icon: 'visibility',
+    Icon: IconVisibility,
     color: 'text-gray-600 dark:text-gray-400',
     bg: 'bg-gray-50 dark:bg-gray-800/50',
     border: 'border-gray-200 dark:border-gray-700',
@@ -39,7 +41,7 @@ const PERMISSAO_OPTIONS: {
     value: 'editar',
     label: 'Editar',
     descricao: 'Pode criar e modificar registros, ocorrências e cronograma',
-    icon: 'edit',
+    Icon: IconEdit,
     color: 'text-blue-600 dark:text-blue-400',
     bg: 'bg-blue-50/50 dark:bg-blue-900/10',
     border: 'border-blue-200 dark:border-blue-800',
@@ -48,7 +50,7 @@ const PERMISSAO_OPTIONS: {
     value: 'admin',
     label: 'Admin',
     descricao: 'Acesso total, incluindo gerenciar equipe e configurações',
-    icon: 'admin_panel_settings',
+    Icon: IconAdminPanelSettings,
     color: 'text-emerald-600 dark:text-emerald-400',
     bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
     border: 'border-emerald-200 dark:border-emerald-800',
@@ -96,7 +98,7 @@ export function PermissoesMembroModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">key</span>
+              <IconKey className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -128,9 +130,7 @@ export function PermissoesMembroModal({
                 )}
               >
                 <div className={cn('p-1.5 rounded-lg', isSelected ? opt.bg : 'bg-gray-100 dark:bg-gray-800')}>
-                  <span className={cn('material-symbols-outlined text-base', isSelected ? opt.color : 'text-gray-400')}>
-                    {opt.icon}
-                  </span>
+                  <opt.Icon className={cn('text-base', isSelected ? opt.color : 'text-gray-400')} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={cn('text-sm font-bold', isSelected ? opt.color : 'text-gray-700 dark:text-gray-300')}>
@@ -141,9 +141,7 @@ export function PermissoesMembroModal({
                   </p>
                 </div>
                 {isSelected && (
-                  <span className={cn('material-symbols-outlined text-base flex-shrink-0', opt.color)}>
-                    check_circle
-                  </span>
+                  <IconCheckCircle className={cn('text-base flex-shrink-0', opt.color)} />
                 )}
               </button>
             );
@@ -156,7 +154,7 @@ export function PermissoesMembroModal({
             Cancelar
           </Button>
           <Button type="button" size="sm" onClick={handleSalvar}>
-            <span className="material-symbols-outlined text-sm mr-1">save</span>
+            <IconSave className="text-sm mr-1" />
             Salvar permissão
           </Button>
         </DialogFooter>

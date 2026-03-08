@@ -8,6 +8,7 @@ import {
 } from '@shared/components/ui/popover';
 import { cn } from '@shared/lib/utils';
 import type { ObraPickerItem, ObraRefAttachment } from '../types';
+import { IconSearch } from '@shared/components/icons';
 
 const STATUS_LABEL: Record<string, string> = {
   em_execucao: 'Em execução',
@@ -68,9 +69,7 @@ export function ObraPickerSheet({ obras, onSelect, children }: ObraPickerSheetPr
             Referenciar obra
           </p>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base">
-              search
-            </span>
+            <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
             <input
               type="text"
               placeholder="Buscar obra..."

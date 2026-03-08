@@ -7,6 +7,7 @@ import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters'
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
 import type { MinhaObraCardProps } from '../types';
+import { IconLocationOn } from '@shared/components/icons';
 
 export function MinhaObraCard({ obra }: MinhaObraCardProps) {
   const borderColor = STATUS_BORDER_COLORS[obra.status] || 'border-l-gray-300';
@@ -45,7 +46,7 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{obra.tipo}</p>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{obra.titulo}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm dark:text-gray-400">location_on</span>
+              <IconLocationOn className="text-sm dark:text-gray-400" />
               {obra.endereco}
             </p>
           </div>

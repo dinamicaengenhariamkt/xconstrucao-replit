@@ -5,6 +5,7 @@ import { useState, Suspense } from "react";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
+import { IconCheckCircle, IconError, IconMarkEmailUnread } from '@shared/components/icons';
 
 function VerificarEmailContent() {
   const searchParams = useSearchParams();
@@ -80,9 +81,7 @@ function VerificarEmailContent() {
               <>
                 <div className="flex justify-center mb-6">
                   <div className="w-16 h-16 rounded-2xl bg-[#22846D]/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-3xl text-[#22846D]">
-                      check_circle
-                    </span>
+                    <IconCheckCircle className="text-3xl text-[#22846D]" />
                   </div>
                 </div>
                 <h2 className="text-2xl font-extrabold mb-2" data-testid="text-verified-title">
@@ -105,9 +104,7 @@ function VerificarEmailContent() {
               <>
                 <div className="flex justify-center mb-6">
                   <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-3xl text-red-500">
-                      error
-                    </span>
+                    <IconError className="text-3xl text-red-500" />
                   </div>
                 </div>
                 <h2 className="text-2xl font-extrabold mb-2" data-testid="text-error-title">
@@ -140,9 +137,7 @@ function VerificarEmailContent() {
               <>
                 <div className="flex justify-center mb-6">
                   <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-3xl text-[#333333] dark:text-white">
-                      mark_email_unread
-                    </span>
+                    <IconMarkEmailUnread className="text-3xl text-[#333333] dark:text-white" />
                   </div>
                 </div>
                 <h2 className="text-2xl font-extrabold mb-2" data-testid="text-pending-title">

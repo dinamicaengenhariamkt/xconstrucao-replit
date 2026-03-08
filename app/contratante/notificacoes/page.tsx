@@ -16,6 +16,7 @@ import {
 } from '@features/contratante/notifications/hooks/use-notifications';
 import type { NotificacaoTipo } from '@features/contratante/notifications/types';
 import type { ContratanteNotification } from '@features/contratante/notifications/types';
+import { IconExpandMore, IconNotificationsOff } from '@shared/components/icons';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -184,9 +185,7 @@ export default function NotificacoesPage() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
         {notifications.length === 0 ? (
           <div className="py-16 text-center">
-            <span className="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-600 block mb-3">
-              notifications_off
-            </span>
+            <IconNotificationsOff className="text-4xl text-gray-300 dark:text-gray-600 block mb-3" />
             <p className="text-sm text-gray-400">
               {filterLida === 'nao_lidas' ? 'Nenhuma notificação não lida' : 'Nenhuma notificação encontrada'}
             </p>
@@ -211,7 +210,7 @@ export default function NotificacoesPage() {
               onClick={loadMore}
               className="w-full py-2 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-lg">expand_more</span>
+              <IconExpandMore className="text-lg" />
               Carregar mais notificações
             </button>
           </div>

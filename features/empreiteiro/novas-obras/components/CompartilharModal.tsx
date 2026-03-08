@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { IconClose, IconLink, IconChat, IconSend, IconCheckCircle } from '@shared/components/icons';
+import type { ComponentType } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CompartilharModalProps {
@@ -9,25 +11,31 @@ interface CompartilharModalProps {
   obraTitulo: string;
 }
 
-const SHARE_OPTIONS = [
+const SHARE_OPTIONS: {
+  id: string;
+  label: string;
+  Icon: ComponentType<{ className?: string }>;
+  bg: string;
+  iconColor: string;
+}[] = [
   {
     id: 'copiar',
     label: 'Copiar link',
-    icon: 'link',
+    Icon: IconLink,
     bg: 'bg-gray-100 dark:bg-gray-800',
     iconColor: 'text-gray-700 dark:text-gray-300',
   },
   {
     id: 'whatsapp',
     label: 'WhatsApp',
-    icon: 'chat',
+    Icon: IconChat,
     bg: 'bg-green-50 dark:bg-green-900/20',
     iconColor: 'text-green-600',
   },
   {
     id: 'telegram',
     label: 'Telegram',
-    icon: 'send',
+    Icon: IconSend,
     bg: 'bg-blue-50 dark:bg-blue-900/20',
     iconColor: 'text-blue-500',
   },
@@ -100,7 +108,7 @@ export function CompartilharModal({ open, onClose, obraTitulo }: CompartilharMod
                   onClick={onClose}
                   className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-400 hover:text-gray-600"
                 >
-                  <span className="material-symbols-outlined text-lg">close</span>
+                  <IconClose className="text-lg" />
                 </button>
               </div>
 
@@ -115,9 +123,11 @@ export function CompartilharModal({ open, onClose, obraTitulo }: CompartilharMod
                       className="flex items-center gap-4 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left w-full group"
                     >
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${option.bg}`}>
-                        <span className={`material-symbols-outlined ${option.iconColor}`}>
-                          {isCopied ? 'check_circle' : option.icon}
-                        </span>
+                        {isCopied ? (
+                          <IconCheckCircle className={option.iconColor} />
+                        ) : (
+                          <option.Icon className={option.iconColor} />
+                        )}
                       </div>
                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                         {isCopied ? 'Link copiado!' : option.label}

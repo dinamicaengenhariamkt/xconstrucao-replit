@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@shared/lib/utils';
 import type { ObraContratanteDetalhe, OcorrenciaContratante } from '../types';
+import { IconCheckCircle, IconPerson, IconCalendarToday, IconTaskAlt, IconEmergency, IconWarning, IconInfo } from '@shared/components/icons';
 
 interface TabOcorrenciasProps {
   obra: ObraContratanteDetalhe;
@@ -15,28 +16,28 @@ const GRAVIDADE_CONFIG: Record<OcorrenciaContratante['gravidade'], {
   badgeBg: string;
   badgeText: string;
   borderClass: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string }>;
 }> = {
   critico: {
     label: 'Crítico',
     badgeBg: 'bg-red-100 dark:bg-red-900/30',
     badgeText: 'text-red-700 dark:text-red-400',
     borderClass: 'border-l-4 border-l-red-400 border-red-100 dark:border-red-800/40',
-    icon: 'emergency',
+    Icon: IconEmergency,
   },
   medio: {
     label: 'Médio',
     badgeBg: 'bg-amber-100 dark:bg-amber-900/30',
     badgeText: 'text-amber-700 dark:text-amber-400',
     borderClass: 'border-l-4 border-l-amber-400 border-amber-100 dark:border-amber-800/40',
-    icon: 'warning',
+    Icon: IconWarning,
   },
   baixo: {
     label: 'Baixo',
     badgeBg: 'bg-blue-100 dark:bg-blue-900/30',
     badgeText: 'text-blue-700 dark:text-blue-400',
     borderClass: 'border-l-4 border-l-blue-400 border-blue-100 dark:border-blue-800/40',
-    icon: 'info',
+    Icon: IconInfo,
   },
 };
 
@@ -130,7 +131,7 @@ export function TabOcorrencias({ obra }: TabOcorrenciasProps) {
       {/* Ocorrências list */}
       {filtered.length === 0 ? (
         <div className="text-center py-14">
-          <span className="material-symbols-outlined text-4xl text-gray-200 dark:text-gray-700">check_circle</span>
+          <IconCheckCircle className="text-4xl text-gray-200 dark:text-gray-700" />
           <p className="text-sm font-semibold text-gray-500 mt-3">Nenhuma ocorrência encontrada</p>
           <p className="text-xs text-gray-400 mt-1">Sem problemas para o filtro selecionado.</p>
         </div>
@@ -167,13 +168,13 @@ export function TabOcorrencias({ obra }: TabOcorrenciasProps) {
                           config.badgeBg,
                           config.badgeText
                         )}>
-                          <span className="material-symbols-outlined text-[12px]">{config.icon}</span>
+                          <config.Icon className="text-[12px]" />
                           {config.label}
                         </span>
                       )}
                       {isResolvida && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                          <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                          <IconCheckCircle className="text-[12px]" />
                           Resolvida
                         </span>
                       )}
@@ -191,16 +192,16 @@ export function TabOcorrencias({ obra }: TabOcorrenciasProps) {
                     {/* Meta */}
                     <div className="flex flex-wrap gap-4 text-xs text-gray-500">
                       <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px]">person</span>
+                        <IconPerson className="text-[12px]" />
                         {oc.responsavel}
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px]">calendar_today</span>
+                        <IconCalendarToday className="text-[12px]" />
                         Aberta em {oc.dataAbertura}
                       </span>
                       {isResolvida && oc.dataResolucao && (
                         <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                          <span className="material-symbols-outlined text-[12px]">task_alt</span>
+                          <IconTaskAlt className="text-[12px]" />
                           Resolvida em {oc.dataResolucao}
                           {oc.resolvidoPor && ` por ${oc.resolvidoPor}`}
                         </span>

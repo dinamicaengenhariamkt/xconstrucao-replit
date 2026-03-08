@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { RiImageLine } from 'react-icons/ri';
 import type { ObraContratanteDetalhe, FotoObra } from '../types';
+import { IconSend, IconCompare, IconClose, IconZoomIn } from '@shared/components/icons';
 
 interface TabFotosProps {
   obra: ObraContratanteDetalhe;
@@ -86,7 +87,7 @@ export function TabFotos({ obra }: TabFotosProps) {
             <p className="text-sm text-gray-500">Registro fotográfico enviado pelo empreiteiro</p>
           </div>
           <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-xl">
-            <span className="material-symbols-outlined text-sm text-primary">send</span>
+            <IconSend className="text-sm text-primary" />
             <span>{fotosEnviadas.length} foto{fotosEnviadas.length !== 1 ? 's' : ''} recebida{fotosEnviadas.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
@@ -134,9 +135,7 @@ export function TabFotos({ obra }: TabFotosProps) {
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl">
-                          zoom_in
-                        </span>
+                        <IconZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-2xl" />
                       </div>
                     </button>
 
@@ -166,7 +165,7 @@ export function TabFotos({ obra }: TabFotosProps) {
             {fotoAntes && fotoDurante && fotoAgora && (
               <div className="p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                 <h4 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">compare</span>
+                  <IconCompare className="text-primary" />
                   Comparativo de Evolução
                 </h4>
                 {!temFasesDefinidas && (
@@ -241,7 +240,7 @@ export function TabFotos({ obra }: TabFotosProps) {
                   <p className="text-xs text-white/60 mt-1">{selectedFoto.data}</p>
                 </div>
                 <span className="text-xs text-white/70 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">send</span>
+                  <IconSend className="text-sm" />
                   Enviada pelo empreiteiro
                 </span>
               </div>
@@ -250,7 +249,7 @@ export function TabFotos({ obra }: TabFotosProps) {
               onClick={() => setSelectedFoto(null)}
               className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-3xl">close</span>
+              <IconClose className="text-3xl" />
             </button>
           </motion.div>
         )}

@@ -13,6 +13,7 @@ import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { useToast } from '@shared/hooks/use-toast';
 import type { MinhaObraDetalhe } from '../types';
+import { IconShare, IconCheck, IconContentCopy, IconMail, IconLink } from '@shared/components/icons';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ export function CompartilharModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">share</span>
+              <IconShare className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -94,9 +95,7 @@ export function CompartilharModal({
                 onClick={handleCopiar}
                 className="shrink-0"
               >
-                <span className="material-symbols-outlined text-sm mr-1">
-                  {copied ? 'check' : 'content_copy'}
-                </span>
+                {copied ? <IconCheck className="text-sm mr-1" /> : <IconContentCopy className="text-sm mr-1" />}
                 {copied ? 'Copiado' : 'Copiar'}
               </Button>
             </div>
@@ -128,7 +127,7 @@ export function CompartilharModal({
                 className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
               >
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-xl">mail</span>
+                  <IconMail className="text-white text-xl" />
                 </div>
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">E-mail</span>
               </a>
@@ -140,7 +139,7 @@ export function CompartilharModal({
                 className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
               >
                 <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-xl">link</span>
+                  <IconLink className="text-white text-xl" />
                 </div>
                 <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Copiar link</span>
               </button>

@@ -13,6 +13,7 @@ import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { Button } from '@shared/components/ui/button';
 import type { MinhaObraDetalhe } from '../types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { IconDescription, IconConstruction, IconPayments, IconTaskAlt, IconTimeline, IconGroups, IconWarning, IconProgressActivity, IconDownload } from '@shared/components/icons';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export function RelatorioObraModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <span className="material-symbols-outlined text-primary text-xl">description</span>
+              <IconDescription className="text-primary text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -156,9 +157,7 @@ export function RelatorioObraModal({
                       className="w-10 h-10 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: 'var(--primary, #2563eb)' }}
                     >
-                      <span style={{ color: 'white', fontSize: '20px' }} className="material-symbols-outlined">
-                        construction
-                      </span>
+                      <IconConstruction style={{ color: 'white', fontSize: '20px' }} />
                     </div>
                     <span style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                       Obra Manager
@@ -198,7 +197,7 @@ export function RelatorioObraModal({
               {/* ── Resumo Financeiro ─────────────────────────────────────────── */}
               <section className="mb-8">
                 <h2 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}>payments</span>
+                  <IconPayments style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                   Resumo Financeiro
                 </h2>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -225,7 +224,7 @@ export function RelatorioObraModal({
               {/* ── Tarefas ───────────────────────────────────────────────────── */}
               <section className="mb-8">
                 <h2 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}>task_alt</span>
+                  <IconTaskAlt style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                   Tarefas ({obra.tarefas.length} total)
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
@@ -278,7 +277,7 @@ export function RelatorioObraModal({
               {obra.etapas.length > 0 && (
                 <section className="mb-8">
                   <h2 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}>timeline</span>
+                    <IconTimeline style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                     Etapas do Cronograma
                   </h2>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -313,7 +312,7 @@ export function RelatorioObraModal({
               {obra.equipe.length > 0 && (
                 <section className="mb-8">
                   <h2 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }}>groups</span>
+                    <IconGroups style={{ fontSize: '16px', color: 'var(--primary, #2563eb)' }} />
                     Equipe ({obra.equipe.filter((m) => m.ativo !== false).length} ativo(s))
                   </h2>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -344,7 +343,7 @@ export function RelatorioObraModal({
               {/* ── Ocorrências Abertas ───────────────────────────────────────── */}
               <section className="mb-8">
                 <h2 style={{ fontSize: '13px', fontWeight: 800, color: '#111827', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#ef4444' }}>warning</span>
+                  <IconWarning style={{ fontSize: '16px', color: '#ef4444' }} />
                   Ocorrências em Aberto
                 </h2>
                 {ocorrenciasAbertas.length === 0 ? (
@@ -398,12 +397,12 @@ export function RelatorioObraModal({
           <Button type="button" size="sm" onClick={handleDownload} disabled={loading}>
             {loading ? (
               <>
-                <span className="material-symbols-outlined text-sm mr-1 animate-spin">progress_activity</span>
+                <IconProgressActivity className="text-sm mr-1 animate-spin" />
                 Gerando...
               </>
             ) : (
               <>
-                <span className="material-symbols-outlined text-sm mr-1">download</span>
+                <IconDownload className="text-sm mr-1" />
                 Baixar PDF
               </>
             )}

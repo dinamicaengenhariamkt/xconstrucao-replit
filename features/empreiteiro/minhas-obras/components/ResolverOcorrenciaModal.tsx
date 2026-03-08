@@ -24,6 +24,7 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import type { ObraOcorrencia } from '../types';
+import { IconTaskAlt, IconCheck } from '@shared/components/icons';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ export function ResolverOcorrenciaModal({
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-              <span className="material-symbols-outlined text-emerald-600 text-xl">task_alt</span>
+              <IconTaskAlt className="text-emerald-600 text-xl" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
@@ -177,7 +178,7 @@ export function ResolverOcorrenciaModal({
             size="sm"
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            <span className="material-symbols-outlined text-sm mr-1">check</span>
+            <IconCheck className="text-sm mr-1" />
             Marcar resolvida
           </Button>
         </DialogFooter>
