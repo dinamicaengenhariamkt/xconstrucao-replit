@@ -33,7 +33,7 @@ export interface ObraContratanteDetalhe extends ObraContratante {
   timeline: TimelineEventContratante[];
   ocorrencias: OcorrenciaContratante[];
   equipe: MembroEquipe[];
-  financeiro: RegistroFinanceiro[];
+  financeiro: ObraFinanceiroContratante;
   fotos: FotoObra[];
   localizacao?: {
     cidade: string;
@@ -84,6 +84,24 @@ export interface RegistroFinanceiro {
   data: string;
   status: 'pago' | 'pendente' | 'atrasado';
   categoria: string;
+}
+
+export interface ObraMedicaoContratante {
+  id: string;
+  numero: number;
+  periodo: string;
+  dataEnvio: string;
+  valor: number;
+  status: 'aguardando_aprovacao' | 'aprovada' | 'rejeitada';
+  descricao?: string;
+}
+
+export interface ObraFinanceiroContratante {
+  valorContratado: number;
+  aditivos: number;
+  valorTotal: number;
+  valorPago: number;
+  medicoes: ObraMedicaoContratante[];
 }
 
 export interface FotoObra {

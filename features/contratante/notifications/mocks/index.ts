@@ -13,7 +13,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'info',
     lida: false,
     criadoEm: minutesAgo(8),
-    href: '/contratante/obras/reforma-comercial/propostas',
+    href: '/contratante/minhas-obras/5',
   },
   {
     id: 'cn-002',
@@ -22,7 +22,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'lembrete',
     lida: false,
     criadoEm: minutesAgo(45),
-    href: '/contratante/obras/residencial-jardins',
+    href: '/contratante/minhas-obras/1',
   },
   {
     id: 'cn-003',
@@ -31,7 +31,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'sucesso',
     lida: false,
     criadoEm: hoursAgo(2),
-    href: '/contratante/obras/ampliacao-galpao',
+    href: '/contratante/minhas-obras/2',
   },
   {
     id: 'cn-004',
@@ -49,7 +49,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'info',
     lida: false,
     criadoEm: hoursAgo(9),
-    href: '/contratante/obras/piscina-alvorada/propostas',
+    href: '/contratante/minhas-obras/5',
   },
   {
     id: 'cn-006',
@@ -58,7 +58,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'sucesso',
     lida: true,
     criadoEm: daysAgo(1),
-    href: '/contratante/obras/reforma-fachada/medicoes',
+    href: '/contratante/minhas-obras/1',
   },
   {
     id: 'cn-007',
@@ -67,7 +67,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'lembrete',
     lida: true,
     criadoEm: daysAgo(2),
-    href: '/contratante/obras/pintura-apartamento',
+    href: '/contratante/minhas-obras/3',
   },
   {
     id: 'cn-008',
@@ -76,7 +76,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'lembrete',
     lida: true,
     criadoEm: daysAgo(5),
-    href: '/contratante/obras/instalacao-eletrica/avaliacao',
+    href: '/contratante/minhas-obras/4',
   },
   {
     id: 'cn-009',
@@ -85,7 +85,7 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'alerta',
     lida: true,
     criadoEm: daysAgo(7),
-    href: '/contratante/obras/cobertura-metalica',
+    href: '/contratante/minhas-obras/6',
   },
   {
     id: 'cn-010',
@@ -94,6 +94,6 @@ export const MOCK_CONTRATANTE_NOTIFICATIONS: ContratanteNotification[] = [
     tipo: 'sucesso',
     lida: true,
     criadoEm: daysAgo(30),
-    href: '/contratante/obras/nova',
+    href: '/contratante/nova-obra',
   },
 ];

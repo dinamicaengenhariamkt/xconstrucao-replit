@@ -9,7 +9,6 @@ import { ObrasAtencaoTable } from '@features/admin/financeiro/components/ObrasAt
 import { TopClientesTable } from '@features/admin/financeiro/components/TopClientesTable';
 import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopEmpreiteirasTable';
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
-import { ExportBanner } from '@features/admin/financeiro/components/ExportBanner';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
 import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
 import {
@@ -83,8 +82,6 @@ export default function AdminFinanceiroPage() {
       {/* Bloco 6: Resumo de receitas */}
       <ReceitasPlataformaTable receitas={mockReceitasPlataforma} total={mockTotalReceitas} />
 
-      {/* Bloco 7: Export Banner */}
-      <ExportBanner />
     </div>
   );
 }

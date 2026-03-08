@@ -147,13 +147,17 @@ const detalhesMap: Record<string, Partial<ObraContratanteDetalhe>> = {
       { id: 'm3', nome: 'Roberto Mendes', funcao: 'Eletricista', iniciais: 'RM', cor: 'bg-amber-500', telefone: '(11) 96543-2109' },
       { id: 'm4', nome: 'Fátima Oliveira', funcao: 'Arquiteta', iniciais: 'FO', cor: 'bg-green-600', telefone: '(11) 95432-1098' },
     ],
-    financeiro: [
-      { id: 'f1', descricao: 'Medição 1 - Fundação', valor: 120000, tipo: 'saida', data: '15/02/2025', status: 'pago', categoria: 'Medição' },
-      { id: 'f2', descricao: 'Material - Cimento e Aço', valor: 85000, tipo: 'saida', data: '01/03/2025', status: 'pago', categoria: 'Material' },
-      { id: 'f3', descricao: 'Medição 2 - Estrutura', valor: 143000, tipo: 'saida', data: '20/04/2025', status: 'pago', categoria: 'Medição' },
-      { id: 'f4', descricao: 'Material - Tijolos e Argamassa', valor: 45000, tipo: 'saida', data: '15/05/2025', status: 'pendente', categoria: 'Material' },
-      { id: 'f5', descricao: 'Medição 3 - Alvenaria', valor: 95000, tipo: 'saida', data: '10/06/2025', status: 'pendente', categoria: 'Medição' },
-    ],
+    financeiro: {
+      valorContratado: 420000,
+      aditivos: 0,
+      valorTotal: 420000,
+      valorPago: 263000,
+      medicoes: [
+        { id: 'm1', numero: 1, periodo: 'Fevereiro 2025', dataEnvio: '14/02/2025', valor: 120000, status: 'aprovada' as const, descricao: 'Fundação completa — escavação, concretagem e impermeabilização' },
+        { id: 'm2', numero: 2, periodo: 'Abril 2025', dataEnvio: '18/04/2025', valor: 143000, status: 'aprovada' as const, descricao: 'Estrutura — pilares e lajes do térreo e 1º andar' },
+        { id: 'm3', numero: 3, periodo: 'Junho 2025', dataEnvio: '09/06/2025', valor: 95000, status: 'aguardando_aprovacao' as const, descricao: 'Alvenaria do térreo e instalações elétricas parciais' },
+      ],
+    },
     timeline: [
       { id: 'tl1', tipo: 'progresso', titulo: 'Progresso atualizado: 65%', descricao: 'Alvenaria do 1º andar concluída com sucesso', autor: 'João Silva', data: 'Hoje, 14:32' },
       { id: 'tl2', tipo: 'tarefa', titulo: 'Tarefa concluída: Laje do 1º andar', descricao: 'Concretagem da laje finalizada — cura mínima de 28 dias aguardada', autor: 'Equipe Pedro', data: 'Ontem, 17:15' },
@@ -231,7 +235,7 @@ const detalhesMap: Record<string, Partial<ObraContratanteDetalhe>> = {
     ],
     tarefas: [],
     equipe: [],
-    financeiro: [],
+    financeiro: { valorContratado: 3500000, aditivos: 0, valorTotal: 3500000, valorPago: 0, medicoes: [] },
     timeline: [],
     ocorrencias: [],
     fotos: [],
