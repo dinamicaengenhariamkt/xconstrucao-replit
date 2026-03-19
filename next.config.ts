@@ -13,17 +13,9 @@ const devOrigins = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  output: "standalone",
   serverExternalPackages: ["pg", "bcryptjs"],
   allowedDevOrigins: devOrigins,
-  webpack: (config, { dev }) => {
-    if (dev) {
-      config.watchOptions = {
-        aggregateTimeout: 500,
-        ignored: /\.next/,
-      };
-    }
-    return config;
-  },
 };
 
 export default nextConfig;

@@ -94,6 +94,8 @@ export default function AdminAuditoriaPage() {
   const { data: eventos, isLoading: eventosLoading } = useAuditoriaEventos();
   const [activeModulo, setActiveModulo] = useState('todos');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const filterOptions: FilterChipOption[] = useMemo(
     () =>
@@ -123,22 +125,24 @@ export default function AdminAuditoriaPage() {
           e.usuario.toLowerCase().includes(q),
       );
     }
+    if (dateFrom) {
+      result = result.filter((e) => e.dataHora >= dateFrom);
+    }
+    if (dateTo) {
+      result = result.filter((e) => e.dataHora <= dateTo + 'T23:59:59');
+    }
     return result;
-  }, [eventos, activeModulo, searchQuery]);
+  }, [eventos, activeModulo, searchQuery, dateFrom, dateTo]);
 
   // Group events by date label
   const grouped = useMemo(() => {
-    const groups: { dateLabel: string; eventos: typeof filtered }[] = [];
-    let currentLabel = '';
+    const map = new Map<string, typeof filtered>();
     for (const evt of filtered) {
       const label = getDateLabel(evt.dataHora);
-      if (label !== currentLabel) {
-        currentLabel = label;
-        groups.push({ dateLabel: label, eventos: [] });
-      }
-      groups[groups.length - 1].eventos.push(evt);
+      if (!map.has(label)) map.set(label, []);
+      map.get(label)!.push(evt);
     }
-    return groups;
+    return Array.from(map.entries()).map(([dateLabel, eventos]) => ({ dateLabel, eventos }));
   }, [filtered]);
 
   const kpis = [
@@ -208,16 +212,42 @@ export default function AdminAuditoriaPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <FilterChips options={filterOptions} activeValue={activeModulo} onSelect={setActiveModulo} />
-        <div className="relative w-full sm:w-72">
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar eventos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <FilterChips options={filterOptions} activeValue={activeModulo} onSelect={setActiveModulo} />
+          <div className="relative w-full sm:w-72">
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar eventos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Período:</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
+          <span className="text-gray-400 text-sm">–</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(''); setDateTo(''); }}
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              Limpar
+            </button>
+          )}
         </div>
       </div>
 

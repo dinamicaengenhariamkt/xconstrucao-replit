@@ -4,12 +4,23 @@ import { createPasswordResetToken } from "@features/auth/api/auth-service";
 import { sendPasswordResetEmail } from "@shared/lib/email";
 import { z } from "zod";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 const schema = z.object({
   email: z.string().email("Email inválido"),
 });
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (isRateLimited(`forgot:${ip}`, 3, 60 * 60 * 1000)) {
+    const response = NextResponse.json(
+      { message: "Muitas tentativas. Tente novamente em alguns minutos." },
+      { status: 429 }
+    );
+    setNoCacheHeaders(response);
+    return response;
+  }
+
   try {
     const body = await request.json();
     const result = schema.safeParse(body);

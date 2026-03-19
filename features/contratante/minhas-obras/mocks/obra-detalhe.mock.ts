@@ -269,7 +269,7 @@ export function getObraContratanteDetalheMock(id: string): ObraContratanteDetalh
     timeline: extra.timeline || [],
     ocorrencias: extra.ocorrencias || [],
     equipe: extra.equipe || [],
-    financeiro: extra.financeiro || [],
+    financeiro: extra.financeiro || { valorContratado: 0, aditivos: 0, valorTotal: 0, valorPago: 0, medicoes: [] },
     fotos: extra.fotos || [],
     localizacao: extra.localizacao,
     candidaturasLista: extra.candidaturasLista,

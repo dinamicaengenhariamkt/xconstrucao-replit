@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -25,21 +24,8 @@ import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist } from '../types';
-import { IconClose, IconAdd, IconHealthAndSafety, IconFactCheck, IconDomain, IconTaskAlt, IconEdit, IconPlaylistAdd, IconDragIndicator, IconSave } from '@shared/components/icons';
-import type { ComponentType } from 'react';
-
-// ─── Schema ───────────────────────────────────────────────────────────────────
-
-const checklistSchema = z.object({
-  nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
-  tipo: z.enum(['seguranca', 'diario', 'etapa']),
-  descricao: z.string().optional(),
-  itens: z
-    .array(z.object({ titulo: z.string().min(1, 'Item não pode ser vazio') }))
-    .min(1, 'Adicione ao menos um item'),
-});
-
-type ChecklistFormData = z.infer<typeof checklistSchema>;
+import { IconClose, IconAdd, IconTaskAlt, IconEdit, IconPlaylistAdd, IconDragIndicator, IconSave } from '@shared/components/icons';
+import { checklistSchema, type ChecklistFormData, TIPO_OPTIONS } from '../schemas/checklist-form.schema';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -49,38 +35,6 @@ interface ChecklistFormModalProps {
   checklistParaEditar?: MinhaObraChecklist | null;
   onSalvar: (checklist: MinhaObraChecklist) => void;
 }
-
-// ─── Configurações visuais por tipo ──────────────────────────────────────────
-
-const TIPO_OPTIONS: {
-  value: MinhaObraChecklist['tipo'];
-  label: string;
-  descricao: string;
-  Icon: ComponentType<{ className?: string }>;
-  color: string;
-}[] = [
-  {
-    value: 'seguranca',
-    label: 'Segurança',
-    descricao: 'EPIs, isolamentos e verificações de segurança',
-    Icon: IconHealthAndSafety,
-    color: 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-600',
-  },
-  {
-    value: 'diario',
-    label: 'Diário',
-    descricao: 'Registros e atividades do dia na obra',
-    Icon: IconFactCheck,
-    color: 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600',
-  },
-  {
-    value: 'etapa',
-    label: 'Etapa',
-    descricao: 'Validação técnica de fase da obra (requer assinatura)',
-    Icon: IconDomain,
-    color: 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600',
-  },
-];
 
 function gerarId() {
   return `cl${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;

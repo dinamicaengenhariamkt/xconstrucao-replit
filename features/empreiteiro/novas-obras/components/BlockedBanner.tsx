@@ -3,7 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import type { BlockedBannerProps, MotivoBloqueio } from '../types';
-import { IconSchedule, IconLock, IconArrowDownward, IconDomain, IconStarHalf, IconShield, IconSupportAgent } from '@shared/components/icons';
+import { IconSchedule, IconLock, IconArrowDown, IconDomain, IconStarHalf, IconShield, IconSupportAgent } from '@shared/components/icons';
 
 function MotivoCard({ motivo }: { motivo: MotivoBloqueio }) {
   if (motivo.tipo === 'volume_obras') {
@@ -122,7 +122,7 @@ export function BlockedBanner({ perfilStatus }: BlockedBannerProps) {
               className="inline-flex items-center gap-1.5 mt-3 text-sm font-bold text-red-600 dark:text-red-400 hover:text-red-700 transition-colors"
             >
               <span>Entenda o motivo</span>
-              <IconArrowDownward className="text-base" />
+              <IconArrowDown className="text-base" />
             </a>
           )}
         </div>

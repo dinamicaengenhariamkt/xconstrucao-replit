@@ -14,16 +14,8 @@ import { Button } from '@shared/components/ui/button';
 import type { MinhaObraDetalhe } from '../types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconDescription, IconConstruction, IconPayments, IconTaskAlt, IconTimeline, IconGroups, IconWarning, IconProgressActivity, IconDownload } from '@shared/components/icons';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const STATUS_LABELS: Record<string, string> = {
-  em_execucao: 'Em Execução',
-  com_atrasos: 'Com Atrasos',
-  com_pendencias: 'Com Pendências',
-  planejamento: 'Planejamento',
-  finalizada: 'Finalizada',
-};
+import { STATUS_LABELS } from '@shared/constants/status';
+import { generateObraPdf } from '../utils/generate-obra-pdf';
 
 const TAREFA_STATUS_LABELS: Record<string, string> = {
   pendente: 'Pendente',
@@ -82,37 +74,7 @@ export function RelatorioObraModal({
     if (!reportRef.current) return;
     setLoading(true);
     try {
-      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas'),
-      ]);
-
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      const img = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-
-      if (imgH <= pageH) {
-        pdf.addImage(img, 'PNG', 0, 0, imgW, imgH);
-      } else {
-        let yOffset = 0;
-        while (yOffset < imgH) {
-          pdf.addImage(img, 'PNG', 0, -yOffset, imgW, imgH);
-          yOffset += pageH;
-          if (yOffset < imgH) pdf.addPage();
-        }
-      }
-
-      pdf.save(`relatorio-obra-${obra.id}.pdf`);
+      await generateObraPdf(reportRef.current, obra.id);
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
     } finally {

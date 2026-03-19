@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { formatCurrency } from '@shared/lib/formatters';
 import {
@@ -24,9 +25,12 @@ import {
   RiArrowDownLine,
   RiVipCrownLine,
   RiCheckLine,
+  RiSearchLine,
 } from 'react-icons/ri';
 
 type TabKey = 'contratante' | 'empreiteiro';
+
+const PAGE_SIZE = 5;
 
 function PlanoCard({ plano }: { plano: AdminPlano }) {
   const priceLabel = plano.preco === 0 ? 'Gratuito' : `R$ ${plano.preco}/mês`;
@@ -138,6 +142,9 @@ function AssinantesTable({ assinantes }: { assinantes: AdminPlanoAssinante[] }) 
 
 export default function AdminPlanosPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('contratante');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
   const { data: kpi, isLoading: kpiLoading } = usePlanosKpi();
   const { data: planosContratante, isLoading: pcLoading } = usePlanosContratante();
   const { data: planosEmpreiteiro, isLoading: peLoading } = usePlanosEmpreiteiro();
@@ -145,8 +152,28 @@ export default function AdminPlanosPage() {
   const { data: assinantesEmpreiteiro } = useAssinantesEmpreiteiro();
 
   const planos = activeTab === 'contratante' ? (planosContratante ?? []) : (planosEmpreiteiro ?? []);
-  const assinantes = activeTab === 'contratante' ? (assinantesContratante ?? []) : (assinantesEmpreiteiro ?? []);
+  const allAssinantes = activeTab === 'contratante' ? (assinantesContratante ?? []) : (assinantesEmpreiteiro ?? []);
   const planosLoading = activeTab === 'contratante' ? pcLoading : peLoading;
+
+  const filteredAssinantes = useMemo(() => {
+    if (!search.trim()) return allAssinantes;
+    const q = search.toLowerCase();
+    return allAssinantes.filter(
+      (a) =>
+        a.nome.toLowerCase().includes(q) ||
+        a.email.toLowerCase().includes(q) ||
+        a.planoNome.toLowerCase().includes(q),
+    );
+  }, [allAssinantes, search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, activeTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAssinantes.length / PAGE_SIZE));
+  const paginatedAssinantes = filteredAssinantes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const showingFrom = filteredAssinantes.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const showingTo = Math.min(page * PAGE_SIZE, filteredAssinantes.length);
 
   const kpis = [
     {
@@ -245,10 +272,46 @@ export default function AdminPlanosPage() {
 
       {/* Subscribers Table */}
       <div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-          Assinantes — {activeTab === 'contratante' ? 'Contratantes' : 'Empreiteiros'}
-        </h2>
-        <AssinantesTable assinantes={assinantes} />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Assinantes — {activeTab === 'contratante' ? 'Contratantes' : 'Empreiteiros'}
+          </h2>
+          <div className="relative w-full sm:w-64">
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar assinante..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+            />
+          </div>
+        </div>
+
+        <AssinantesTable assinantes={paginatedAssinantes} />
+
+        {filteredAssinantes.length > 0 && (
+          <div className="flex items-center justify-between mt-4 text-sm text-gray-500 dark:text-gray-400">
+            <span>
+              Mostrando {showingFrom}–{showingTo} de {filteredAssinantes.length}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
+              >
+                Próximo
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

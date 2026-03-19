@@ -35,7 +35,7 @@ export function EmpreiteiroSidebar() {
     router.push('/');
   }, [logout, router]);
 
-  const PLANO_ATUAL_ID = 'profissional'; // 'basico' | 'profissional' | 'enterprise'
+  const PLANO_ATUAL_ID: string = 'profissional'; // 'basico' | 'profissional' | 'enterprise'
 
   const isActive = (url: string): boolean => {
     if (url === '/empreiteiro/dashboard') return pathname === url;

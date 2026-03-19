@@ -7,8 +7,19 @@ import {
   createRefreshToken
 } from "@features/auth/api/auth-service";
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (isRateLimited(`login:${ip}`, 10, 15 * 60 * 1000)) {
+    const response = NextResponse.json(
+      { error: "Muitas tentativas. Tente novamente em alguns minutos." },
+      { status: 429 }
+    );
+    setNoCacheHeaders(response);
+    return response;
+  }
+
   try {
     const body = await request.json();
 

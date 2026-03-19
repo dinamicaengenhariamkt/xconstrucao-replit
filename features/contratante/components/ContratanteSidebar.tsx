@@ -34,7 +34,7 @@ export function ContratanteSidebar() {
     router.push('/');
   }, [logout, router]);
 
-  const PLANO_ATUAL_ID = 'empresarial'; // 'starter' | 'empresarial' | 'enterprise'
+  const PLANO_ATUAL_ID: string = 'empresarial'; // 'starter' | 'empresarial' | 'enterprise'
 
   const isActive = (url: string): boolean => {
     if (url === '/contratante/dashboard') return pathname === url;

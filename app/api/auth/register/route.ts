@@ -4,8 +4,19 @@ import { hashPassword, createEmailVerificationToken } from "@features/auth/api/a
 import { registerSchema } from "@features/auth/schemas";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  if (isRateLimited(`register:${ip}`, 5, 60 * 60 * 1000)) {
+    const response = NextResponse.json(
+      { message: "Muitas tentativas. Tente novamente em alguns minutos." },
+      { status: 429 }
+    );
+    setNoCacheHeaders(response);
+    return response;
+  }
+
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);

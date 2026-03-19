@@ -44,7 +44,7 @@ function buildChartData(pagamentos: ClientePagamento[]) {
 }
 
 interface ClienteFinanceiroTabProps {
-  financeiro: ClienteFinanceiro | undefined;
+  financeiro: ClienteFinanceiro | null | undefined;
   isLoading: boolean;
 }
 

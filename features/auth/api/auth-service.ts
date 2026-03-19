@@ -24,25 +24,27 @@ export function createPasswordResetToken(userId: string, email: string): string 
   return `${header}.${payload}.${signature}`;
 }
 
-export function verifyPasswordResetToken(token: string): { userId: string; email: string } | null {
+// Verifica assinatura HMAC, tipo e expiração. Retorna payload bruto ou null.
+function verifyJwtPayload(token: string, expectedType: string): Record<string, unknown> | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-
     const [header, payload, signature] = parts;
     const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
     if (signature !== expectedSig) return null;
-
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-
-    // Verificar se é token de reset e se não expirou
-    if (data.type !== "password-reset") return null;
-    if (data.exp < Math.floor(Date.now() / 1000)) return null;
-
-    return { userId: data.sub, email: data.email };
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as Record<string, unknown>;
+    if (data.type !== expectedType) return null;
+    if ((data.exp as number) < Math.floor(Date.now() / 1000)) return null;
+    return data;
   } catch {
     return null;
   }
+}
+
+export function verifyPasswordResetToken(token: string): { userId: string; email: string } | null {
+  const data = verifyJwtPayload(token, "password-reset");
+  if (!data) return null;
+  return { userId: data.sub as string, email: data.email as string };
 }
 
 export function createEmailVerificationToken(userId: string, email: string): string {
@@ -59,23 +61,9 @@ export function createEmailVerificationToken(userId: string, email: string): str
 }
 
 export function verifyEmailVerificationToken(token: string): { userId: string; email: string } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const [header, payload, signature] = parts;
-    const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-    if (signature !== expectedSig) return null;
-
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-
-    if (data.type !== "email-verification") return null;
-    if (data.exp < Math.floor(Date.now() / 1000)) return null;
-
-    return { userId: data.sub, email: data.email };
-  } catch {
-    return null;
-  }
+  const data = verifyJwtPayload(token, "email-verification");
+  if (!data) return null;
+  return { userId: data.sub as string, email: data.email as string };
 }
 
 // ==================== SISTEMA JWT CUSTOM (ACCESS + REFRESH TOKENS) ====================
@@ -164,24 +152,8 @@ export function createRefreshToken(userId: string, rememberMe: boolean = false):
  * Retorna o payload se válido, null caso contrário
  */
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const [header, payload, signature] = parts;
-    const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-    if (signature !== expectedSig) return null;
-
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-
-    // Verificar tipo e expiração
-    if (data.type !== "access") return null;
-    if (data.exp < Math.floor(Date.now() / 1000)) return null;
-
-    return data as AccessTokenPayload;
-  } catch {
-    return null;
-  }
+  const data = verifyJwtPayload(token, "access");
+  return data ? (data as unknown as AccessTokenPayload) : null;
 }
 
 /**
@@ -189,24 +161,8 @@ export function verifyAccessToken(token: string): AccessTokenPayload | null {
  * Retorna o payload se válido, null caso contrário
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const [header, payload, signature] = parts;
-    const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
-    if (signature !== expectedSig) return null;
-
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
-
-    // Verificar tipo e expiração
-    if (data.type !== "refresh") return null;
-    if (data.exp < Math.floor(Date.now() / 1000)) return null;
-
-    return data as RefreshTokenPayload;
-  } catch {
-    return null;
-  }
+  const data = verifyJwtPayload(token, "refresh");
+  return data ? (data as unknown as RefreshTokenPayload) : null;
 }
 
 /**

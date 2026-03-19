@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/components/ui/tabs';
 import {
   RiArrowLeftLine,
+  RiArrowRightSLine,
   RiBuilding2Line,
   RiMapPinLine,
   RiCalendarLine,
@@ -214,7 +216,6 @@ function HistoricoTab({ historico }: { historico: AdminObraHistoricoItem[] }) {
 
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -247,13 +248,13 @@ export default function AdminObraDetalhePage() {
         <p className="text-gray-500 dark:text-gray-400 text-center max-w-sm">
           Não encontramos nenhuma obra com o identificador informado.
         </p>
-        <button
-          onClick={() => router.back()}
+        <Link
+          href="/admin/obras"
           className="flex items-center gap-2 text-sm font-bold text-[#1E88E5] hover:underline"
         >
           <RiArrowLeftLine className="w-4 h-4" />
-          Voltar
-        </button>
+          Voltar para Obras
+        </Link>
       </div>
     );
   }
@@ -304,14 +305,23 @@ export default function AdminObraDetalhePage() {
 
   return (
     <div className="space-y-6 p-6 md:p-10">
-      {/* Botão voltar */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors font-medium"
-      >
-        <RiArrowLeftLine className="w-4 h-4" />
-        Voltar
-      </button>
+      {/* Breadcrumb */}
+      <div className="flex flex-col gap-2">
+        <Link
+          href="/admin/obras"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors w-fit font-medium"
+        >
+          <RiArrowLeftLine className="w-4 h-4" />
+          Voltar para Obras
+        </Link>
+        <div className="flex items-center gap-1.5 text-sm">
+          <Link href="/admin/obras" className="text-muted-foreground hover:text-primary transition-colors">
+            Obras
+          </Link>
+          <RiArrowRightSLine className="w-4 h-4 text-gray-400" />
+          <span className="font-bold text-gray-900 dark:text-white">{obra.nome}</span>
+        </div>
+      </div>
 
       {/* Hero Card */}
       <Card className="rounded-2xl border border-border-light dark:border-gray-800 shadow-sm overflow-hidden">
