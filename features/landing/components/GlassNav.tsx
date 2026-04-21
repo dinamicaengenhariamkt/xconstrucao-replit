@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { RiMenuLine } from 'react-icons/ri';
-import { Sheet, SheetContent, SheetTrigger } from "@shared/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@shared/components/ui/sheet";
 import type { GlassNavProps } from '../types';
 
 export function GlassNav({ showAccessButton = true, showAdminButton = false }: GlassNavProps) {
@@ -109,6 +109,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
         side="left"
         className="w-[280px] backdrop-blur-xl bg-white/95 dark:bg-[#1C1F22]/95 border-r border-white/20"
       >
+        <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
         <div className="flex flex-col h-full pt-8">
           <nav className="flex flex-col gap-2">
             <Link

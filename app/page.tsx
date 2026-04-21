@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
-import { IconShield, IconVerified, IconDashboardCustomize, IconTarget, IconHub, IconBolt, IconCalculate, IconTableChart } from '@shared/components/icons';
+import { IconShield, IconDashboardCustomize, IconTarget, IconHub, IconBolt } from '@shared/components/icons';
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
+import { MarketplaceNotificacaoModal } from "@features/landing/components/MarketplaceNotificacaoModal";
 
 export default function HomePage() {
+  const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
+
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
       <StructuredData data={[
@@ -69,6 +73,14 @@ export default function HomePage() {
               >
                 Sou Contratante
               </Link>
+              <a
+                href="#solucoes"
+                className="bg-[#7C3AED] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex flex-col items-center justify-center leading-tight"
+                data-testid="link-marketplace-em-breve"
+              >
+                <span>marketplace</span>
+                <span className="text-xs font-medium opacity-80">(em breve)</span>
+              </a>
             </div>
             {/* Imagem ilustrativa */}
             <div className="mt-12 w-full">
@@ -86,7 +98,7 @@ export default function HomePage() {
         {/* Parceiros / Trust Bar */}
         <section className="py-24 px-6">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Nossos <br />
@@ -97,7 +109,7 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-12 opacity-40 grayscale items-center justify-items-center">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-12 opacity-40 grayscale items-center justify-items-center">
               {["Parceiro 1", "Parceiro 2", "Parceiro 3", "Parceiro 4", "Parceiro 5"].map(
                 (partner) => (
                   <div
@@ -110,10 +122,94 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Bento Features - Inovação em cada etapa */}
-        <section id="solucoes" className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
+        {/* Nossas Soluções */}
+        <section id="solucoes" className="py-32 px-6 scroll-mt-24">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
+              <div className="max-w-[600px]">
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                  Nossas <br />
+                  Soluções
+                </h2>
+                <p className="text-xl text-slate-500">
+                  Tecnologia que acelera suas obras, do planejamento ao fechamento.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Card xgestão inteligente */}
+              <div
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
+                style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+              >
+                <IconDashboardCustomize className="text-5xl text-[#333333] dark:text-white mb-6" />
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-xl md:text-2xl font-extrabold mb-1">
+                    xgestão inteligente
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium italic mb-5">
+                    (Solução ativa — já disponível)
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
+                    Sistema completo de gestão de obras com dashboards financeiros,
+                    progresso real-time, alertas, relatórios e SINAPI integrado.
+                    Controle total, transparência e previsibilidade desde o primeiro dia.
+                  </p>
+                  <p className="text-slate-700 dark:text-slate-200 text-sm font-bold mb-8">
+                    Teste Grátis por 3 meses
+                  </p>
+                  <div className="mt-auto">
+                    <Link
+                      href="/acesso-plataforma"
+                      className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
+                      data-testid="link-comecar-xgestao"
+                    >
+                      Começar com xgestão inteligente
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card Marketplace xconstrução (em breve) */}
+              <div
+                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
+                style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+              >
+                <IconHub className="text-5xl text-[#7C3AED] mb-6" />
+                <div className="flex-1 flex flex-col">
+                  <h3 className="text-xl md:text-2xl font-extrabold mb-1">
+                    Marketplace xconstrução
+                  </h3>
+                  <p className="text-[#7C3AED] text-sm font-medium italic mb-5">
+                    (em breve)
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
+                    Conexão direta entre contratantes e empreiteiros qualificados,
+                    com intermediação segura, escrow e oportunidades exclusivas.
+                    Acesso a profissionais verificados com Responsabilidade Técnica
+                    ativa (ART/RRT) e portfólio validado — qualidade, legalidade
+                    e experiência comprovada em cada projeto.
+                  </p>
+                  <div className="mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => setMarketplaceModalOpen(true)}
+                      className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold px-8 py-3 rounded-full transition-colors inline-flex items-center text-sm"
+                      data-testid="button-notificar-marketplace"
+                    >
+                      Quero ser notificado quando lançar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bento Features - Inovação em cada etapa */}
+        <section className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Inovação em <br />
@@ -158,34 +254,6 @@ export default function HomePage() {
                 className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
-                <IconHub className="text-5xl text-[#333333] dark:text-white mb-6" />
-                <div className="flex-1 flex flex-col">
-                  <h3 className="text-2xl font-extrabold mb-3">Conexão xconstrução</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
-                    Acesse os melhores projetos e profissionais do mercado através de nosso ecossistema verificado. Profissionais respaldados por Responsabilidade Técnica ativa (ART/RRT) e portfólio de obras reais validado pela plataforma — garantia de qualidade, legalidade e experiência comprovada em projetos diversos e de alto padrão.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className="bg-[#333333] text-white rounded-2xl p-10 flex flex-col min-h-[300px] md:col-span-2"
-                style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-              >
-                <IconVerified className="text-5xl mb-6" />
-                <div className="flex-1 flex flex-col">
-                  <h3 className="text-2xl font-extrabold mb-3">
-                    Profissionais com Responsabilidade Técnica e portfólio validado
-                  </h3>
-                  <p className="text-white/80 text-sm leading-relaxed">
-                    Profissionais respaldados por Responsabilidade Técnica ativa (ART/RRT) e portfólio de obras reais validado pela plataforma — garantia de qualidade, legalidade e experiência comprovada em projetos diversos e de alto padrão.
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[300px]"
-                style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-              >
                 <IconBolt className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
                   <h3 className="text-2xl font-extrabold mb-3">
@@ -201,9 +269,9 @@ export default function HomePage() {
         </section>
 
         {/* Projetos em Destaque */}
-        <section id="projetos" className="py-32 px-6">
+        <section id="projetos" className="py-32 px-6 scroll-mt-24">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Projetos em <br />
@@ -257,7 +325,7 @@ export default function HomePage() {
         {/* Mercado em Foco */}
         <section className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Mercado em <br />
@@ -365,70 +433,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* xgestão inteligente + SINAPI */}
-        <section className="py-20 px-6">
-          <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div
-              className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col justify-between min-h-[300px]"
-              style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-            >
-              <IconDashboardCustomize className="text-5xl text-[#333333] dark:text-white mb-4" />
-              <div>
-                <h3 className="text-2xl font-extrabold mb-3">
-                  xgestão inteligente
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                  Sistema completo de gestão com IA para otimizar custos, prazos
-                  e recursos em suas obras.
-                </p>
-                <Link
-                  href="/xgestao-inteligente"
-                  className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
-                  data-testid="link-saiba-mais"
-                >
-                  Saiba Mais
-                </Link>
-              </div>
-            </div>
-
-            <div
-              className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col justify-between min-h-[300px]"
-              style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-            >
-              <IconCalculate className="text-5xl text-[#333333] dark:text-white mb-4" />
-              <div>
-                <h3 className="text-2xl font-extrabold mb-3">
-                  Comece com xgestão inteligente
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6">
-                  Teste gratuitamente por 3 meses e descubra o poder de uma
-                  gestão transparente e eficiente.
-                </p>
-                <Link
-                  href="/acesso-plataforma"
-                  className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
-                >
-                  Teste Grátis
-                </Link>
-              </div>
-            </div>
-
-            <div
-              className="bg-[#333333] text-white rounded-2xl p-10 flex flex-col justify-center items-center text-center min-h-[160px] md:col-span-2"
-              style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-            >
-              <IconTableChart className="text-4xl mb-3" />
-              <h3 className="text-xl font-bold mb-2">
-                SINAPI em Todos os Planos
-              </h3>
-              <p className="text-white/70 text-sm max-w-[500px]">
-                Acesse a tabela SINAPI atualizada em todos os planos da
-                plataforma, sem custos adicionais.
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* CTA Final */}
         <section className="relative py-32 px-6 bg-[#333333] text-white overflow-hidden">
           <div className="relative z-10 max-w-[800px] mx-auto text-center">
@@ -436,8 +440,7 @@ export default function HomePage() {
               Pronto para o próximo nível?
             </h2>
             <p className="text-xl opacity-80 max-w-[600px] mx-auto mb-12 font-light">
-              Junte-se à xconstrução.
-              <br />A plataforma que está revolucionando a construção civil.
+              Comece agora com a xgestão inteligente (3 meses grátis) e prepare-se para o marketplace completo.
             </p>
             <div className="flex justify-center">
               <Link
@@ -445,7 +448,7 @@ export default function HomePage() {
                 className="bg-white text-[#333333] font-bold h-14 px-10 rounded-full hover:scale-105 transition-transform inline-flex items-center justify-center"
                 data-testid="link-cta-acesso"
               >
-                Acesso à Plataforma
+                Acessar xgestão inteligente
               </Link>
             </div>
           </div>
@@ -455,6 +458,11 @@ export default function HomePage() {
       </main>
 
       <SiteFooter />
+
+      <MarketplaceNotificacaoModal
+        open={marketplaceModalOpen}
+        onOpenChange={setMarketplaceModalOpen}
+      />
     </div>
   );
 }

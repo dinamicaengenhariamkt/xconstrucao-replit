@@ -145,7 +145,7 @@ export default function XGestaoInteligentePage() {
         {/* Funcionalidades */}
         <section id="funcionalidades" className="py-20 px-6">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Funcionalidades
@@ -177,7 +177,7 @@ export default function XGestaoInteligentePage() {
         {/* Diferenciais */}
         <section className="py-20 px-6 bg-[#F4F5F5] dark:bg-[#2A2D30] transition-colors duration-300">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
               <div className="max-w-[600px]">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
                   Diferenciais

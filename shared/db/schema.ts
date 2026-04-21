@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -86,6 +86,18 @@ export const candidaturas = pgTable("candidaturas", {
   atividades: text("atividades"),
 });
 
+export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
+
+export const marketplaceLeads = pgTable("marketplace_leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: text("nome").notNull(),
+  email: text("email").notNull(),
+  telefone: text("telefone").notNull(),
+  isWhatsapp: boolean("is_whatsapp").notNull().default(false),
+  status: marketplaceLeadStatusEnum("status").notNull().default("pendente"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // NextAuth.js tables
 export const accounts = pgTable("accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -121,6 +133,14 @@ export const insertEmpreiteiraSchema = createInsertSchema(empreiteiras).omit({ i
 export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
 export const insertFinanceiroSchema = createInsertSchema(financeiro).omit({ id: true });
 export const insertCandidaturaSchema = createInsertSchema(candidaturas).omit({ id: true, createdAt: true });
+export const insertMarketplaceLeadSchema = createInsertSchema(marketplaceLeads).omit({ id: true, createdAt: true, status: true });
+
+export const marketplaceLeadSchema = z.object({
+  nome: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(120, "Nome muito longo"),
+  email: z.string().trim().email("Email inválido").max(160, "Email muito longo"),
+  telefone: z.string().trim().min(8, "Telefone inválido").max(30, "Telefone muito longo"),
+  isWhatsapp: z.boolean().default(false),
+});
 
 export const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -148,3 +168,6 @@ export type InsertFinanceiro = z.infer<typeof insertFinanceiroSchema>;
 export type Financeiro = typeof financeiro.$inferSelect;
 export type InsertCandidatura = z.infer<typeof insertCandidaturaSchema>;
 export type Candidatura = typeof candidaturas.$inferSelect;
+export type InsertMarketplaceLead = z.infer<typeof insertMarketplaceLeadSchema>;
+export type MarketplaceLead = typeof marketplaceLeads.$inferSelect;
+export type MarketplaceLeadInput = z.infer<typeof marketplaceLeadSchema>;

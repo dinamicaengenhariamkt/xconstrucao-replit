@@ -12,7 +12,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string, userN
 
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
-      from: `XConstrução <${emailFrom}>`,
+      from: `XConstrucao <${emailFrom}>`,
       to,
       subject: 'XConstrução - Recuperação de Senha',
       html: emailHtml,
@@ -40,7 +40,7 @@ export async function sendWelcomeEmail(
 
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
-      from: `XConstrução <${emailFrom}>`,
+      from: `XConstrucao <${emailFrom}>`,
       to,
       subject: 'Bem-vindo à XConstrução!',
       html: emailHtml,
@@ -68,7 +68,7 @@ export async function sendVerificationEmail(
 
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
-      from: `XConstrução <${emailFrom}>`,
+      from: `XConstrucao <${emailFrom}>`,
       to,
       subject: 'XConstrução - Confirme seu Email',
       html: emailHtml,
