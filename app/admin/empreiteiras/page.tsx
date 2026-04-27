@@ -10,20 +10,23 @@ import { Badge } from '@shared/components/ui/badge';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
-import { FilterChips } from '@features/shared/components/FilterChips';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
+import { StarRatingFilter } from '@features/shared/components/filters/StarRatingFilter';
 import { useAdminEmpreiteiras } from '@features/admin/empreiteiras/hooks/use-empreiteiras';
 import { NovaEmpreiteiraModal } from '@features/admin/empreiteiras/components/NovaEmpreiteiraModal';
 import {
   RiSearchLine,
   RiAddLine,
   RiBuilding2Line,
-  RiCheckLine,
   RiBriefcaseLine,
   RiMoneyDollarCircleLine,
   RiStarFill,
   RiStarLine,
+  RiMapPinLine,
 } from 'react-icons/ri';
-import type { FilterChipOption } from '@features/shared/types';
 import type { AdminEmpreiteira, EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
 
 import { formatCurrency } from '@shared/lib/formatters';
@@ -82,6 +85,10 @@ function EmpreiteiraCard({ empreiteira }: { empreiteira: AdminEmpreiteira }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{empreiteira.razaoSocial}</p>
                 <p className="text-xs text-muted-foreground truncate">{empreiteira.cnpj}</p>
+                <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                  <RiMapPinLine className="w-3 h-3 shrink-0" />
+                  {empreiteira.cidade} · {empreiteira.estado}
+                </p>
               </div>
               <Badge
                 className={cn('rounded-full text-[10px] font-bold px-2.5 py-0.5 no-default-hover-elevate no-default-active-elevate', status.className)}
@@ -131,37 +138,84 @@ function EmpreiteiraCard({ empreiteira }: { empreiteira: AdminEmpreiteira }) {
   );
 }
 
+const STATUS_OPTIONS: { value: EmpreiteiraStatus; label: string }[] = [
+  { value: 'ativa', label: 'Ativa' },
+  { value: 'inativa', label: 'Inativa' },
+  { value: 'suspensa', label: 'Suspensa' },
+  { value: 'pendente', label: 'Pendente' },
+];
+
 export default function AdminEmpreiteirasPage() {
   const { data: empreiteiras, isLoading } = useAdminEmpreiteiras();
-  const [activeFilter, setActiveFilter] = useState('todas');
+  const [statusSelected, setStatusSelected] = useState<EmpreiteiraStatus[]>([]);
+  const [especialidadesSelected, setEspecialidadesSelected] = useState<string[]>([]);
+  const [ufsSelected, setUfsSelected] = useState<string[]>([]);
+  const [obrasMin, setObrasMin] = useState('');
+  const [obrasMax, setObrasMax] = useState('');
+  const [qualidadeMin, setQualidadeMin] = useState<number | undefined>(undefined);
+  const [valorMin, setValorMin] = useState('');
+  const [valorMax, setValorMax] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const stats = useMemo(() => {
-    if (!empreiteiras) return { total: 0, ativas: 0, obrasEmAndamento: 0, volume: 0 };
-    const ativas = empreiteiras.filter((e) => e.status === 'ativa').length;
-    const obrasEmAndamento = empreiteiras.reduce((sum, e) => sum + e.obrasEmAndamento, 0);
-    const volume = empreiteiras.reduce((sum, e) => sum + e.valorTotalContratado, 0);
-    return { total: empreiteiras.length, ativas, obrasEmAndamento, volume };
+  const especialidadesOptions = useMemo(() => {
+    if (!empreiteiras) return [];
+    const set = new Set<string>();
+    empreiteiras.forEach((e) => e.especialidades.forEach((esp) => set.add(esp)));
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((v) => ({ value: v, label: v }));
   }, [empreiteiras]);
 
-  const filterOptions: FilterChipOption[] = useMemo(() => {
+  const ufsOptions = useMemo(() => {
     if (!empreiteiras) return [];
-    return [
-      { label: 'Todas', value: 'todas', count: empreiteiras.length },
-      { label: 'Ativas', value: 'ativa', count: empreiteiras.filter((e) => e.status === 'ativa').length },
-      { label: 'Inativas', value: 'inativa', count: empreiteiras.filter((e) => e.status === 'inativa').length },
-      { label: 'Suspensas', value: 'suspensa', count: empreiteiras.filter((e) => e.status === 'suspensa').length },
-      { label: 'Pendentes', value: 'pendente', count: empreiteiras.filter((e) => e.status === 'pendente').length },
-    ];
+    const set = new Set<string>();
+    empreiteiras.forEach((e) => set.add(e.estado));
+    return Array.from(set)
+      .sort()
+      .map((v) => ({ value: v, label: v }));
   }, [empreiteiras]);
+
+  const stats = useMemo(() => {
+    if (!empreiteiras) return { total: 0, volume: 0 };
+    const volume = empreiteiras.reduce((sum, e) => sum + e.valorTotalContratado, 0);
+    return { total: empreiteiras.length, volume };
+  }, [empreiteiras]);
+
+  const obrasMinNum = obrasMin === '' ? undefined : Number(obrasMin);
+  const obrasMaxNum = obrasMax === '' ? undefined : Number(obrasMax);
+  const valorMinNum = valorMin === '' ? undefined : Number(valorMin);
+  const valorMaxNum = valorMax === '' ? undefined : Number(valorMax);
 
   const filteredEmpreiteiras = useMemo(() => {
     if (!empreiteiras) return [];
     let result = empreiteiras;
-    if (activeFilter !== 'todas') {
-      result = result.filter((e) => e.status === activeFilter);
+
+    if (statusSelected.length > 0) {
+      result = result.filter((e) => statusSelected.includes(e.status));
     }
+    if (especialidadesSelected.length > 0) {
+      result = result.filter((e) => e.especialidades.some((esp) => especialidadesSelected.includes(esp)));
+    }
+    if (ufsSelected.length > 0) {
+      result = result.filter((e) => ufsSelected.includes(e.estado));
+    }
+    if (obrasMinNum !== undefined) {
+      result = result.filter((e) => e.totalObras >= obrasMinNum);
+    }
+    if (obrasMaxNum !== undefined) {
+      result = result.filter((e) => e.totalObras <= obrasMaxNum);
+    }
+    if (qualidadeMin !== undefined) {
+      result = result.filter((e) => Math.round(e.nota) === qualidadeMin);
+    }
+    if (valorMinNum !== undefined) {
+      result = result.filter((e) => e.valorTotalContratado >= valorMinNum);
+    }
+    if (valorMaxNum !== undefined) {
+      result = result.filter((e) => e.valorTotalContratado <= valorMaxNum);
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -173,7 +227,32 @@ export default function AdminEmpreiteirasPage() {
       );
     }
     return result;
-  }, [empreiteiras, activeFilter, searchQuery]);
+  }, [empreiteiras, statusSelected, especialidadesSelected, ufsSelected, obrasMinNum, obrasMaxNum, qualidadeMin, valorMinNum, valorMaxNum, searchQuery]);
+
+  const advancedActiveCount =
+    (statusSelected.length > 0 ? 1 : 0) +
+    (especialidadesSelected.length > 0 ? 1 : 0) +
+    (ufsSelected.length > 0 ? 1 : 0) +
+    (obrasMinNum !== undefined || obrasMaxNum !== undefined ? 1 : 0) +
+    (qualidadeMin !== undefined ? 1 : 0) +
+    (valorMinNum !== undefined || valorMaxNum !== undefined ? 1 : 0);
+
+  const clearAllAdvanced = () => {
+    setStatusSelected([]);
+    setEspecialidadesSelected([]);
+    setUfsSelected([]);
+    setObrasMin('');
+    setObrasMax('');
+    setQualidadeMin(undefined);
+    setValorMin('');
+    setValorMax('');
+  };
+
+  const formatRange = (min: string, max: string, prefix = '') => {
+    const minPart = min ? `${prefix}${min}` : `${prefix}0`;
+    const maxPart = max ? `${prefix}${max}` : '∞';
+    return `${minPart} – ${maxPart}`;
+  };
 
   const kpis = [
     {
@@ -181,18 +260,6 @@ export default function AdminEmpreiteirasPage() {
       value: String(stats.total),
       icon: RiBuilding2Line,
       iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
-    },
-    {
-      label: 'Ativas',
-      value: String(stats.ativas),
-      icon: RiCheckLine,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
-    },
-    {
-      label: 'Obras em Andamento',
-      value: String(stats.obrasEmAndamento),
-      icon: RiBriefcaseLine,
-      iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
     },
     {
       label: 'Volume Contratado',
@@ -212,17 +279,15 @@ export default function AdminEmpreiteirasPage() {
           </div>
           <Skeleton className="h-9 w-44" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-24 rounded-full" />
-          ))}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-10 w-44 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:max-w-md sm:ml-auto rounded-md" />
         </div>
-        <Skeleton className="h-10 w-full max-w-sm rounded-md" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-40 rounded-2xl" />
@@ -252,7 +317,7 @@ export default function AdminEmpreiteirasPage() {
         </>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {kpis.map((kpi) => (
           <motion.div
             key={kpi.label}
@@ -278,18 +343,140 @@ export default function AdminEmpreiteirasPage() {
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <FilterChips options={filterOptions} activeValue={activeFilter} onSelect={setActiveFilter} />
-        <div className="relative w-full sm:w-72">
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar por nome, CNPJ..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-            data-testid="input-search-empreiteiras"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <AdvancedFiltersPopover
+            activeCount={advancedActiveCount}
+            onClearAll={clearAllAdvanced}
+            contentClassName="w-96"
+          >
+            <MultiSelectDropdown
+              label="Status"
+              options={STATUS_OPTIONS}
+              values={statusSelected}
+              onChange={setStatusSelected}
+              placeholder="Todos os status"
+              testIdPrefix="filter-status"
+            />
+            <MultiSelectDropdown
+              label="Especialidade"
+              options={especialidadesOptions}
+              values={especialidadesSelected}
+              onChange={setEspecialidadesSelected}
+              placeholder="Todas as especialidades"
+              searchPlaceholder="Buscar especialidade..."
+              testIdPrefix="filter-especialidade"
+            />
+            <MultiSelectDropdown
+              label="Estado (UF)"
+              options={ufsOptions}
+              values={ufsSelected}
+              onChange={setUfsSelected}
+              placeholder="Todos os estados"
+              searchPlaceholder="Buscar UF..."
+              testIdPrefix="filter-uf"
+            />
+            <RangeNumberInput
+              label="Quantidade de obras"
+              min={obrasMin}
+              max={obrasMax}
+              onMinChange={setObrasMin}
+              onMaxChange={setObrasMax}
+              testIdPrefix="filter-obras"
+            />
+            <StarRatingFilter
+              label="Qualidade"
+              value={qualidadeMin}
+              onChange={setQualidadeMin}
+              testIdPrefix="filter-qualidade"
+            />
+            <RangeNumberInput
+              label="Volume contratado"
+              min={valorMin}
+              max={valorMax}
+              onMinChange={setValorMin}
+              onMaxChange={setValorMax}
+              prefix="R$ "
+              placeholderMin="100.000"
+              placeholderMax="100.000.000"
+              testIdPrefix="filter-valor"
+            />
+          </AdvancedFiltersPopover>
+
+          <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar por nome, CNPJ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+              data-testid="input-search-empreiteiras"
+            />
+          </div>
         </div>
+
+        {advancedActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {statusSelected.map((s) => {
+              const opt = STATUS_OPTIONS.find((o) => o.value === s);
+              return (
+                <ActiveFilterChip
+                  key={s}
+                  label={`Status: ${opt?.label ?? s}`}
+                  onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                  testId={`active-chip-status-${s}`}
+                />
+              );
+            })}
+            {especialidadesSelected.map((esp) => (
+              <ActiveFilterChip
+                key={esp}
+                label={`Especialidade: ${esp}`}
+                onRemove={() => setEspecialidadesSelected(especialidadesSelected.filter((x) => x !== esp))}
+                testId={`active-chip-especialidade-${esp}`}
+              />
+            ))}
+            {ufsSelected.map((uf) => (
+              <ActiveFilterChip
+                key={uf}
+                label={`UF: ${uf}`}
+                onRemove={() => setUfsSelected(ufsSelected.filter((x) => x !== uf))}
+                testId={`active-chip-uf-${uf}`}
+              />
+            ))}
+            {(obrasMinNum !== undefined || obrasMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Obras: ${formatRange(obrasMin, obrasMax)}`}
+                onRemove={() => {
+                  setObrasMin('');
+                  setObrasMax('');
+                }}
+                testId="active-chip-obras"
+              />
+            )}
+            {qualidadeMin !== undefined && (
+              <ActiveFilterChip
+                label={
+                  qualidadeMin === 0
+                    ? 'Qualidade: Sem avaliação'
+                    : `Qualidade: ${qualidadeMin} ${qualidadeMin === 1 ? 'estrela' : 'estrelas'}`
+                }
+                onRemove={() => setQualidadeMin(undefined)}
+                testId="active-chip-qualidade"
+              />
+            )}
+            {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Volume: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                onRemove={() => {
+                  setValorMin('');
+                  setValorMax('');
+                }}
+                testId="active-chip-valor"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {filteredEmpreiteiras.length > 0 ? (

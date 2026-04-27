@@ -40,7 +40,7 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
             )}>
               {STATUS_LABELS[obra.status] || obra.status}
             </span>
-            <HealthBadge status={health.status} size="sm" className="backdrop-blur-sm" />
+            <HealthBadge status={health.status} size="sm" variant="solid" className="backdrop-blur-sm" />
           </div>
         </div>
 

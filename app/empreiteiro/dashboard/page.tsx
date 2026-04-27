@@ -11,6 +11,7 @@ import { useFinancialData } from '@features/empreiteiro/dashboard/hooks/use-fina
 import { useRecentActivities } from '@features/empreiteiro/dashboard/hooks/use-recent-activities';
 import { useMinhasObras } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
 import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { ProfitSummary, getMockProfitSummary } from '@features/shared/profit';
 
 export default function EmpreiteiroDashboardPage() {
   const { data: statsData, isLoading: statsLoading } = useDashboardStats();
@@ -22,7 +23,9 @@ export default function EmpreiteiroDashboardPage() {
     return <DashboardSkeleton />;
   }
 
-  const healthSummary = getMockHealthSummary((obras ?? []).map((o) => o.id));
+  const obraIds = (obras ?? []).map((o) => o.id);
+  const healthSummary = getMockHealthSummary(obraIds);
+  const profitSummary = getMockProfitSummary(obraIds);
 
   return (
     <div className="space-y-10 p-10">
@@ -34,6 +37,12 @@ export default function EmpreiteiroDashboardPage() {
         summary={healthSummary}
         title="Saúde das suas obras"
         hrefFor={(status) => buildObrasHealthUrl('/empreiteiro/minhas-obras', status)}
+      />
+
+      <ProfitSummary
+        summary={profitSummary}
+        title="Lucro consolidado das suas obras"
+        description="Receita, lucro e margem agregados das obras ativas."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-stretch">

@@ -57,7 +57,10 @@ export function AdvancedFiltersPopover({
       <PopoverContent
         align="start"
         sideOffset={8}
-        className={cn('w-80 space-y-4', contentClassName)}
+        className={cn(
+          'w-80 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto',
+          contentClassName
+        )}
       >
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{label}</h4>

@@ -40,7 +40,7 @@ export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
             )}>
               {STATUS_LABELS[obra.status] || obra.status}
             </span>
-            <HealthBadge status={health.status} size="sm" className="backdrop-blur-sm" />
+            <HealthBadge status={health.status} size="sm" variant="solid" className="backdrop-blur-sm" />
           </div>
           {obra.candidaturas && obra.candidaturas > 0 && (
             <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-3 py-1">

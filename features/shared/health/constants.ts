@@ -18,10 +18,22 @@ export const HEALTH_BADGE_CLASSES: Record<HealthStatus, string> = {
   risco: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
 };
 
+export const HEALTH_BADGE_SOLID_CLASSES: Record<HealthStatus, string> = {
+  saudavel: 'bg-emerald-600/95 text-white border-emerald-700/40 shadow-sm',
+  atencao: 'bg-amber-500/95 text-white border-amber-600/40 shadow-sm',
+  risco: 'bg-red-600/95 text-white border-red-700/40 shadow-sm',
+};
+
 export const HEALTH_DOT_CLASSES: Record<HealthStatus, string> = {
   saudavel: 'bg-green-500',
   atencao: 'bg-amber-500',
   risco: 'bg-red-500',
+};
+
+export const HEALTH_DOT_SOLID_CLASSES: Record<HealthStatus, string> = {
+  saudavel: 'bg-white',
+  atencao: 'bg-white',
+  risco: 'bg-white',
 };
 
 export const HEALTH_PROGRESS_COLOR: Record<HealthStatus, 'success' | 'warning' | 'error'> = {
