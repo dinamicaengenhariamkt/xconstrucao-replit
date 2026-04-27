@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
-import { FilterChips } from '@features/shared/components/FilterChips';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
 import { ClienteCard } from '@features/admin/clientes/components/ClienteCard';
 import { NovoClienteModal } from '@features/admin/clientes/components/NovoClienteModal';
 import { useAdminClientes } from '@features/admin/clientes/hooks/use-clientes';
@@ -24,13 +27,20 @@ import {
   RiSearchLine,
   RiUserAddLine,
   RiGroupLine,
-  RiUserFollowLine,
   RiMoneyDollarCircleLine,
   RiAlertLine,
   RiUserLine,
 } from 'react-icons/ri';
-import type { FilterChipOption } from '@features/shared/types';
+import type { AdminCliente } from '@features/admin/clientes/types';
 import { formatCurrency } from '@shared/lib/formatters';
+
+type ClienteStatus = AdminCliente['status'];
+
+const STATUS_OPTIONS: { value: ClienteStatus; label: string }[] = [
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'inativo', label: 'Inativo' },
+  { value: 'pendente', label: 'Pendente' },
+];
 
 const ITEMS_PER_PAGE = 12;
 
@@ -43,46 +53,46 @@ function getPaginationRange(current: number, total: number): (number | 'ellipsis
 
 export default function AdminClientesPage() {
   const { data: clientes, isLoading } = useAdminClientes();
-  const [activeFilter, setActiveFilter] = useState('todos');
+  const [statusSelected, setStatusSelected] = useState<ClienteStatus[]>([]);
+  const [obrasMin, setObrasMin] = useState('');
+  const [obrasMax, setObrasMax] = useState('');
+  const [valorMin, setValorMin] = useState('');
+  const [valorMax, setValorMax] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  function handleFilterChange(value: string) {
-    setActiveFilter(value);
-    setCurrentPage(1);
-  }
-
-  function handleSearchChange(value: string) {
-    setSearchQuery(value);
-    setCurrentPage(1);
-  }
+  const obrasMinNum = obrasMin === '' ? undefined : Number(obrasMin);
+  const obrasMaxNum = obrasMax === '' ? undefined : Number(obrasMax);
+  const valorMinNum = valorMin === '' ? undefined : Number(valorMin);
+  const valorMaxNum = valorMax === '' ? undefined : Number(valorMax);
 
   const stats = useMemo(() => {
-    if (!clientes) return { total: 0, ativos: 0, volume: 0, inadimplencia: 0 };
-    const ativos = clientes.filter((c) => c.status === 'ativo').length;
+    if (!clientes) return { total: 0, volume: 0, inadimplencia: 0 };
     const volume = clientes.reduce((sum, c) => sum + c.valorTotalContratado, 0);
     const totalContratado = clientes.reduce((sum, c) => sum + c.valorTotalContratado, 0);
     const totalPago = clientes.reduce((sum, c) => sum + c.valorTotalPago, 0);
     const inadimplencia = totalContratado > 0 ? ((totalContratado - totalPago) / totalContratado) * 100 : 0;
-    return { total: clientes.length, ativos, volume, inadimplencia };
-  }, [clientes]);
-
-  const filterOptions: FilterChipOption[] = useMemo(() => {
-    if (!clientes) return [];
-    return [
-      { label: 'Todos', value: 'todos', count: clientes.length },
-      { label: 'Ativos', value: 'ativo', count: clientes.filter((c) => c.status === 'ativo').length },
-      { label: 'Inativos', value: 'inativo', count: clientes.filter((c) => c.status === 'inativo').length },
-      { label: 'Pendentes', value: 'pendente', count: clientes.filter((c) => c.status === 'pendente').length },
-    ];
+    return { total: clientes.length, volume, inadimplencia };
   }, [clientes]);
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
     let result = clientes;
-    if (activeFilter !== 'todos') {
-      result = result.filter((c) => c.status === activeFilter);
+    if (statusSelected.length > 0) {
+      result = result.filter((c) => statusSelected.includes(c.status));
+    }
+    if (obrasMinNum !== undefined) {
+      result = result.filter((c) => c.totalObras >= obrasMinNum);
+    }
+    if (obrasMaxNum !== undefined) {
+      result = result.filter((c) => c.totalObras <= obrasMaxNum);
+    }
+    if (valorMinNum !== undefined) {
+      result = result.filter((c) => c.valorTotalContratado >= valorMinNum);
+    }
+    if (valorMaxNum !== undefined) {
+      result = result.filter((c) => c.valorTotalContratado <= valorMaxNum);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -94,7 +104,32 @@ export default function AdminClientesPage() {
       );
     }
     return result;
-  }, [clientes, activeFilter, searchQuery]);
+  }, [clientes, statusSelected, obrasMinNum, obrasMaxNum, valorMinNum, valorMaxNum, searchQuery]);
+
+  const advancedActiveCount =
+    (statusSelected.length > 0 ? 1 : 0) +
+    (obrasMinNum !== undefined || obrasMaxNum !== undefined ? 1 : 0) +
+    (valorMinNum !== undefined || valorMaxNum !== undefined ? 1 : 0);
+
+  const clearAllAdvanced = () => {
+    setStatusSelected([]);
+    setObrasMin('');
+    setObrasMax('');
+    setValorMin('');
+    setValorMax('');
+    setCurrentPage(1);
+  };
+
+  const formatRange = (min: string, max: string, prefix = '') => {
+    const minPart = min ? `${prefix}${min}` : `${prefix}0`;
+    const maxPart = max ? `${prefix}${max}` : '∞';
+    return `${minPart} – ${maxPart}`;
+  };
+
+  const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.ceil(filteredClientes.length / ITEMS_PER_PAGE);
   const paginatedClientes = filteredClientes.slice(
@@ -108,12 +143,6 @@ export default function AdminClientesPage() {
       value: String(stats.total),
       icon: RiGroupLine,
       iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
-    },
-    {
-      label: 'Clientes Ativos',
-      value: String(stats.ativos),
-      icon: RiUserFollowLine,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
     },
     {
       label: 'Volume Contratado',
@@ -139,17 +168,15 @@ export default function AdminClientesPage() {
           </div>
           <Skeleton className="h-9 w-36" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-2xl" />
           ))}
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-24 rounded-full" />
-          ))}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-10 w-44 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:max-w-md sm:ml-auto rounded-md" />
         </div>
-        <Skeleton className="h-10 w-full max-w-sm rounded-md" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-32 rounded-2xl" />
@@ -179,7 +206,7 @@ export default function AdminClientesPage() {
         </>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((kpi) => (
           <motion.div
             key={kpi.label}
@@ -205,18 +232,88 @@ export default function AdminClientesPage() {
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <FilterChips options={filterOptions} activeValue={activeFilter} onSelect={handleFilterChange} />
-        <div className="relative w-full sm:w-72">
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar por nome, CPF/CNPJ..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-            data-testid="input-search-clientes"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <AdvancedFiltersPopover
+            activeCount={advancedActiveCount}
+            onClearAll={clearAllAdvanced}
+          >
+            <MultiSelectDropdown
+              label="Status"
+              options={STATUS_OPTIONS}
+              values={statusSelected}
+              onChange={onFilterChange(setStatusSelected)}
+              placeholder="Todos os status"
+              testIdPrefix="filter-status"
+            />
+            <RangeNumberInput
+              label="Quantidade de obras"
+              min={obrasMin}
+              max={obrasMax}
+              onMinChange={onFilterChange(setObrasMin)}
+              onMaxChange={onFilterChange(setObrasMax)}
+              testIdPrefix="filter-obras"
+            />
+            <RangeNumberInput
+              label="Volume contratado"
+              min={valorMin}
+              max={valorMax}
+              onMinChange={onFilterChange(setValorMin)}
+              onMaxChange={onFilterChange(setValorMax)}
+              prefix="R$ "
+              placeholderMin="100.000"
+              placeholderMax="10.000.000"
+              testIdPrefix="filter-valor"
+            />
+          </AdvancedFiltersPopover>
+
+          <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar por nome, CPF/CNPJ..."
+              value={searchQuery}
+              onChange={(e) => onFilterChange(setSearchQuery)(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+              data-testid="input-search-clientes"
+            />
+          </div>
         </div>
+
+        {advancedActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {statusSelected.map((s) => {
+              const opt = STATUS_OPTIONS.find((o) => o.value === s);
+              return (
+                <ActiveFilterChip
+                  key={s}
+                  label={`Status: ${opt?.label ?? s}`}
+                  onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                  testId={`active-chip-status-${s}`}
+                />
+              );
+            })}
+            {(obrasMinNum !== undefined || obrasMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Obras: ${formatRange(obrasMin, obrasMax)}`}
+                onRemove={() => {
+                  setObrasMin('');
+                  setObrasMax('');
+                }}
+                testId="active-chip-obras"
+              />
+            )}
+            {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Volume: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                onRemove={() => {
+                  setValorMin('');
+                  setValorMax('');
+                }}
+                testId="active-chip-valor"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {filteredClientes.length > 0 ? (
