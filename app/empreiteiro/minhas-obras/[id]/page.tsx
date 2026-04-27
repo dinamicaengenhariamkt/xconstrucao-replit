@@ -22,7 +22,9 @@ import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
-import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconPhotoCamera, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction } from '@shared/components/icons';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconPhotoCamera, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
+import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
+import { ProfitCard, getMockProfit } from '@features/shared/profit';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -40,9 +42,10 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   success: 'bg-green-500',
 };
 
-type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias';
+type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias' | 'saude' | 'lucro';
 
 const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'saude', label: 'Saúde', Icon: IconHealthAndSafety },
   { key: 'tarefas', label: 'Tarefas', Icon: IconTaskAlt },
   { key: 'checklists', label: 'Checklists', Icon: IconFactCheck },
   { key: 'timeline', label: 'Timeline', Icon: IconTimeline },
@@ -50,6 +53,7 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
   { key: 'cronograma', label: 'Cronograma', Icon: IconCalendarMonth },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
+  { key: 'lucro', label: 'Lucro', Icon: IconPayments },
 ];
 
 export default function MinhaObraDetalhePage() {
@@ -319,6 +323,9 @@ export default function MinhaObraDetalhePage() {
         </div>
       </motion.div>
 
+      {/* BLOCO 3.5: Indicador de Saúde */}
+      <HealthCard health={getMockHealth(obra.id)} />
+
       {/* BLOCOs 4–10: Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -362,6 +369,17 @@ export default function MinhaObraDetalhePage() {
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
               {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
+              {activeTab === 'saude' && (
+                <HealthDetailPanel
+                  health={getMockHealth(obra.id)}
+                  actionsByFactor={{
+                    atraso: { label: 'Ver cronograma', onClick: () => setActiveTab('cronograma') },
+                    financeiro: { label: 'Ver lucro', onClick: () => setActiveTab('lucro') },
+                    tarefas: { label: 'Ver tarefas', onClick: () => setActiveTab('tarefas') },
+                  }}
+                />
+              )}
+              {activeTab === 'lucro' && <ProfitCard metrics={getMockProfit(obra.id)} />}
             </motion.div>
           </AnimatePresence>
         </div>

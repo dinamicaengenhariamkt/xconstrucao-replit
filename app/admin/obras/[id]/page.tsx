@@ -30,6 +30,8 @@ import {
 import { getMockObraDetalhe } from '@features/admin/obras/mocks';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
+import { RiHeartPulseLine } from 'react-icons/ri';
 
 const KPI_HOVER = {
   whileHover: {
@@ -271,6 +273,7 @@ export default function AdminObraDetalhePage() {
 
   const saldoPagar = obra.valorTotal - obra.valorPago;
   const percentPago = Math.round((obra.valorPago / obra.valorTotal) * 100);
+  const health = getMockHealth(obra.id);
 
   const kpis = [
     {
@@ -394,6 +397,9 @@ export default function AdminObraDetalhePage() {
         </CardContent>
       </Card>
 
+      {/* Health summary card */}
+      <HealthCard health={health} />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
@@ -424,6 +430,13 @@ export default function AdminObraDetalhePage() {
       <Tabs defaultValue="financeiro">
         <TabsList className="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl gap-1">
           <TabsTrigger
+            value="saude"
+            className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
+          >
+            <RiHeartPulseLine className="w-4 h-4" />
+            Saúde
+          </TabsTrigger>
+          <TabsTrigger
             value="financeiro"
             className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
           >
@@ -445,6 +458,10 @@ export default function AdminObraDetalhePage() {
             Dados Gerais
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="saude" className="mt-4">
+          <HealthDetailPanel health={health} />
+        </TabsContent>
 
         <TabsContent value="financeiro" className="mt-4">
           <MedicoesTab medicoes={obra.medicoes} />

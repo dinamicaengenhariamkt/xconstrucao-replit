@@ -31,15 +31,18 @@ import {
   RiListCheck2,
   RiAlertLine,
   RiHistoryLine,
+  RiHeartPulseLine,
 } from 'react-icons/ri';
+import { HealthDetailPanel, getMockHealth } from '@features/shared/health';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
 import { IconGroups } from '@shared/components/icons';
 
-type ObraTab = 'visao-geral' | 'etapas' | 'timeline' | 'ocorrencias' | 'financeiro' | 'equipe' | 'fotos';
+type ObraTab = 'visao-geral' | 'saude' | 'etapas' | 'timeline' | 'ocorrencias' | 'financeiro' | 'equipe' | 'fotos';
 
 const TABS: { key: ObraTab; label: string; icon: React.ElementType }[] = [
   { key: 'visao-geral', label: 'Visão Geral', icon: RiLayoutGridLine },
+  { key: 'saude', label: 'Saúde', icon: RiHeartPulseLine },
   { key: 'etapas', label: 'Etapas', icon: RiListCheck2 },
   { key: 'timeline', label: 'Timeline', icon: RiHistoryLine },
   { key: 'ocorrencias', label: 'Ocorrências', icon: RiAlertLine },
@@ -386,7 +389,17 @@ export default function ObraDetalhePage() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === 'visao-geral' && <TabVisaoGeral obra={obra} progressColor={progressColor} onNavigateToTimeline={() => setActiveTab('timeline')} />}
+              {activeTab === 'visao-geral' && <TabVisaoGeral obra={obra} progressColor={progressColor} onNavigateToTimeline={() => setActiveTab('timeline')} onNavigateToHealth={() => setActiveTab('saude')} />}
+              {activeTab === 'saude' && (
+                <HealthDetailPanel
+                  health={getMockHealth(obra.id)}
+                  actionsByFactor={{
+                    atraso: { label: 'Ver etapas', onClick: () => setActiveTab('etapas') },
+                    financeiro: { label: 'Ver financeiro', onClick: () => setActiveTab('financeiro') },
+                    tarefas: { label: 'Ver ocorrências', onClick: () => setActiveTab('ocorrencias') },
+                  }}
+                />
+              )}
               {activeTab === 'etapas' && <TabEtapas obra={obra} progressColor={progressColor} />}
               {activeTab === 'timeline' && <TabTimeline obra={obra} />}
               {activeTab === 'ocorrencias' && <TabOcorrencias obra={obra} />}

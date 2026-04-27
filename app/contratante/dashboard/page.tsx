@@ -17,9 +17,12 @@ import {
   mockValoresContratados,
 } from '@features/contratante/dashboard/mocks/evolution-data.mock';
 import { mockActivities, mockPendencias } from '@features/contratante/dashboard/mocks/activities.mock';
+import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
+import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
 
 export default function ContratanteDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const { data: obras } = useObrasContratante();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -30,11 +33,19 @@ export default function ContratanteDashboardPage() {
     return <DashboardSkeleton />;
   }
 
+  const healthSummary = getMockHealthSummary((obras ?? []).map((o) => o.id));
+
   return (
     <div className="space-y-10 p-10">
       <WelcomeSection />
 
       <StatsGridContainer data={mockDashboardStats} />
+
+      <HealthSummary
+        summary={healthSummary}
+        title="Saúde das suas obras"
+        hrefFor={(status) => buildObrasHealthUrl('/contratante/minhas-obras', status)}
+      />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

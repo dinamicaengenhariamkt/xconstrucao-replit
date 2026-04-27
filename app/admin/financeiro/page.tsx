@@ -23,11 +23,15 @@ import {
   mockTotalReceitas,
 } from '@features/admin/financeiro/mocks/obras.mock';
 import type { PeriodoSeletor, DateRange } from '@features/admin/financeiro/types';
+import { useAdminObras } from '@features/admin/obras/hooks/use-obras-list';
+import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { ProfitSummary, getMockProfitSummary } from '@features/shared/profit';
 
 export default function AdminFinanceiroPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<PeriodoSeletor>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
+  const { data: obras } = useAdminObras();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -43,6 +47,10 @@ export default function AdminFinanceiroPage() {
     return <DashboardSkeleton />;
   }
 
+  const obraIds = (obras ?? []).map((o) => o.id);
+  const healthSummary = getMockHealthSummary(obraIds);
+  const profitSummary = getMockProfitSummary(obraIds);
+
   return (
     <div className="space-y-8 p-6 md:p-10">
       {/* Bloco 1: Header + Seletor de período */}
@@ -55,6 +63,15 @@ export default function AdminFinanceiroPage() {
 
       {/* Bloco 2: KPI Cards */}
       <StatsGridContainer data={mockStatsByPeriodo[periodo]} />
+
+      {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <HealthSummary
+          summary={healthSummary}
+          hrefFor={(status) => buildObrasHealthUrl('/admin/obras', status)}
+        />
+        <ProfitSummary summary={profitSummary} />
+      </div>
 
       {/* Bloco 3: Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

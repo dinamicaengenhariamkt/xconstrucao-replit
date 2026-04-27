@@ -8,10 +8,12 @@ import { ProgressBar } from '@features/shared/components/ProgressBar';
 import { STATUS_BORDER_COLORS, STATUS_BADGE_CLASSES, STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
 import type { MinhaObraCardProps } from '../types';
 import { IconLocationOn } from '@shared/components/icons';
+import { HealthBadge, getMockHealth } from '@features/shared/health';
 
 export function MinhaObraCard({ obra }: MinhaObraCardProps) {
   const borderColor = STATUS_BORDER_COLORS[obra.status] || 'border-l-gray-300';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as 'success' | 'warning' | 'error' | 'info' | 'primary';
+  const health = getMockHealth(obra.id);
 
   return (
     <Link href={`/empreiteiro/minhas-obras/${obra.id}`} data-testid={`obra-card-${obra.id}`}>
@@ -31,13 +33,14 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
             style={{ backgroundImage: `url('${obra.imagemUrl}')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 flex items-center gap-2">
             <span className={cn(
               'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
               STATUS_BADGE_CLASSES[obra.status] || 'bg-gray-800/80 text-white'
             )}>
               {STATUS_LABELS[obra.status] || obra.status}
             </span>
+            <HealthBadge status={health.status} size="sm" className="backdrop-blur-sm" />
           </div>
         </div>
 
