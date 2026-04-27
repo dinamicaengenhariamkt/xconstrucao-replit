@@ -23,6 +23,8 @@ export {
 export { HEALTH_QUERY_PARAM, parseHealthStatus, buildObrasHealthUrl } from './urls';
 export { useSaudeFilter } from './hooks/use-saude-filter';
 export type { UseSaudeFilterResult } from './hooks/use-saude-filter';
+export { useSaudeMultiFilter } from './hooks/use-saude-multi-filter';
+export type { UseSaudeMultiFilterResult } from './hooks/use-saude-multi-filter';
 export { HealthBadge } from './components/HealthBadge';
 export { HealthCard } from './components/HealthCard';
 export { HealthSummary } from './components/HealthSummary';

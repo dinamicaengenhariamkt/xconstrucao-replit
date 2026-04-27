@@ -19,33 +19,31 @@ import {
   RiSearchLine,
   RiHammerLine,
   RiArrowRightLine,
-  RiBuildingLine,
-  RiCheckLine,
-  RiPauseLine,
   RiCloseLine,
+  RiMoneyDollarCircleLine,
 } from 'react-icons/ri';
 import {
   HealthBadge,
-  HealthFilterSelect,
   HEALTH_LABELS,
   HEALTH_DOT_CLASSES,
   getMockHealth,
-  getMockHealthSummary,
-  useSaudeFilter,
+  useSaudeMultiFilter,
 } from '@features/shared/health';
+import type { HealthStatus } from '@features/shared/health';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
 
 const ITEMS_PER_PAGE = 10;
 
-type StatusFilterKey = 'todos' | 'em_andamento' | 'concluida' | 'pausadas_canceladas';
+const STATUS_OPTIONS: { value: AdminObraStatus; label: string }[] = (
+  Object.keys(OBRA_STATUS_LABEL) as AdminObraStatus[]
+).map((s) => ({ value: s, label: OBRA_STATUS_LABEL[s] }));
 
-const STATUS_FILTER_VALUES: Record<StatusFilterKey, AdminObraStatus[] | null> = {
-  todos: null,
-  em_andamento: ['em_andamento'],
-  concluida: ['concluida'],
-  pausadas_canceladas: ['pausada', 'cancelada'],
-};
+const SAUDE_OPTIONS: { value: HealthStatus; label: string }[] = (
+  Object.keys(HEALTH_LABELS) as HealthStatus[]
+).map((s) => ({ value: s, label: HEALTH_LABELS[s] }));
 
 function getPaginationRange(current: number, total: number): (number | 'ellipsis')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -56,47 +54,58 @@ function getPaginationRange(current: number, total: number): (number | 'ellipsis
 
 export default function AdminObrasPage() {
   const { data: obras, isLoading } = useAdminObras();
-  const [activeFilter, setActiveFilter] = useState<StatusFilterKey>('todos');
+  const saudeMulti = useSaudeMultiFilter();
+  const [statusSelected, setStatusSelected] = useState<AdminObraStatus[]>([]);
+  const [tiposSelected, setTiposSelected] = useState<string[]>([]);
+  const [progressMin, setProgressMin] = useState('');
+  const [progressMax, setProgressMax] = useState('');
+  const [valorMin, setValorMin] = useState('');
+  const [valorMax, setValorMax] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const saude = useSaudeFilter();
-
-  function handleStatusKpiClick(key: StatusFilterKey) {
-    setActiveFilter(key);
-    setCurrentPage(1);
-  }
-
-  function handleSaudeChange(next: Parameters<typeof saude.setValue>[0]) {
-    saude.setValue(next);
-    setCurrentPage(1);
-  }
-
-  function handleSearchChange(value: string) {
-    setSearchQuery(value);
-    setCurrentPage(1);
-  }
+  const progressMinNum = progressMin === '' ? undefined : Number(progressMin);
+  const progressMaxNum = progressMax === '' ? undefined : Number(progressMax);
+  const valorMinNum = valorMin === '' ? undefined : Number(valorMin);
+  const valorMaxNum = valorMax === '' ? undefined : Number(valorMax);
 
   const stats = useMemo(() => {
-    if (!obras) return { total: 0, emAndamento: 0, concluidas: 0, pausadas: 0, canceladas: 0 };
-    return {
-      total: obras.length,
-      emAndamento: obras.filter((o) => o.status === 'em_andamento').length,
-      concluidas: obras.filter((o) => o.status === 'concluida').length,
-      pausadas: obras.filter((o) => o.status === 'pausada').length,
-      canceladas: obras.filter((o) => o.status === 'cancelada').length,
-    };
+    if (!obras) return { total: 0, valorTotal: 0 };
+    const valorTotal = obras.reduce((sum, o) => sum + o.valorTotal, 0);
+    return { total: obras.length, valorTotal };
+  }, [obras]);
+
+  const tiposOptions = useMemo(() => {
+    const set = new Set<string>();
+    (obras ?? []).forEach((o) => set.add(o.tipo));
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((v) => ({ value: v, label: v }));
   }, [obras]);
 
   const filteredObras = useMemo(() => {
     if (!obras) return [];
     let result = obras;
-    const allowedStatuses = STATUS_FILTER_VALUES[activeFilter];
-    if (allowedStatuses) {
-      result = result.filter((o) => allowedStatuses.includes(o.status as AdminObraStatus));
+    if (statusSelected.length > 0) {
+      result = result.filter((o) => statusSelected.includes(o.status as AdminObraStatus));
     }
-    if (saude.value) {
-      result = result.filter((o) => getMockHealth(o.id).status === saude.value);
+    if (saudeMulti.values.length > 0) {
+      result = result.filter((o) => saudeMulti.values.includes(getMockHealth(o.id).status));
+    }
+    if (tiposSelected.length > 0) {
+      result = result.filter((o) => tiposSelected.includes(o.tipo));
+    }
+    if (progressMinNum !== undefined) {
+      result = result.filter((o) => o.progresso >= progressMinNum);
+    }
+    if (progressMaxNum !== undefined) {
+      result = result.filter((o) => o.progresso <= progressMaxNum);
+    }
+    if (valorMinNum !== undefined) {
+      result = result.filter((o) => o.valorTotal >= valorMinNum);
+    }
+    if (valorMaxNum !== undefined) {
+      result = result.filter((o) => o.valorTotal <= valorMaxNum);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -109,12 +118,36 @@ export default function AdminObrasPage() {
       );
     }
     return result;
-  }, [obras, activeFilter, saude.value, searchQuery]);
+  }, [obras, statusSelected, saudeMulti.values, tiposSelected, progressMinNum, progressMaxNum, valorMinNum, valorMaxNum, searchQuery]);
 
-  const healthSummary = useMemo(
-    () => getMockHealthSummary((obras ?? []).map((o) => o.id)),
-    [obras]
-  );
+  const advancedActiveCount =
+    (statusSelected.length > 0 ? 1 : 0) +
+    (saudeMulti.values.length > 0 ? 1 : 0) +
+    (tiposSelected.length > 0 ? 1 : 0) +
+    (progressMinNum !== undefined || progressMaxNum !== undefined ? 1 : 0) +
+    (valorMinNum !== undefined || valorMaxNum !== undefined ? 1 : 0);
+
+  const clearAllAdvanced = () => {
+    setStatusSelected([]);
+    saudeMulti.setValues([]);
+    setTiposSelected([]);
+    setProgressMin('');
+    setProgressMax('');
+    setValorMin('');
+    setValorMax('');
+    setCurrentPage(1);
+  };
+
+  const formatRange = (min: string, max: string, prefix = '', suffix = '') => {
+    const minPart = min ? `${prefix}${min}${suffix}` : `${prefix}0${suffix}`;
+    const maxPart = max ? `${prefix}${max}${suffix}` : '∞';
+    return `${minPart} – ${maxPart}`;
+  };
+
+  const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.ceil(filteredObras.length / ITEMS_PER_PAGE);
   const paginatedObras = filteredObras.slice(
@@ -122,49 +155,20 @@ export default function AdminObrasPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  const kpis: {
-    key: StatusFilterKey;
-    label: string;
-    value: string;
-    icon: typeof RiHammerLine;
-    iconBg: string;
-    activeRing: string;
-  }[] = [
+  const kpis = [
     {
-      key: 'todos',
       label: 'Total Obras',
       value: String(stats.total),
       icon: RiHammerLine,
       iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
-      activeRing: 'ring-amber-400/60 border-amber-300',
     },
     {
-      key: 'em_andamento',
-      label: 'Em Andamento',
-      value: String(stats.emAndamento),
-      icon: RiBuildingLine,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
-      activeRing: 'ring-emerald-400/60 border-emerald-300',
-    },
-    {
-      key: 'concluida',
-      label: 'Concluídas',
-      value: String(stats.concluidas),
-      icon: RiCheckLine,
-      iconBg: 'bg-slate-100 text-slate-600 dark:bg-slate-800',
-      activeRing: 'ring-slate-400/60 border-slate-300',
-    },
-    {
-      key: 'pausadas_canceladas',
-      label: 'Pausadas / Canceladas',
-      value: String(stats.pausadas + stats.canceladas),
-      icon: RiPauseLine,
-      iconBg: 'bg-red-50 text-red-500 dark:bg-red-900/20',
-      activeRing: 'ring-red-400/60 border-red-300',
+      label: 'Valor Total de Obras',
+      value: formatCurrency(stats.valorTotal),
+      icon: RiMoneyDollarCircleLine,
+      iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },
   ];
-
-  const advancedActiveCount = saude.value ? 1 : 0;
 
   if (isLoading) {
     return (
@@ -173,10 +177,13 @@ export default function AdminObrasPage() {
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-64 mt-2" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         </div>
-        <Skeleton className="h-10 w-full max-w-sm rounded-md" />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-10 w-44 rounded-lg" />
+          <Skeleton className="h-10 w-full sm:max-w-md sm:ml-auto rounded-md" />
+        </div>
         {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
       </div>
     );
@@ -193,48 +200,31 @@ export default function AdminObrasPage() {
         </p>
       </div>
 
-      {/* KPI Cards — também atuam como filtros de status */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => {
-          const isActive = activeFilter === kpi.key;
-          return (
-            <motion.button
-              key={kpi.key}
-              type="button"
-              onClick={() => handleStatusKpiClick(kpi.key)}
-              className="rounded-2xl overflow-visible text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              whileHover={{
-                scale: 1.01,
-                boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-              }}
-              transition={{ duration: 0.2 }}
-              aria-pressed={isActive}
-              data-testid={`kpi-status-${kpi.key}`}
-            >
-              <Card
-                className={cn(
-                  'h-full rounded-2xl transition-all',
-                  isActive ? cn('ring-2 border-transparent', kpi.activeRing) : 'border-gray-100 dark:border-gray-800'
-                )}
-              >
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                  <div className={cn('p-3 rounded-lg', kpi.iconBg)}>
-                    <kpi.icon className="w-5 h-5" />
-                  </div>
-                  {isActive && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                      Filtrando
-                    </span>
-                  )}
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.label}</p>
-                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
-                </CardContent>
-              </Card>
-            </motion.button>
-          );
-        })}
+      {/* KPI Cards (informativos) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {kpis.map((kpi) => (
+          <motion.div
+            key={kpi.label}
+            className="rounded-2xl overflow-visible"
+            whileHover={{
+              scale: 1.01,
+              boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
+            }}
+            transition={{ duration: 0.2 }}
+          >
+            <Card className="h-full rounded-2xl" data-testid={`kpi-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                <div className={cn('p-3 rounded-lg', kpi.iconBg)}>
+                  <kpi.icon className="w-5 h-5" />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.label}</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       {/* Toolbar: filtros avançados + busca */}
@@ -242,12 +232,53 @@ export default function AdminObrasPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <AdvancedFiltersPopover
             activeCount={advancedActiveCount}
-            onClearAll={() => saude.setValue(undefined)}
+            onClearAll={clearAllAdvanced}
           >
-            <HealthFilterSelect
-              value={saude.value}
-              onChange={handleSaudeChange}
-              summary={healthSummary}
+            <MultiSelectDropdown
+              label="Status"
+              options={STATUS_OPTIONS}
+              values={statusSelected}
+              onChange={onFilterChange(setStatusSelected)}
+              placeholder="Todos os status"
+              testIdPrefix="filter-status"
+            />
+            <MultiSelectDropdown
+              label="Saúde"
+              options={SAUDE_OPTIONS}
+              values={saudeMulti.values}
+              onChange={onFilterChange(saudeMulti.setValues)}
+              placeholder="Todas"
+              testIdPrefix="filter-saude"
+            />
+            <MultiSelectDropdown
+              label="Tipo de obra"
+              options={tiposOptions}
+              values={tiposSelected}
+              onChange={onFilterChange(setTiposSelected)}
+              placeholder="Todos os tipos"
+              searchPlaceholder="Buscar tipo..."
+              testIdPrefix="filter-tipo"
+            />
+            <RangeNumberInput
+              label="Progresso (%)"
+              min={progressMin}
+              max={progressMax}
+              onMinChange={onFilterChange(setProgressMin)}
+              onMaxChange={onFilterChange(setProgressMax)}
+              placeholderMin="0"
+              placeholderMax="100"
+              testIdPrefix="filter-progresso"
+            />
+            <RangeNumberInput
+              label="Valor total"
+              min={valorMin}
+              max={valorMax}
+              onMinChange={onFilterChange(setValorMin)}
+              onMaxChange={onFilterChange(setValorMax)}
+              prefix="R$ "
+              placeholderMin="100.000"
+              placeholderMax="10.000.000"
+              testIdPrefix="filter-valor"
             />
           </AdvancedFiltersPopover>
 
@@ -256,22 +287,60 @@ export default function AdminObrasPage() {
             <Input
               placeholder="Buscar por nome, cliente, empreiteira..."
               value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => onFilterChange(setSearchQuery)(e.target.value)}
               className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
               data-testid="input-search-obras"
             />
           </div>
         </div>
 
-        {/* Chips de filtros ativos (apenas avançados — status já está visível via KPI ativo) */}
-        {saude.value && (
+        {advancedActiveCount > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <ActiveFilterChip
-              label={`Saúde: ${HEALTH_LABELS[saude.value]}`}
-              onRemove={() => saude.setValue(undefined)}
-              dotClassName={HEALTH_DOT_CLASSES[saude.value]}
-              testId="active-chip-saude"
-            />
+            {statusSelected.map((s) => (
+              <ActiveFilterChip
+                key={s}
+                label={`Status: ${OBRA_STATUS_LABEL[s]}`}
+                onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                testId={`active-chip-status-${s}`}
+              />
+            ))}
+            {saudeMulti.values.map((s) => (
+              <ActiveFilterChip
+                key={s}
+                label={`Saúde: ${HEALTH_LABELS[s]}`}
+                onRemove={() => saudeMulti.setValues(saudeMulti.values.filter((x) => x !== s))}
+                dotClassName={HEALTH_DOT_CLASSES[s]}
+                testId={`active-chip-saude-${s}`}
+              />
+            ))}
+            {tiposSelected.map((t) => (
+              <ActiveFilterChip
+                key={t}
+                label={`Tipo: ${t}`}
+                onRemove={() => setTiposSelected(tiposSelected.filter((x) => x !== t))}
+                testId={`active-chip-tipo-${t}`}
+              />
+            ))}
+            {(progressMinNum !== undefined || progressMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Progresso: ${formatRange(progressMin, progressMax, '', '%')}`}
+                onRemove={() => {
+                  setProgressMin('');
+                  setProgressMax('');
+                }}
+                testId="active-chip-progresso"
+              />
+            )}
+            {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
+              <ActiveFilterChip
+                label={`Valor: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                onRemove={() => {
+                  setValorMin('');
+                  setValorMax('');
+                }}
+                testId="active-chip-valor"
+              />
+            )}
           </div>
         )}
       </div>
@@ -301,7 +370,7 @@ export default function AdminObrasPage() {
                     return (
                       <tr
                         key={obra.id}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+                        className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                       >
                         <td className="px-5 py-4">
                           <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{obra.nome}</p>

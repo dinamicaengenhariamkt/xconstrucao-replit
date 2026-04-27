@@ -50,7 +50,7 @@ export function ReceitasPlataformaTable({ receitas, total }: ReceitasPlataformaT
                   <tr
                     key={receita.id}
                     className={cn(
-                      'hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors',
+                      'hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
                       !isLast && 'border-b border-gray-50 dark:border-gray-800'
                     )}
                   >

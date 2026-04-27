@@ -112,11 +112,11 @@ export const mockCaixaKpisByPeriodo: Record<CaixaPeriodo, CaixaKpiData> = {
   },
 };
 
-// ─── Movimentações (datas atualizadas para filtro por período funcionar) ──────
-// Referência: hoje = 2026-03-01
+// ─── Movimentações (datas relativas para filtro por período funcionar) ───────
+// Referência: hoje ≈ 2026-04-27
 // 7dias  → mov-001 a mov-005 (5 itens, dentro dos últimos 7 dias)
 // 30dias → mov-001 a mov-009 (9 itens, dentro dos últimos 30 dias)
-// 90dias/anoAtual → todos os 10 itens
+// 90dias / anoAtual → todos os 10 itens
 
 export const mockMovimentacoes: Movimentacao[] = [
   {
@@ -124,7 +124,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Medição Obra Residencial Alphaville',
     valor: 185_000,
-    data: '2026-02-28',
+    data: '2026-04-26',
     categoria: 'Medição',
     referencia: 'MED-2026-0045',
     status: 'confirmado',
@@ -134,7 +134,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Pagamento Empreiteira Silva & Filhos',
     valor: 92_500,
-    data: '2026-02-27',
+    data: '2026-04-25',
     categoria: 'Pagamento Empreiteira',
     referencia: 'PAG-2026-0112',
     status: 'confirmado',
@@ -144,7 +144,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Taxa de administração - Contrato #1847',
     valor: 12_450,
-    data: '2026-02-26',
+    data: '2026-04-24',
     categoria: 'Taxa',
     referencia: 'TX-2026-0033',
     status: 'confirmado',
@@ -154,7 +154,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Compra de materiais - Cimento e Aço',
     valor: 34_200,
-    data: '2026-02-25',
+    data: '2026-04-22',
     categoria: 'Material',
     referencia: 'MAT-2026-0089',
     status: 'pendente',
@@ -164,7 +164,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Assinatura Plano Premium - Cliente ABC',
     valor: 2_990,
-    data: '2026-02-24',
+    data: '2026-04-21',
     categoria: 'Assinatura',
     referencia: 'ASS-2026-0021',
     status: 'confirmado',
@@ -174,7 +174,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Impostos retidos - INSS e ISS',
     valor: 28_750,
-    data: '2026-02-20',
+    data: '2026-04-15',
     categoria: 'Impostos',
     referencia: 'IMP-2026-0007',
     status: 'confirmado',
@@ -184,7 +184,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Multa contratual - Atraso entrega',
     valor: 15_000,
-    data: '2026-02-18',
+    data: '2026-04-08',
     categoria: 'Multa',
     referencia: 'MLT-2026-0003',
     status: 'pendente',
@@ -194,7 +194,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Despesas operacionais - Escritório',
     valor: 8_900,
-    data: '2026-02-15',
+    data: '2026-04-02',
     categoria: 'Operacional',
     referencia: 'OPE-2026-0045',
     status: 'confirmado',
@@ -204,7 +204,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'entrada',
     descricao: 'Medição Obra Comercial Centro',
     valor: 320_000,
-    data: '2026-02-10',
+    data: '2026-03-30',
     categoria: 'Medição',
     referencia: 'MED-2026-0044',
     status: 'cancelado',
@@ -214,7 +214,7 @@ export const mockMovimentacoes: Movimentacao[] = [
     tipo: 'saida',
     descricao: 'Pagamento Empreiteira Construtora Norte',
     valor: 156_800,
-    data: '2026-01-25',
+    data: '2026-02-15',
     categoria: 'Pagamento Empreiteira',
     referencia: 'PAG-2026-0111',
     status: 'pendente',

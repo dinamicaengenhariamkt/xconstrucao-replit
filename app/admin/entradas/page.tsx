@@ -19,6 +19,7 @@ import { Calendar } from '@shared/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
+import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
   Table,
@@ -32,6 +33,9 @@ import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/admin/financeiro/components/StatsCard';
 import { EntradaChart } from '@features/admin/entradas/components/EntradaChart';
 import { EntradaTopEntidades } from '@features/admin/entradas/components/EntradaTopEntidades';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import type {
   EntradaPeriodo,
   EntradaTipoReceita,
@@ -88,6 +92,24 @@ const statusClasses: Record<EntradaStatus, string> = {
   em_processamento: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
+const ORIGEM_OPTIONS: { value: EntradaOrigem; label: string }[] = [
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'empreiteira', label: 'Empreiteira' },
+  { value: 'outros', label: 'Outros' },
+];
+
+const TIPO_RECEITA_OPTIONS: { value: EntradaTipoReceita; label: string }[] = [
+  { value: 'taxa_medicao', label: 'Taxa sobre medição' },
+  { value: 'assinatura', label: 'Assinatura' },
+  { value: 'outros_servicos', label: 'Outros serviços' },
+];
+
+const STATUS_OPTIONS: { value: EntradaStatus; label: string }[] = [
+  { value: 'recebido', label: 'Recebido' },
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'em_processamento', label: 'Em processamento' },
+];
+
 // ─── Period options ───────────────────────────────────────────────────────────
 
 const periodOptions: { value: EntradaPeriodo; label: string }[] = [
@@ -98,13 +120,9 @@ const periodOptions: { value: EntradaPeriodo; label: string }[] = [
   { value: 'personalizado', label: 'Personalizado' },
 ];
 
-// ─── Items per page ───────────────────────────────────────────────────────────
-
 const PAGE_SIZE = 20;
 
-// ─── Custom range label ──────────────────────────────────────────────────────
-
-function formatRange(range: DateRange | undefined): string {
+function formatRangeLabel(range: DateRange | undefined): string {
   if (!range) return 'Personalizado';
   const from = format(range.from, 'dd/MM', { locale: ptBR });
   const to = range.to ? format(range.to, 'dd/MM', { locale: ptBR }) : '...';
@@ -152,10 +170,14 @@ export default function AdminEntradasPage() {
   const [periodo, setPeriodo] = useState<EntradaPeriodo>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [origemFilter, setOrigemFilter] = useState<string>('todos');
-  const [tipoReceitaFilter, setTipoReceitaFilter] = useState<string>('todos');
-  const [tabelaTipoFilter, setTabelaTipoFilter] = useState<string>('todas');
-  const [tabelaStatusFilter, setTabelaStatusFilter] = useState<string>('todas');
+
+  // Filtros do topo (afetam tabela de lançamentos)
+  const [origemSelected, setOrigemSelected] = useState<EntradaOrigem[]>([]);
+  const [tipoReceitaSelected, setTipoReceitaSelected] = useState<EntradaTipoReceita[]>([]);
+
+  // Filtros da tabela "Lançamentos"
+  const [tabelaTipoSelected, setTabelaTipoSelected] = useState<EntradaTipoReceita[]>([]);
+  const [tabelaStatusSelected, setTabelaStatusSelected] = useState<EntradaStatus[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -172,6 +194,20 @@ export default function AdminEntradasPage() {
     if (p === 'personalizado') setPopoverOpen(true);
   }
 
+  const topoActiveCount =
+    (origemSelected.length > 0 ? 1 : 0) + (tipoReceitaSelected.length > 0 ? 1 : 0);
+
+  const clearTopoFilters = () => {
+    setOrigemSelected([]);
+    setTipoReceitaSelected([]);
+    setPage(1);
+  };
+
+  const onTopoFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
+
   const { data: kpi, isLoading: isLoadingKpi } = useEntradaKpi(periodo);
   const { data: entradas, isLoading: isLoadingEntradas } = useEntradas(periodo, customRange);
   const { data: chartData, isLoading: isLoadingChart } = useEntradaChart(periodo);
@@ -183,11 +219,19 @@ export default function AdminEntradasPage() {
 
   const filtered = useMemo(() => {
     let result = entradas ?? [];
-    if (tabelaTipoFilter !== 'todas') {
-      result = result.filter((e) => e.tipoReceita === tabelaTipoFilter);
+    // Filtros do topo (origem + tipo de receita)
+    if (origemSelected.length > 0) {
+      result = result.filter((e) => origemSelected.includes(e.origem));
     }
-    if (tabelaStatusFilter !== 'todas') {
-      result = result.filter((e) => e.status === tabelaStatusFilter);
+    if (tipoReceitaSelected.length > 0) {
+      result = result.filter((e) => tipoReceitaSelected.includes(e.tipoReceita));
+    }
+    // Filtros da tabela
+    if (tabelaTipoSelected.length > 0) {
+      result = result.filter((e) => tabelaTipoSelected.includes(e.tipoReceita));
+    }
+    if (tabelaStatusSelected.length > 0) {
+      result = result.filter((e) => tabelaStatusSelected.includes(e.status));
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -198,10 +242,24 @@ export default function AdminEntradasPage() {
       );
     }
     return result;
-  }, [entradas, tabelaTipoFilter, tabelaStatusFilter, search]);
+  }, [entradas, origemSelected, tipoReceitaSelected, tabelaTipoSelected, tabelaStatusSelected, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const tabelaActiveCount =
+    (tabelaTipoSelected.length > 0 ? 1 : 0) + (tabelaStatusSelected.length > 0 ? 1 : 0);
+
+  const clearTabelaAdvanced = () => {
+    setTabelaTipoSelected([]);
+    setTabelaStatusSelected([]);
+    setPage(1);
+  };
+
+  const onTabelaFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
 
   const kpiCards = useMemo(() => {
     if (!kpi) return [];
@@ -267,26 +325,38 @@ export default function AdminEntradasPage() {
 
   return (
     <div className="p-6 md:p-10 space-y-8">
-      {/* ─── BLOCO 1: Header + Período + Filtros globais ─── */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+      {/* ─── BLOCO 1: Header ─── */}
+      <div>
+        {kpi && (
+          <p className="text-sm font-bold text-[#22846D] mb-1">
+            Entradas cresceram {kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% em relação aos 30 dias anteriores
+          </p>
+        )}
+        <h1
+          className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight"
+          data-testid="text-page-title"
+        >
+          Entradas
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Detalhamento das receitas da plataforma por período, origem e tipo.
+        </p>
+      </div>
+
+      {/* ─── BLOCO 2: Filtros do período (escopo: KPIs + gráfico) ─── */}
+      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/40 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            {kpi && (
-              <p className="text-sm font-bold text-[#22846D] mb-1">
-                Entradas cresceram {kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% em relação aos 30 dias anteriores
-              </p>
-            )}
-            <h1
-              className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight"
-              data-testid="text-page-title"
-            >
-              Entradas
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Detalhamento das receitas da plataforma por período, origem e tipo.
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Filtros globais
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Período aplicado aos KPIs, gráfico e lançamentos · Origem e tipo refinam a tabela de lançamentos
             </p>
           </div>
+        </div>
 
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
           {/* Seletor de período */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap">
             {periodOptions.map((opt) => {
@@ -305,7 +375,7 @@ export default function AdminEntradasPage() {
                   )}
                 >
                   {isPersonalizado && <RiCalendarLine className="w-3.5 h-3.5 shrink-0" />}
-                  {isPersonalizado && isActive ? formatRange(customRange) : opt.label}
+                  {isPersonalizado && isActive ? formatRangeLabel(customRange) : opt.label}
                 </button>
               );
 
@@ -328,44 +398,55 @@ export default function AdminEntradasPage() {
               );
             })}
           </div>
+
+          <div className="lg:ml-auto">
+            <AdvancedFiltersPopover
+              activeCount={topoActiveCount}
+              onClearAll={clearTopoFilters}
+            >
+              <MultiSelectDropdown
+                label="Origem"
+                options={ORIGEM_OPTIONS}
+                values={origemSelected}
+                onChange={onTopoFilterChange(setOrigemSelected)}
+                placeholder="Todas as origens"
+                testIdPrefix="topo-filter-origem"
+              />
+              <MultiSelectDropdown
+                label="Tipo de receita"
+                options={TIPO_RECEITA_OPTIONS}
+                values={tipoReceitaSelected}
+                onChange={onTopoFilterChange(setTipoReceitaSelected)}
+                placeholder="Todos os tipos"
+                testIdPrefix="topo-filter-tipo"
+              />
+            </AdvancedFiltersPopover>
+          </div>
         </div>
 
-        {/* Filtros de origem e tipo de receita */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <select
-              value={origemFilter}
-              onChange={(e) => { setOrigemFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todos">Origem: Todos</option>
-              <option value="cliente">Cliente</option>
-              <option value="empreiteira">Empreiteira</option>
-              <option value="outros">Outros</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+        {topoActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {origemSelected.map((o) => (
+              <ActiveFilterChip
+                key={o}
+                label={`Origem: ${origemLabels[o]}`}
+                onRemove={() => setOrigemSelected(origemSelected.filter((x) => x !== o))}
+                testId={`topo-active-chip-origem-${o}`}
+              />
+            ))}
+            {tipoReceitaSelected.map((t) => (
+              <ActiveFilterChip
+                key={t}
+                label={`Tipo: ${tipoReceitaLabels[t]}`}
+                onRemove={() => setTipoReceitaSelected(tipoReceitaSelected.filter((x) => x !== t))}
+                testId={`topo-active-chip-tipo-${t}`}
+              />
+            ))}
           </div>
-          <div className="relative">
-            <select
-              value={tipoReceitaFilter}
-              onChange={(e) => { setTipoReceitaFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todos">Tipo de receita: Todos</option>
-              <option value="taxa_medicao">Taxas sobre medições</option>
-              <option value="assinatura">Assinatura</option>
-              <option value="outros_servicos">Outros serviços</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ─── BLOCO 2: 6 KPI Cards ─── */}
+      {/* ─── BLOCO 3: 6 KPI Cards ─── */}
       <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={{
@@ -385,66 +466,74 @@ export default function AdminEntradasPage() {
         ))}
       </motion.div>
 
-      {/* ─── BLOCO 3: Gráfico ─── */}
+      {/* ─── BLOCO 4: Gráfico ─── */}
       <EntradaChart data={chartData?.chart} insights={chartData?.insights} />
 
-      {/* ─── BLOCO 4: Tabela de lançamentos ─── */}
+      {/* ─── BLOCO 5: Tabela de Lançamentos ─── */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        {/* Barra de filtros */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Busca */}
-            <div className="relative">
-              <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Lançamentos</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Detalhamento por operação no período
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <AdvancedFiltersPopover
+              activeCount={tabelaActiveCount}
+              onClearAll={clearTabelaAdvanced}
+            >
+              <MultiSelectDropdown
+                label="Tipo de receita"
+                options={TIPO_RECEITA_OPTIONS}
+                values={tabelaTipoSelected}
+                onChange={onTabelaFilterChange(setTabelaTipoSelected)}
+                placeholder="Todos os tipos"
+                testIdPrefix="lancamentos-filter-tipo"
+              />
+              <MultiSelectDropdown
+                label="Status"
+                options={STATUS_OPTIONS}
+                values={tabelaStatusSelected}
+                onChange={onTabelaFilterChange(setTabelaStatusSelected)}
+                placeholder="Todos os status"
+                testIdPrefix="lancamentos-filter-status"
+              />
+            </AdvancedFiltersPopover>
+
+            <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
+              <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por cliente, empreiteira ou descrição..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Buscar por cliente, empreiteira ou descrição..."
-                className="bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-9 pr-4 py-2 text-xs w-72 focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:text-gray-100 outline-none"
+                className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 data-testid="input-search"
               />
             </div>
-            {/* Filtros rápidos de tipo */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-              {[
-                { value: 'todas', label: 'Todas' },
-                { value: 'taxa_medicao', label: 'Taxas' },
-                { value: 'assinatura', label: 'Assinaturas' },
-                { value: 'outros_servicos', label: 'Outros' },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => { setTabelaTipoFilter(opt.value); setPage(1); }}
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer',
-                    tabelaTipoFilter === opt.value
-                      ? 'bg-primary text-white font-bold shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
-                  )}
-                  data-testid={`filter-chip-${opt.value}`}
-                >
-                  {opt.label}
-                </button>
+          </div>
+
+          {tabelaActiveCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {tabelaTipoSelected.map((t) => (
+                <ActiveFilterChip
+                  key={t}
+                  label={`Tipo: ${tipoReceitaLabels[t]}`}
+                  onRemove={() => setTabelaTipoSelected(tabelaTipoSelected.filter((x) => x !== t))}
+                  testId={`lancamentos-active-chip-tipo-${t}`}
+                />
+              ))}
+              {tabelaStatusSelected.map((s) => (
+                <ActiveFilterChip
+                  key={s}
+                  label={`Status: ${statusLabels[s]}`}
+                  onRemove={() => setTabelaStatusSelected(tabelaStatusSelected.filter((x) => x !== s))}
+                  testId={`lancamentos-active-chip-status-${s}`}
+                />
               ))}
             </div>
-          </div>
-          {/* Dropdown de status */}
-          <div className="relative">
-            <select
-              value={tabelaStatusFilter}
-              onChange={(e) => { setTabelaStatusFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todas">Status: Todas</option>
-              <option value="recebido">Recebido</option>
-              <option value="pendente">Pendente</option>
-              <option value="em_processamento">Em processamento</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
+          )}
         </div>
 
         {/* Tabela */}
@@ -465,14 +554,14 @@ export default function AdminEntradasPage() {
               {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                    Nenhuma entrada encontrada
+                    Nenhum lançamento encontrado
                   </TableCell>
                 </TableRow>
               ) : (
                 paginated.map((ent: Entrada) => (
                   <TableRow
                     key={ent.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                    className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     data-testid={`row-entrada-${ent.id}`}
                   >
                     <TableCell>
@@ -580,7 +669,7 @@ export default function AdminEntradasPage() {
         </div>
       </div>
 
-      {/* ─── BLOCO 5: Top Entidades ─── */}
+      {/* ─── BLOCO 6: Top Entidades ─── */}
       {topClientes && topEmpreiteiras && (
         <EntradaTopEntidades clientes={topClientes} empreiteiras={topEmpreiteiras} />
       )}

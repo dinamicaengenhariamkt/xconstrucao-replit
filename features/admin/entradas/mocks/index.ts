@@ -45,16 +45,16 @@ export const mockEntradaKpiByPeriodo: Record<EntradaPeriodo, EntradaKpi> = {
 };
 
 // ─── Lançamentos ─────────────────────────────────────────────────────────────
-// Dates distributed so period filtering shows meaningful differences (today = 2026-03-01):
-//   7dias  (Feb 22–Mar 01): ent-001, 002, 003, 004, 005
-//   30dias (Jan 30–Mar 01): + ent-006, 007, 008, 009
-//   3meses (Dec 01–Mar 01): + ent-010
-//   12meses(Mar 01 2025–):  + ent-011
+// Dates distributed so period filtering shows meaningful differences (hoje ≈ 2026-04-27):
+//   7dias  (20/04 – 27/04):     ent-001 a ent-005 (5 itens)
+//   30dias (28/03 – 27/04):     + ent-006, 007, 008, 009 (9 itens)
+//   3meses (27/01 – 27/04):     + ent-010 (10 itens)
+//   12meses(28/04/2025 – ):     + ent-011 (todos os 11)
 
 export const mockEntradas: Entrada[] = [
   {
     id: 'ent-001',
-    dataHora: '2026-02-28T14:30:00',
+    dataHora: '2026-04-26T14:30:00',
     descricao: 'Taxa de plataforma – Medição #12 – Obra Residencial Campinas',
     clienteEmpreiteira: 'Incorporadora Sunrise',
     tipoReceita: 'taxa_medicao',
@@ -64,8 +64,8 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-002',
-    dataHora: '2026-02-28T16:45:00',
-    descricao: 'Assinatura Plano Pro – Fevereiro/2026',
+    dataHora: '2026-04-26T16:45:00',
+    descricao: 'Assinatura Plano Pro – Abril/2026',
     clienteEmpreiteira: 'Construtora Horizonte',
     tipoReceita: 'assinatura',
     origem: 'cliente',
@@ -74,7 +74,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-003',
-    dataHora: '2026-02-27T09:20:00',
+    dataHora: '2026-04-25T09:20:00',
     descricao: 'Taxa de plataforma – Medição #8 – Ed. Comercial Alpha',
     clienteEmpreiteira: 'Andrade Construções',
     tipoReceita: 'taxa_medicao',
@@ -84,7 +84,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-004',
-    dataHora: '2026-02-25T14:00:00',
+    dataHora: '2026-04-23T14:00:00',
     descricao: 'Consultoria técnica – Laudo estrutural Obra #OBR-0051',
     clienteEmpreiteira: 'Carlos Santos',
     tipoReceita: 'outros_servicos',
@@ -94,7 +94,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-005',
-    dataHora: '2026-02-25T10:30:00',
+    dataHora: '2026-04-21T10:30:00',
     descricao: 'Taxa de plataforma – Medição #7 – Galpão Industrial',
     clienteEmpreiteira: 'Costa & Oliveira',
     tipoReceita: 'taxa_medicao',
@@ -104,8 +104,8 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-006',
-    dataHora: '2026-02-20T15:10:00',
-    descricao: 'Assinatura Plano Enterprise – Fevereiro/2026',
+    dataHora: '2026-04-15T15:10:00',
+    descricao: 'Assinatura Plano Enterprise – Abril/2026',
     clienteEmpreiteira: 'Engenharia Delta',
     tipoReceita: 'assinatura',
     origem: 'cliente',
@@ -114,7 +114,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-007',
-    dataHora: '2026-02-20T08:45:00',
+    dataHora: '2026-04-10T08:45:00',
     descricao: 'Taxa de plataforma – Medição #5 – Residencial Vista Mar',
     clienteEmpreiteira: 'Ponto Alto Engenharia',
     tipoReceita: 'taxa_medicao',
@@ -124,7 +124,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-008',
-    dataHora: '2026-02-10T11:00:00',
+    dataHora: '2026-04-05T11:00:00',
     descricao: 'Treinamento plataforma – Equipe técnica',
     clienteEmpreiteira: 'João Mendes',
     tipoReceita: 'outros_servicos',
@@ -134,7 +134,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-009',
-    dataHora: '2026-02-03T13:30:00',
+    dataHora: '2026-03-30T13:30:00',
     descricao: 'Taxa de plataforma – Medição #3 – Condomínio Serrano',
     clienteEmpreiteira: 'Construtora ABC Ltda.',
     tipoReceita: 'taxa_medicao',
@@ -144,8 +144,8 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-010',
-    dataHora: '2025-12-15T09:00:00',
-    descricao: 'Assinatura Plano Pro – Dezembro/2025',
+    dataHora: '2026-02-15T09:00:00',
+    descricao: 'Assinatura Plano Pro – Fevereiro/2026',
     clienteEmpreiteira: 'Tech Solutions Brasil',
     tipoReceita: 'assinatura',
     origem: 'cliente',
@@ -154,7 +154,7 @@ export const mockEntradas: Entrada[] = [
   },
   {
     id: 'ent-011',
-    dataHora: '2025-06-15T14:00:00',
+    dataHora: '2025-09-15T14:00:00',
     descricao: 'Taxa de plataforma – Medição #1 – Obra Pioneira',
     clienteEmpreiteira: 'Grupo Mello Engenharia',
     tipoReceita: 'taxa_medicao',
