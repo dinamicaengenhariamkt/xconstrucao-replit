@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { cn } from '@shared/lib/utils';
-import { FilterChips } from '@features/shared/components/FilterChips';
 import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { useAdminFAQ } from '@features/admin/faq/hooks/use-faq';
 import {
@@ -12,6 +11,9 @@ import {
   ADMIN_FAQ_VISAO_COLORS,
 } from '@features/admin/faq/constants';
 import { NovaPerguntaModal } from '@features/admin/faq/components/NovaPerguntaModal';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
@@ -30,9 +32,23 @@ import {
   RiSettings3Line,
   RiEditLine,
 } from 'react-icons/ri';
-import type { FilterChipOption } from '@features/shared/types';
-import type { AdminFAQItem } from '@features/admin/faq/types';
+import type { AdminFAQItem, FAQVisao } from '@features/admin/faq/types';
 import type { IconType } from 'react-icons';
+
+type FAQAtivoStatus = 'ativo' | 'inativo';
+
+const CATEGORY_OPTIONS: { value: string; label: string }[] = Object.entries(
+  ADMIN_FAQ_CATEGORIES,
+).map(([value, label]) => ({ value, label }));
+
+const VISAO_OPTIONS: { value: FAQVisao; label: string }[] = (
+  Object.keys(ADMIN_FAQ_VISAO_LABELS) as FAQVisao[]
+).map((v) => ({ value: v, label: ADMIN_FAQ_VISAO_LABELS[v] }));
+
+const STATUS_OPTIONS: { value: FAQAtivoStatus; label: string }[] = [
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'inativo', label: 'Inativo' },
+];
 
 const CATEGORY_ICONS: Record<string, IconType> = {
   usuarios: RiGroupLine,
@@ -59,14 +75,12 @@ function FAQPageSkeleton() {
         <Skeleton className="h-5 w-2/3 mx-auto rounded" />
         <Skeleton className="h-12 w-full max-w-2xl mx-auto rounded-2xl" />
       </div>
-      <div className="flex justify-center gap-2 flex-wrap">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-28 rounded-full" />
-        ))}
+      <div className="flex justify-center">
+        <Skeleton className="h-9 w-44 rounded-lg" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+          <Skeleton key={i} className="h-20 rounded-xl" />
         ))}
       </div>
       <div className="space-y-8">
@@ -97,22 +111,24 @@ function AdminFAQCategoryCard({
   const meta = ADMIN_FAQ_CATEGORY_META[categoryKey];
   const Icon = CATEGORY_ICONS[categoryKey] ?? RiGroupLine;
   return (
-    <div
+    <button
+      type="button"
       onClick={onSelect}
-      className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm hover:border-primary/30 hover:-translate-y-1 transition-all cursor-pointer group"
+      className="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm hover:border-primary/30 hover:-translate-y-0.5 transition-all cursor-pointer group"
+      data-testid={`faq-category-card-${categoryKey}`}
     >
-      <div className="flex items-start gap-4">
-        <div className={cn('p-3 rounded-xl shrink-0', meta?.iconBg)}>
-          <Icon className={cn('w-6 h-6', meta?.iconColor)} />
+      <div className="flex items-start gap-3">
+        <div className={cn('p-2 rounded-lg shrink-0', meta?.iconBg)}>
+          <Icon className={cn('w-5 h-5', meta?.iconColor)} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1 leading-snug">{label}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{meta?.description}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{count} perguntas</p>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">{label}</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{meta?.description}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{count} perguntas</p>
         </div>
-        <RiArrowRightSLine className="w-5 h-5 text-gray-300 group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+        <RiArrowRightSLine className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 mt-0.5" />
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -229,68 +245,38 @@ function AdminFAQAccordion({
 
 export default function AdminFAQPage() {
   const { data: items, isLoading } = useAdminFAQ();
-  const [activeCategory, setActiveCategory] = useState('todas');
-  const [activeVisao, setActiveVisao] = useState('todas');
+  const [categorySelected, setCategorySelected] = useState<string[]>([]);
+  const [visaoSelected, setVisaoSelected] = useState<FAQVisao[]>([]);
+  const [statusSelected, setStatusSelected] = useState<FAQAtivoStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<AdminFAQItem | null>(null);
 
-  const categoryOptions: FilterChipOption[] = useMemo(() => {
-    if (!items) return [];
-    return [
-      { label: 'Todas', value: 'todas', count: items.length },
-      ...Object.entries(ADMIN_FAQ_CATEGORIES).map(([value, label]) => ({
-        label,
-        value,
-        count: items.filter((i) => i.category === value).length,
-      })),
-    ];
-  }, [items]);
-
-  const visaoOptions: FilterChipOption[] = useMemo(() => {
-    if (!items) return [];
-    return [
-      { label: 'Todas', value: 'todas', count: items.length },
-      {
-        label: 'Contratante',
-        value: 'contratante',
-        count: items.filter((i) => i.visao === 'contratante' || i.visao === 'ambos').length,
-      },
-      {
-        label: 'Empreiteiro',
-        value: 'empreiteiro',
-        count: items.filter((i) => i.visao === 'empreiteiro' || i.visao === 'ambos').length,
-      },
-      {
-        label: 'Ambas',
-        value: 'ambos',
-        count: items.filter((i) => i.visao === 'ambos').length,
-      },
-    ];
-  }, [items]);
-
   const filteredItems = useMemo(() => {
     if (!items) return [];
     let result = items;
-    if (activeCategory !== 'todas') {
-      result = result.filter((i) => i.category === activeCategory);
+    if (categorySelected.length > 0) {
+      result = result.filter((i) => categorySelected.includes(i.category));
     }
-    if (activeVisao !== 'todas') {
+    if (visaoSelected.length > 0) {
       result = result.filter((i) =>
-        activeVisao === 'ambos'
-          ? i.visao === 'ambos'
-          : i.visao === activeVisao || i.visao === 'ambos'
+        visaoSelected.some((v) =>
+          v === 'ambos' ? i.visao === 'ambos' : i.visao === v || i.visao === 'ambos',
+        ),
       );
+    }
+    if (statusSelected.length > 0) {
+      result = result.filter((i) => statusSelected.includes(i.ativo ? 'ativo' : 'inativo'));
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (i) => i.question.toLowerCase().includes(query) || i.answer.toLowerCase().includes(query)
+        (i) => i.question.toLowerCase().includes(query) || i.answer.toLowerCase().includes(query),
       );
     }
     return result;
-  }, [items, activeCategory, activeVisao, searchQuery]);
+  }, [items, categorySelected, visaoSelected, statusSelected, searchQuery]);
 
   const groupedItems = useMemo(() => {
     const groups: Record<string, AdminFAQItem[]> = {};
@@ -301,7 +287,19 @@ export default function AdminFAQPage() {
     return groups;
   }, [filteredItems]);
 
-  const showGrid = activeCategory === 'todas' && activeVisao === 'todas' && !searchQuery.trim();
+  const advancedActiveCount =
+    (categorySelected.length > 0 ? 1 : 0) +
+    (visaoSelected.length > 0 ? 1 : 0) +
+    (statusSelected.length > 0 ? 1 : 0);
+
+  const clearAllAdvanced = () => {
+    setCategorySelected([]);
+    setVisaoSelected([]);
+    setStatusSelected([]);
+  };
+
+  const showGrid =
+    advancedActiveCount === 0 && !searchQuery.trim();
 
   const handleOpenEdit = (item: AdminFAQItem) => {
     setEditItem(item);
@@ -350,25 +348,78 @@ export default function AdminFAQPage() {
         </div>
       </div>
 
-      {/* Filtros centralizados */}
+      {/* Filtros avançados centralizados */}
       <div className="flex flex-col items-center gap-3">
-        <FilterChips options={categoryOptions} activeValue={activeCategory} onSelect={setActiveCategory} />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 font-medium">Visão:</span>
-          <FilterChips options={visaoOptions} activeValue={activeVisao} onSelect={setActiveVisao} />
-        </div>
+        <AdvancedFiltersPopover
+          activeCount={advancedActiveCount}
+          onClearAll={clearAllAdvanced}
+        >
+          <MultiSelectDropdown<string>
+            label="Categoria"
+            options={CATEGORY_OPTIONS}
+            values={categorySelected}
+            onChange={setCategorySelected}
+            placeholder="Todas as categorias"
+            testIdPrefix="filter-faq-categoria"
+          />
+          <MultiSelectDropdown<FAQVisao>
+            label="Visão"
+            options={VISAO_OPTIONS}
+            values={visaoSelected}
+            onChange={setVisaoSelected}
+            placeholder="Todas as visões"
+            testIdPrefix="filter-faq-visao"
+          />
+          <MultiSelectDropdown<FAQAtivoStatus>
+            label="Status"
+            options={STATUS_OPTIONS}
+            values={statusSelected}
+            onChange={setStatusSelected}
+            placeholder="Todos os status"
+            testIdPrefix="filter-faq-status"
+          />
+        </AdvancedFiltersPopover>
+
+        {advancedActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {categorySelected.map((c) => (
+              <ActiveFilterChip
+                key={c}
+                label={`Categoria: ${ADMIN_FAQ_CATEGORIES[c] ?? c}`}
+                onRemove={() => setCategorySelected(categorySelected.filter((x) => x !== c))}
+                testId={`active-chip-faq-categoria-${c}`}
+              />
+            ))}
+            {visaoSelected.map((v) => (
+              <ActiveFilterChip
+                key={v}
+                label={`Visão: ${ADMIN_FAQ_VISAO_LABELS[v]}`}
+                onRemove={() => setVisaoSelected(visaoSelected.filter((x) => x !== v))}
+                testId={`active-chip-faq-visao-${v}`}
+              />
+            ))}
+            {statusSelected.map((s) => (
+              <ActiveFilterChip
+                key={s}
+                label={`Status: ${s === 'ativo' ? 'Ativo' : 'Inativo'}`}
+                onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                testId={`active-chip-faq-status-${s}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Grid de categorias (visível apenas em "Todas" sem filtros/busca) */}
+      {/* Grid de categorias (visível apenas sem filtros/busca) */}
       {showGrid && items && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(ADMIN_FAQ_CATEGORIES).map(([key, label]) => (
             <AdminFAQCategoryCard
               key={key}
               categoryKey={key}
               label={label}
               count={items.filter((i) => i.category === key).length}
-              onSelect={() => setActiveCategory(key)}
+              onSelect={() => setCategorySelected([key])}
             />
           ))}
         </div>

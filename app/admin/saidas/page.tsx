@@ -19,6 +19,7 @@ import { Calendar } from '@shared/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Badge } from '@shared/components/ui/badge';
+import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
   Table,
@@ -31,6 +32,10 @@ import {
 import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/admin/financeiro/components/StatsCard';
 import { SaidaChart } from '@features/admin/saidas/components/SaidaChart';
+import { SaidaTopEntidades } from '@features/admin/saidas/components/SaidaTopEntidades';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import type {
   SaidaPeriodo,
   SaidaTipo,
@@ -45,6 +50,8 @@ import {
   useSaidas,
   useSaidaChart,
   useSaidasFuturas,
+  useTopEmpreiteirasPagas,
+  useTopClientesReembolsados,
 } from '@features/admin/saidas/hooks/use-saidas';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 
@@ -100,6 +107,27 @@ const destinoPerfilClasses: Record<SaidaDestinoPerfil, string> = {
   outro: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
 
+const TIPO_SAIDA_OPTIONS: { value: SaidaTipo; label: string }[] = [
+  { value: 'pagamento_medicao', label: 'Pagamento de medição' },
+  { value: 'reembolso', label: 'Reembolso' },
+  { value: 'custo_operacional', label: 'Custo operacional' },
+];
+
+const DESTINO_PERFIL_OPTIONS: { value: SaidaDestinoPerfil; label: string }[] = [
+  { value: 'empreiteira', label: 'Empreiteira' },
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'outro', label: 'Outro' },
+];
+
+const STATUS_OPTIONS: { value: SaidaStatus; label: string }[] = [
+  { value: 'pago', label: 'Pago' },
+  { value: 'agendado', label: 'Agendado' },
+  { value: 'pendente_aprovacao', label: 'Pendente aprovação' },
+  { value: 'atrasado', label: 'Atrasado' },
+];
+
+const SEM_OBRA = '__sem_obra__';
+
 // ─── Period options ───────────────────────────────────────────────────────────
 
 const periodOptions: { value: SaidaPeriodo; label: string }[] = [
@@ -110,13 +138,10 @@ const periodOptions: { value: SaidaPeriodo; label: string }[] = [
   { value: 'personalizado', label: 'Personalizado' },
 ];
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
 const PAGE_SIZE = 20;
+const PAGE_SIZE_FUTURAS = 8;
 
-// ─── Custom range label ──────────────────────────────────────────────────────
-
-function formatRange(range: DateRange | undefined): string {
+function formatRangeLabel(range: DateRange | undefined): string {
   if (!range) return 'Personalizado';
   const from = format(range.from, 'dd/MM', { locale: ptBR });
   const to = range.to ? format(range.to, 'dd/MM', { locale: ptBR }) : '...';
@@ -159,6 +184,11 @@ function SaidasSkeleton() {
           <Skeleton className="h-48 w-full rounded-xl" />
         </CardContent>
       </Card>
+      <Card>
+        <CardContent className="p-0">
+          <Skeleton className="h-96 w-full rounded-xl" />
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -169,12 +199,18 @@ export default function AdminSaidasPage() {
   const [periodo, setPeriodo] = useState<SaidaPeriodo>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [tipoFilter, setTipoFilter] = useState<string>('todos');
-  const [destinoFilter, setDestinoFilter] = useState<string>('todos');
-  const [tabelaTipoFilter, setTabelaTipoFilter] = useState<string>('todas');
-  const [tabelaStatusFilter, setTabelaStatusFilter] = useState<string>('todas');
+
+  // Filtros globais (afetam tabela de lançamentos)
+  const [tipoSaidaSelected, setTipoSaidaSelected] = useState<SaidaTipo[]>([]);
+  const [destinoPerfilSelected, setDestinoPerfilSelected] = useState<SaidaDestinoPerfil[]>([]);
+
+  // Filtros da tabela
+  const [tabelaTipoSelected, setTabelaTipoSelected] = useState<SaidaTipo[]>([]);
+  const [tabelaStatusSelected, setTabelaStatusSelected] = useState<SaidaStatus[]>([]);
+  const [tabelaObraSelected, setTabelaObraSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [futurasPage, setFuturasPage] = useState(1);
 
   function handleDayPickerSelect(range: DayPickerRange | undefined) {
     if (!range?.from) { setCustomRange(undefined); return; }
@@ -189,20 +225,64 @@ export default function AdminSaidasPage() {
     if (p === 'personalizado') setPopoverOpen(true);
   }
 
+  const topoActiveCount =
+    (tipoSaidaSelected.length > 0 ? 1 : 0) + (destinoPerfilSelected.length > 0 ? 1 : 0);
+
+  const clearTopoFilters = () => {
+    setTipoSaidaSelected([]);
+    setDestinoPerfilSelected([]);
+    setPage(1);
+  };
+
+  const onTopoFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
+
   const { data: kpi, isLoading: isLoadingKpi } = useSaidaKpi(periodo);
   const { data: saidas, isLoading: isLoadingSaidas } = useSaidas(periodo, customRange);
   const { data: chartData, isLoading: isLoadingChart } = useSaidaChart(periodo);
   const { data: futuras, isLoading: isLoadingFuturas } = useSaidasFuturas();
+  const { data: topEmpreiteirasPagas, isLoading: isLoadingTopEmp } = useTopEmpreiteirasPagas(periodo);
+  const { data: topClientesReembolsados, isLoading: isLoadingTopCli } = useTopClientesReembolsados(periodo);
 
-  const isLoading = isLoadingKpi || isLoadingSaidas || isLoadingChart || isLoadingFuturas;
+  const isLoading =
+    isLoadingKpi ||
+    isLoadingSaidas ||
+    isLoadingChart ||
+    isLoadingFuturas ||
+    isLoadingTopEmp ||
+    isLoadingTopCli;
+
+  const obraOptions = useMemo(() => {
+    const set = new Set<string>();
+    (saidas ?? []).forEach((s) => { if (s.obra) set.add(s.obra); });
+    const sorted = Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return [
+      { value: SEM_OBRA, label: 'Sem obra vinculada' },
+      ...sorted.map((o) => ({ value: o, label: o })),
+    ];
+  }, [saidas]);
 
   const filtered = useMemo(() => {
     let result = saidas ?? [];
-    if (tabelaTipoFilter !== 'todas') {
-      result = result.filter((s) => s.tipoSaida === tabelaTipoFilter);
+    if (tipoSaidaSelected.length > 0) {
+      result = result.filter((s) => tipoSaidaSelected.includes(s.tipoSaida));
     }
-    if (tabelaStatusFilter !== 'todas') {
-      result = result.filter((s) => s.status === tabelaStatusFilter);
+    if (destinoPerfilSelected.length > 0) {
+      result = result.filter((s) => destinoPerfilSelected.includes(s.destinoPerfil));
+    }
+    if (tabelaTipoSelected.length > 0) {
+      result = result.filter((s) => tabelaTipoSelected.includes(s.tipoSaida));
+    }
+    if (tabelaStatusSelected.length > 0) {
+      result = result.filter((s) => tabelaStatusSelected.includes(s.status));
+    }
+    if (tabelaObraSelected.length > 0) {
+      result = result.filter((s) => {
+        if (s.obra) return tabelaObraSelected.includes(s.obra);
+        return tabelaObraSelected.includes(SEM_OBRA);
+      });
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -214,10 +294,34 @@ export default function AdminSaidasPage() {
       );
     }
     return result;
-  }, [saidas, tabelaTipoFilter, tabelaStatusFilter, search]);
+  }, [saidas, tipoSaidaSelected, destinoPerfilSelected, tabelaTipoSelected, tabelaStatusSelected, tabelaObraSelected, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const futurasTotal = futuras?.length ?? 0;
+  const futurasTotalPages = Math.max(1, Math.ceil(futurasTotal / PAGE_SIZE_FUTURAS));
+  const futurasPaginated = (futuras ?? []).slice(
+    (futurasPage - 1) * PAGE_SIZE_FUTURAS,
+    futurasPage * PAGE_SIZE_FUTURAS
+  );
+
+  const tabelaActiveCount =
+    (tabelaTipoSelected.length > 0 ? 1 : 0) +
+    (tabelaStatusSelected.length > 0 ? 1 : 0) +
+    (tabelaObraSelected.length > 0 ? 1 : 0);
+
+  const clearTabelaAdvanced = () => {
+    setTabelaTipoSelected([]);
+    setTabelaStatusSelected([]);
+    setTabelaObraSelected([]);
+    setPage(1);
+  };
+
+  const onTabelaFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setPage(1);
+  };
 
   const kpiCards = useMemo(() => {
     if (!kpi) return [];
@@ -283,27 +387,38 @@ export default function AdminSaidasPage() {
 
   return (
     <div className="p-6 md:p-10 space-y-8">
+      {/* ─── BLOCO 1: Header ─── */}
+      <div>
+        {kpi && (
+          <p className="text-sm font-bold text-red-600 dark:text-red-400 mb-1">
+            As saídas cresceram {kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% em relação aos 30 dias anteriores
+          </p>
+        )}
+        <h1
+          className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight"
+          data-testid="text-page-title"
+        >
+          Saídas
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Detalhamento dos pagamentos e desembolsos da plataforma por período, destino e tipo.
+        </p>
+      </div>
 
-      {/* ─── BLOCO 1: Header + Período + Filtros globais ─── */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+      {/* ─── BLOCO 2: Filtros globais (escopo: KPIs + gráfico + lançamentos) ─── */}
+      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/40 p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            {kpi && (
-              <p className="text-sm font-bold text-red-600 dark:text-red-400 mb-1">
-                As saídas cresceram {kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% em relação aos 30 dias anteriores
-              </p>
-            )}
-            <h1
-              className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight"
-              data-testid="text-page-title"
-            >
-              Saídas
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Detalhamento dos pagamentos e desembolsos da plataforma por período, destino e tipo.
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Filtros globais
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Período aplicado aos KPIs, gráfico e lançamentos · Tipo de saída e destino refinam a tabela de lançamentos
             </p>
           </div>
+        </div>
 
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
           {/* Seletor de período */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap">
             {periodOptions.map((opt) => {
@@ -322,7 +437,7 @@ export default function AdminSaidasPage() {
                   )}
                 >
                   {isPersonalizado && <RiCalendarLine className="w-3.5 h-3.5 shrink-0" />}
-                  {isPersonalizado && isActive ? formatRange(customRange) : opt.label}
+                  {isPersonalizado && isActive ? formatRangeLabel(customRange) : opt.label}
                 </button>
               );
 
@@ -345,44 +460,55 @@ export default function AdminSaidasPage() {
               );
             })}
           </div>
+
+          <div className="lg:ml-auto">
+            <AdvancedFiltersPopover
+              activeCount={topoActiveCount}
+              onClearAll={clearTopoFilters}
+            >
+              <MultiSelectDropdown
+                label="Tipo de saída"
+                options={TIPO_SAIDA_OPTIONS}
+                values={tipoSaidaSelected}
+                onChange={onTopoFilterChange(setTipoSaidaSelected)}
+                placeholder="Todos os tipos"
+                testIdPrefix="topo-filter-tipo"
+              />
+              <MultiSelectDropdown
+                label="Destino"
+                options={DESTINO_PERFIL_OPTIONS}
+                values={destinoPerfilSelected}
+                onChange={onTopoFilterChange(setDestinoPerfilSelected)}
+                placeholder="Todos os destinos"
+                testIdPrefix="topo-filter-destino"
+              />
+            </AdvancedFiltersPopover>
+          </div>
         </div>
 
-        {/* Filtros de tipo de saída e destino */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <select
-              value={tipoFilter}
-              onChange={(e) => { setTipoFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todos">Tipo de saída: Todos</option>
-              <option value="pagamento_medicao">Pagamento a empreiteiras</option>
-              <option value="reembolso">Reembolso a clientes</option>
-              <option value="custo_operacional">Outros desembolsos</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+        {topoActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {tipoSaidaSelected.map((t) => (
+              <ActiveFilterChip
+                key={t}
+                label={`Tipo: ${tipoSaidaLabels[t]}`}
+                onRemove={() => setTipoSaidaSelected(tipoSaidaSelected.filter((x) => x !== t))}
+                testId={`topo-active-chip-tipo-${t}`}
+              />
+            ))}
+            {destinoPerfilSelected.map((d) => (
+              <ActiveFilterChip
+                key={d}
+                label={`Destino: ${destinoPerfilLabels[d]}`}
+                onRemove={() => setDestinoPerfilSelected(destinoPerfilSelected.filter((x) => x !== d))}
+                testId={`topo-active-chip-destino-${d}`}
+              />
+            ))}
           </div>
-          <div className="relative">
-            <select
-              value={destinoFilter}
-              onChange={(e) => { setDestinoFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todos">Destino: Todos</option>
-              <option value="empreiteira">Empreiteiras</option>
-              <option value="cliente">Clientes</option>
-              <option value="outro">Outros</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ─── BLOCO 2: 6 KPI Cards ─── */}
+      {/* ─── BLOCO 3: 6 KPI Cards ─── */}
       <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={{
@@ -402,67 +528,90 @@ export default function AdminSaidasPage() {
         ))}
       </motion.div>
 
-      {/* ─── BLOCO 3: Gráfico ─── */}
+      {/* ─── BLOCO 4: Gráfico ─── */}
       <SaidaChart data={chartData?.chart} insights={chartData?.insights} />
 
-      {/* ─── BLOCO 4: Tabela de saídas ─── */}
+      {/* ─── BLOCO 5: Tabela de Lançamentos ─── */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        {/* Barra de filtros */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Busca */}
-            <div className="relative">
-              <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Lançamentos</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Detalhamento por operação no período
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <AdvancedFiltersPopover
+              activeCount={tabelaActiveCount}
+              onClearAll={clearTabelaAdvanced}
+            >
+              <MultiSelectDropdown
+                label="Tipo de saída"
+                options={TIPO_SAIDA_OPTIONS}
+                values={tabelaTipoSelected}
+                onChange={onTabelaFilterChange(setTabelaTipoSelected)}
+                placeholder="Todos os tipos"
+                testIdPrefix="lancamentos-filter-tipo"
+              />
+              <MultiSelectDropdown
+                label="Status"
+                options={STATUS_OPTIONS}
+                values={tabelaStatusSelected}
+                onChange={onTabelaFilterChange(setTabelaStatusSelected)}
+                placeholder="Todos os status"
+                testIdPrefix="lancamentos-filter-status"
+              />
+              <MultiSelectDropdown
+                label="Obra"
+                options={obraOptions}
+                values={tabelaObraSelected}
+                onChange={onTabelaFilterChange(setTabelaObraSelected)}
+                placeholder="Todas as obras"
+                testIdPrefix="lancamentos-filter-obra"
+              />
+            </AdvancedFiltersPopover>
+
+            <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
+              <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por empreiteira, cliente, obra ou descrição..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Buscar por empreiteira, cliente, obra ou descrição..."
-                className="bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-9 pr-4 py-2 text-xs w-80 focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:text-gray-100 outline-none"
+                className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 data-testid="input-search"
               />
             </div>
-            {/* Filtros rápidos de tipo */}
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-              {[
-                { value: 'todas', label: 'Todas' },
-                { value: 'pagamento_medicao', label: 'Pag. empreiteiras' },
-                { value: 'reembolso', label: 'Reembolsos' },
-                { value: 'custo_operacional', label: 'Outros' },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => { setTabelaTipoFilter(opt.value); setPage(1); }}
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer',
-                    tabelaTipoFilter === opt.value
-                      ? 'bg-primary text-white font-bold shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
-                  )}
-                  data-testid={`filter-chip-${opt.value}`}
-                >
-                  {opt.label}
-                </button>
+          </div>
+
+          {tabelaActiveCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {tabelaTipoSelected.map((t) => (
+                <ActiveFilterChip
+                  key={t}
+                  label={`Tipo: ${tipoSaidaLabels[t]}`}
+                  onRemove={() => setTabelaTipoSelected(tabelaTipoSelected.filter((x) => x !== t))}
+                  testId={`lancamentos-active-chip-tipo-${t}`}
+                />
+              ))}
+              {tabelaStatusSelected.map((s) => (
+                <ActiveFilterChip
+                  key={s}
+                  label={`Status: ${statusLabels[s]}`}
+                  onRemove={() => setTabelaStatusSelected(tabelaStatusSelected.filter((x) => x !== s))}
+                  testId={`lancamentos-active-chip-status-${s}`}
+                />
+              ))}
+              {tabelaObraSelected.map((o) => (
+                <ActiveFilterChip
+                  key={o}
+                  label={`Obra: ${o === SEM_OBRA ? 'Sem obra' : o}`}
+                  onRemove={() => setTabelaObraSelected(tabelaObraSelected.filter((x) => x !== o))}
+                  testId={`lancamentos-active-chip-obra-${o}`}
+                />
               ))}
             </div>
-          </div>
-          {/* Dropdown de status */}
-          <div className="relative">
-            <select
-              value={tabelaStatusFilter}
-              onChange={(e) => { setTabelaStatusFilter(e.target.value); setPage(1); }}
-              className="appearance-none bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-4 pr-10 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="todas">Status: Todos</option>
-              <option value="pago">Pago</option>
-              <option value="agendado">Agendado</option>
-              <option value="pendente_aprovacao">Pendente aprovação</option>
-              <option value="atrasado">Atrasado</option>
-            </select>
-            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </div>
+          )}
         </div>
 
         {/* Tabela */}
@@ -475,8 +624,8 @@ export default function AdminSaidasPage() {
                 <TableHead className="text-xs font-bold uppercase tracking-wider">Obra/Contexto</TableHead>
                 <TableHead className="text-xs font-bold uppercase tracking-wider">Destino</TableHead>
                 <TableHead className="text-xs font-bold uppercase tracking-wider">Tipo de saída</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider">Status</TableHead>
                 <TableHead className="text-xs font-bold uppercase tracking-wider text-right">Valor</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -490,7 +639,7 @@ export default function AdminSaidasPage() {
                 paginated.map((sai: Saida) => (
                   <TableRow
                     key={sai.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                    className="hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     data-testid={`row-saida-${sai.id}`}
                   >
                     <TableCell>
@@ -537,6 +686,11 @@ export default function AdminSaidasPage() {
                         {tipoSaidaLabels[sai.tipoSaida]}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <p className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
+                        {formatCurrency(sai.valor)}
+                      </p>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
@@ -545,11 +699,6 @@ export default function AdminSaidasPage() {
                       >
                         {statusLabels[sai.status]}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <p className="text-sm font-bold text-red-600 dark:text-red-400 whitespace-nowrap">
-                        {formatCurrency(sai.valor)}
-                      </p>
                     </TableCell>
                   </TableRow>
                 ))
@@ -611,22 +760,21 @@ export default function AdminSaidasPage() {
         </div>
       </div>
 
-      {/* ─── BLOCO 5: Agenda de saídas futuras ─── */}
+      {/* ─── BLOCO 6: Agenda de saídas futuras ─── */}
       {futuras && futuras.length > 0 && (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800">
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Saídas previstas</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Compromissos de pagamento nos próximos 15 dias</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Compromissos de pagamento nos próximos 30 dias</p>
           </div>
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
-            {futuras.map((fut: SaidaFutura) => (
+            {futurasPaginated.map((fut: SaidaFutura) => (
               <div
                 key={fut.id}
-                className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 data-testid={`row-futura-${fut.id}`}
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  {/* Badge de vencimento */}
                   <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400">
                     <span className="text-xs font-bold leading-none">{formatDate(fut.vencimento).split('/')[0]}</span>
                     <span className="text-[10px] font-medium leading-none mt-0.5">/{formatDate(fut.vencimento).split('/')[1]}</span>
@@ -658,7 +806,69 @@ export default function AdminSaidasPage() {
               </div>
             ))}
           </div>
+
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center">
+            <span className="text-sm text-gray-500">
+              Exibindo{' '}
+              <span className="font-bold text-gray-700 dark:text-gray-200">
+                {futurasTotal === 0 ? '0' : `${(futurasPage - 1) * PAGE_SIZE_FUTURAS + 1}–${Math.min(futurasPage * PAGE_SIZE_FUTURAS, futurasTotal)}`}
+              </span>{' '}
+              de{' '}
+              <span className="font-bold text-gray-700 dark:text-gray-200">{futurasTotal}</span>{' '}
+              compromissos
+            </span>
+            {futurasTotalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setFuturasPage((p) => Math.max(1, p - 1))}
+                  disabled={futurasPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  data-testid="futuras-prev-page"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {Array.from({ length: Math.min(futurasTotalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setFuturasPage(pageNum)}
+                      className={cn(
+                        'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors',
+                        futurasPage === pageNum
+                          ? 'bg-primary text-white font-bold'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      )}
+                      data-testid={`futuras-page-${pageNum}`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setFuturasPage((p) => Math.min(futurasTotalPages, p + 1))}
+                  disabled={futurasPage === futurasTotalPages}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  data-testid="futuras-next-page"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* ─── BLOCO 7: Top Entidades ─── */}
+      {topEmpreiteirasPagas && topClientesReembolsados && (
+        <SaidaTopEntidades
+          empreiteiras={topEmpreiteirasPagas}
+          clientes={topClientesReembolsados}
+        />
       )}
     </div>
   );

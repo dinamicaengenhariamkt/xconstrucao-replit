@@ -1,15 +1,22 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
-import { FilterChips } from '@features/shared/components/FilterChips';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { RangeDateInput } from '@features/shared/components/filters/RangeDateInput';
 import { useAuditoriaKpi, useAuditoriaEventos } from '@features/admin/auditoria/hooks/use-auditoria';
-import type { AuditoriaEventTipo, AuditoriaModulo } from '@features/admin/auditoria/types';
-import type { FilterChipOption } from '@features/shared/types';
+import type {
+  AuditoriaEventTipo,
+  AuditoriaModulo,
+  AuditoriaCategoria,
+} from '@features/admin/auditoria/types';
 import {
   RiLoginCircleLine,
   RiLogoutCircleLine,
@@ -28,7 +35,12 @@ import {
   RiShieldUserLine,
   RiAlertLine,
   RiErrorWarningLine,
+  RiGroupLine,
+  RiArrowDownLine,
 } from 'react-icons/ri';
+
+const INITIAL_DAYS = 3;
+const DAYS_INCREMENT = 3;
 
 type EventoConfig = { icon: React.ElementType; bgColor: string };
 
@@ -48,6 +60,22 @@ const EVENTO_CONFIG: Record<AuditoriaEventTipo, EventoConfig> = {
   sistema: { icon: RiServerLine, bgColor: 'bg-gray-600' },
 };
 
+const TIPO_LABEL: Record<AuditoriaEventTipo, string> = {
+  login: 'Login',
+  logout: 'Logout',
+  cliente_criado: 'Cliente criado',
+  cliente_editado: 'Cliente editado',
+  cliente_bloqueado: 'Cliente bloqueado',
+  empreiteira_criada: 'Empreiteira criada',
+  empreiteira_bloqueada: 'Empreiteira bloqueada',
+  obra_criada: 'Obra criada',
+  obra_atualizada: 'Obra atualizada',
+  pagamento_registrado: 'Pagamento registrado',
+  configuracao_alterada: 'Configuração alterada',
+  plano_alterado: 'Plano alterado',
+  sistema: 'Sistema',
+};
+
 const MODULO_LABEL: Record<AuditoriaModulo, string> = {
   clientes: 'Clientes',
   empreiteiras: 'Empreiteiras',
@@ -57,6 +85,68 @@ const MODULO_LABEL: Record<AuditoriaModulo, string> = {
   configuracoes: 'Configurações',
   sistema: 'Sistema',
 };
+
+const CATEGORIA_LABEL: Record<AuditoriaCategoria, string> = {
+  risco: 'Risco',
+  financeiro: 'Financeiro',
+  acesso: 'Acesso',
+  mudanca: 'Mudança',
+  sistema: 'Sistema',
+};
+
+const CATEGORIA_BADGE_CLASS: Record<AuditoriaCategoria, string> = {
+  risco: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  financeiro: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  acesso: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  mudanca: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  sistema: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+};
+
+function getCategoria(tipo: AuditoriaEventTipo): AuditoriaCategoria {
+  switch (tipo) {
+    case 'cliente_bloqueado':
+    case 'empreiteira_bloqueada':
+    case 'configuracao_alterada':
+      return 'risco';
+    case 'pagamento_registrado':
+      return 'financeiro';
+    case 'login':
+    case 'logout':
+      return 'acesso';
+    case 'cliente_criado':
+    case 'cliente_editado':
+    case 'obra_criada':
+    case 'obra_atualizada':
+    case 'empreiteira_criada':
+    case 'plano_alterado':
+      return 'mudanca';
+    case 'sistema':
+    default:
+      return 'sistema';
+  }
+}
+
+const TIPO_OPTIONS: { value: AuditoriaEventTipo; label: string }[] = (
+  Object.entries(TIPO_LABEL) as [AuditoriaEventTipo, string][]
+).map(([value, label]) => ({ value, label }));
+
+const MODULO_OPTIONS: { value: AuditoriaModulo; label: string }[] = (
+  Object.entries(MODULO_LABEL) as [AuditoriaModulo, string][]
+).map(([value, label]) => ({ value, label }));
+
+const CATEGORIA_OPTIONS: { value: AuditoriaCategoria; label: string }[] = (
+  Object.entries(CATEGORIA_LABEL) as [AuditoriaCategoria, string][]
+).map(([value, label]) => ({ value, label }));
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
 
 function formatDataHora(isoString: string): string {
   const date = new Date(isoString);
@@ -79,42 +169,45 @@ function getDateLabel(isoString: string): string {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-const MODULOS_FILTER: { label: string; value: string }[] = [
-  { label: 'Todos', value: 'todos' },
-  { label: 'Clientes', value: 'clientes' },
-  { label: 'Empreiteiras', value: 'empreiteiras' },
-  { label: 'Obras', value: 'obras' },
-  { label: 'Financeiro', value: 'financeiro' },
-  { label: 'Planos', value: 'planos' },
-  { label: 'Sistema', value: 'sistema' },
-];
-
 export default function AdminAuditoriaPage() {
   const { data: kpi, isLoading: kpiLoading } = useAuditoriaKpi();
   const { data: eventos, isLoading: eventosLoading } = useAuditoriaEventos();
-  const [activeModulo, setActiveModulo] = useState('todos');
+
   const [searchQuery, setSearchQuery] = useState('');
+  const [moduloSelected, setModuloSelected] = useState<AuditoriaModulo[]>([]);
+  const [tipoSelected, setTipoSelected] = useState<AuditoriaEventTipo[]>([]);
+  const [categoriaSelected, setCategoriaSelected] = useState<AuditoriaCategoria[]>([]);
+  const [usuarioSelected, setUsuarioSelected] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [daysToShow, setDaysToShow] = useState(INITIAL_DAYS);
 
-  const filterOptions: FilterChipOption[] = useMemo(
-    () =>
-      MODULOS_FILTER.map((m) => ({
-        label: m.label,
-        value: m.value,
-        count:
-          m.value === 'todos'
-            ? (eventos?.length ?? 0)
-            : (eventos?.filter((e) => e.modulo === m.value).length ?? 0),
-      })),
-    [eventos],
-  );
+  useEffect(() => {
+    setDaysToShow(INITIAL_DAYS);
+  }, [moduloSelected, tipoSelected, categoriaSelected, usuarioSelected, searchQuery, dateFrom, dateTo]);
+
+  const usuarioOptions = useMemo(() => {
+    const set = new Set<string>();
+    (eventos ?? []).forEach((e) => set.add(e.usuario));
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((u) => ({ value: u, label: u }));
+  }, [eventos]);
 
   const filtered = useMemo(() => {
     if (!eventos) return [];
     let result = eventos;
-    if (activeModulo !== 'todos') {
-      result = result.filter((e) => e.modulo === activeModulo);
+    if (moduloSelected.length > 0) {
+      result = result.filter((e) => moduloSelected.includes(e.modulo));
+    }
+    if (tipoSelected.length > 0) {
+      result = result.filter((e) => tipoSelected.includes(e.tipo));
+    }
+    if (categoriaSelected.length > 0) {
+      result = result.filter((e) => categoriaSelected.includes(getCategoria(e.tipo)));
+    }
+    if (usuarioSelected.length > 0) {
+      result = result.filter((e) => usuarioSelected.includes(e.usuario));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -132,7 +225,7 @@ export default function AdminAuditoriaPage() {
       result = result.filter((e) => e.dataHora <= dateTo + 'T23:59:59');
     }
     return result;
-  }, [eventos, activeModulo, searchQuery, dateFrom, dateTo]);
+  }, [eventos, moduloSelected, tipoSelected, categoriaSelected, usuarioSelected, searchQuery, dateFrom, dateTo]);
 
   // Group events by date label
   const grouped = useMemo(() => {
@@ -145,18 +238,71 @@ export default function AdminAuditoriaPage() {
     return Array.from(map.entries()).map(([dateLabel, eventos]) => ({ dateLabel, eventos }));
   }, [filtered]);
 
+  const visibleGrouped = useMemo(() => grouped.slice(0, daysToShow), [grouped, daysToShow]);
+  const hasMoreDays = grouped.length > daysToShow;
+  const remainingDays = grouped.length - daysToShow;
+  const nextChunk = Math.min(DAYS_INCREMENT, remainingDays);
+
+  const advancedActiveCount =
+    (moduloSelected.length > 0 ? 1 : 0) +
+    (tipoSelected.length > 0 ? 1 : 0) +
+    (categoriaSelected.length > 0 ? 1 : 0) +
+    (usuarioSelected.length > 0 ? 1 : 0) +
+    (dateFrom || dateTo ? 1 : 0);
+
+  const clearAdvancedFilters = () => {
+    setModuloSelected([]);
+    setTipoSelected([]);
+    setCategoriaSelected([]);
+    setUsuarioSelected([]);
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const formatPeriodoLabel = () => {
+    const formatBR = (iso: string) => {
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    };
+    if (dateFrom && dateTo) return `${formatBR(dateFrom)} – ${formatBR(dateTo)}`;
+    if (dateFrom) return `Desde ${formatBR(dateFrom)}`;
+    if (dateTo) return `Até ${formatBR(dateTo)}`;
+    return '';
+  };
+
+  // ─── KPIs derivados de eventos (hoje) ─────────────────────────────────
+  const todayMetrics = useMemo(() => {
+    const todayEvents = (eventos ?? []).filter((e) => isToday(e.dataHora));
+    const usuariosUnicos = new Set(todayEvents.map((e) => e.usuario)).size;
+    const pagamentos = todayEvents.filter((e) => e.tipo === 'pagamento_registrado').length;
+    const logins = todayEvents.filter((e) => e.tipo === 'login').length;
+    return { totalHoje: todayEvents.length, usuariosUnicos, pagamentos, logins };
+  }, [eventos]);
+
   const kpis = [
     {
       label: 'Ações hoje',
-      value: kpi?.acoesHoje ?? 0,
+      value: kpiLoading ? null : todayMetrics.totalHoje,
       icon: RiFlashlightLine,
       iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
       label: 'Logins hoje',
-      value: kpi?.loginsHoje ?? 0,
+      value: kpiLoading ? null : todayMetrics.logins,
       icon: RiShieldUserLine,
       iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
+    },
+    {
+      label: 'Usuários ativos',
+      value: kpiLoading ? null : todayMetrics.usuariosUnicos,
+      icon: RiGroupLine,
+      iconBg: 'bg-primary/10 text-primary',
+    },
+    {
+      label: 'Pagamentos hoje',
+      value: kpiLoading ? null : todayMetrics.pagamentos,
+      icon: RiMoneyDollarCircleLine,
+      iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },
     {
       label: 'Alertas',
@@ -184,26 +330,26 @@ export default function AdminAuditoriaPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {kpis.map((kpiCard) => (
           <motion.div
-            key={kpi.label}
+            key={kpiCard.label}
             className="rounded-2xl overflow-visible"
             whileHover={{ scale: 1.01, boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
             transition={{ duration: 0.2 }}
           >
             <Card className="h-full rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                <div className={cn('p-3 rounded-lg', kpi.iconBg)}>
-                  <kpi.icon className="w-5 h-5" />
+                <div className={cn('p-3 rounded-lg', kpiCard.iconBg)}>
+                  <kpiCard.icon className="w-5 h-5" />
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.label}</p>
-                {kpiLoading ? (
+                <p className="text-sm font-medium text-muted-foreground mb-1">{kpiCard.label}</p>
+                {kpiCard.value === null ? (
                   <Skeleton className="h-8 w-12" />
                 ) : (
-                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
+                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpiCard.value}</p>
                 )}
               </CardContent>
             </Card>
@@ -211,44 +357,111 @@ export default function AdminAuditoriaPage() {
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <FilterChips options={filterOptions} activeValue={activeModulo} onSelect={setActiveModulo} />
-          <div className="relative w-full sm:w-72">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <AdvancedFiltersPopover
+            activeCount={advancedActiveCount}
+            onClearAll={clearAdvancedFilters}
+            contentClassName="w-96"
+          >
+            <RangeDateInput
+              label="Período"
+              min={dateFrom}
+              max={dateTo}
+              onMinChange={setDateFrom}
+              onMaxChange={setDateTo}
+              testIdPrefix="auditoria-filter-periodo"
+            />
+            <MultiSelectDropdown
+              label="Módulo"
+              options={MODULO_OPTIONS}
+              values={moduloSelected}
+              onChange={setModuloSelected}
+              placeholder="Todos os módulos"
+              testIdPrefix="auditoria-filter-modulo"
+            />
+            <MultiSelectDropdown
+              label="Tipo de evento"
+              options={TIPO_OPTIONS}
+              values={tipoSelected}
+              onChange={setTipoSelected}
+              placeholder="Todos os tipos"
+              testIdPrefix="auditoria-filter-tipo"
+            />
+            <MultiSelectDropdown
+              label="Categoria"
+              options={CATEGORIA_OPTIONS}
+              values={categoriaSelected}
+              onChange={setCategoriaSelected}
+              placeholder="Todas as categorias"
+              testIdPrefix="auditoria-filter-categoria"
+            />
+            <MultiSelectDropdown
+              label="Usuário"
+              options={usuarioOptions}
+              values={usuarioSelected}
+              onChange={setUsuarioSelected}
+              placeholder="Todos os usuários"
+              testIdPrefix="auditoria-filter-usuario"
+            />
+          </AdvancedFiltersPopover>
+
+          <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
             <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Buscar eventos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+              data-testid="input-search-auditoria"
             />
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Período:</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <span className="text-gray-400 text-sm">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          {(dateFrom || dateTo) && (
-            <button
-              onClick={() => { setDateFrom(''); setDateTo(''); }}
-              className="text-xs text-primary hover:underline font-medium"
-            >
-              Limpar
-            </button>
-          )}
-        </div>
+
+        {advancedActiveCount > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {(dateFrom || dateTo) && (
+              <ActiveFilterChip
+                label={`Período: ${formatPeriodoLabel()}`}
+                onRemove={() => { setDateFrom(''); setDateTo(''); }}
+                testId="auditoria-active-chip-periodo"
+              />
+            )}
+            {moduloSelected.map((m) => (
+              <ActiveFilterChip
+                key={m}
+                label={`Módulo: ${MODULO_LABEL[m]}`}
+                onRemove={() => setModuloSelected(moduloSelected.filter((x) => x !== m))}
+                testId={`auditoria-active-chip-modulo-${m}`}
+              />
+            ))}
+            {tipoSelected.map((t) => (
+              <ActiveFilterChip
+                key={t}
+                label={`Tipo: ${TIPO_LABEL[t]}`}
+                onRemove={() => setTipoSelected(tipoSelected.filter((x) => x !== t))}
+                testId={`auditoria-active-chip-tipo-${t}`}
+              />
+            ))}
+            {categoriaSelected.map((c) => (
+              <ActiveFilterChip
+                key={c}
+                label={`Categoria: ${CATEGORIA_LABEL[c]}`}
+                onRemove={() => setCategoriaSelected(categoriaSelected.filter((x) => x !== c))}
+                testId={`auditoria-active-chip-categoria-${c}`}
+              />
+            ))}
+            {usuarioSelected.map((u) => (
+              <ActiveFilterChip
+                key={u}
+                label={`Usuário: ${u}`}
+                onRemove={() => setUsuarioSelected(usuarioSelected.filter((x) => x !== u))}
+                testId={`auditoria-active-chip-usuario-${u}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Timeline */}
@@ -272,7 +485,7 @@ export default function AdminAuditoriaPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {grouped.map((group) => (
+          {visibleGrouped.map((group) => (
             <div key={group.dateLabel}>
               <div className="flex items-center gap-3 mb-4">
                 <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -283,25 +496,38 @@ export default function AdminAuditoriaPage() {
 
               <div className="relative">
                 <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-100 dark:bg-gray-800" />
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1.5">
                   {group.eventos.map((evento) => {
                     const cfg = EVENTO_CONFIG[evento.tipo] ?? EVENTO_CONFIG.sistema;
                     const Icon = cfg.icon;
+                    const categoria = getCategoria(evento.tipo);
                     return (
-                      <div key={evento.id} className="flex gap-4">
+                      <div
+                        key={evento.id}
+                        className="flex gap-4 -mx-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 transition-colors cursor-default"
+                        data-testid={`evento-${evento.id}`}
+                      >
                         <div
                           className={cn(
-                            'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 z-10',
+                            'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 z-10 mt-0.5',
                             cfg.bgColor,
                           )}
                         >
                           <Icon className="w-3 h-3 text-white" />
                         </div>
-                        <div className="flex-1 pb-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                             <p className="text-sm font-bold text-gray-900 dark:text-white">{evento.titulo}</p>
                             <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
                               {MODULO_LABEL[evento.modulo]}
+                            </span>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full',
+                                CATEGORIA_BADGE_CLASS[categoria],
+                              )}
+                            >
+                              {CATEGORIA_LABEL[categoria]}
                             </span>
                             <span className="text-xs text-muted-foreground">{formatDataHora(evento.dataHora)}</span>
                           </div>
@@ -315,6 +541,22 @@ export default function AdminAuditoriaPage() {
               </div>
             </div>
           ))}
+
+          <div className="flex flex-col items-center gap-2 pt-4">
+            <p className="text-xs text-muted-foreground" data-testid="auditoria-days-counter">
+              Mostrando {visibleGrouped.length} de {grouped.length} {grouped.length === 1 ? 'dia' : 'dias'}
+            </p>
+            {hasMoreDays && (
+              <Button
+                variant="outline"
+                onClick={() => setDaysToShow((d) => d + DAYS_INCREMENT)}
+                data-testid="auditoria-load-more"
+              >
+                <RiArrowDownLine className="w-4 h-4 mr-2" />
+                Carregar mais {nextChunk} {nextChunk === 1 ? 'dia' : 'dias'}
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>

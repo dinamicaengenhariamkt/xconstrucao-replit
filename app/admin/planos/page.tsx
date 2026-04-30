@@ -19,6 +19,9 @@ import {
   PLANO_STATUS_COLOR,
 } from '@features/admin/planos/types';
 import type { AdminPlano, AdminPlanoAssinante, PlanoStatus } from '@features/admin/planos/types';
+import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
+import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import {
   RiGroupLine,
   RiMoneyDollarCircleLine,
@@ -31,6 +34,12 @@ import {
 type TabKey = 'contratante' | 'empreiteiro';
 
 const PAGE_SIZE = 5;
+
+const STATUS_OPTIONS: { value: PlanoStatus; label: string }[] =
+  (Object.keys(PLANO_STATUS_LABEL) as PlanoStatus[]).map((v) => ({
+    value: v,
+    label: PLANO_STATUS_LABEL[v],
+  }));
 
 function PlanoCard({ plano }: { plano: AdminPlano }) {
   const priceLabel = plano.preco === 0 ? 'Gratuito' : `R$ ${plano.preco}/mês`;
@@ -144,6 +153,8 @@ export default function AdminPlanosPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('contratante');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [statusSelected, setStatusSelected] = useState<PlanoStatus[]>([]);
+  const [planoSelected, setPlanoSelected] = useState<string[]>([]);
 
   const { data: kpi, isLoading: kpiLoading } = usePlanosKpi();
   const { data: planosContratante, isLoading: pcLoading } = usePlanosContratante();
@@ -155,20 +166,48 @@ export default function AdminPlanosPage() {
   const allAssinantes = activeTab === 'contratante' ? (assinantesContratante ?? []) : (assinantesEmpreiteiro ?? []);
   const planosLoading = activeTab === 'contratante' ? pcLoading : peLoading;
 
+  const planoOptions = useMemo(
+    () => Array.from(new Set(planos.map((p) => p.nome))).map((nome) => ({ value: nome, label: nome })),
+    [planos],
+  );
+
   const filteredAssinantes = useMemo(() => {
-    if (!search.trim()) return allAssinantes;
-    const q = search.toLowerCase();
-    return allAssinantes.filter(
-      (a) =>
-        a.nome.toLowerCase().includes(q) ||
-        a.email.toLowerCase().includes(q) ||
-        a.planoNome.toLowerCase().includes(q),
-    );
-  }, [allAssinantes, search]);
+    let result = allAssinantes;
+    if (statusSelected.length > 0) {
+      result = result.filter((a) => statusSelected.includes(a.status));
+    }
+    if (planoSelected.length > 0) {
+      result = result.filter((a) => planoSelected.includes(a.planoNome));
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (a) =>
+          a.nome.toLowerCase().includes(q) ||
+          a.email.toLowerCase().includes(q) ||
+          a.planoNome.toLowerCase().includes(q),
+      );
+    }
+    return result;
+  }, [allAssinantes, statusSelected, planoSelected, search]);
+
+  const advancedActiveCount =
+    (statusSelected.length > 0 ? 1 : 0) + (planoSelected.length > 0 ? 1 : 0);
+
+  const clearAllAdvanced = () => {
+    setStatusSelected([]);
+    setPlanoSelected([]);
+  };
+
+  const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => setter(v);
 
   useEffect(() => {
     setPage(1);
-  }, [search, activeTab]);
+  }, [search, activeTab, statusSelected, planoSelected]);
+
+  useEffect(() => {
+    setPlanoSelected([]);
+  }, [activeTab]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAssinantes.length / PAGE_SIZE));
   const paginatedAssinantes = filteredAssinantes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -272,19 +311,66 @@ export default function AdminPlanosPage() {
 
       {/* Subscribers Table */}
       <div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            Assinantes — {activeTab === 'contratante' ? 'Contratantes' : 'Empreiteiros'}
-          </h2>
-          <div className="relative w-full sm:w-64">
-            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Buscar assinante..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-            />
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Assinantes — {activeTab === 'contratante' ? 'Contratantes' : 'Empreiteiros'}
+            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <AdvancedFiltersPopover
+                activeCount={advancedActiveCount}
+                onClearAll={clearAllAdvanced}
+              >
+                <MultiSelectDropdown<PlanoStatus>
+                  label="Status"
+                  options={STATUS_OPTIONS}
+                  values={statusSelected}
+                  onChange={onFilterChange(setStatusSelected)}
+                  placeholder="Todos os status"
+                  testIdPrefix="filter-planos-status"
+                />
+                <MultiSelectDropdown<string>
+                  label="Plano"
+                  options={planoOptions}
+                  values={planoSelected}
+                  onChange={onFilterChange(setPlanoSelected)}
+                  placeholder="Todos os planos"
+                  testIdPrefix="filter-planos-plano"
+                />
+              </AdvancedFiltersPopover>
+
+              <div className="relative w-full sm:w-64">
+                <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Buscar assinante..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                />
+              </div>
+            </div>
           </div>
+
+          {advancedActiveCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {statusSelected.map((s) => (
+                <ActiveFilterChip
+                  key={s}
+                  label={`Status: ${PLANO_STATUS_LABEL[s]}`}
+                  onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                  testId={`active-chip-planos-status-${s}`}
+                />
+              ))}
+              {planoSelected.map((p) => (
+                <ActiveFilterChip
+                  key={p}
+                  label={`Plano: ${p}`}
+                  onRemove={() => setPlanoSelected(planoSelected.filter((x) => x !== p))}
+                  testId={`active-chip-planos-plano-${p}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <AssinantesTable assinantes={paginatedAssinantes} />

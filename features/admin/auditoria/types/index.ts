@@ -22,6 +22,8 @@ export type AuditoriaModulo =
   | 'configuracoes'
   | 'sistema';
 
+export type AuditoriaCategoria = 'risco' | 'financeiro' | 'acesso' | 'mudanca' | 'sistema';
+
 export interface AuditoriaEvento {
   id: string;
   tipo: AuditoriaEventTipo;

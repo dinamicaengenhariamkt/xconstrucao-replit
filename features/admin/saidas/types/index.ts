@@ -64,3 +64,9 @@ export interface SaidaFutura {
   tipoSaida: SaidaTipo;
   valor: number;
 }
+
+export interface SaidaTopItem {
+  nome: string;
+  obras: number;
+  totalSaidas: number;
+}

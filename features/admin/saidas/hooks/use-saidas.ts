@@ -1,10 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Saida, SaidaKpi, SaidaChartData, SaidaFutura, SaidaPeriodo, DateRange } from '../types';
+import type {
+  Saida,
+  SaidaKpi,
+  SaidaChartData,
+  SaidaFutura,
+  SaidaPeriodo,
+  SaidaTopItem,
+  DateRange,
+} from '../types';
 import {
   mockSaidaKpiByPeriodo,
   mockSaidas,
   mockSaidaChartDataByPeriodo,
   mockSaidasFuturas,
+  mockTopEmpreiteirasPagasByPeriodo,
+  mockTopClientesReembolsadosByPeriodo,
 } from '../mocks';
 
 const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
@@ -93,6 +103,32 @@ export function useSaidasFuturas() {
       if (ENABLE_MOCK) return mockSaidasFuturas;
       const res = await fetch('/api/admin/saidas/futuras');
       if (!res.ok) throw new Error('Erro ao buscar saídas futuras');
+      return res.json();
+    },
+    ...QUERY_CONFIG,
+  });
+}
+
+export function useTopEmpreiteirasPagas(periodo: SaidaPeriodo) {
+  return useQuery<SaidaTopItem[]>({
+    queryKey: ['admin', 'saidas', 'top-empreiteiras-pagas', periodo],
+    queryFn: async () => {
+      if (ENABLE_MOCK) return mockTopEmpreiteirasPagasByPeriodo[periodo];
+      const res = await fetch(`/api/admin/saidas/top-empreiteiras-pagas?periodo=${periodo}`);
+      if (!res.ok) throw new Error('Erro ao buscar top empreiteiras pagas');
+      return res.json();
+    },
+    ...QUERY_CONFIG,
+  });
+}
+
+export function useTopClientesReembolsados(periodo: SaidaPeriodo) {
+  return useQuery<SaidaTopItem[]>({
+    queryKey: ['admin', 'saidas', 'top-clientes-reembolsados', periodo],
+    queryFn: async () => {
+      if (ENABLE_MOCK) return mockTopClientesReembolsadosByPeriodo[periodo];
+      const res = await fetch(`/api/admin/saidas/top-clientes-reembolsados?periodo=${periodo}`);
+      if (!res.ok) throw new Error('Erro ao buscar top clientes reembolsados');
       return res.json();
     },
     ...QUERY_CONFIG,
