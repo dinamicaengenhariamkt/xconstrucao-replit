@@ -9,6 +9,8 @@ import type { AdminEmpreiteira } from '@features/admin/empreiteiras/types';
 import type { AdminObra } from '@features/admin/obras/types/list';
 import type { Entrada } from '@features/admin/entradas/types';
 import type { Saida } from '@features/admin/saidas/types';
+import type { SearchGroup, SearchHit, UseSearchResult } from '@features/shared/search/types';
+import { normalize, matches } from '@features/shared/search/utils';
 
 export type AdminSearchCategory =
   | 'clientes'
@@ -16,23 +18,6 @@ export type AdminSearchCategory =
   | 'obras'
   | 'entradas'
   | 'saidas';
-
-export interface AdminSearchHit {
-  id: string;
-  category: AdminSearchCategory;
-  title: string;
-  subtitle?: string;
-  meta?: string;
-  href: string;
-}
-
-export interface AdminSearchGroup {
-  category: AdminSearchCategory;
-  label: string;
-  hits: AdminSearchHit[];
-  totalMatches: number;
-  seeAllHref: string;
-}
 
 const PER_GROUP_LIMIT = 5;
 
@@ -52,20 +37,7 @@ const CATEGORY_LIST_HREF: Record<AdminSearchCategory, string> = {
   saidas: '/admin/saidas',
 };
 
-function normalize(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-}
-
-function matches(term: string, ...fields: (string | undefined | null)[]): boolean {
-  if (!term) return true;
-  const haystack = normalize(fields.filter(Boolean).join(' '));
-  return haystack.includes(term);
-}
-
-function clienteToHit(c: AdminCliente): AdminSearchHit {
+function clienteToHit(c: AdminCliente): SearchHit<AdminSearchCategory> {
   const localizacao = [c.cidade, c.estado].filter(Boolean).join(' · ');
   return {
     id: c.id,
@@ -77,7 +49,7 @@ function clienteToHit(c: AdminCliente): AdminSearchHit {
   };
 }
 
-function empreiteiraToHit(e: AdminEmpreiteira): AdminSearchHit {
+function empreiteiraToHit(e: AdminEmpreiteira): SearchHit<AdminSearchCategory> {
   const localizacao = [e.cidade, e.estado].filter(Boolean).join(' · ');
   return {
     id: e.id,
@@ -89,7 +61,7 @@ function empreiteiraToHit(e: AdminEmpreiteira): AdminSearchHit {
   };
 }
 
-function obraToHit(o: AdminObra): AdminSearchHit {
+function obraToHit(o: AdminObra): SearchHit<AdminSearchCategory> {
   return {
     id: o.id,
     category: 'obras',
@@ -100,7 +72,7 @@ function obraToHit(o: AdminObra): AdminSearchHit {
   };
 }
 
-function entradaToHit(en: Entrada): AdminSearchHit {
+function entradaToHit(en: Entrada): SearchHit<AdminSearchCategory> {
   return {
     id: en.id,
     category: 'entradas',
@@ -111,7 +83,7 @@ function entradaToHit(en: Entrada): AdminSearchHit {
   };
 }
 
-function saidaToHit(s: Saida): AdminSearchHit {
+function saidaToHit(s: Saida): SearchHit<AdminSearchCategory> {
   return {
     id: s.id,
     category: 'saidas',
@@ -122,13 +94,7 @@ function saidaToHit(s: Saida): AdminSearchHit {
   };
 }
 
-export interface UseAdminGlobalSearchResult {
-  groups: AdminSearchGroup[];
-  totalHits: number;
-  isLoading: boolean;
-}
-
-export function useAdminGlobalSearch(query: string): UseAdminGlobalSearchResult {
+export function useAdminGlobalSearch(query: string): UseSearchResult<AdminSearchCategory> {
   const { data: clientes, isLoading: loadingClientes } = useAdminClientes();
   const { data: empreiteiras, isLoading: loadingEmpreiteiras } = useAdminEmpreiteiras();
   const { data: obras, isLoading: loadingObras } = useAdminObras();
@@ -138,7 +104,7 @@ export function useAdminGlobalSearch(query: string): UseAdminGlobalSearchResult 
   const isLoading =
     loadingClientes || loadingEmpreiteiras || loadingObras || loadingEntradas || loadingSaidas;
 
-  const groups = useMemo<AdminSearchGroup[]>(() => {
+  const groups = useMemo<SearchGroup<AdminSearchCategory>[]>(() => {
     const term = normalize(query.trim());
 
     const clientesMatches = (clientes ?? []).filter((c) =>
@@ -157,7 +123,7 @@ export function useAdminGlobalSearch(query: string): UseAdminGlobalSearchResult 
       matches(term, s.descricao, s.destino, s.obra, s.local, s.id),
     );
 
-    const result: AdminSearchGroup[] = [
+    const result: SearchGroup<AdminSearchCategory>[] = [
       {
         category: 'clientes',
         label: CATEGORY_LABEL.clientes,
@@ -198,7 +164,5 @@ export function useAdminGlobalSearch(query: string): UseAdminGlobalSearchResult 
     return result.filter((g) => g.hits.length > 0);
   }, [query, clientes, empreiteiras, obras, entradas, saidas]);
 
-  const totalHits = groups.reduce((acc, g) => acc + g.totalMatches, 0);
-
-  return { groups, totalHits, isLoading };
+  return { groups, isLoading };
 }

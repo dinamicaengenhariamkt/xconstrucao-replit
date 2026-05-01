@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Button } from '@shared/components/ui/button';
-import { Input } from '@shared/components/ui/input';
 import { Badge } from '@shared/components/ui/badge';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
@@ -17,7 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@shared/components/ui/dropdown-menu';
-import { SearchModal, SearchResult } from '@shared/components/SearchModal';
+import { ContratanteSearchDialog } from '@features/contratante/search/components/ContratanteSearchDialog';
+import { CONTRATANTE_SEARCH_CONFIG } from '@features/contratante/search/config';
 import {
   RiSearchLine,
   RiNotification3Line,
@@ -73,8 +73,6 @@ export function ContratanteTopbar() {
   const { topbarNotifications: notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } =
     useContratanteNotifications();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -82,11 +80,17 @@ export function ContratanteTopbar() {
     router.push('/');
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // TODO: Implementar lógica de busca específica do contratante
-    setSearchResults([]);
-  };
+  // Atalho de teclado Cmd/Ctrl + K para abrir busca global
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <header className="h-20 flex items-center justify-between px-4 md:px-12 py-2 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
@@ -105,21 +109,25 @@ export function ContratanteTopbar() {
           onClick={() => setSearchOpen(true)}
           className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
           aria-label="Abrir busca"
+          data-testid="button-search-mobile"
         >
           <RiSearchLine className="w-5 h-5" />
         </Button>
 
-        {/* Desktop: Campo de Busca Inline */}
-        <div className="relative w-full max-w-xs md:max-w-sm hidden md:block">
+        {/* Desktop: Trigger de Busca Global (abre ContratanteSearchDialog) */}
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
+          aria-label="Abrir busca global"
+          data-testid="button-search"
+        >
           <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            type="text"
-            placeholder="Buscar obras, documentos ou propostas..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 py-2 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400"
-          />
-        </div>
+          <span className="flex-1 truncate">{CONTRATANTE_SEARCH_CONFIG.triggerLabel}</span>
+          <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 tabular-nums">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {/* Actions */}
@@ -287,15 +295,8 @@ export function ContratanteTopbar() {
         </DropdownMenu>
       </div>
 
-      {/* Modal de Busca (Mobile) */}
-      <SearchModal
-        isOpen={searchOpen}
-        onOpenChange={setSearchOpen}
-        placeholder="Buscar obras, documentos ou propostas..."
-        results={searchResults}
-        onSearch={handleSearch}
-        emptyMessage="Nenhum resultado encontrado."
-      />
+      {/* Dialog de Busca Global (desktop + mobile) */}
+      <ContratanteSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }
