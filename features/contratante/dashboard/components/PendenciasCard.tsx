@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   RiErrorWarningLine,
   RiAlertLine,
@@ -53,7 +54,12 @@ export function PendenciasCard({ pendencias }: PendenciasCardProps) {
           const config = priorityConfig[item.priority];
           const Icon = config.icon;
           return (
-            <div key={item.id} className="flex gap-3">
+            <Link
+              key={item.id}
+              href={`/contratante/minhas-obras/${item.obraId}`}
+              className="flex gap-3 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 transition-colors hover:bg-accent/60 dark:hover:bg-accent/30"
+              data-testid={`pendencia-link-${item.id}`}
+            >
               <div
                 className={cn(
                   'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
@@ -77,9 +83,14 @@ export function PendenciasCard({ pendencias }: PendenciasCardProps) {
                     {config.label}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{item.prazo}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {item.obraNome}
+                </p>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                  {item.prazo}
+                </p>
               </div>
-            </div>
+            </Link>
           );
         })}
 

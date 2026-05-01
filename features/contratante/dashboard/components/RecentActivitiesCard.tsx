@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   RiCheckboxCircleLine,
@@ -33,40 +34,51 @@ export function RecentActivitiesCard({ activities }: RecentActivitiesCardProps) 
         <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
           Atividades Recentes
         </CardTitle>
-        <button className="text-xs font-bold text-primary hover:underline">Ver todas</button>
+        <Link
+          href="/contratante/atividades"
+          className="text-xs font-bold text-primary hover:underline cursor-pointer"
+          data-testid="link-ver-todas-atividades"
+        >
+          Ver todas
+        </Link>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-6">
           {activities.map((activity) => {
             const Icon = iconMap[activity.icon as keyof typeof iconMap] ?? RiCheckboxCircleLine;
             return (
-              <motion.div
+              <Link
                 key={activity.id}
-                className="flex gap-4 cursor-pointer px-3 py-2 -mx-3 -my-2 rounded-lg"
-                whileHover={{
-                  x: 4,
-                  backgroundColor: 'hsl(var(--accent))',
-                }}
-                transition={{ duration: 0.15 }}
+                href={`/contratante/minhas-obras/${activity.obraId}`}
+                data-testid={`atividade-link-${activity.id}`}
               >
-                <div
-                  className={cn(
-                    'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
-                    colorMap[activity.color]
-                  )}
+                <motion.div
+                  className="flex gap-4 cursor-pointer px-3 py-2 -mx-3 -my-2 rounded-lg"
+                  whileHover={{
+                    x: 4,
+                    backgroundColor: 'hsl(var(--accent))',
+                  }}
+                  transition={{ duration: 0.15 }}
                 >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-                    {activity.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{activity.obraNome}</p>
-                  <p className="text-[10px] text-gray-400 mt-1 font-medium">
-                    {activity.timestamp}
-                  </p>
-                </div>
-              </motion.div>
+                  <div
+                    className={cn(
+                      'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center',
+                      colorMap[activity.color]
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                      {activity.title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{activity.obraNome}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-medium">
+                      {activity.timestamp}
+                    </p>
+                  </div>
+                </motion.div>
+              </Link>
             );
           })}
         </div>

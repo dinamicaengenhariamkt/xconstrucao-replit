@@ -8,6 +8,8 @@ import type { IconType } from 'react-icons';
 // Domain types
 // ---------------------------------------------------------------------------
 
+export type DashboardPeriodo = '7dias' | '30dias' | '3meses' | '12meses';
+
 export interface ContratanteDashboardStats {
   obrasAtivas: number;
   obrasAtivasDelta: number;
@@ -36,6 +38,7 @@ export interface ContratanteActivity {
   icon: string;
   color: ActivityColor;
   title: string;
+  obraId: string;
   obraNome: string;
   timestamp: string;
 }
@@ -47,6 +50,8 @@ export interface Pendencia {
   title: string;
   prazo: string;
   priority: PendenciaPriority;
+  obraId: string;
+  obraNome: string;
 }
 
 export interface ValoresContratadosData {
@@ -73,6 +78,10 @@ export interface StatsCardData {
     label: string;
     variant: StatsCardBadgeVariant;
   };
+  /** Se presente, transforma o card num link clicável para essa URL. */
+  href?: string;
+  /** testId do bloco clicável (se href presente). */
+  testId?: string;
 }
 
 export type StatsCardProps = StatsCardData;

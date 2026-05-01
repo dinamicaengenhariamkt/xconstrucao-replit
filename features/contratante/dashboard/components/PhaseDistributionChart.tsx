@@ -1,8 +1,29 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import type { PhaseDistributionChartProps, PhaseDistributionChartTooltipProps } from '../types';
+
+/**
+ * Mapeia o nome da fase exibida no chart para o filtro de status correspondente
+ * em /contratante/minhas-obras. Fases sem status equivalente caem em 'em_execucao'
+ * (estado padrão de obra "em andamento").
+ */
+const PHASE_TO_STATUS: Record<string, string> = {
+  Planejamento: 'planejamento',
+  Fundação: 'em_execucao',
+  Estrutura: 'em_execucao',
+  Acabamento: 'em_execucao',
+  Concluído: 'finalizada',
+};
+
+function buildHrefFromPhase(name: string): string {
+  const status = PHASE_TO_STATUS[name];
+  return status
+    ? `/contratante/minhas-obras?status=${status}`
+    : '/contratante/minhas-obras';
+}
 
 function CustomTooltip({ active, payload }: PhaseDistributionChartTooltipProps) {
   if (!active || !payload?.length) return null;
@@ -20,6 +41,12 @@ export function PhaseDistributionChart({
   data,
   totalObras = 12,
 }: PhaseDistributionChartProps) {
+  const router = useRouter();
+
+  const handleSliceClick = (entry: { name: string }) => {
+    router.push(buildHrefFromPhase(entry.name));
+  };
+
   return (
     <Card className="border-border-light dark:border-gray-800">
       <CardHeader>
@@ -27,7 +54,7 @@ export function PhaseDistributionChart({
           Distribuição por Fase
         </CardTitle>
         <CardDescription className="text-sm text-gray-500">
-          Status atual de todas as obras
+          Status atual de todas as obras · clique para filtrar
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,6 +74,8 @@ export function PhaseDistributionChart({
                   startAngle={90}
                   endAngle={-270}
                   strokeWidth={0}
+                  onClick={handleSliceClick}
+                  className="cursor-pointer"
                 >
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -65,9 +94,15 @@ export function PhaseDistributionChart({
           </div>
 
           {/* Legend */}
-          <div className="flex-1 space-y-3">
+          <div className="flex-1 space-y-1">
             {data.map((item) => (
-              <div key={item.name} className="flex items-center justify-between">
+              <button
+                key={item.name}
+                type="button"
+                onClick={() => handleSliceClick({ name: item.name })}
+                className="w-full flex items-center justify-between cursor-pointer rounded-lg px-2 py-1.5 transition-colors hover:bg-accent/60 dark:hover:bg-accent/30"
+                data-testid={`fase-link-${item.name}`}
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full flex-shrink-0"
@@ -80,7 +115,7 @@ export function PhaseDistributionChart({
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                   {item.value}%
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

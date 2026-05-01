@@ -17,6 +17,8 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       icon: RiBuilding2Line,
       iconBgColor: 'bg-primary/10 text-primary',
       badge: { label: `+${data.obrasAtivasDelta} este mês`, variant: 'success' },
+      href: '/contratante/minhas-obras?status=em_execucao',
+      testId: 'kpi-obras-ativas',
     },
     {
       label: 'Percentual Previsto',
@@ -31,6 +33,8 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       icon: RiCheckboxCircleLine,
       iconBgColor: 'bg-[#22846D]/10 text-[#22846D]',
       badge: { label: `${data.desvioPercentual}% do prev.`, variant: 'amber' },
+      href: '/contratante/minhas-obras?status=finalizada',
+      testId: 'kpi-percentual-concluido',
     },
     {
       label: 'Obras Atrasadas',
@@ -38,6 +42,8 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       icon: RiAlertLine,
       iconBgColor: 'bg-red-50 text-red-600',
       badge: { label: 'Atenção', variant: 'red' },
+      href: '/contratante/minhas-obras?status=com_atrasos',
+      testId: 'kpi-obras-atrasadas',
     },
   ];
 
