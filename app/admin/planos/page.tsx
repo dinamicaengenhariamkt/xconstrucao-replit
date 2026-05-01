@@ -19,9 +19,20 @@ import {
   PLANO_STATUS_COLOR,
 } from '@features/admin/planos/types';
 import type { AdminPlano, AdminPlanoAssinante, PlanoStatus } from '@features/admin/planos/types';
+import { PAGE_SIZE, STATUS_OPTIONS } from '@features/admin/planos/constants';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
 import {
   RiGroupLine,
   RiMoneyDollarCircleLine,
@@ -32,14 +43,6 @@ import {
 } from 'react-icons/ri';
 
 type TabKey = 'contratante' | 'empreiteiro';
-
-const PAGE_SIZE = 5;
-
-const STATUS_OPTIONS: { value: PlanoStatus; label: string }[] =
-  (Object.keys(PLANO_STATUS_LABEL) as PlanoStatus[]).map((v) => ({
-    value: v,
-    label: PLANO_STATUS_LABEL[v],
-  }));
 
 function PlanoCard({ plano }: { plano: AdminPlano }) {
   const priceLabel = plano.preco === 0 ? 'Gratuito' : `R$ ${plano.preco}/mês`;
@@ -380,22 +383,57 @@ export default function AdminPlanosPage() {
             <span>
               Mostrando {showingFrom}–{showingTo} de {filteredAssinantes.length}
             </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => p - 1)}
-                disabled={page <= 1}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= totalPages}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
-              >
-                Próximo
-              </button>
-            </div>
+            {totalPages > 1 && (
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((p) => Math.max(1, p - 1));
+                      }}
+                      aria-disabled={page <= 1}
+                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      data-testid="planos-pagination-prev"
+                    />
+                  </PaginationItem>
+                  {getPaginationRange(page, totalPages).map((item, idx) =>
+                    item === 'ellipsis' ? (
+                      <PaginationItem key={`planos-ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          href="#"
+                          isActive={page === item}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(item);
+                          }}
+                          data-testid={`planos-pagination-page-${item}`}
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage((p) => Math.min(totalPages, p + 1));
+                      }}
+                      aria-disabled={page >= totalPages}
+                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                      data-testid="planos-pagination-next"
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </div>
         )}
       </div>

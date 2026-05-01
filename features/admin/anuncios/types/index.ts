@@ -1,4 +1,5 @@
 export type AnuncioStatus = 'ativa' | 'pausada' | 'expirada' | 'agendada';
+export type AnuncianteStatus = 'ativo' | 'inativo';
 export type AnuncioZonaStatus = 'ativo' | 'vazio';
 export type AnuncioZonaId =
   | 'sidebar-sup-contratante'
@@ -57,5 +58,5 @@ export interface Anunciante {
   telefone: string;
   campanhasAtivas: number;
   receitaTotal: number;
-  status: 'ativo' | 'inativo';
+  status: AnuncianteStatus;
 }

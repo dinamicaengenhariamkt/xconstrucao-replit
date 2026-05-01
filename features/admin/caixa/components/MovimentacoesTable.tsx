@@ -18,11 +18,17 @@ import { AdvancedFiltersPopover } from '@features/shared/components/filters/Adva
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
+import { RiSearchLine } from 'react-icons/ri';
 import {
-  RiSearchLine,
-  RiArrowLeftSLine,
-  RiArrowRightSLine,
-} from 'react-icons/ri';
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
 import { useMovimentacoes } from '../hooks/use-caixa';
 import type { Movimentacao, CaixaPeriodo, DateRange } from '../types';
 
@@ -352,41 +358,55 @@ export function MovimentacoesTable({ periodo, customRange }: MovimentacoesTableP
                 <p className="text-xs text-muted-foreground tabular-nums">
                   Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} de {filtered.length}
                 </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={safePage === 1}
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-colors',
-                      safePage === 1
-                        ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400'
-                        : 'cursor-pointer bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
+                <Pagination className="mx-0 w-auto justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage((p) => Math.max(1, p - 1));
+                        }}
+                        aria-disabled={safePage === 1}
+                        className={safePage === 1 ? 'pointer-events-none opacity-50' : ''}
+                        data-testid="movimentacoes-pagination-prev"
+                      />
+                    </PaginationItem>
+                    {getPaginationRange(safePage, totalPages).map((item, idx) =>
+                      item === 'ellipsis' ? (
+                        <PaginationItem key={`ellipsis-${idx}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={item}>
+                          <PaginationLink
+                            href="#"
+                            isActive={safePage === item}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPage(item);
+                            }}
+                            data-testid={`movimentacoes-pagination-page-${item}`}
+                          >
+                            {item}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
                     )}
-                    data-testid="movimentacoes-pagination-prev"
-                  >
-                    <RiArrowLeftSLine className="w-4 h-4" />
-                    Anterior
-                  </button>
-                  <span className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                    {safePage} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={safePage === totalPages}
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold border transition-colors',
-                      safePage === totalPages
-                        ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400'
-                        : 'cursor-pointer bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
-                    )}
-                    data-testid="movimentacoes-pagination-next"
-                  >
-                    Próxima
-                    <RiArrowRightSLine className="w-4 h-4" />
-                  </button>
-                </div>
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage((p) => Math.min(totalPages, p + 1));
+                        }}
+                        aria-disabled={safePage === totalPages}
+                        className={safePage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                        data-testid="movimentacoes-pagination-next"
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             )}
           </>

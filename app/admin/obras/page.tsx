@@ -14,7 +14,8 @@ import {
   OBRA_PROGRESS_COLOR,
 } from '@features/admin/obras/types/list';
 import type { AdminObraStatus } from '@features/admin/obras/types/list';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, formatRange } from '@shared/lib/formatters';
+import { getPaginationRange } from '@shared/lib/pagination';
 import {
   RiSearchLine,
   RiHammerLine,
@@ -34,23 +35,16 @@ import { AdvancedFiltersPopover } from '@features/shared/components/filters/Adva
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
-
-const ITEMS_PER_PAGE = 10;
-
-const STATUS_OPTIONS: { value: AdminObraStatus; label: string }[] = (
-  Object.keys(OBRA_STATUS_LABEL) as AdminObraStatus[]
-).map((s) => ({ value: s, label: OBRA_STATUS_LABEL[s] }));
-
-const SAUDE_OPTIONS: { value: HealthStatus; label: string }[] = (
-  Object.keys(HEALTH_LABELS) as HealthStatus[]
-).map((s) => ({ value: s, label: HEALTH_LABELS[s] }));
-
-function getPaginationRange(current: number, total: number): (number | 'ellipsis')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis', total];
-  if (current >= total - 3) return [1, 'ellipsis', total - 4, total - 3, total - 2, total - 1, total];
-  return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
-}
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { ITEMS_PER_PAGE, STATUS_OPTIONS, SAUDE_OPTIONS } from '@features/admin/obras/constants';
 
 export default function AdminObrasPage() {
   const { data: obras, isLoading } = useAdminObras();
@@ -136,12 +130,6 @@ export default function AdminObrasPage() {
     setValorMin('');
     setValorMax('');
     setCurrentPage(1);
-  };
-
-  const formatRange = (min: string, max: string, prefix = '', suffix = '') => {
-    const minPart = min ? `${prefix}${min}${suffix}` : `${prefix}0${suffix}`;
-    const maxPart = max ? `${prefix}${max}${suffix}` : '∞';
-    return `${minPart} – ${maxPart}`;
   };
 
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -323,7 +311,7 @@ export default function AdminObrasPage() {
             ))}
             {(progressMinNum !== undefined || progressMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Progresso: ${formatRange(progressMin, progressMax, '', '%')}`}
+                label={`Progresso: ${formatRange(progressMin, progressMax, { suffix: '%' })}`}
                 onRemove={() => {
                   setProgressMin('');
                   setProgressMax('');
@@ -333,7 +321,7 @@ export default function AdminObrasPage() {
             )}
             {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Valor: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                label={`Valor: ${formatRange(valorMin, valorMax, { prefix: 'R$ ' })}`}
                 onRemove={() => {
                   setValorMin('');
                   setValorMax('');
@@ -425,40 +413,55 @@ export default function AdminObrasPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1 flex-wrap">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Anterior
-              </button>
-              {getPaginationRange(currentPage, totalPages).map((item, idx) =>
-                item === 'ellipsis' ? (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">…</span>
-                ) : (
-                  <button
-                    key={item}
-                    onClick={() => setCurrentPage(item)}
-                    className={cn(
-                      'w-9 h-9 text-sm rounded-lg border transition-colors',
-                      currentPage === item
-                        ? 'bg-primary text-white border-primary'
-                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800',
-                    )}
-                  >
-                    {item}
-                  </button>
-                ),
-              )}
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Próxima
-              </button>
-            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={currentPage === 1}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="obras-pagination-prev"
+                  />
+                </PaginationItem>
+                {getPaginationRange(currentPage, totalPages).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`obras-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(item);
+                        }}
+                        data-testid={`obras-pagination-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    aria-disabled={currentPage === totalPages}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="obras-pagination-next"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </>
       ) : (

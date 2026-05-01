@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useCaixaKpis, useIndicadoresEconomicos, useCaixaChartData, useMovimentacoes } from '@features/admin/caixa/hooks/use-caixa';
 import { CaixaSkeleton } from '@features/admin/caixa/components/CaixaSkeleton';
-import { WelcomeSection } from '@features/admin/caixa/components/WelcomeSection';
+import { FiltrosGlobais } from '@features/admin/caixa/components/FiltrosGlobais';
 import { KpiGridContainer } from '@features/admin/caixa/components/KpiGrid.container';
 import { IndicadoresEconomicosSection } from '@features/admin/caixa/components/IndicadoresEconomicosSection';
 import { CaixaChart } from '@features/admin/caixa/components/CaixaChart';
@@ -34,14 +34,27 @@ export default function AdminCaixaPage() {
 
   return (
     <div className="p-6 md:p-10 space-y-8">
-      <WelcomeSection
+      <div>
+        <h1
+          className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight"
+          data-testid="text-page-title"
+        >
+          Caixa
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Acompanhamento do fluxo de caixa da plataforma por período.
+        </p>
+      </div>
+
+      <FiltrosGlobais
         periodo={periodo}
         onPeriodoChange={handlePeriodoChange}
         customRange={customRange}
         onCustomRangeChange={setCustomRange}
       />
+
       <KpiGridContainer periodo={periodo} />
-      <IndicadoresEconomicosSection />
+      <IndicadoresEconomicosSection periodo={periodo} />
       <CaixaChart periodo={periodo} />
       <FluxoResumo periodo={periodo} />
       <MovimentacoesTable periodo={periodo} customRange={customRange} />

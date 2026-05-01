@@ -36,6 +36,16 @@ import { EntradaTopEntidades } from '@features/admin/entradas/components/Entrada
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
 import type {
   EntradaPeriodo,
   EntradaTipoReceita,
@@ -51,76 +61,19 @@ import {
   useTopClientes,
   useTopEmpreiteiras,
 } from '@features/admin/entradas/hooks/use-entradas';
-import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-
-// ─── Formatting ───────────────────────────────────────────────────────────────
-
-const formatDateTime = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-};
-
-// ─── Label / Style Maps ───────────────────────────────────────────────────────
-
-const tipoReceitaLabels: Record<EntradaTipoReceita, string> = {
-  taxa_medicao: 'Taxa sobre medição',
-  assinatura: 'Assinatura',
-  outros_servicos: 'Outros serviços',
-};
-
-const tipoReceitaClasses: Record<EntradaTipoReceita, string> = {
-  taxa_medicao: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  assinatura: 'bg-[#22846D]/10 text-[#22846D]',
-  outros_servicos: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-};
-
-const origemLabels: Record<EntradaOrigem, string> = {
-  cliente: 'Cliente',
-  empreiteira: 'Empreiteira',
-  outros: 'Outros',
-};
-
-const statusLabels: Record<EntradaStatus, string> = {
-  recebido: 'Recebido',
-  pendente: 'Pendente',
-  em_processamento: 'Em processamento',
-};
-
-const statusClasses: Record<EntradaStatus, string> = {
-  recebido: 'bg-[#22846D]/10 text-[#22846D]',
-  pendente: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  em_processamento: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-};
-
-const ORIGEM_OPTIONS: { value: EntradaOrigem; label: string }[] = [
-  { value: 'cliente', label: 'Cliente' },
-  { value: 'empreiteira', label: 'Empreiteira' },
-  { value: 'outros', label: 'Outros' },
-];
-
-const TIPO_RECEITA_OPTIONS: { value: EntradaTipoReceita; label: string }[] = [
-  { value: 'taxa_medicao', label: 'Taxa sobre medição' },
-  { value: 'assinatura', label: 'Assinatura' },
-  { value: 'outros_servicos', label: 'Outros serviços' },
-];
-
-const STATUS_OPTIONS: { value: EntradaStatus; label: string }[] = [
-  { value: 'recebido', label: 'Recebido' },
-  { value: 'pendente', label: 'Pendente' },
-  { value: 'em_processamento', label: 'Em processamento' },
-];
-
-// ─── Period options ───────────────────────────────────────────────────────────
-
-const periodOptions: { value: EntradaPeriodo; label: string }[] = [
-  { value: '7dias', label: '7 dias' },
-  { value: '30dias', label: 'Últimos 30 dias' },
-  { value: '3meses', label: '3 meses' },
-  { value: '12meses', label: '12 meses' },
-  { value: 'personalizado', label: 'Personalizado' },
-];
-
-const PAGE_SIZE = 20;
+import { formatCurrencyRounded as formatCurrency, formatDateTime } from '@shared/lib/formatters';
+import {
+  tipoReceitaLabels,
+  tipoReceitaClasses,
+  origemLabels,
+  statusLabels,
+  statusClasses,
+  ORIGEM_OPTIONS,
+  TIPO_RECEITA_OPTIONS,
+  STATUS_OPTIONS,
+  PERIOD_OPTIONS,
+  PAGE_SIZE,
+} from '@features/admin/entradas/constants';
 
 function formatRangeLabel(range: DateRange | undefined): string {
   if (!range) return 'Personalizado';
@@ -359,7 +312,7 @@ export default function AdminEntradasPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
           {/* Seletor de período */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap">
-            {periodOptions.map((opt) => {
+            {PERIOD_OPTIONS.map((opt) => {
               const isActive = periodo === opt.value;
               const isPersonalizado = opt.value === 'personalizado';
 
@@ -628,43 +581,55 @@ export default function AdminEntradasPage() {
             lançamentos
           </span>
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={cn(
-                      'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors',
-                      page === pageNum
-                        ? 'bg-primary text-white font-bold'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    )}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={page === 1}
+                    className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="entradas-pagination-prev"
+                  />
+                </PaginationItem>
+                {getPaginationRange(page, totalPages).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`entradas-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={page === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(item);
+                        }}
+                        data-testid={`entradas-pagination-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    aria-disabled={page === totalPages}
+                    className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="entradas-pagination-next"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </div>
       </div>

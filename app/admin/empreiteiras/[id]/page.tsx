@@ -40,22 +40,7 @@ import {
   RiUserStarLine,
 } from 'react-icons/ri';
 import type { EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
-import { formatCurrency } from '@shared/lib/formatters';
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
-
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('pt-BR');
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
+import { formatCurrency, formatDate, getInitials } from '@shared/lib/formatters';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

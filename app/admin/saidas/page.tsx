@@ -36,6 +36,16 @@ import { SaidaTopEntidades } from '@features/admin/saidas/components/SaidaTopEnt
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
 import type {
   SaidaPeriodo,
   SaidaTipo,
@@ -53,93 +63,22 @@ import {
   useTopEmpreiteirasPagas,
   useTopClientesReembolsados,
 } from '@features/admin/saidas/hooks/use-saidas';
-import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-
-// ─── Formatting ───────────────────────────────────────────────────────────────
-
-const formatDateTime = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-};
-
-const formatDate = (iso: string) => {
-  const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-};
-
-// ─── Label / Style Maps ───────────────────────────────────────────────────────
-
-const tipoSaidaLabels: Record<SaidaTipo, string> = {
-  pagamento_medicao: 'Pagamento de medição',
-  reembolso: 'Reembolso',
-  custo_operacional: 'Custo operacional',
-};
-
-const tipoSaidaClasses: Record<SaidaTipo, string> = {
-  pagamento_medicao: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  reembolso: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  custo_operacional: 'bg-primary/10 text-primary',
-};
-
-const statusLabels: Record<SaidaStatus, string> = {
-  pago: 'Pago',
-  agendado: 'Agendado',
-  pendente_aprovacao: 'Pendente aprovação',
-  atrasado: 'Atrasado',
-};
-
-const statusClasses: Record<SaidaStatus, string> = {
-  pago: 'bg-[#22846D]/10 text-[#22846D]',
-  agendado: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  pendente_aprovacao: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  atrasado: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-};
-
-const destinoPerfilLabels: Record<SaidaDestinoPerfil, string> = {
-  empreiteira: 'Empreiteira',
-  cliente: 'Cliente',
-  outro: 'Outro',
-};
-
-const destinoPerfilClasses: Record<SaidaDestinoPerfil, string> = {
-  empreiteira: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  cliente: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  outro: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-};
-
-const TIPO_SAIDA_OPTIONS: { value: SaidaTipo; label: string }[] = [
-  { value: 'pagamento_medicao', label: 'Pagamento de medição' },
-  { value: 'reembolso', label: 'Reembolso' },
-  { value: 'custo_operacional', label: 'Custo operacional' },
-];
-
-const DESTINO_PERFIL_OPTIONS: { value: SaidaDestinoPerfil; label: string }[] = [
-  { value: 'empreiteira', label: 'Empreiteira' },
-  { value: 'cliente', label: 'Cliente' },
-  { value: 'outro', label: 'Outro' },
-];
-
-const STATUS_OPTIONS: { value: SaidaStatus; label: string }[] = [
-  { value: 'pago', label: 'Pago' },
-  { value: 'agendado', label: 'Agendado' },
-  { value: 'pendente_aprovacao', label: 'Pendente aprovação' },
-  { value: 'atrasado', label: 'Atrasado' },
-];
-
-const SEM_OBRA = '__sem_obra__';
-
-// ─── Period options ───────────────────────────────────────────────────────────
-
-const periodOptions: { value: SaidaPeriodo; label: string }[] = [
-  { value: '7dias', label: '7 dias' },
-  { value: '30dias', label: 'Últimos 30 dias' },
-  { value: '3meses', label: '3 meses' },
-  { value: '12meses', label: '12 meses' },
-  { value: 'personalizado', label: 'Personalizado' },
-];
-
-const PAGE_SIZE = 20;
-const PAGE_SIZE_FUTURAS = 8;
+import { formatCurrencyRounded as formatCurrency, formatDateTime, formatDate } from '@shared/lib/formatters';
+import {
+  tipoSaidaLabels,
+  tipoSaidaClasses,
+  statusLabels,
+  statusClasses,
+  destinoPerfilLabels,
+  destinoPerfilClasses,
+  TIPO_SAIDA_OPTIONS,
+  DESTINO_PERFIL_OPTIONS,
+  STATUS_OPTIONS,
+  SEM_OBRA,
+  PERIOD_OPTIONS,
+  PAGE_SIZE,
+  PAGE_SIZE_FUTURAS,
+} from '@features/admin/saidas/constants';
 
 function formatRangeLabel(range: DateRange | undefined): string {
   if (!range) return 'Personalizado';
@@ -421,7 +360,7 @@ export default function AdminSaidasPage() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
           {/* Seletor de período */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap">
-            {periodOptions.map((opt) => {
+            {PERIOD_OPTIONS.map((opt) => {
               const isActive = periodo === opt.value;
               const isPersonalizado = opt.value === 'personalizado';
 
@@ -719,43 +658,55 @@ export default function AdminSaidasPage() {
             saídas
           </span>
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={cn(
-                      'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors',
-                      page === pageNum
-                        ? 'bg-primary text-white font-bold'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    )}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={page === 1}
+                    className={page === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="saidas-pagination-prev"
+                  />
+                </PaginationItem>
+                {getPaginationRange(page, totalPages).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`saidas-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={page === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(item);
+                        }}
+                        data-testid={`saidas-pagination-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    aria-disabled={page === totalPages}
+                    className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="saidas-pagination-next"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           )}
         </div>
       </div>
@@ -776,8 +727,8 @@ export default function AdminSaidasPage() {
               >
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400">
-                    <span className="text-xs font-bold leading-none">{formatDate(fut.vencimento).split('/')[0]}</span>
-                    <span className="text-[10px] font-medium leading-none mt-0.5">/{formatDate(fut.vencimento).split('/')[1]}</span>
+                    <span className="text-xs font-bold leading-none">{formatDate(fut.vencimento, { style: 'short' }).split('/')[0]}</span>
+                    <span className="text-[10px] font-medium leading-none mt-0.5">/{formatDate(fut.vencimento, { style: 'short' }).split('/')[1]}</span>
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{fut.descricao}</p>
@@ -818,46 +769,55 @@ export default function AdminSaidasPage() {
               compromissos
             </span>
             {futurasTotalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setFuturasPage((p) => Math.max(1, p - 1))}
-                  disabled={futurasPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  data-testid="futuras-prev-page"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                {Array.from({ length: Math.min(futurasTotalPages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setFuturasPage(pageNum)}
-                      className={cn(
-                        'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium transition-colors',
-                        futurasPage === pageNum
-                          ? 'bg-primary text-white font-bold'
-                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      )}
-                      data-testid={`futuras-page-${pageNum}`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setFuturasPage((p) => Math.min(futurasTotalPages, p + 1))}
-                  disabled={futurasPage === futurasTotalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 dark:text-gray-300 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  data-testid="futuras-next-page"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setFuturasPage((p) => Math.max(1, p - 1));
+                      }}
+                      aria-disabled={futurasPage === 1}
+                      className={futurasPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                      data-testid="futuras-prev-page"
+                    />
+                  </PaginationItem>
+                  {getPaginationRange(futurasPage, futurasTotalPages).map((item, idx) =>
+                    item === 'ellipsis' ? (
+                      <PaginationItem key={`futuras-ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          href="#"
+                          isActive={futurasPage === item}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setFuturasPage(item);
+                          }}
+                          data-testid={`futuras-page-${item}`}
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setFuturasPage((p) => Math.min(futurasTotalPages, p + 1));
+                      }}
+                      aria-disabled={futurasPage === futurasTotalPages}
+                      className={futurasPage === futurasTotalPages ? 'pointer-events-none opacity-50' : ''}
+                      data-testid="futuras-next-page"
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </div>
         </div>

@@ -21,8 +21,6 @@ import {
   RiPauseCircleLine,
   RiExternalLinkLine,
   RiProhibitedLine,
-  RiArrowLeftSLine,
-  RiArrowRightSLine,
   RiPlayCircleLine,
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
@@ -47,63 +45,36 @@ import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilt
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
+import {
   useAnuncioKpi,
   useZonasAnuncio,
   useCampanhas,
   useAnunciantes,
 } from '@features/admin/anuncios/hooks/use-anuncios';
-import type { AnuncioStatus, ZonaAnuncio, Campanha, Anunciante } from '@features/admin/anuncios/types';
+import type { AnuncioStatus, AnuncianteStatus, ZonaAnuncio, Campanha, Anunciante } from '@features/admin/anuncios/types';
 import type { EditarAnuncianteFormData } from '@features/admin/anuncios/schemas';
-import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-
-const PAGE_SIZE_CAMPANHAS = 10;
-const PAGE_SIZE_ANUNCIANTES = 10;
+import { formatCurrencyRounded as formatCurrency, formatDate, formatRange } from '@shared/lib/formatters';
+import {
+  PAGE_SIZE_CAMPANHAS,
+  PAGE_SIZE_ANUNCIANTES,
+  statusClasses,
+  statusLabels,
+  STATUS_CAMPANHA_OPTIONS,
+  ZONA_OPTIONS,
+  STATUS_ANUNCIANTE_OPTIONS,
+} from '@features/admin/anuncios/constants';
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat('pt-BR').format(value);
-
-const formatDate = (dateStr: string) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const statusClasses: Record<AnuncioStatus, string> = {
-  ativa: 'bg-[#22846D]/10 text-[#22846D]',
-  pausada: 'bg-amber-50 text-amber-600 dark:bg-amber-900/10 dark:text-amber-500',
-  expirada: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-  agendada: 'bg-blue-50 text-blue-600 dark:bg-blue-900/10 dark:text-blue-400',
-};
-
-const statusLabels: Record<AnuncioStatus, string> = {
-  ativa: 'Ativa',
-  pausada: 'Pausada',
-  expirada: 'Expirada',
-  agendada: 'Agendada',
-};
-
-const STATUS_CAMPANHA_OPTIONS: { value: AnuncioStatus; label: string }[] = [
-  { value: 'ativa', label: 'Ativa' },
-  { value: 'pausada', label: 'Pausada' },
-  { value: 'expirada', label: 'Expirada' },
-  { value: 'agendada', label: 'Agendada' },
-];
-
-const ZONA_OPTIONS: { value: string; label: string }[] = [
-  { value: 'sidebar-sup-contratante', label: 'Sidebar Sup. Contratante' },
-  { value: 'sidebar-inf-contratante', label: 'Sidebar Inf. Contratante' },
-  { value: 'sidebar-sup-empreiteiro', label: 'Sidebar Sup. Empreiteiro' },
-  { value: 'sidebar-inf-empreiteiro', label: 'Sidebar Inf. Empreiteiro' },
-  { value: 'banner-dashboard-contratante', label: 'Banner Dashboard – Contratante' },
-  { value: 'banner-dashboard-empreiteiro', label: 'Banner Dashboard – Empreiteiro' },
-  { value: 'banner-qa', label: 'Banner Q&A' },
-];
-
-type AnuncianteStatus = 'ativo' | 'inativo';
-
-const STATUS_ANUNCIANTE_OPTIONS: { value: AnuncianteStatus; label: string }[] = [
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'inativo', label: 'Inativo' },
-];
 
 const zonaIcone = {
   web: RiLayoutLine,
@@ -342,12 +313,6 @@ export default function AdminAnunciosPage() {
   const onAnuncianteFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
     setPageAnunciante(1);
-  };
-
-  const formatRangeFilterLabel = (min: string, max: string, prefix = '') => {
-    const minPart = min ? `${prefix}${min}` : `${prefix}0`;
-    const maxPart = max ? `${prefix}${max}` : '∞';
-    return `${minPart} – ${maxPart}`;
   };
 
   const kpiCards = useMemo(() => {
@@ -608,35 +573,56 @@ export default function AdminAnunciosPage() {
           </table>
         </div>
         {totalPagesCampanha > 1 && (
-          <div className="flex justify-center items-center gap-2 py-6 border-t border-gray-100 dark:border-gray-800">
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 disabled:opacity-40"
-              disabled={pageCampanha === 1}
-              onClick={() => setPageCampanha((p) => p - 1)}
-            >
-              <RiArrowLeftSLine className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalPagesCampanha }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPageCampanha(p)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  p === pageCampanha
-                    ? 'bg-primary text-white font-bold'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+          <div className="py-4 border-t border-gray-100 dark:border-gray-800">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPageCampanha((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={pageCampanha === 1}
+                    className={pageCampanha === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="campanhas-pagination-prev"
+                  />
+                </PaginationItem>
+                {getPaginationRange(pageCampanha, totalPagesCampanha).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`campanhas-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageCampanha === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPageCampanha(item);
+                        }}
+                        data-testid={`campanhas-pagination-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
                 )}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 disabled:opacity-40"
-              disabled={pageCampanha === totalPagesCampanha}
-              onClick={() => setPageCampanha((p) => p + 1)}
-            >
-              <RiArrowRightSLine className="w-5 h-5" />
-            </button>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPageCampanha((p) => Math.min(totalPagesCampanha, p + 1));
+                    }}
+                    aria-disabled={pageCampanha === totalPagesCampanha}
+                    className={pageCampanha === totalPagesCampanha ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="campanhas-pagination-next"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </Card>
@@ -724,7 +710,7 @@ export default function AdminAnunciosPage() {
             ))}
             {(campanhasMinNum !== undefined || campanhasMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Campanhas: ${formatRangeFilterLabel(anuncianteCampanhasMin, anuncianteCampanhasMax)}`}
+                label={`Campanhas: ${formatRange(anuncianteCampanhasMin, anuncianteCampanhasMax)}`}
                 onRemove={() => {
                   setAnuncianteCampanhasMin('');
                   setAnuncianteCampanhasMax('');
@@ -734,7 +720,7 @@ export default function AdminAnunciosPage() {
             )}
             {(receitaMinNum !== undefined || receitaMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Receita: ${formatRangeFilterLabel(anuncianteReceitaMin, anuncianteReceitaMax, 'R$ ')}`}
+                label={`Receita: ${formatRange(anuncianteReceitaMin, anuncianteReceitaMax, { prefix: 'R$ ' })}`}
                 onRemove={() => {
                   setAnuncianteReceitaMin('');
                   setAnuncianteReceitaMax('');
@@ -785,38 +771,56 @@ export default function AdminAnunciosPage() {
           </table>
         </div>
         {totalPagesAnunciante > 1 && (
-          <div className="flex justify-center items-center gap-2 py-6 border-t border-gray-100 dark:border-gray-800">
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 disabled:opacity-40"
-              disabled={pageAnunciante === 1}
-              onClick={() => setPageAnunciante((p) => p - 1)}
-              data-testid="anunciantes-prev-page"
-            >
-              <RiArrowLeftSLine className="w-5 h-5" />
-            </button>
-            {Array.from({ length: totalPagesAnunciante }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPageAnunciante(p)}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  p === pageAnunciante
-                    ? 'bg-primary text-white font-bold'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+          <div className="py-4 border-t border-gray-100 dark:border-gray-800">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPageAnunciante((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={pageAnunciante === 1}
+                    className={pageAnunciante === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="anunciantes-prev-page"
+                  />
+                </PaginationItem>
+                {getPaginationRange(pageAnunciante, totalPagesAnunciante).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`anunciantes-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={pageAnunciante === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPageAnunciante(item);
+                        }}
+                        data-testid={`anunciantes-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
                 )}
-                data-testid={`anunciantes-page-${p}`}
-              >
-                {p}
-              </button>
-            ))}
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 disabled:opacity-40"
-              disabled={pageAnunciante === totalPagesAnunciante}
-              onClick={() => setPageAnunciante((p) => p + 1)}
-              data-testid="anunciantes-next-page"
-            >
-              <RiArrowRightSLine className="w-5 h-5" />
-            </button>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPageAnunciante((p) => Math.min(totalPagesAnunciante, p + 1));
+                    }}
+                    aria-disabled={pageAnunciante === totalPagesAnunciante}
+                    className={pageAnunciante === totalPagesAnunciante ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="anunciantes-next-page"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </Card>

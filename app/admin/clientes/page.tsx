@@ -31,25 +31,9 @@ import {
   RiAlertLine,
   RiUserLine,
 } from 'react-icons/ri';
-import type { AdminCliente } from '@features/admin/clientes/types';
-import { formatCurrency } from '@shared/lib/formatters';
-
-type ClienteStatus = AdminCliente['status'];
-
-const STATUS_OPTIONS: { value: ClienteStatus; label: string }[] = [
-  { value: 'ativo', label: 'Ativo' },
-  { value: 'inativo', label: 'Inativo' },
-  { value: 'pendente', label: 'Pendente' },
-];
-
-const ITEMS_PER_PAGE = 12;
-
-function getPaginationRange(current: number, total: number): (number | 'ellipsis')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, 'ellipsis', total];
-  if (current >= total - 3) return [1, 'ellipsis', total - 4, total - 3, total - 2, total - 1, total];
-  return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
-}
+import { formatCurrency, formatRange } from '@shared/lib/formatters';
+import { getPaginationRange } from '@shared/lib/pagination';
+import { STATUS_OPTIONS, ITEMS_PER_PAGE, type ClienteStatus } from '@features/admin/clientes/constants';
 
 export default function AdminClientesPage() {
   const { data: clientes, isLoading } = useAdminClientes();
@@ -118,12 +102,6 @@ export default function AdminClientesPage() {
     setValorMin('');
     setValorMax('');
     setCurrentPage(1);
-  };
-
-  const formatRange = (min: string, max: string, prefix = '') => {
-    const minPart = min ? `${prefix}${min}` : `${prefix}0`;
-    const maxPart = max ? `${prefix}${max}` : '∞';
-    return `${minPart} – ${maxPart}`;
   };
 
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -304,7 +282,7 @@ export default function AdminClientesPage() {
             )}
             {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Volume: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                label={`Volume: ${formatRange(valorMin, valorMax, { prefix: 'R$ ' })}`}
                 onRemove={() => {
                   setValorMin('');
                   setValorMax('');

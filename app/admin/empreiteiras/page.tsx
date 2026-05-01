@@ -28,25 +28,19 @@ import {
   RiMapPinLine,
 } from 'react-icons/ri';
 import type { AdminEmpreiteira, EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
+import { statusConfig, STATUS_OPTIONS, ITEMS_PER_PAGE } from '@features/admin/empreiteiras/constants';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@shared/components/ui/pagination';
+import { getPaginationRange } from '@shared/lib/pagination';
 
-import { formatCurrency } from '@shared/lib/formatters';
-
-const statusConfig: Record<EmpreiteiraStatus, { label: string; className: string }> = {
-  ativa: { label: 'Ativa', className: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
-  inativa: { label: 'Inativa', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-  suspensa: { label: 'Suspensa', className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
-  pendente: { label: 'Pendente', className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
-};
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
+import { formatCurrency, formatRange, getInitials } from '@shared/lib/formatters';
 
 function StarRating({ nota }: { nota: number }) {
   const stars = [];
@@ -138,13 +132,6 @@ function EmpreiteiraCard({ empreiteira }: { empreiteira: AdminEmpreiteira }) {
   );
 }
 
-const STATUS_OPTIONS: { value: EmpreiteiraStatus; label: string }[] = [
-  { value: 'ativa', label: 'Ativa' },
-  { value: 'inativa', label: 'Inativa' },
-  { value: 'suspensa', label: 'Suspensa' },
-  { value: 'pendente', label: 'Pendente' },
-];
-
 export default function AdminEmpreiteirasPage() {
   const { data: empreiteiras, isLoading } = useAdminEmpreiteiras();
   const [statusSelected, setStatusSelected] = useState<EmpreiteiraStatus[]>([]);
@@ -156,7 +143,13 @@ export default function AdminEmpreiteirasPage() {
   const [valorMin, setValorMin] = useState('');
   const [valorMax, setValorMax] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    setCurrentPage(1);
+  };
 
   const especialidadesOptions = useMemo(() => {
     if (!empreiteiras) return [];
@@ -246,13 +239,14 @@ export default function AdminEmpreiteirasPage() {
     setQualidadeMin(undefined);
     setValorMin('');
     setValorMax('');
+    setCurrentPage(1);
   };
 
-  const formatRange = (min: string, max: string, prefix = '') => {
-    const minPart = min ? `${prefix}${min}` : `${prefix}0`;
-    const maxPart = max ? `${prefix}${max}` : '∞';
-    return `${minPart} – ${maxPart}`;
-  };
+  const totalPages = Math.max(1, Math.ceil(filteredEmpreiteiras.length / ITEMS_PER_PAGE));
+  const paginatedEmpreiteiras = filteredEmpreiteiras.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   const kpis = [
     {
@@ -354,7 +348,7 @@ export default function AdminEmpreiteirasPage() {
               label="Status"
               options={STATUS_OPTIONS}
               values={statusSelected}
-              onChange={setStatusSelected}
+              onChange={onFilterChange(setStatusSelected)}
               placeholder="Todos os status"
               testIdPrefix="filter-status"
             />
@@ -362,7 +356,7 @@ export default function AdminEmpreiteirasPage() {
               label="Especialidade"
               options={especialidadesOptions}
               values={especialidadesSelected}
-              onChange={setEspecialidadesSelected}
+              onChange={onFilterChange(setEspecialidadesSelected)}
               placeholder="Todas as especialidades"
               searchPlaceholder="Buscar especialidade..."
               testIdPrefix="filter-especialidade"
@@ -371,7 +365,7 @@ export default function AdminEmpreiteirasPage() {
               label="Estado (UF)"
               options={ufsOptions}
               values={ufsSelected}
-              onChange={setUfsSelected}
+              onChange={onFilterChange(setUfsSelected)}
               placeholder="Todos os estados"
               searchPlaceholder="Buscar UF..."
               testIdPrefix="filter-uf"
@@ -380,22 +374,22 @@ export default function AdminEmpreiteirasPage() {
               label="Quantidade de obras"
               min={obrasMin}
               max={obrasMax}
-              onMinChange={setObrasMin}
-              onMaxChange={setObrasMax}
+              onMinChange={onFilterChange(setObrasMin)}
+              onMaxChange={onFilterChange(setObrasMax)}
               testIdPrefix="filter-obras"
             />
             <StarRatingFilter
               label="Qualidade"
               value={qualidadeMin}
-              onChange={setQualidadeMin}
+              onChange={onFilterChange(setQualidadeMin)}
               testIdPrefix="filter-qualidade"
             />
             <RangeNumberInput
               label="Volume contratado"
               min={valorMin}
               max={valorMax}
-              onMinChange={setValorMin}
-              onMaxChange={setValorMax}
+              onMinChange={onFilterChange(setValorMin)}
+              onMaxChange={onFilterChange(setValorMax)}
               prefix="R$ "
               placeholderMin="100.000"
               placeholderMax="100.000.000"
@@ -408,7 +402,10 @@ export default function AdminEmpreiteirasPage() {
             <Input
               placeholder="Buscar por nome, CNPJ..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
               data-testid="input-search-empreiteiras"
             />
@@ -423,7 +420,10 @@ export default function AdminEmpreiteirasPage() {
                 <ActiveFilterChip
                   key={s}
                   label={`Status: ${opt?.label ?? s}`}
-                  onRemove={() => setStatusSelected(statusSelected.filter((x) => x !== s))}
+                  onRemove={() => {
+                    setStatusSelected(statusSelected.filter((x) => x !== s));
+                    setCurrentPage(1);
+                  }}
                   testId={`active-chip-status-${s}`}
                 />
               );
@@ -432,7 +432,10 @@ export default function AdminEmpreiteirasPage() {
               <ActiveFilterChip
                 key={esp}
                 label={`Especialidade: ${esp}`}
-                onRemove={() => setEspecialidadesSelected(especialidadesSelected.filter((x) => x !== esp))}
+                onRemove={() => {
+                  setEspecialidadesSelected(especialidadesSelected.filter((x) => x !== esp));
+                  setCurrentPage(1);
+                }}
                 testId={`active-chip-especialidade-${esp}`}
               />
             ))}
@@ -440,7 +443,10 @@ export default function AdminEmpreiteirasPage() {
               <ActiveFilterChip
                 key={uf}
                 label={`UF: ${uf}`}
-                onRemove={() => setUfsSelected(ufsSelected.filter((x) => x !== uf))}
+                onRemove={() => {
+                  setUfsSelected(ufsSelected.filter((x) => x !== uf));
+                  setCurrentPage(1);
+                }}
                 testId={`active-chip-uf-${uf}`}
               />
             ))}
@@ -450,6 +456,7 @@ export default function AdminEmpreiteirasPage() {
                 onRemove={() => {
                   setObrasMin('');
                   setObrasMax('');
+                  setCurrentPage(1);
                 }}
                 testId="active-chip-obras"
               />
@@ -461,16 +468,20 @@ export default function AdminEmpreiteirasPage() {
                     ? 'Qualidade: Sem avaliação'
                     : `Qualidade: ${qualidadeMin} ${qualidadeMin === 1 ? 'estrela' : 'estrelas'}`
                 }
-                onRemove={() => setQualidadeMin(undefined)}
+                onRemove={() => {
+                  setQualidadeMin(undefined);
+                  setCurrentPage(1);
+                }}
                 testId="active-chip-qualidade"
               />
             )}
             {(valorMinNum !== undefined || valorMaxNum !== undefined) && (
               <ActiveFilterChip
-                label={`Volume: ${formatRange(valorMin, valorMax, 'R$ ')}`}
+                label={`Volume: ${formatRange(valorMin, valorMax, { prefix: 'R$ ' })}`}
                 onRemove={() => {
                   setValorMin('');
                   setValorMax('');
+                  setCurrentPage(1);
                 }}
                 testId="active-chip-valor"
               />
@@ -480,11 +491,65 @@ export default function AdminEmpreiteirasPage() {
       </div>
 
       {filteredEmpreiteiras.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredEmpreiteiras.map((empreiteira) => (
-            <EmpreiteiraCard key={empreiteira.id} empreiteira={empreiteira} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedEmpreiteiras.map((empreiteira) => (
+              <EmpreiteiraCard key={empreiteira.id} empreiteira={empreiteira} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage((p) => Math.max(1, p - 1));
+                    }}
+                    aria-disabled={currentPage === 1}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="empreiteiras-pagination-prev"
+                  />
+                </PaginationItem>
+                {getPaginationRange(currentPage, totalPages).map((item, idx) =>
+                  item === 'ellipsis' ? (
+                    <PaginationItem key={`empreiteiras-ellipsis-${idx}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === item}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(item);
+                        }}
+                        data-testid={`empreiteiras-pagination-page-${item}`}
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setCurrentPage((p) => Math.min(totalPages, p + 1));
+                    }}
+                    aria-disabled={currentPage === totalPages}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                    data-testid="empreiteiras-pagination-next"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       ) : (
         <div className="text-center py-16">
           <RiBuilding2Line className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />

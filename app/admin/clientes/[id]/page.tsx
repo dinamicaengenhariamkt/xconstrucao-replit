@@ -50,7 +50,7 @@ import {
 } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import type { ClienteStatus, ClienteAtividade, AdminClienteObra, ClienteDocumento } from '@features/admin/clientes/types';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, getInitials } from '@shared/lib/formatters';
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; className: string }> = {
   ativo: {
@@ -77,16 +77,6 @@ const KPI_HOVER = {
   },
   transition: { duration: 0.2 },
 } as const;
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
 
 function formatRelativeDate(isoString: string): string {
   const date = new Date(isoString);
