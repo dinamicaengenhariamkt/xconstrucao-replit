@@ -1,19 +1,54 @@
 /**
- * Dados mockados para estatísticas do dashboard
+ * Dados mockados para estatísticas do dashboard, particionados por período.
  */
 
-import type { DashboardStats } from '../types';
+import type { DashboardPeriodo, DashboardStats } from '../types';
 
-export const mockDashboardStats: DashboardStats = {
-  obrasAtivas: 5,
-  obrasAtivasDelta: 2,
-  obrasConcluidas: 23,
-  obrasConcluidasPeriodo: 'Este ano',
-  valorRecebido: 850000,
-  valorRecebidoDelta: 15,
-  valorGasto: 620000,
-  valorGastoPeriodo: 'No período',
+export const mockDashboardStatsByPeriodo: Record<DashboardPeriodo, DashboardStats> = {
+  '7dias': {
+    obrasAtivas: 5,
+    obrasAtivasDelta: 1,
+    obrasConcluidas: 1,
+    obrasConcluidasPeriodo: 'Últimos 7 dias',
+    valorRecebido: 78_500,
+    valorRecebidoDelta: 4,
+    valorGasto: 56_200,
+    valorGastoPeriodo: 'Últimos 7 dias',
+  },
+  '30dias': {
+    obrasAtivas: 5,
+    obrasAtivasDelta: 2,
+    obrasConcluidas: 3,
+    obrasConcluidasPeriodo: 'Últimos 30 dias',
+    valorRecebido: 312_400,
+    valorRecebidoDelta: 9,
+    valorGasto: 224_800,
+    valorGastoPeriodo: 'Últimos 30 dias',
+  },
+  '3meses': {
+    obrasAtivas: 5,
+    obrasAtivasDelta: 3,
+    obrasConcluidas: 8,
+    obrasConcluidasPeriodo: 'Últimos 3 meses',
+    valorRecebido: 612_300,
+    valorRecebidoDelta: 12,
+    valorGasto: 460_500,
+    valorGastoPeriodo: 'Últimos 3 meses',
+  },
+  '12meses': {
+    obrasAtivas: 5,
+    obrasAtivasDelta: 4,
+    obrasConcluidas: 23,
+    obrasConcluidasPeriodo: 'Últimos 12 meses',
+    valorRecebido: 850_000,
+    valorRecebidoDelta: 15,
+    valorGasto: 620_000,
+    valorGastoPeriodo: 'Últimos 12 meses',
+  },
 };
+
+/** Compatibilidade com chamadas existentes — devolve a janela de 12 meses. */
+export const mockDashboardStats: DashboardStats = mockDashboardStatsByPeriodo['12meses'];
 
 // Mock para estado vazio (sem obras)
 export const mockEmptyDashboardStats: DashboardStats = {

@@ -59,85 +59,101 @@ export function PagamentosEvolutionChart({ pagamentos }: PagamentosEvolutionChar
       });
   }, [pagamentos]);
 
+  if (chartData.length === 0) {
+    return (
+      <Card className="border-border-light dark:border-gray-800">
+        <CardHeader className="py-4">
+          <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
+            Evolução Financeira
+          </CardTitle>
+          <CardDescription className="text-xs text-gray-500">
+            Sem movimentações no período selecionado.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-border-light dark:border-gray-800">
-      <CardHeader>
-        <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
-          Evolução Financeira
-        </CardTitle>
-        <CardDescription className="text-sm text-gray-500">
-          Acompanhamento dos últimos 6 meses
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pb-4">
-        <div className="flex items-center gap-6 mb-6">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Entradas (pagamentos)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Saídas (custos extras)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 border-t-2 border-dashed border-gray-400" />
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Orçamento planejado</span>
-          </div>
+      <CardHeader className="flex flex-row items-start justify-between gap-4 py-4 space-y-0">
+        <div>
+          <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
+            Evolução Financeira
+          </CardTitle>
+          <CardDescription className="text-xs text-gray-500">
+            Entradas, saídas e orçamento planejado por mês
+          </CardDescription>
         </div>
 
-        <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height={256}>
-            <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-              <defs>
-                <linearGradient id="gradEntradasPag" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-              <XAxis
-                dataKey="mes"
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 700 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={formatCurrencyCompact}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Area
-                type="monotone"
-                dataKey="entradas"
-                name="Entradas"
-                stroke="#3b82f6"
-                strokeWidth={2.5}
-                fill="url(#gradEntradasPag)"
-                dot={{ fill: '#3b82f6', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="saidas"
-                name="Saídas"
-                stroke="#ef4444"
-                strokeWidth={2.5}
-                dot={{ fill: '#ef4444', r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="planejado"
-                name="Planejado"
-                stroke="#9ca3af"
-                strokeWidth={2}
-                strokeDasharray="5 4"
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="hidden sm:flex items-center gap-4 flex-wrap pt-1">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+            <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400">Entradas</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+            <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400">Saídas</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 border-t-2 border-dashed border-gray-400" />
+            <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400">Planejado</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 pb-4 px-4">
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <AreaChart data={chartData} margin={{ top: 5, right: 8, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradEntradasPag" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+            <XAxis
+              dataKey="mes"
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 700 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tickFormatter={formatCurrencyCompact}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={50}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Area
+              type="monotone"
+              dataKey="entradas"
+              name="Entradas"
+              stroke="#3b82f6"
+              strokeWidth={2}
+              fill="url(#gradEntradasPag)"
+              dot={{ fill: '#3b82f6', r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="saidas"
+              name="Saídas"
+              stroke="#ef4444"
+              strokeWidth={2}
+              dot={{ fill: '#ef4444', r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="planejado"
+              name="Planejado"
+              stroke="#9ca3af"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              dot={false}
+            />
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>

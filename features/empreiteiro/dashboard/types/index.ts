@@ -4,9 +4,30 @@
 
 import type { IconType } from 'react-icons';
 
+export type { DashboardPeriodo } from '@features/shared/dashboard/types';
+
 // ---------------------------------------------------------------------------
 // Domain types
 // ---------------------------------------------------------------------------
+
+export type PendenciaPriority = 'alta' | 'media' | 'baixa';
+
+export interface EmpreiteiroPendencia {
+  id: string;
+  title: string;
+  prazo: string;
+  priority: PendenciaPriority;
+  obraId: string;
+  obraNome: string;
+}
+
+export interface ObrasStatusDatum {
+  name: string;
+  value: number;
+  color: string;
+  /** Status correspondente em /empreiteiro/minhas-obras (para deep-link). */
+  status?: string;
+}
 
 export interface DashboardStats {
   obrasAtivas: number;
@@ -93,6 +114,20 @@ export interface CashFlowChartProps {
 export interface RecentActivitiesProps {
   activities: Activity[];
   efficiency: EfficiencyData;
+}
+
+export interface PendenciasCardProps {
+  pendencias: EmpreiteiroPendencia[];
+}
+
+export interface ObrasStatusChartProps {
+  data: ObrasStatusDatum[];
+  totalObras?: number;
+}
+
+export interface ObrasStatusChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; payload: ObrasStatusDatum }>;
 }
 
 export interface ActivityItemProps {

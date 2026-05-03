@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AnuncioKpi, ZonaAnuncio, Campanha, Anunciante } from '../types';
-import { mockAnuncioKpi, mockZonasAnuncio, mockCampanhas, mockAnunciantes } from '../mocks';
+import type { AnuncioKpi, Campanha, Anunciante } from '../types';
+import { mockAnuncioKpi, mockCampanhas, mockAnunciantes } from '../mocks';
+
+export { useZonasAnuncio } from '@features/shared/anuncios/hooks/use-zonas';
 
 const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
 
@@ -16,19 +18,6 @@ export function useAnuncioKpi() {
       if (ENABLE_MOCK) return mockAnuncioKpi;
       const res = await fetch('/api/admin/anuncios/kpi');
       if (!res.ok) throw new Error('Erro ao buscar KPIs de anúncios');
-      return res.json();
-    },
-    ...QUERY_CONFIG,
-  });
-}
-
-export function useZonasAnuncio() {
-  return useQuery<ZonaAnuncio[]>({
-    queryKey: ['admin', 'anuncios', 'zonas'],
-    queryFn: async () => {
-      if (ENABLE_MOCK) return mockZonasAnuncio;
-      const res = await fetch('/api/admin/anuncios/zonas');
-      if (!res.ok) throw new Error('Erro ao buscar zonas de anúncios');
       return res.json();
     },
     ...QUERY_CONFIG,

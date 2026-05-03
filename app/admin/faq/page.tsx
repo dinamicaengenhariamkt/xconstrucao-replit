@@ -3,6 +3,9 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@shared/lib/utils';
 import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
+import { FAQHeroSearch } from '@features/shared/faq/FAQHeroSearch';
+import { FAQCategoryCard } from '@features/shared/faq/FAQCategoryCard';
+import { FAQSectionHeader } from '@features/shared/faq/FAQSectionHeader';
 import { useAdminFAQ } from '@features/admin/faq/hooks/use-faq';
 import {
   ADMIN_FAQ_CATEGORIES,
@@ -14,16 +17,13 @@ import { NovaPerguntaModal } from '@features/admin/faq/components/NovaPerguntaMo
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
-import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
-  RiSearchLine,
   RiArrowDownSLine,
   RiAddLine,
   RiCalendarLine,
-  RiArrowRightSLine,
   RiGroupLine,
   RiUserLine,
   RiToolsLine,
@@ -93,55 +93,6 @@ function FAQPageSkeleton() {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function AdminFAQCategoryCard({
-  categoryKey,
-  label,
-  count,
-  onSelect,
-}: {
-  categoryKey: string;
-  label: string;
-  count: number;
-  onSelect: () => void;
-}) {
-  const meta = ADMIN_FAQ_CATEGORY_META[categoryKey];
-  const Icon = CATEGORY_ICONS[categoryKey] ?? RiGroupLine;
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="text-left bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm hover:border-primary/30 hover:-translate-y-0.5 transition-all cursor-pointer group"
-      data-testid={`faq-category-card-${categoryKey}`}
-    >
-      <div className="flex items-start gap-3">
-        <div className={cn('p-2 rounded-lg shrink-0', meta?.iconBg)}>
-          <Icon className={cn('w-5 h-5', meta?.iconColor)} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-snug">{label}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{meta?.description}</p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{count} perguntas</p>
-        </div>
-        <RiArrowRightSLine className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0 mt-0.5" />
-      </div>
-    </button>
-  );
-}
-
-function AdminFAQSectionHeader({ category }: { category: string }) {
-  const meta = ADMIN_FAQ_CATEGORY_META[category];
-  const label = ADMIN_FAQ_CATEGORIES[category] || category;
-  const Icon = CATEGORY_ICONS[category] ?? RiGroupLine;
-  return (
-    <div className="flex items-center gap-3">
-      <div className={cn('p-2 rounded-lg', meta?.iconBg)}>
-        <Icon className={cn('w-5 h-5', meta?.iconColor)} />
-      </div>
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white">{label}</h2>
     </div>
   );
 }
@@ -325,28 +276,13 @@ export default function AdminFAQPage() {
         </Button>
       </div>
 
-      {/* Hero claro centralizado */}
-      <div className="text-center max-w-3xl mx-auto w-full">
-        <h1
-          className="text-5xl font-extrabold tracking-tighter text-gray-900 dark:text-white mb-4"
-          data-testid="text-page-title"
-        >
-          Perguntas Frequentes do Administrador
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 text-lg mb-8">
-          Respostas rápidas para a gestão de clientes, empreiteiras, financeiro e operação da plataforma.
-        </p>
-        <div className="relative max-w-2xl mx-auto">
-          <RiSearchLine className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            placeholder="Buscar por palavra-chave (cliente, empreiteira, financeiro...)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 pr-4 py-4 h-auto text-sm bg-gray-100 dark:bg-gray-800 border-none rounded-2xl placeholder:text-gray-400"
-            data-testid="faq-search-input"
-          />
-        </div>
-      </div>
+      <FAQHeroSearch
+        title="Perguntas Frequentes do Administrador"
+        subtitle="Respostas rápidas para a gestão de clientes, empreiteiras, financeiro e operação da plataforma."
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Buscar por palavra-chave (cliente, empreiteira, financeiro...)"
+      />
 
       {/* Filtros avançados centralizados */}
       <div className="flex flex-col items-center gap-3">
@@ -413,36 +349,53 @@ export default function AdminFAQPage() {
       {/* Grid de categorias (visível apenas sem filtros/busca) */}
       {showGrid && items && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(ADMIN_FAQ_CATEGORIES).map(([key, label]) => (
-            <AdminFAQCategoryCard
-              key={key}
-              categoryKey={key}
-              label={label}
-              count={items.filter((i) => i.category === key).length}
-              onSelect={() => setCategorySelected([key])}
-            />
-          ))}
+          {Object.entries(ADMIN_FAQ_CATEGORIES).map(([key, label]) => {
+            const meta = ADMIN_FAQ_CATEGORY_META[key];
+            const Icon = CATEGORY_ICONS[key] ?? RiGroupLine;
+            return (
+              <FAQCategoryCard
+                key={key}
+                categoryKey={key}
+                label={label}
+                description={meta?.description}
+                count={items.filter((i) => i.category === key).length}
+                iconBg={meta?.iconBg}
+                iconColor={meta?.iconColor}
+                Icon={Icon}
+                onSelect={() => setCategorySelected([key])}
+              />
+            );
+          })}
         </div>
       )}
 
       {/* Seções de acordeão */}
       <div className="space-y-8">
-        {Object.entries(groupedItems).map(([category, categoryItems]) => (
-          <div key={category}>
-            <AdminFAQSectionHeader category={category} />
-            <div className="space-y-3 mt-4">
-              {categoryItems.map((item) => (
-                <AdminFAQAccordion
-                  key={item.id}
-                  item={item}
-                  isOpen={openItemId === item.id}
-                  onToggle={() => setOpenItemId(openItemId === item.id ? null : item.id)}
-                  onEdit={() => handleOpenEdit(item)}
-                />
-              ))}
+        {Object.entries(groupedItems).map(([category, categoryItems]) => {
+          const meta = ADMIN_FAQ_CATEGORY_META[category];
+          const Icon = CATEGORY_ICONS[category] ?? RiGroupLine;
+          return (
+            <div key={category}>
+              <FAQSectionHeader
+                label={ADMIN_FAQ_CATEGORIES[category] || category}
+                iconBg={meta?.iconBg}
+                iconColor={meta?.iconColor}
+                Icon={Icon}
+              />
+              <div className="space-y-3 mt-4">
+                {categoryItems.map((item) => (
+                  <AdminFAQAccordion
+                    key={item.id}
+                    item={item}
+                    isOpen={openItemId === item.id}
+                    onToggle={() => setOpenItemId(openItemId === item.id ? null : item.id)}
+                    onEdit={() => handleOpenEdit(item)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {filteredItems.length === 0 && <FAQEmptyState />}
       </div>
 

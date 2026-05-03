@@ -6,18 +6,37 @@ import { ChatHeader } from '@features/contratante/xchat/components/ChatHeader';
 import { MessageArea } from '@features/contratante/xchat/components/MessageArea';
 import { ChatInput } from '@features/contratante/xchat/components/ChatInput';
 import { EmptyChat } from '@features/contratante/xchat/components/EmptyChat';
-import { useContratanteConversations, useContratanteMessages } from '@features/contratante/xchat/hooks/use-chat';
+import {
+  useContratanteConversations,
+  useContratanteMessages,
+} from '@features/contratante/xchat/hooks/use-chat';
 import { useContratanteChatStore } from '@features/contratante/xchat/store/chat-store';
 import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
-import type { ContratanteMessageAttachment, ContratanteObraPickerItem } from '@features/contratante/xchat/types';
+import type {
+  ContratanteMessageAttachment,
+  ContratanteObraPickerItem,
+} from '@features/contratante/xchat/types';
+import { cn } from '@shared/lib/utils';
 
 export default function ContratanteChatPage() {
   const { data: conversations, isLoading: convLoading } = useContratanteConversations();
-  const { selectedConversationId, localMessages, sendMessage } = useContratanteChatStore();
-  const { data: serverMessages, isLoading: msgLoading } = useContratanteMessages(selectedConversationId);
+  const {
+    selectedConversationId,
+    localMessages,
+    typingConversationIds,
+    sendMessage,
+    setSelectedConversation,
+  } = useContratanteChatStore();
+  const { data: serverMessages, isLoading: msgLoading } = useContratanteMessages(
+    selectedConversationId,
+  );
   const { data: obrasData } = useObrasContratante();
 
-  const selectedConversation = conversations?.find((c) => c.id === selectedConversationId) ?? null;
+  const selectedConversation =
+    conversations?.find((c) => c.id === selectedConversationId) ?? null;
+
+  const isTyping =
+    !!selectedConversationId && typingConversationIds.includes(selectedConversationId);
 
   // Merge server messages with locally sent messages
   const allMessages = useMemo(() => {
@@ -45,44 +64,64 @@ export default function ContratanteChatPage() {
 
   if (convLoading) {
     return (
-      <div className="flex h-[calc(100vh-80px)] animate-pulse m-6 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="w-80 border-r border-gray-100 dark:border-gray-800 p-4 space-y-3 flex-shrink-0">
-          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-32" />
-          <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded-xl" />
-          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded-lg" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex gap-3 p-3">
-              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
+      <div className="h-full p-3 sm:p-6">
+        <div className="flex h-full animate-pulse bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div className="w-80 border-r border-gray-100 dark:border-gray-800 p-4 space-y-3 flex-shrink-0">
+            <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-32" />
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded-xl" />
+            <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded-lg" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-3 p-3">
+                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="flex-1" />
         </div>
-        <div className="flex-1" />
       </div>
     );
   }
 
-  return (
-    <div className="flex h-[calc(100vh-80px)] bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden m-6" data-testid="chat-contratante-page">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0">
-        <ConversationList conversations={conversations ?? []} />
-      </div>
+  const hasSelection = !!selectedConversation;
 
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {selectedConversation ? (
-          <>
-            <ChatHeader conversation={selectedConversation} />
-            <MessageArea messages={allMessages} isLoading={msgLoading} />
-            <ChatInput onSend={handleSend} obras={obras} />
-          </>
-        ) : (
-          <EmptyChat />
-        )}
+  return (
+    <div className="h-full p-3 sm:p-6" data-testid="chat-contratante-page">
+      <div className="flex h-full bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+        {/* Sidebar — em mobile esconde quando há conversa selecionada */}
+        <div
+          className={cn(
+            'w-full md:w-80 flex-shrink-0 min-h-0',
+            hasSelection ? 'hidden md:block' : 'block',
+          )}
+        >
+          <ConversationList conversations={conversations ?? []} />
+        </div>
+
+        {/* Chat area — em mobile esconde quando não há seleção */}
+        <div
+          className={cn(
+            'flex-1 flex-col min-w-0 min-h-0',
+            hasSelection ? 'flex' : 'hidden md:flex',
+          )}
+        >
+          {selectedConversation ? (
+            <>
+              <ChatHeader
+                conversation={selectedConversation}
+                isTyping={isTyping}
+                onBack={() => setSelectedConversation(null)}
+              />
+              <MessageArea messages={allMessages} isLoading={msgLoading} isTyping={isTyping} />
+              <ChatInput onSend={handleSend} obras={obras} />
+            </>
+          ) : (
+            <EmptyChat />
+          )}
+        </div>
       </div>
     </div>
   );

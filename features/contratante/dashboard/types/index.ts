@@ -8,7 +8,7 @@ import type { IconType } from 'react-icons';
 // Domain types
 // ---------------------------------------------------------------------------
 
-export type DashboardPeriodo = '7dias' | '30dias' | '3meses' | '12meses';
+export type { DashboardPeriodo } from '@features/shared/dashboard/types';
 
 export interface ContratanteDashboardStats {
   obrasAtivas: number;

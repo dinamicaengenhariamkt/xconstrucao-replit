@@ -8,6 +8,20 @@ interface MessageAreaProps {
   messages: Message[];
   isLoading: boolean;
   basePath: string;
+  /** Quando true, mostra um indicador "..." animado no fim da lista. */
+  isTyping?: boolean;
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start" data-testid="chat-typing-indicator">
+      <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
+        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
+        <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
+      </div>
+    </div>
+  );
 }
 
 function getDateLabel(rawTimestamp: string): string {
@@ -55,18 +69,18 @@ function DateSeparator({ label }: { label: string }) {
   );
 }
 
-export function MessageArea({ messages, isLoading, basePath }: MessageAreaProps) {
+export function MessageArea({ messages, isLoading, basePath, isTyping }: MessageAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="animate-pulse flex flex-col gap-4 w-full max-w-md px-6">
           <div className="h-12 bg-gray-100 dark:bg-gray-800 rounded-2xl w-3/4" />
           <div className="h-12 bg-gray-100 dark:bg-gray-800 rounded-2xl w-2/3 self-end" />
@@ -76,9 +90,9 @@ export function MessageArea({ messages, isLoading, basePath }: MessageAreaProps)
     );
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isTyping) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <p className="text-sm text-gray-400">Nenhuma mensagem ainda. Diga olá!</p>
       </div>
     );
@@ -87,7 +101,7 @@ export function MessageArea({ messages, isLoading, basePath }: MessageAreaProps)
   const groups = groupByDate(messages);
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2">
+    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col gap-2">
       {groups.map((group) => (
         <Fragment key={group.label}>
           <DateSeparator label={group.label} />
@@ -96,6 +110,7 @@ export function MessageArea({ messages, isLoading, basePath }: MessageAreaProps)
           ))}
         </Fragment>
       ))}
+      {isTyping && <TypingIndicator />}
     </div>
   );
 }

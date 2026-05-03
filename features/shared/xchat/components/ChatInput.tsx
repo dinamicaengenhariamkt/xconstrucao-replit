@@ -39,7 +39,7 @@ export function ChatInput({ onSend, disabled, obras = [] }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+    <div className="flex-shrink-0 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
       {pendingAttachment && (
         <div className="mx-4 mt-3 flex items-center gap-2 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl px-3 py-2">
           <IconHomeWork className="text-base text-primary" />

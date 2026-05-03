@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export interface ObraRefAttachment {
   type: 'obra_ref';
   obraId: string;
@@ -52,6 +54,10 @@ export interface ChatInputProps {
 export interface ChatHeaderProps {
   conversation: Conversation | null;
   basePath: string;
+  /** Quando presente, renderiza um botão "voltar" (visível apenas em mobile). */
+  onBack?: () => void;
+  /** Quando true, mostra "digitando..." em vez de "online". */
+  isTyping?: boolean;
 }
 
 export interface MessageBubbleProps {
@@ -68,4 +74,8 @@ export interface ConversationListProps {
   onSelect: (id: string) => void;
   onSearchChange: (query: string) => void;
   onFilterChange: (tab: 'all' | 'unread') => void;
+  /** Renderizado dentro do sidebar, entre o cabeçalho e a lista de conversas. */
+  headerSlot?: ReactNode;
+  /** Renderizado dentro do sidebar, fixado abaixo da lista (fora do scroll). */
+  footerSlot?: ReactNode;
 }

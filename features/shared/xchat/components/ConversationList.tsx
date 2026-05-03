@@ -13,6 +13,8 @@ export function ConversationList({
   onSelect,
   onSearchChange,
   onFilterChange,
+  headerSlot,
+  footerSlot,
 }: ConversationListProps) {
   const allConversations = [
     ...ephemeralConversations,
@@ -70,6 +72,8 @@ export function ConversationList({
           ))}
         </div>
       </div>
+
+      {headerSlot}
 
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
@@ -140,6 +144,8 @@ export function ConversationList({
           ))
         )}
       </div>
+
+      {footerSlot}
     </div>
   );
 }

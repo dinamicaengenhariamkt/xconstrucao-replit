@@ -1,14 +1,13 @@
+export type {
+  AnuncioZonaStatus,
+  AnuncioZonaId,
+  ZonaAnuncio,
+} from '@features/shared/anuncios/types';
+
+import type { AnuncioZonaId } from '@features/shared/anuncios/types';
+
 export type AnuncioStatus = 'ativa' | 'pausada' | 'expirada' | 'agendada';
 export type AnuncianteStatus = 'ativo' | 'inativo';
-export type AnuncioZonaStatus = 'ativo' | 'vazio';
-export type AnuncioZonaId =
-  | 'sidebar-sup-contratante'
-  | 'sidebar-inf-contratante'
-  | 'sidebar-sup-empreiteiro'
-  | 'sidebar-inf-empreiteiro'
-  | 'banner-dashboard-contratante'
-  | 'banner-dashboard-empreiteiro'
-  | 'banner-qa';
 
 export interface AnuncioKpi {
   receitaAnuncios: number;
@@ -19,15 +18,6 @@ export interface AnuncioKpi {
   ctrMedio: number;
   anunciantesAtivos: number;
   campanhasExpirando: number;
-}
-
-export interface ZonaAnuncio {
-  id: AnuncioZonaId;
-  nome: string;
-  descricao: string;
-  icone: 'web' | 'dashboard' | 'help';
-  status: AnuncioZonaStatus;
-  anuncioAtual?: string;
 }
 
 export interface Campanha {

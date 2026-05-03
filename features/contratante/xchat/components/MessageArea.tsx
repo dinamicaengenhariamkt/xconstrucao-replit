@@ -6,8 +6,16 @@ import type { Message } from '../types';
 interface Props {
   messages: Message[];
   isLoading: boolean;
+  isTyping?: boolean;
 }
 
-export function MessageArea({ messages, isLoading }: Props) {
-  return <SharedMessageArea messages={messages} isLoading={isLoading} basePath="/contratante" />;
+export function MessageArea({ messages, isLoading, isTyping }: Props) {
+  return (
+    <SharedMessageArea
+      messages={messages}
+      isLoading={isLoading}
+      basePath="/contratante"
+      isTyping={isTyping}
+    />
+  );
 }

@@ -1,6 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import { ConversationList as SharedList } from '@features/shared/xchat/components/ConversationList';
+import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import { useChatStore } from '../store/chat-store';
 import type { Conversation } from '../types';
 
@@ -14,14 +16,25 @@ export function ConversationList({ conversations }: Props) {
     searchQuery,
     filterTab,
     ephemeralConversations,
+    readConversationIds,
     setSelectedConversation,
     setSearchQuery,
     setFilterTab,
   } = useChatStore();
 
+  // Aplica override de "lida localmente" — zera unreadCount visualmente
+  // para conversas que o usuário já abriu nesta sessão.
+  const adjustedConversations = useMemo(
+    () =>
+      conversations.map((c) =>
+        readConversationIds.includes(c.id) ? { ...c, unreadCount: 0 } : c,
+      ),
+    [conversations, readConversationIds],
+  );
+
   return (
     <SharedList
-      conversations={conversations}
+      conversations={adjustedConversations}
       ephemeralConversations={ephemeralConversations}
       selectedConversationId={selectedConversationId}
       searchQuery={searchQuery}
@@ -29,6 +42,8 @@ export function ConversationList({ conversations }: Props) {
       onSelect={setSelectedConversation}
       onSearchChange={setSearchQuery}
       onFilterChange={setFilterTab}
+      headerSlot={<AdSidebarSlot zoneId="sidebar-sup-empreiteiro" />}
+      footerSlot={<AdSidebarSlot zoneId="sidebar-inf-empreiteiro" />}
     />
   );
 }
