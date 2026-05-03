@@ -7,10 +7,12 @@ interface ObrasSalvasStore {
   isSaved: (id: string) => boolean;
 }
 
+const DEFAULT_SAVED_IDS = ['nova-1', 'nova-3', 'nova-5', 'edificio-solar'];
+
 export const useObrasSalvasStore = create<ObrasSalvasStore>()(
   persist(
     (set, get) => ({
-      savedIds: [],
+      savedIds: DEFAULT_SAVED_IDS,
       toggleSave: (id) =>
         set((state) => ({
           savedIds: state.savedIds.includes(id)

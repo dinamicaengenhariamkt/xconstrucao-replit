@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { ActivityItem } from './ActivityItem';
-import { EfficiencyProgress } from './EfficiencyProgress';
 import { EmptyState } from './EmptyState';
 import { RiTimeLine } from 'react-icons/ri';
 import type { RecentActivitiesProps } from '../types';
 
-export function RecentActivities({ activities, efficiency }: RecentActivitiesProps) {
+export function RecentActivities({ activities }: RecentActivitiesProps) {
   if (!activities || activities.length === 0) {
     return (
       <Card>
@@ -35,7 +34,10 @@ export function RecentActivities({ activities, efficiency }: RecentActivitiesPro
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Atividades Recentes
         </CardTitle>
-        <Link href="/empreiteiro/dashboard/atividades-recentes" className="text-xs font-bold text-primary hover:underline">
+        <Link
+          href="/empreiteiro/dashboard/atividades-recentes"
+          className="text-xs font-bold text-primary hover:underline"
+        >
           Ver todas
         </Link>
       </CardHeader>
@@ -47,10 +49,6 @@ export function RecentActivities({ activities, efficiency }: RecentActivitiesPro
             ))}
           </div>
         </ScrollArea>
-
-        <div className="mt-10 pt-8 border-t border-border-light dark:border-gray-800">
-          <EfficiencyProgress percentage={efficiency.percentage} label={efficiency.label} />
-        </div>
       </CardContent>
     </Card>
   );

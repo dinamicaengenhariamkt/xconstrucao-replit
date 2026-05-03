@@ -3,18 +3,18 @@
  */
 
 import { ENABLE_MOCK } from '../constants';
-import { mockFinancialData } from '../mocks/financial-data.mock';
-import type { FinancialOverview } from '../types';
+import { mockFinancialOverviewByPeriodo } from '../mocks/financial-data.mock';
+import type { DashboardPeriodo, FinancialOverview } from '../types';
 
-export async function getFinancialData(): Promise<FinancialOverview> {
+export async function getFinancialData(
+  periodo: DashboardPeriodo = '12meses',
+): Promise<FinancialOverview> {
   if (ENABLE_MOCK) {
-    // Simula delay de rede
     await new Promise((resolve) => setTimeout(resolve, 400));
-    return mockFinancialData;
+    return mockFinancialOverviewByPeriodo[periodo];
   }
 
-  // Implementação real com API
-  const response = await fetch('/api/empreiteiro/dashboard/financial');
+  const response = await fetch(`/api/empreiteiro/dashboard/financial?periodo=${periodo}`);
   if (!response.ok) {
     throw new Error('Erro ao buscar dados financeiros');
   }

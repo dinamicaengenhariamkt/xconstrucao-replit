@@ -1,3 +1,5 @@
+export type MedicaoStatus = 'recebido' | 'aguardando_aprovacao' | 'pendente' | 'rejeitado';
+
 export interface MedicaoEmpreiteiro {
   id: string;
   obraId: string;
@@ -5,8 +7,10 @@ export interface MedicaoEmpreiteiro {
   numero: number;
   periodo: string;
   valor: number;
-  status: 'recebido' | 'aguardando_aprovacao' | 'pendente' | 'rejeitado';
+  status: MedicaoStatus;
+  /** Formato ISO `YYYY-MM-DD` para permitir filtragem por intervalo de datas. */
   dataEnvio: string;
+  /** Formato ISO `YYYY-MM-DD` quando o status for `recebido`. */
   dataRecebimento?: string;
   descricao: string;
 }
@@ -16,4 +20,8 @@ export interface PagamentosEmpriteiroKPI {
   totalRecebido: number;
   aguardandoAprovacao: number;
   aLiberar: number;
+  /** Soma das medições com status `rejeitado` (precisam ser refeitas). */
+  rejeitado: number;
+  /** Média de dias entre `dataEnvio` e `dataRecebimento` para medições recebidas. */
+  prazoMedioRecebimentoDias: number;
 }

@@ -3,6 +3,7 @@
  */
 
 import type { IconType } from 'react-icons';
+import type { HealthSummaryData } from '@features/shared/health';
 
 export type { DashboardPeriodo } from '@features/shared/dashboard/types';
 
@@ -80,6 +81,8 @@ export interface EfficiencyData {
 // Component prop types
 // ---------------------------------------------------------------------------
 
+export type StatsCardBadgeVariant = 'success' | 'neutral' | 'blue' | 'amber' | 'red';
+
 export interface StatsCardData {
   label: string;
   value: string | number;
@@ -87,8 +90,10 @@ export interface StatsCardData {
   iconBgColor: string;
   badge?: {
     label: string;
-    variant: 'success' | 'neutral';
+    variant: StatsCardBadgeVariant;
   };
+  href?: string;
+  testId?: string;
 }
 
 export type StatsCardProps = StatsCardData;
@@ -101,6 +106,7 @@ export interface StatsGridProps {
 /** Props do container (recebe dados brutos do domínio) */
 export interface StatsGridContainerProps {
   data: DashboardStats;
+  healthSummary?: HealthSummaryData;
 }
 
 export interface FinancialOverviewProps {
@@ -113,7 +119,6 @@ export interface CashFlowChartProps {
 
 export interface RecentActivitiesProps {
   activities: Activity[];
-  efficiency: EfficiencyData;
 }
 
 export interface PendenciasCardProps {

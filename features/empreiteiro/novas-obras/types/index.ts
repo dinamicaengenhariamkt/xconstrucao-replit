@@ -1,5 +1,11 @@
 import type { ObraComplexidade, ApplicationStatus, FilterChipOption } from '@features/shared/types';
 
+export type NovaObraStatus =
+  | 'recebendo_propostas'
+  | 'analise_final'
+  | 'urgente'
+  | 'encerrando';
+
 export interface NovaObra {
   id: string;
   titulo: string;
@@ -7,6 +13,7 @@ export interface NovaObra {
   imagemUrl: string;
   tipo: string;
   complexidade: ObraComplexidade;
+  status: NovaObraStatus;
   orcamento: number;
   prazo: string;
   descricao: string;

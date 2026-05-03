@@ -5,12 +5,14 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { getRecentActivities } from '../api/activities-service';
 import { QUERY_CONFIG } from '../constants';
-import type { Activity } from '../types';
+import type { Activity, DashboardPeriodo } from '../types';
 
-export function useRecentActivities(): UseQueryResult<Activity[], Error> {
+export function useRecentActivities(
+  periodo: DashboardPeriodo = '12meses',
+): UseQueryResult<Activity[], Error> {
   return useQuery({
-    queryKey: ['empreiteiro', 'dashboard', 'activities'],
-    queryFn: getRecentActivities,
+    queryKey: ['empreiteiro', 'dashboard', 'activities', periodo],
+    queryFn: () => getRecentActivities(periodo),
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { RiSearchLine } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
@@ -35,8 +36,16 @@ import { formatRange } from '@shared/lib/formatters';
 
 export default function MinhasObrasPage() {
   const { data: obras, isLoading } = useMinhasObras();
+  const searchParams = useSearchParams();
   const saude = useSaudeFilter();
-  const [statusSelected, setStatusSelected] = useState<string[]>([]);
+  const [statusSelected, setStatusSelected] = useState<string[]>(() => {
+    const param = searchParams?.get('status');
+    if (!param) return [];
+    return param
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && s in STATUS_LABELS);
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [tipoSelected, setTipoSelected] = useState<string[]>([]);
   const [contratanteSelected, setContratanteSelected] = useState<string[]>([]);
