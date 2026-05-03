@@ -1,11 +1,4 @@
-export type NotificacaoTipo = 'lembrete' | 'alerta' | 'info' | 'sucesso';
-
-export interface EmpreiteiroNotification {
-  id: string;
-  titulo: string;
-  descricao: string;
-  tipo: NotificacaoTipo;
-  lida: boolean;
-  criadoEm: string;
-  href: string;
-}
+export type {
+  BaseNotification as EmpreiteiroNotification,
+  NotificacaoTipo,
+} from '@features/shared/notifications/types';

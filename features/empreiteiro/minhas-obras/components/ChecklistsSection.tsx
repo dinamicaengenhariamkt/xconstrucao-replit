@@ -62,8 +62,8 @@ const CHECKLIST_CONFIG: Record<
     itemCheckedBg: 'bg-success/10',
     itemHoverBg: 'hover:bg-blue-100/50 dark:hover:bg-blue-900/20',
     footerBorder: 'border-blue-200 dark:border-blue-800',
-    actionBtn: 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600',
-    actionBtnLabel: 'Ver registro',
+    actionBtn: 'bg-blue-600 text-white hover:bg-blue-700',
+    actionBtnLabel: 'Concluir registro',
   },
   etapa: {
     bgWrapper: 'bg-purple-50/50 dark:bg-purple-900/10',
@@ -171,7 +171,11 @@ function ChecklistCard({
 
   const handleAcaoPrincipal = () => {
     if (checklist.tipo === 'diario') {
-      onVerRegistro(checklist);
+      if (isCompleto) {
+        onVerRegistro(checklist);
+      } else {
+        onFinalizar(checklist);
+      }
     } else if (checklist.tipo === 'etapa') {
       handleAssinar();
     } else {
@@ -325,15 +329,17 @@ function ChecklistCard({
           disabled={isCompleto && checklist.tipo !== 'diario'}
           className={cn(
             'px-3 py-1.5 text-xs font-bold rounded-lg transition-colors flex items-center gap-1',
-            isCompleto && checklist.tipo !== 'diario'
-              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-              : config.actionBtn + ' cursor-pointer'
+            isCompleto && checklist.tipo === 'diario'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer'
+              : isCompleto
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                : config.actionBtn + ' cursor-pointer'
           )}
         >
           {config.ActionBtnIcon && !isCompleto && (
             <config.ActionBtnIcon className="text-sm" />
           )}
-          {checklist.tipo === 'diario'
+          {isCompleto && checklist.tipo === 'diario'
             ? 'Ver registro'
             : isCompleto
               ? 'Concluído'
