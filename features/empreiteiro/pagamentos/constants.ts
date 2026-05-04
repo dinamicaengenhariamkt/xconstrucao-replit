@@ -1,5 +1,13 @@
 import type { MedicaoStatus } from './types';
 
+export const ENABLE_MOCK =
+  process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+
+export const QUERY_CONFIG = {
+  staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: true,
+} as const;
+
 export const ITEMS_PER_PAGE = 10;
 
 export const MEDICAO_STATUS_LABELS: Record<MedicaoStatus, string> = {

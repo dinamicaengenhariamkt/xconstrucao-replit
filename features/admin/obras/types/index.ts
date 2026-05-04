@@ -11,7 +11,14 @@ export interface AdminObraDetalhe extends AdminClienteObra {
   historico: AdminObraHistoricoItem[];
 }
 
-export type ObraMedicaoStatus = 'pago' | 'pendente' | 'atrasado' | 'em_analise';
+export type ObraMedicaoStatus =
+  | 'pago'
+  | 'pendente'
+  | 'atrasado'
+  | 'em_analise'
+  | 'aprovada_contratante'
+  | 'rejeitada_contratante'
+  | 'em_disputa';
 
 export interface AdminObraMedicao {
   id: string;
@@ -22,6 +29,12 @@ export interface AdminObraMedicao {
   status: ObraMedicaoStatus;
   dataVencimento: string;
   dataPagamento?: string;
+  /** ISO `YYYY-MM-DD`: data em que o contratante aprovou. */
+  dataAprovacao?: string;
+  /** ISO `YYYY-MM-DD`: data em que o contratante rejeitou. */
+  dataRejeicao?: string;
+  /** Motivo registrado pelo contratante ao rejeitar a medição. */
+  motivoRejeicao?: string;
 }
 
 export interface AdminObraHistoricoItem {

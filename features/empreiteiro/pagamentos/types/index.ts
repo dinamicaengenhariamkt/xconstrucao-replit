@@ -15,7 +15,7 @@ export interface MedicaoEmpreiteiro {
   descricao: string;
 }
 
-export interface PagamentosEmpriteiroKPI {
+export interface PagamentosEmpreiteiroKPI {
   totalContratado: number;
   totalRecebido: number;
   aguardandoAprovacao: number;

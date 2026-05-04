@@ -87,6 +87,15 @@ export const mockAdminClientes: AdminCliente[] = [
     totalObras: 2,
     valorTotalContratado: 980_000,
     valorTotalPago: 980_000,
+    historicoBloqueios: [
+      {
+        id: 'hb-cli005-1',
+        tipo: 'bloqueio',
+        data: '2024-12-08',
+        motivo: 'Conta encerrada a pedido do próprio cliente após conclusão de todas as obras contratadas.',
+        responsavel: 'admin@xconstrucao.com',
+      },
+    ],
   },
   {
     id: 'cli-006',
@@ -135,6 +144,16 @@ export const mockAdminClientes: AdminCliente[] = [
     totalObras: 4,
     valorTotalContratado: 3_400_000,
     valorTotalPago: 3_400_000,
+    historicoBloqueios: [
+      {
+        id: 'hb-cli008-1',
+        tipo: 'bloqueio',
+        data: '2024-06-30',
+        motivo: 'Atrasos persistentes na aprovação de medições (>30 dias) — três empreiteiros formalizaram reclamações.',
+        responsavel: 'compliance@xconstrucao.com',
+        observacoes: 'Notificações 1, 2 e 3 enviadas sem retorno.',
+      },
+    ],
   },
 ];
 

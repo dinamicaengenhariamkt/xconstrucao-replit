@@ -81,22 +81,14 @@ export interface EfficiencyData {
 // Component prop types
 // ---------------------------------------------------------------------------
 
-export type StatsCardBadgeVariant = 'success' | 'neutral' | 'blue' | 'amber' | 'red';
+export type {
+  StatsCardBadge,
+  StatsCardBadgeVariant,
+  StatsCardData,
+  StatsCardProps,
+} from '@features/shared/components/StatsCard';
 
-export interface StatsCardData {
-  label: string;
-  value: string | number;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: StatsCardBadgeVariant;
-  };
-  href?: string;
-  testId?: string;
-}
-
-export type StatsCardProps = StatsCardData;
+import type { StatsCardData } from '@features/shared/components/StatsCard';
 
 /** Props da apresentação pura (recebe stats já montados) */
 export interface StatsGridProps {

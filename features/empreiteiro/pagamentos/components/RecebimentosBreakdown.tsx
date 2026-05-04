@@ -3,10 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import { formatCurrencyRounded } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
-import type { PagamentosEmpriteiroKPI } from '../types';
+import type { PagamentosEmpreiteiroKPI } from '../types';
 
 interface RecebimentosBreakdownProps {
-  kpi: PagamentosEmpriteiroKPI;
+  kpi: PagamentosEmpreiteiroKPI;
 }
 
 interface Segment {

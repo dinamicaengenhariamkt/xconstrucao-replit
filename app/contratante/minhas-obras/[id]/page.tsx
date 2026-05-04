@@ -14,6 +14,8 @@ import { TabEquipe } from '@features/contratante/minhas-obras/components/TabEqui
 import { TabFotos } from '@features/contratante/minhas-obras/components/TabFotos';
 import { TabTimeline } from '@features/contratante/minhas-obras/components/TabTimeline';
 import { TabOcorrencias } from '@features/contratante/minhas-obras/components/TabOcorrencias';
+import { TabDocumentos } from '@features/contratante/minhas-obras/components/TabDocumentos';
+import { TabChecklists } from '@features/contratante/minhas-obras/components/TabChecklists';
 import { ContatoEmpreiteiroCard } from '@features/contratante/minhas-obras/components/ContatoEmpreiteiroCard';
 import { CandidaturasCard } from '@features/contratante/minhas-obras/components/CandidaturasCard';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
@@ -32,13 +34,25 @@ import {
   RiAlertLine,
   RiHistoryLine,
   RiHeartPulseLine,
+  RiFolderLine,
+  RiFileList3Line,
 } from 'react-icons/ri';
 import { HealthDetailPanel, getMockHealth } from '@features/shared/health';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
 import { IconGroups } from '@shared/components/icons';
 
-type ObraTab = 'visao-geral' | 'saude' | 'etapas' | 'timeline' | 'ocorrencias' | 'financeiro' | 'equipe' | 'fotos';
+type ObraTab =
+  | 'visao-geral'
+  | 'saude'
+  | 'etapas'
+  | 'timeline'
+  | 'ocorrencias'
+  | 'financeiro'
+  | 'documentos'
+  | 'checklists'
+  | 'equipe'
+  | 'fotos';
 
 const TABS: { key: ObraTab; label: string; icon: React.ElementType }[] = [
   { key: 'visao-geral', label: 'Visão Geral', icon: RiLayoutGridLine },
@@ -47,6 +61,8 @@ const TABS: { key: ObraTab; label: string; icon: React.ElementType }[] = [
   { key: 'timeline', label: 'Timeline', icon: RiHistoryLine },
   { key: 'ocorrencias', label: 'Ocorrências', icon: RiAlertLine },
   { key: 'financeiro', label: 'Financeiro', icon: RiMoneyDollarCircleLine },
+  { key: 'documentos', label: 'Documentos', icon: RiFolderLine },
+  { key: 'checklists', label: 'Checklists', icon: RiFileList3Line },
   { key: 'equipe', label: 'Equipe', icon: RiTeamLine },
   { key: 'fotos', label: 'Fotos', icon: RiImageLine },
 ];
@@ -404,6 +420,8 @@ export default function ObraDetalhePage() {
               {activeTab === 'timeline' && <TabTimeline obra={obra} />}
               {activeTab === 'ocorrencias' && <TabOcorrencias obra={obra} />}
               {activeTab === 'financeiro' && <TabFinanceiro obra={obra} />}
+              {activeTab === 'documentos' && <TabDocumentos documentos={obra.documentos} />}
+              {activeTab === 'checklists' && <TabChecklists checklists={obra.checklists} />}
               {activeTab === 'equipe' && <TabEquipe obra={obra} />}
               {activeTab === 'fotos' && <TabFotos obra={obra} />}
             </motion.div>

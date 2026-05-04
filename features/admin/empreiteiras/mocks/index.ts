@@ -76,6 +76,16 @@ export const mockAdminEmpreiteiras: AdminEmpreiteira[] = [
     obrasConcluidas: 5,
     valorTotalContratado: 2_300_000,
     valorTotalRecebido: 1_610_000,
+    historicoBloqueios: [
+      {
+        id: 'hb-emp003-1',
+        tipo: 'bloqueio',
+        data: '2025-08-12',
+        motivo: 'Inadimplência recorrente em obrigações fiscais e duas reclamações formais de contratantes pendentes de resposta.',
+        responsavel: 'admin@xconstrucao.com',
+        observacoes: 'Aguardando regularização da CND federal e resposta aos chamados #2304 e #2317.',
+      },
+    ],
   },
   {
     id: 'emp-004',
@@ -122,6 +132,29 @@ export const mockAdminEmpreiteiras: AdminEmpreiteira[] = [
     obrasConcluidas: 1,
     valorTotalContratado: 980_000,
     valorTotalRecebido: 490_000,
+    historicoBloqueios: [
+      {
+        id: 'hb-emp005-1',
+        tipo: 'bloqueio',
+        data: '2024-09-04',
+        motivo: 'Documentação técnica desatualizada (ART vencida há mais de 90 dias) e ausência de movimentação na plataforma há 6 meses.',
+        responsavel: 'compliance@xconstrucao.com',
+      },
+      {
+        id: 'hb-emp005-2',
+        tipo: 'desbloqueio',
+        data: '2024-11-22',
+        motivo: 'ART regularizada e equipe técnica recadastrada.',
+        responsavel: 'admin@xconstrucao.com',
+      },
+      {
+        id: 'hb-emp005-3',
+        tipo: 'bloqueio',
+        data: '2025-02-15',
+        motivo: 'Solicitação do próprio empreiteiro — pausa operacional por reestruturação societária.',
+        responsavel: 'suporte@xconstrucao.com',
+      },
+    ],
   },
   {
     id: 'emp-006',

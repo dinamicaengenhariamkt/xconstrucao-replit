@@ -2,7 +2,6 @@
  * Types para o Dashboard do Contratante
  */
 
-import type { IconType } from 'react-icons';
 
 // ---------------------------------------------------------------------------
 // Domain types
@@ -67,24 +66,14 @@ export interface ValoresContratadosData {
 // Component prop types
 // ---------------------------------------------------------------------------
 
-export type StatsCardBadgeVariant = 'success' | 'neutral' | 'blue' | 'amber' | 'red';
+export type {
+  StatsCardBadge,
+  StatsCardBadgeVariant,
+  StatsCardData,
+  StatsCardProps,
+} from '@features/shared/components/StatsCard';
 
-export interface StatsCardData {
-  label: string;
-  value: string | number;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: {
-    label: string;
-    variant: StatsCardBadgeVariant;
-  };
-  /** Se presente, transforma o card num link clicável para essa URL. */
-  href?: string;
-  /** testId do bloco clicável (se href presente). */
-  testId?: string;
-}
-
-export type StatsCardProps = StatsCardData;
+import type { StatsCardData } from '@features/shared/components/StatsCard';
 
 /** Props da apresentação pura (recebe stats já montados) */
 export interface StatsGridProps {

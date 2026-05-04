@@ -1,5 +1,3 @@
-import type { IconType } from 'react-icons';
-
 export type PeriodoSeletor = '30dias' | '3meses' | '12meses' | 'personalizado';
 
 export interface DateRange {
@@ -23,28 +21,14 @@ export interface AdminFinanceiroDashboardStats {
   inadimplencia: number;
 }
 
-export type StatsCardBadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
+export type {
+  StatsCardBadge,
+  StatsCardBadgeVariant,
+  StatsCardData,
+  StatsCardProps,
+} from '@features/shared/components/StatsCard';
 
-export interface StatsCardBadge {
-  label: string;
-  variant: StatsCardBadgeVariant;
-}
-
-export interface StatsCardProps {
-  label: string;
-  value: string;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: StatsCardBadge;
-}
-
-export interface StatsCardData {
-  label: string;
-  value: string;
-  icon: IconType;
-  iconBgColor: string;
-  badge?: StatsCardBadge;
-}
+import type { StatsCardData } from '@features/shared/components/StatsCard';
 
 export interface StatsGridProps {
   stats: StatsCardData[];
@@ -80,7 +64,14 @@ export interface ObraAtencao {
   situacao: SituacaoKey;
 }
 
-export type MedicaoStatus = 'pago' | 'pendente' | 'atrasado' | 'em_analise';
+export type MedicaoStatus =
+  | 'pago'
+  | 'pendente'
+  | 'atrasado'
+  | 'em_analise'
+  | 'aprovada_contratante'
+  | 'rejeitada_contratante'
+  | 'em_disputa';
 
 export interface AdminMedicao {
   id: string;
@@ -91,6 +82,12 @@ export interface AdminMedicao {
   status: MedicaoStatus;
   dataVencimento: string;
   dataPagamento?: string;
+  /** ISO `YYYY-MM-DD`: data em que o contratante aprovou. */
+  dataAprovacao?: string;
+  /** ISO `YYYY-MM-DD`: data em que o contratante rejeitou. */
+  dataRejeicao?: string;
+  /** Motivo registrado pelo contratante ao rejeitar a medição. */
+  motivoRejeicao?: string;
 }
 
 export interface AdminHistoricoItem {

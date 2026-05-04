@@ -1,4 +1,10 @@
 import type { ObraStatus, FilterChipOption } from '@features/shared/types';
+import type {
+  ObraDocumento,
+  MinhaObraChecklist,
+} from '@features/empreiteiro/minhas-obras/types';
+
+export type { ObraDocumento, MinhaObraChecklist };
 
 export interface ObraContratante {
   id: string;
@@ -35,6 +41,10 @@ export interface ObraContratanteDetalhe extends ObraContratante {
   equipe: MembroEquipe[];
   financeiro: ObraFinanceiroContratante;
   fotos: FotoObra[];
+  /** Documentos da obra anexados pelo empreiteiro (read-only do lado contratante). */
+  documentos?: ObraDocumento[];
+  /** Checklists registrados pelo empreiteiro (read-only do lado contratante). */
+  checklists?: MinhaObraChecklist[];
   localizacao?: {
     cidade: string;
     estado: string;

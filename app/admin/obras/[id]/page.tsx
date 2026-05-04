@@ -88,6 +88,18 @@ const MEDICAO_STATUS_CONFIG: Record<ObraMedicaoStatus, { label: string; classNam
     label: 'Em análise',
     className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
   },
+  aprovada_contratante: {
+    label: 'Aprovada pelo contratante',
+    className: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400',
+  },
+  rejeitada_contratante: {
+    label: 'Rejeitada pelo contratante',
+    className: 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400',
+  },
+  em_disputa: {
+    label: 'Em disputa',
+    className: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
+  },
 };
 
 const HISTORICO_ICON: Record<AdminObraHistoricoItem['tipo'], React.ComponentType<{ className?: string }>> = {
@@ -404,14 +416,34 @@ function MedicoesTab({ medicoes }: { medicoes: AdminObraMedicao[] }) {
                         {m.dataPagamento ?? '—'}
                       </td>
                       <td className="py-3 px-5">
-                        <span
-                          className={cn(
-                            'inline-flex px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap',
-                            cfg.className
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className={cn(
+                              'inline-flex w-fit px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap',
+                              cfg.className,
+                            )}
+                          >
+                            {cfg.label}
+                          </span>
+                          {m.status === 'rejeitada_contratante' && m.motivoRejeicao && (
+                            <span
+                              className="text-[11px] text-rose-600 dark:text-rose-400 italic max-w-xs"
+                              title={m.motivoRejeicao}
+                            >
+                              Motivo: {m.motivoRejeicao}
+                            </span>
                           )}
-                        >
-                          {cfg.label}
-                        </span>
+                          {m.status === 'aprovada_contratante' && m.dataAprovacao && (
+                            <span className="text-[11px] text-cyan-600 dark:text-cyan-400">
+                              Aprovada em {m.dataAprovacao.split('-').reverse().join('/')}
+                            </span>
+                          )}
+                          {m.status === 'rejeitada_contratante' && m.dataRejeicao && (
+                            <span className="text-[11px] text-rose-500 dark:text-rose-400">
+                              Rejeitada em {m.dataRejeicao.split('-').reverse().join('/')}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

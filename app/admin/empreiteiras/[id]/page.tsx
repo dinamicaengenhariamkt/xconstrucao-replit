@@ -14,6 +14,7 @@ import { EmpreiteiraObrasSection } from '@features/admin/empreiteiras/components
 import { EditarEmpreiteiraModal } from '@features/admin/empreiteiras/components/EditarEmpreiteiraModal';
 import { ResetarAcessoModal } from '@features/admin/empreiteiras/components/ResetarAcessoModal';
 import { BloquearEmpreiteiraModal } from '@features/admin/empreiteiras/components/BloquearEmpreiteiraModal';
+import { HistoricoBloqueiosTimeline } from '@features/admin/shared/components/HistoricoBloqueiosTimeline';
 import {
   useAdminEmpreiteira,
   useAdminEmpreiteiraObras,
@@ -508,6 +509,24 @@ export default function AdminEmpreiteiraDetailPage() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Histórico de bloqueios */}
+      <Card className="rounded-3xl" data-testid="card-historico-bloqueios-empreiteira">
+        <CardContent className="p-8">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Histórico de bloqueios
+            </h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Registro de bloqueios e desbloqueios desta empreiteira na plataforma.
+            </p>
+          </div>
+          <HistoricoBloqueiosTimeline
+            historico={empreiteira.historicoBloqueios}
+            emptyMessage="Esta empreiteira nunca foi bloqueada."
+          />
         </CardContent>
       </Card>
 

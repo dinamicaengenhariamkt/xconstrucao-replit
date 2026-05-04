@@ -1,4 +1,8 @@
+import type { HistoricoBloqueio } from '@features/admin/shared/types/historico-bloqueio';
+
 export type EmpreiteiraStatus = 'ativa' | 'inativa' | 'suspensa' | 'pendente';
+
+export type { HistoricoBloqueio };
 
 export interface AdminEmpreiteira {
   id: string;
@@ -32,6 +36,8 @@ export interface AdminEmpreiteira {
   responsavelTelefone?: string;
   responsavelRegistro?: string;
   responsavelProfissao?: string;
+  /** Histórico de bloqueios e desbloqueios da conta. */
+  historicoBloqueios?: HistoricoBloqueio[];
 }
 
 export interface AdminEmpreiteiraObra {

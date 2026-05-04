@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   RiIndeterminateCircleLine,
   RiCheckboxCircleLine,
@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
+import { Textarea } from '@shared/components/ui/textarea';
 import { useBloquearCliente } from '../hooks/use-clientes';
 import type { AdminCliente } from '../types';
 
@@ -26,11 +27,22 @@ interface BloquearClienteModalProps {
 
 export function BloquearClienteModal({ open, onOpenChange, cliente }: BloquearClienteModalProps) {
   const [erro, setErro] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   const { mutateAsync, isPending } = useBloquearCliente();
 
   const isInativo = cliente.status === 'inativo';
   const novoStatus: AdminCliente['status'] = isInativo ? 'ativo' : 'inativo';
-  const acao = isInativo ? 'desbloquear' : 'bloquear';
+  const motivoTrim = motivo.trim();
+  const motivoValid = isInativo ? true : motivoTrim.length >= 10;
+
+  useEffect(() => {
+    if (open) {
+      setMotivo('');
+      setObservacoes('');
+      setErro(null);
+    }
+  }, [open]);
 
   const handleClose = () => {
     setErro(null);
@@ -39,8 +51,17 @@ export function BloquearClienteModal({ open, onOpenChange, cliente }: BloquearCl
 
   const handleConfirm = async () => {
     setErro(null);
+    if (!motivoValid) {
+      setErro('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
     try {
-      await mutateAsync({ id: cliente.id, novoStatus });
+      await mutateAsync({
+        id: cliente.id,
+        novoStatus,
+        motivo: motivoTrim || undefined,
+        observacoes: observacoes.trim() || undefined,
+      });
       handleClose();
     } catch {
       setErro('Erro ao atualizar o acesso do cliente. Tente novamente.');
@@ -122,9 +143,50 @@ export function BloquearClienteModal({ open, onOpenChange, cliente }: BloquearCl
             </div>
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="motivo-bloqueio-cli"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+            >
+              {isInativo
+                ? 'Motivo do desbloqueio (opcional)'
+                : 'Motivo do bloqueio (mín. 10 caracteres)'}
+            </label>
+            <Textarea
+              id="motivo-bloqueio-cli"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder={
+                isInativo
+                  ? 'Ex: pendências resolvidas e cliente solicitou retorno.'
+                  : 'Ex: atrasos persistentes na aprovação de medições e reclamações de empreiteiros.'
+              }
+              rows={3}
+              data-testid="textarea-motivo-bloqueio-cliente"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="obs-bloqueio-cli"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+            >
+              Observações internas (opcional)
+            </label>
+            <Textarea
+              id="obs-bloqueio-cli"
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Notas para o time de compliance — não compartilhadas com o cliente."
+              rows={2}
+              data-testid="textarea-obs-bloqueio-cliente"
+            />
+          </div>
+
           <p className="text-sm text-gray-500">
             Esta ação pode ser revertida a qualquer momento acessando os detalhes do cliente e
-            clicando em {isInativo ? '"Bloquear Acesso"' : '"Desbloquear"'}.
+            clicando em {isInativo ? '"Bloquear Acesso"' : '"Desbloquear"'}. O histórico de
+            bloqueios fica registrado e visível na ficha.
           </p>
 
           {erro && (
@@ -145,11 +207,11 @@ export function BloquearClienteModal({ open, onOpenChange, cliente }: BloquearCl
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isPending}
+            disabled={isPending || !motivoValid}
             className={
               isInativo
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                : 'bg-red-600 hover:bg-red-700 text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50'
+                : 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
             }
             data-testid="button-confirmar-bloquear-cliente"
           >

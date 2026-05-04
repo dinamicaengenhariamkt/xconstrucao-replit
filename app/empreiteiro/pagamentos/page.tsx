@@ -33,7 +33,7 @@ import { formatCurrencyRounded, formatRange } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
 import {
   usePagamentosEmpreiteiro,
-  usePagamentosEmpriteiroKPI,
+  usePagamentosEmpreiteiroKPI,
 } from '@features/empreiteiro/pagamentos/hooks/use-pagamentos-empreiteiro';
 import { RecebimentosBreakdown } from '@features/empreiteiro/pagamentos/components/RecebimentosBreakdown';
 import { RecebimentosEvolutionChart } from '@features/empreiteiro/pagamentos/components/RecebimentosEvolutionChart';
@@ -59,7 +59,7 @@ function formatDateBR(iso: string): string {
 
 export default function PagamentosEmpreteiroPage() {
   const { data: medicoes } = usePagamentosEmpreiteiro();
-  const { data: kpi } = usePagamentosEmpriteiroKPI();
+  const { data: kpi } = usePagamentosEmpreiteiroKPI();
   const searchParams = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState('');

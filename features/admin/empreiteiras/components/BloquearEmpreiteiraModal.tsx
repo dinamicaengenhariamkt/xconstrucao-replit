@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   RiIndeterminateCircleLine,
   RiCheckboxCircleLine,
@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
+import { Textarea } from '@shared/components/ui/textarea';
 import { useBloquearEmpreiteira } from '../hooks/use-empreiteiras';
 import type { AdminEmpreiteira } from '../types';
 
@@ -30,10 +31,23 @@ export function BloquearEmpreiteiraModal({
   empreiteira,
 }: BloquearEmpreiteiraModalProps) {
   const [erro, setErro] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   const { mutateAsync, isPending } = useBloquearEmpreiteira();
 
   const isBloqueada = empreiteira.status === 'suspensa' || empreiteira.status === 'inativa';
   const novoStatus: AdminEmpreiteira['status'] = isBloqueada ? 'ativa' : 'suspensa';
+  const motivoTrim = motivo.trim();
+  // Bloqueio exige motivo (min 10 chars). Reativação aceita motivo vazio.
+  const motivoValid = isBloqueada ? true : motivoTrim.length >= 10;
+
+  useEffect(() => {
+    if (open) {
+      setMotivo('');
+      setObservacoes('');
+      setErro(null);
+    }
+  }, [open]);
 
   const handleClose = () => {
     setErro(null);
@@ -42,8 +56,17 @@ export function BloquearEmpreiteiraModal({
 
   const handleConfirm = async () => {
     setErro(null);
+    if (!motivoValid) {
+      setErro('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
     try {
-      await mutateAsync({ id: empreiteira.id, novoStatus });
+      await mutateAsync({
+        id: empreiteira.id,
+        novoStatus,
+        motivo: motivoTrim || undefined,
+        observacoes: observacoes.trim() || undefined,
+      });
       handleClose();
     } catch {
       setErro('Erro ao atualizar o acesso da empreiteira. Tente novamente.');
@@ -125,9 +148,50 @@ export function BloquearEmpreiteiraModal({
             </div>
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="motivo-bloqueio-emp"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+            >
+              {isBloqueada
+                ? 'Motivo da reativação (opcional)'
+                : 'Motivo do bloqueio (mín. 10 caracteres)'}
+            </label>
+            <Textarea
+              id="motivo-bloqueio-emp"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder={
+                isBloqueada
+                  ? 'Ex: documentação regularizada e pendências resolvidas.'
+                  : 'Ex: inadimplência recorrente e duas reclamações formais pendentes.'
+              }
+              rows={3}
+              data-testid="textarea-motivo-bloqueio-empreiteira"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="obs-bloqueio-emp"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+            >
+              Observações internas (opcional)
+            </label>
+            <Textarea
+              id="obs-bloqueio-emp"
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Notas para o time de compliance — não compartilhadas com a empreiteira."
+              rows={2}
+              data-testid="textarea-obs-bloqueio-empreiteira"
+            />
+          </div>
+
           <p className="text-sm text-gray-500">
             Esta ação pode ser revertida a qualquer momento acessando os detalhes da empreiteira e
-            clicando em {isBloqueada ? '"Bloquear Empreiteira"' : '"Reativar Empreiteira"'}.
+            clicando em {isBloqueada ? '"Bloquear Empreiteira"' : '"Reativar Empreiteira"'}. O
+            histórico de bloqueios fica registrado e visível na ficha.
           </p>
 
           {erro && (
@@ -148,11 +212,11 @@ export function BloquearEmpreiteiraModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isPending}
+            disabled={isPending || !motivoValid}
             className={
               isBloqueada
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                : 'bg-red-600 hover:bg-red-700 text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50'
+                : 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
             }
             data-testid="button-confirmar-bloquear-empreiteira"
           >

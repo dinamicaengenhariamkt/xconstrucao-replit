@@ -56,6 +56,18 @@ const MEDICAO_STATUS_CONFIG: Record<MedicaoStatus, { label: string; className: s
     label: 'Em análise',
     className: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
   },
+  aprovada_contratante: {
+    label: 'Aprovada pelo contratante',
+    className: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400',
+  },
+  rejeitada_contratante: {
+    label: 'Rejeitada pelo contratante',
+    className: 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400',
+  },
+  em_disputa: {
+    label: 'Em disputa',
+    className: 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
+  },
 };
 
 const HISTORICO_ICON: Record<AdminHistoricoItem['tipo'], React.ComponentType<{ className?: string }>> = {

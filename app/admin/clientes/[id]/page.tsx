@@ -16,6 +16,7 @@ import { ClienteObrasTab } from '@features/admin/clientes/components/ClienteObra
 import { ClienteFinanceiroTab } from '@features/admin/clientes/components/ClienteFinanceiroTab';
 import { ClienteDocumentosTab } from '@features/admin/clientes/components/ClienteDocumentosTab';
 import { ClienteHistoricoTab } from '@features/admin/clientes/components/ClienteHistoricoTab';
+import { HistoricoBloqueiosTimeline } from '@features/admin/shared/components/HistoricoBloqueiosTimeline';
 import { EditarClienteModal } from '@features/admin/clientes/components/EditarClienteModal';
 import { EditarObraModal } from '@features/admin/clientes/components/EditarObraModal';
 import { AdicionarDocumentoModal } from '@features/admin/clientes/components/AdicionarDocumentoModal';
@@ -92,9 +93,10 @@ const TAB_LABELS: Record<string, string> = {
   financeiro: 'Financeiro',
   documentos: 'Documentos',
   historico: 'Histórico',
+  bloqueios: 'Bloqueios',
 };
 
-const TABS = ['obras', 'financeiro', 'documentos', 'historico'] as const;
+const TABS = ['obras', 'financeiro', 'documentos', 'historico', 'bloqueios'] as const;
 
 export default function AdminClienteDetailPage() {
   const params = useParams();
@@ -436,6 +438,14 @@ export default function AdminClienteDetailPage() {
             </TabsContent>
             <TabsContent value="historico" className="mt-0">
               <ClienteHistoricoTab atividades={allAtividades} isLoading={loadingAtividades} />
+            </TabsContent>
+            <TabsContent value="bloqueios" className="mt-0">
+              <div className="py-2">
+                <HistoricoBloqueiosTimeline
+                  historico={cliente.historicoBloqueios}
+                  emptyMessage="Este cliente nunca foi bloqueado."
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

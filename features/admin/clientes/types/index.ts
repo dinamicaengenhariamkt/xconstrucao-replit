@@ -1,4 +1,8 @@
+import type { HistoricoBloqueio } from '@features/admin/shared/types/historico-bloqueio';
+
 export type ClienteStatus = 'ativo' | 'inativo' | 'pendente';
+
+export type { HistoricoBloqueio };
 
 export interface AdminCliente {
   id: string;
@@ -17,6 +21,8 @@ export interface AdminCliente {
   valorTotalContratado: number;
   valorTotalPago: number;
   observacoes?: string;
+  /** Histórico de bloqueios e desbloqueios da conta. */
+  historicoBloqueios?: HistoricoBloqueio[];
 }
 
 export interface AdminClienteObra {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import type { AdminEmpreiteira, AdminEmpreiteiraObra } from '../types';
+import type { AdminEmpreiteira, AdminEmpreiteiraObra, HistoricoBloqueio } from '../types';
 import { mockAdminEmpreiteiras, mockAdminEmpreiteiraObras } from '../mocks';
 
 const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
@@ -137,26 +137,52 @@ export function useUpdateEmpreiteira(id: string) {
   });
 }
 
+interface BloquearEmpreiteiraInput {
+  id: string;
+  novoStatus: AdminEmpreiteira['status'];
+  /** Motivo registrado pelo admin. Obrigatório ao bloquear; opcional ao desbloquear. */
+  motivo?: string;
+  /** Notas adicionais opcionais. */
+  observacoes?: string;
+  /** Identificador do admin que executou a ação. Default: 'admin@xconstrucao.com'. */
+  responsavel?: string;
+}
+
 export function useBloquearEmpreiteira() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, novoStatus }: { id: string; novoStatus: AdminEmpreiteira['status'] }) => {
+    mutationFn: async ({ id, novoStatus, motivo, observacoes, responsavel }: BloquearEmpreiteiraInput) => {
       if (ENABLE_MOCK) {
         await new Promise((r) => setTimeout(r, 600));
-        return { id, status: novoStatus };
+        return { id, status: novoStatus, motivo, observacoes, responsavel };
       }
       const res = await fetch(`/api/admin/empreiteiras/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: novoStatus }),
+        body: JSON.stringify({ status: novoStatus, motivo, observacoes, responsavel }),
       });
       if (!res.ok) throw new Error('Erro ao atualizar status da empreiteira');
       return res.json();
     },
-    onSuccess: (_result, { id, novoStatus }) => {
+    onSuccess: (_result, { id, novoStatus, motivo, observacoes, responsavel }) => {
+      const novaEntrada: HistoricoBloqueio = {
+        id: `hb-${id}-${Date.now()}`,
+        tipo: novoStatus === 'ativa' ? 'desbloqueio' : 'bloqueio',
+        data: new Date().toISOString().slice(0, 10),
+        motivo,
+        observacoes,
+        responsavel: responsavel ?? 'admin@xconstrucao.com',
+      };
       queryClient.setQueryData<AdminEmpreiteira | undefined>(
         ['admin', 'empreiteiras', id],
-        (old) => (old ? { ...old, status: novoStatus } : old),
+        (old) =>
+          old
+            ? {
+                ...old,
+                status: novoStatus,
+                historicoBloqueios: [...(old.historicoBloqueios ?? []), novaEntrada],
+              }
+            : old,
       );
       queryClient.invalidateQueries({ queryKey: ['admin', 'empreiteiras'] });
     },

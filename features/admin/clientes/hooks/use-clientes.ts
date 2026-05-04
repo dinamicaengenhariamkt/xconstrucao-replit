@@ -6,6 +6,7 @@ import type {
   ClienteFinanceiro,
   ClienteDocumento,
   ClienteAtividade,
+  HistoricoBloqueio,
 } from '../types';
 import {
   mockAdminClientes,
@@ -179,26 +180,49 @@ export function useUpdateCliente(id: string) {
   });
 }
 
+interface BloquearClienteInput {
+  id: string;
+  novoStatus: AdminCliente['status'];
+  motivo?: string;
+  observacoes?: string;
+  responsavel?: string;
+}
+
 export function useBloquearCliente() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, novoStatus }: { id: string; novoStatus: AdminCliente['status'] }) => {
+    mutationFn: async ({ id, novoStatus, motivo, observacoes, responsavel }: BloquearClienteInput) => {
       if (ENABLE_MOCK) {
         await new Promise((r) => setTimeout(r, 600));
-        return { id, status: novoStatus };
+        return { id, status: novoStatus, motivo, observacoes, responsavel };
       }
       const res = await fetch(`/api/admin/clientes/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: novoStatus }),
+        body: JSON.stringify({ status: novoStatus, motivo, observacoes, responsavel }),
       });
       if (!res.ok) throw new Error('Erro ao atualizar status do cliente');
       return res.json();
     },
-    onSuccess: (_result, { id, novoStatus }) => {
+    onSuccess: (_result, { id, novoStatus, motivo, observacoes, responsavel }) => {
+      const novaEntrada: HistoricoBloqueio = {
+        id: `hb-${id}-${Date.now()}`,
+        tipo: novoStatus === 'ativo' ? 'desbloqueio' : 'bloqueio',
+        data: new Date().toISOString().slice(0, 10),
+        motivo,
+        observacoes,
+        responsavel: responsavel ?? 'admin@xconstrucao.com',
+      };
       queryClient.setQueryData<AdminCliente | undefined>(
         ['admin', 'clientes', id],
-        (old) => (old ? { ...old, status: novoStatus } : old),
+        (old) =>
+          old
+            ? {
+                ...old,
+                status: novoStatus,
+                historicoBloqueios: [...(old.historicoBloqueios ?? []), novaEntrada],
+              }
+            : old,
       );
       queryClient.invalidateQueries({ queryKey: ['admin', 'clientes'] });
     },
