@@ -21,6 +21,27 @@ export interface AdminFinanceiroDashboardStats {
   inadimplencia: number;
 }
 
+/**
+ * Métricas de adoção/saúde da plataforma para a visão admin.
+ * Não são financeiras — focam em uso real (engagement, conversão, churn).
+ */
+export interface AdoptionMetrics {
+  /** Empreiteiros + contratantes únicos com login nos últimos 30 dias. */
+  usuariosAtivos30d: number;
+  /** Variação % vs. os 30 dias anteriores. */
+  usuariosAtivos30dDeltaPercent: number;
+  /** Cadastros novos nos últimos 30 dias. */
+  novosUsuarios30d: number;
+  /** Aplicações em obras (candidaturas) nos últimos 7 dias. */
+  aplicacoes7d: number;
+  /** Variação % vs. os 7 dias anteriores. */
+  aplicacoes7dDeltaPercent: number;
+  /** Percentual de candidaturas que viram contrato (0-100). */
+  taxaConversaoCandidatura: number;
+  /** Percentual de empreiteiros sem login há mais de 60 dias (0-100). */
+  churnEmpreiteirosPercent: number;
+}
+
 export type {
   StatsCardBadge,
   StatsCardBadgeVariant,

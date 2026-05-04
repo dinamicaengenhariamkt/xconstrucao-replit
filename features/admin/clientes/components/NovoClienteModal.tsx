@@ -23,6 +23,13 @@ import {
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { novoClienteSchema, useCreateCliente } from '../hooks/use-clientes';
 import type { NovoClienteFormData } from '../hooks/use-clientes';
 
@@ -348,20 +355,20 @@ export function NovoClienteModal({ open, onOpenChange }: NovoClienteModalProps) 
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Estado</FormLabel>
-                          <FormControl>
-                            <select
-                              {...field}
-                              data-testid="select-estado"
-                              className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <option value="">UF</option>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-estado">
+                                <SelectValue placeholder="UF" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
                               {UF_OPTIONS.map((uf) => (
-                                <option key={uf} value={uf}>
+                                <SelectItem key={uf} value={uf}>
                                   {uf}
-                                </option>
+                                </SelectItem>
                               ))}
-                            </select>
-                          </FormControl>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

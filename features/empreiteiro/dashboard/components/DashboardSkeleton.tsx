@@ -1,32 +1,11 @@
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { DashboardSkeleton as SharedDashboardSkeleton } from '@features/shared/components/DashboardSkeleton';
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-10 p-10">
-      {/* Welcome skeleton */}
-      <div className="space-y-2">
-        <Skeleton className="h-9 w-64" />
-        <Skeleton className="h-5 w-96" />
-      </div>
-
-      {/* Stats grid skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4 rounded" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-4 w-16 mt-2" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Financial + Activities skeleton */}
+    <SharedDashboardSkeleton kpiCount={4} kpiVariant="detailed" hasCharts={false}>
+      {/* Financial overview + Recent activities */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -68,6 +47,6 @@ export function DashboardSkeleton() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </SharedDashboardSkeleton>
   );
 }

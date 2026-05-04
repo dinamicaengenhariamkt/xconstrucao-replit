@@ -32,6 +32,13 @@ import {
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { cn } from '@shared/lib/utils';
 import { editarCampanhaSchema } from '../schemas';
 import type { EditarCampanhaFormData } from '../schemas';
@@ -303,18 +310,18 @@ export function CampanhaModal({
                         <FormLabel>
                           Anunciante <span className="text-red-500">*</span>
                         </FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            data-testid="select-campanha-anunciante"
-                            className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <option value="">Selecione um anunciante...</option>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-campanha-anunciante">
+                              <SelectValue placeholder="Selecione um anunciante..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
                             {anunciantes.map((a) => (
-                              <option key={a.id} value={a.id}>{a.nome}</option>
+                              <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>
                             ))}
-                          </select>
-                        </FormControl>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -329,18 +336,18 @@ export function CampanhaModal({
                         <FormLabel>
                           Zona de exibição <span className="text-red-500">*</span>
                         </FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            data-testid="select-campanha-zona"
-                            className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <option value="">Selecione a zona...</option>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-campanha-zona">
+                              <SelectValue placeholder="Selecione a zona..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
                             {zonaOptions.map((z) => (
-                              <option key={z.value} value={z.value}>{z.label}</option>
+                              <SelectItem key={z.value} value={z.value}>{z.label}</SelectItem>
                             ))}
-                          </select>
-                        </FormControl>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -353,17 +360,18 @@ export function CampanhaModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            data-testid="select-campanha-status"
-                            className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-campanha-status">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
                             {statusOptions.map((s) => (
-                              <option key={s.value} value={s.value}>{s.label}</option>
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                             ))}
-                          </select>
-                        </FormControl>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}

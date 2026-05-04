@@ -16,6 +16,12 @@ export interface ContratanteDashboardStats {
   percentualConcluido: number;
   desvioPercentual: number;
   obrasAtrasadas: number;
+  /** Soma de `valorContratado + aditivos` agregada das obras no período. */
+  orcamentoTotal: number;
+  /** Soma de `valorPago` agregada das obras no período. */
+  orcamentoExecutado: number;
+  /** Desvio entre executado e o esperado-pro-rata para o período (positivo = acima do plano). */
+  desvioOrcamentoPercent: number;
 }
 
 export interface EvolutionDataPoint {

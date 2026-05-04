@@ -10,6 +10,7 @@ import {
   RiArrowRightLine,
   RiSearchLine,
   RiCalendarLine,
+  RiCloseCircleLine,
 } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
@@ -181,7 +182,7 @@ export default function PagamentosEmpreteiroPage() {
         subtitle="Acompanhe medições, prazos e o status financeiro de todas as suas obras."
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
         <StatsCard
           label="Total Contratado"
           value={kpi ? formatCurrencyRounded(kpi.totalContratado) : '—'}
@@ -229,6 +230,27 @@ export default function PagamentosEmpreteiroPage() {
               : undefined
           }
           testId="kpi-prazo-medio"
+        />
+        <StatsCard
+          label="Taxa de Rejeição"
+          value={kpi ? `${kpi.taxaRejeicaoPercent}%` : '—'}
+          icon={RiCloseCircleLine}
+          iconBgColor="bg-red-100 text-red-600 dark:bg-red-900/30"
+          badge={
+            kpi && kpi.medicoesEnviadasCount > 0
+              ? {
+                  label: `${kpi.medicoesRejeitadasCount} de ${kpi.medicoesEnviadasCount}`,
+                  variant:
+                    kpi.taxaRejeicaoPercent <= 5
+                      ? 'success'
+                      : kpi.taxaRejeicaoPercent <= 15
+                        ? 'amber'
+                        : 'red',
+                }
+              : undefined
+          }
+          href="/empreiteiro/pagamentos?status=rejeitado"
+          testId="kpi-taxa-rejeicao"
         />
       </div>
 

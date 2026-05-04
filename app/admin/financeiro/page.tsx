@@ -10,7 +10,9 @@ import { TopClientesTable } from '@features/admin/financeiro/components/TopClien
 import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopEmpreiteirasTable';
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
+import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
 import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
+import { mockAdoptionMetrics } from '@features/admin/financeiro/mocks/adoption-metrics.mock';
 import {
   getPaymentEvolutionByPeriodo,
   mockStatusDistributionData,
@@ -63,6 +65,9 @@ export default function AdminFinanceiroPage() {
 
       {/* Bloco 2: KPI Cards */}
       <StatsGridContainer data={mockStatsByPeriodo[periodo]} />
+
+      {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) */}
+      <AdoptionMetricsSection metrics={mockAdoptionMetrics} />
 
       {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -28,6 +28,13 @@ import {
   FormMessage,
 } from '@shared/components/ui/form';
 import { Input } from '@shared/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
@@ -168,20 +175,20 @@ export function VincularZonaModal({ zona, anunciantes, onOpenChange }: VincularZ
                       <FormLabel>
                         Anunciante <span className="text-red-500">*</span>
                       </FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          data-testid="select-anunciante"
-                          className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">Selecione um anunciante...</option>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-anunciante">
+                            <SelectValue placeholder="Selecione um anunciante..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
                           {anunciantes.map((a) => (
-                            <option key={a.id} value={a.id}>
+                            <SelectItem key={a.id} value={a.id}>
                               {a.nome}
-                            </option>
+                            </SelectItem>
                           ))}
-                        </select>
-                      </FormControl>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

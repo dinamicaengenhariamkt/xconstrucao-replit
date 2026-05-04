@@ -7,7 +7,7 @@ import type { StatsGridProps } from '../types';
 export function StatsGrid({ stats }: StatsGridProps) {
   return (
     <motion.div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"
       variants={{
         hidden: { opacity: 0 },
         show: {

@@ -216,9 +216,8 @@ function buildKPI(medicoes: MedicaoEmpreiteiro[]): PagamentosEmpreiteiroKPI {
   const aLiberar = medicoes
     .filter((m) => m.status === 'pendente')
     .reduce((acc, m) => acc + m.valor, 0);
-  const rejeitado = medicoes
-    .filter((m) => m.status === 'rejeitado')
-    .reduce((acc, m) => acc + m.valor, 0);
+  const rejeitadas = medicoes.filter((m) => m.status === 'rejeitado');
+  const rejeitado = rejeitadas.reduce((acc, m) => acc + m.valor, 0);
 
   const recebidas = medicoes.filter((m) => m.status === 'recebido' && m.dataRecebimento);
   const prazoMedioRecebimentoDias =
@@ -229,6 +228,16 @@ function buildKPI(medicoes: MedicaoEmpreiteiro[]): PagamentosEmpreiteiroKPI {
             recebidas.length,
         );
 
+  // Denominador da taxa de rejeição: medições já enviadas para análise.
+  // Excluímos `pendente` (ainda não foram enviadas / são valores futuros previstos).
+  const enviadas = medicoes.filter((m) => m.status !== 'pendente');
+  const medicoesEnviadasCount = enviadas.length;
+  const medicoesRejeitadasCount = rejeitadas.length;
+  const taxaRejeicaoPercent =
+    medicoesEnviadasCount === 0
+      ? 0
+      : Math.round((medicoesRejeitadasCount / medicoesEnviadasCount) * 100);
+
   return {
     totalContratado,
     totalRecebido,
@@ -236,6 +245,9 @@ function buildKPI(medicoes: MedicaoEmpreiteiro[]): PagamentosEmpreiteiroKPI {
     aLiberar,
     rejeitado,
     prazoMedioRecebimentoDias,
+    medicoesRejeitadasCount,
+    medicoesEnviadasCount,
+    taxaRejeicaoPercent,
   };
 }
 

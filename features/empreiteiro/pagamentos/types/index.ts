@@ -24,4 +24,10 @@ export interface PagamentosEmpreiteiroKPI {
   rejeitado: number;
   /** Média de dias entre `dataEnvio` e `dataRecebimento` para medições recebidas. */
   prazoMedioRecebimentoDias: number;
+  /** Quantidade de medições com status `rejeitado`. */
+  medicoesRejeitadasCount: number;
+  /** Total de medições enviadas para análise (excluindo as ainda em rascunho/`pendente`). */
+  medicoesEnviadasCount: number;
+  /** Percentual de rejeição (0-100). 0 quando `medicoesEnviadasCount` é 0. */
+  taxaRejeicaoPercent: number;
 }

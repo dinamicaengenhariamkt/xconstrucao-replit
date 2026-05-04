@@ -24,6 +24,13 @@ import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { editarEmpreiteiraSchema, useUpdateEmpreiteira } from '../hooks/use-empreiteiras';
 import type { EditarEmpreiteiraFormData } from '../hooks/use-empreiteiras';
 import type { AdminEmpreiteira } from '../types';
@@ -315,18 +322,18 @@ export function EditarEmpreiteiraModal({ open, onOpenChange, empreiteira }: Edit
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Estado</FormLabel>
-                              <FormControl>
-                                <select
-                                  {...field}
-                                  data-testid="select-editar-estado"
-                                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  <option value="">UF</option>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-editar-estado">
+                                    <SelectValue placeholder="UF" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
                                   {UF_OPTIONS.map((uf) => (
-                                    <option key={uf} value={uf}>{uf}</option>
+                                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                                   ))}
-                                </select>
-                              </FormControl>
+                                </SelectContent>
+                              </Select>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -414,18 +421,18 @@ export function EditarEmpreiteiraModal({ open, onOpenChange, empreiteira }: Edit
                             <FormLabel>
                               Profissão <span className="text-red-500">*</span>
                             </FormLabel>
-                            <FormControl>
-                              <select
-                                {...field}
-                                data-testid="select-editar-profissao"
-                                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <option value="">Selecione a profissão</option>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-editar-profissao">
+                                  <SelectValue placeholder="Selecione a profissão" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
                                 {PROFISSAO_OPTIONS.map((p) => (
-                                  <option key={p} value={p}>{p}</option>
+                                  <SelectItem key={p} value={p}>{p}</SelectItem>
                                 ))}
-                              </select>
-                            </FormControl>
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

@@ -12,6 +12,9 @@ export const mockDashboardStats: ContratanteDashboardStats = {
   percentualConcluido: 58,
   desvioPercentual: -9,
   obrasAtrasadas: 2,
+  orcamentoTotal: 4_200_000,
+  orcamentoExecutado: 2_440_000,
+  desvioOrcamentoPercent: -3,
 };
 
 /**
@@ -27,6 +30,9 @@ export const mockDashboardStatsByPeriodo: Record<DashboardPeriodo, ContratanteDa
     percentualConcluido: 9,
     desvioPercentual: -3,
     obrasAtrasadas: 1,
+    orcamentoTotal: 4_200_000,
+    orcamentoExecutado: 360_000,
+    desvioOrcamentoPercent: -2,
   },
   '30dias': {
     obrasAtivas: 8,
@@ -35,6 +41,9 @@ export const mockDashboardStatsByPeriodo: Record<DashboardPeriodo, ContratanteDa
     percentualConcluido: 58,
     desvioPercentual: -9,
     obrasAtrasadas: 2,
+    orcamentoTotal: 4_200_000,
+    orcamentoExecutado: 2_440_000,
+    desvioOrcamentoPercent: -3,
   },
   '3meses': {
     obrasAtivas: 10,
@@ -43,6 +52,9 @@ export const mockDashboardStatsByPeriodo: Record<DashboardPeriodo, ContratanteDa
     percentualConcluido: 65,
     desvioPercentual: -7,
     obrasAtrasadas: 3,
+    orcamentoTotal: 5_800_000,
+    orcamentoExecutado: 3_770_000,
+    desvioOrcamentoPercent: -2,
   },
   '12meses': {
     obrasAtivas: 12,
@@ -51,6 +63,9 @@ export const mockDashboardStatsByPeriodo: Record<DashboardPeriodo, ContratanteDa
     percentualConcluido: 79,
     desvioPercentual: -5,
     obrasAtrasadas: 4,
+    orcamentoTotal: 8_500_000,
+    orcamentoExecutado: 6_715_000,
+    desvioOrcamentoPercent: 1,
   },
 };
 

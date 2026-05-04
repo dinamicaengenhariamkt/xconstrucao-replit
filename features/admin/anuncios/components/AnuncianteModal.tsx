@@ -32,6 +32,13 @@ import {
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
 import { cn } from '@shared/lib/utils';
 import { editarAnuncianteSchema } from '../schemas';
 import type { EditarAnuncianteFormData } from '../schemas';
@@ -335,16 +342,17 @@ export function AnuncianteModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            data-testid="select-anunciante-status"
-                            className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <option value="ativo">Ativo</option>
-                            <option value="inativo">Inativo</option>
-                          </select>
-                        </FormControl>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-anunciante-status">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ativo">Ativo</SelectItem>
+                            <SelectItem value="inativo">Inativo</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
