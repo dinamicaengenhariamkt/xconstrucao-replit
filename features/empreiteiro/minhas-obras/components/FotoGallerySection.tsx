@@ -37,59 +37,24 @@ import {
   IconCheck,
   IconMoreVert,
   IconTimeline,
-  IconHistory,
-  IconPending,
-  IconCheckCircle,
-  IconBlock,
   IconLabel,
   IconMarkEmailUnread,
   IconDelete,
 } from '@shared/components/icons';
-
-// ─── Icon lookup for fase options ─────────────────────────────────────────────
-const FASE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  history: IconHistory,
-  pending: IconPending,
-  check_circle: IconCheckCircle,
-  block: IconBlock,
-};
+import {
+  FASE_ICON_MAP,
+  FASE_CONFIG,
+  gerarFotoId as gerarId,
+  melhorFoto,
+  type FaseOption,
+  type FotoModalType as ModalType,
+  type FotoModalState as ModalState,
+} from './foto-gallery/foto-gallery-helpers';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface FotoGallerySectionProps {
   obra: MinhaObraDetalhe;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-type FaseOption = ObraFoto['fase'];
-
-const FASE_CONFIG: Record<
-  NonNullable<FaseOption>,
-  { label: string; badgeBg: string; badgeText: string }
-> = {
-  antes: { label: 'Antes', badgeBg: 'bg-gray-200/90 dark:bg-gray-700/90', badgeText: 'text-gray-700 dark:text-gray-200' },
-  durante: { label: 'Durante', badgeBg: 'bg-amber-100/90 dark:bg-amber-900/70', badgeText: 'text-amber-700 dark:text-amber-300' },
-  agora: { label: 'Agora', badgeBg: 'bg-success/10 dark:bg-success/20', badgeText: 'text-success' },
-};
-
-function gerarId() {
-  return `f${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
-function melhorFoto(fotos: ObraFoto[], fase: FaseOption, fallback: ObraFoto): ObraFoto {
-  const comFase = fotos.filter((f) => f.fase === fase);
-  if (comFase.length > 0) return comFase[comFase.length - 1];
-  return fallback;
-}
-
-// ─── Modal state ──────────────────────────────────────────────────────────────
-
-type ModalType = 'upload' | 'etiqueta' | 'excluir' | 'enviar_confirm' | null;
-
-interface ModalState {
-  type: ModalType;
-  foto: ObraFoto | null;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

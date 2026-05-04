@@ -64,16 +64,20 @@ export function ActivityItem({ activity }: ActivityItemProps) {
   return (
     <motion.div
       className={cn(
-        'flex gap-4 px-3 py-2 -mx-3 -my-2 rounded-lg',
-        isClickable ? 'cursor-pointer' : 'cursor-default',
-      )}
-      whileHover={
+        'group relative flex gap-4 px-2 py-1.5 rounded-lg transition-colors duration-200',
         isClickable
-          ? { x: 4, backgroundColor: 'hsl(var(--accent))' }
-          : undefined
-      }
-      transition={{ duration: 0.15 }}
+          ? 'cursor-pointer hover:bg-primary/[0.04] dark:hover:bg-primary/[0.08]'
+          : 'cursor-default',
+      )}
+      whileHover={isClickable ? { x: 4 } : undefined}
+      transition={{ duration: 0.2 }}
     >
+      {isClickable && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-0 bg-primary rounded-r opacity-0 group-hover:opacity-100 group-hover:h-[60%] transition-all duration-300"
+        />
+      )}
       {isClickable ? (
         <Link
           href={`/empreiteiro/minhas-obras/${activity.obraId}`}

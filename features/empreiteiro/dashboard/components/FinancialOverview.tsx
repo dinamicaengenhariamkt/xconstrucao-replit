@@ -1,13 +1,26 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
-import { FinancialMiniCard } from './FinancialMiniCard';
+import { cn } from '@shared/lib/utils';
+import { StatsCard } from '@features/shared/components/StatsCard';
+import { IconAnalytics, IconAttachMoney, IconCheckCircle } from '@shared/components/icons';
+import { formatCompactCurrency, formatPercentage } from '../utils';
 import { CashFlowChart } from './CashFlowChart';
 import type { FinancialOverviewProps } from '../types';
 
-export function FinancialOverview({ data }: FinancialOverviewProps) {
+interface FinancialOverviewExtendedProps extends FinancialOverviewProps {
+  /** Aplica a borda luminosa de seção. */
+  luminous?: boolean;
+}
+
+export function FinancialOverview({ data, luminous = false }: FinancialOverviewExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800 card-shadow">
+    <Card
+      className={cn(
+        !luminous && 'border-border-light dark:border-gray-800 card-shadow',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Visão Financeira Consolidada
@@ -19,28 +32,36 @@ export function FinancialOverview({ data }: FinancialOverviewProps) {
       <CardContent className="space-y-6">
         {/* Mini Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FinancialMiniCard
+          <StatsCard
             label="Margem de Lucro"
-            value={data.margemLucro}
-            format="percentage"
-            color="success"
-            trend="up"
+            value={formatPercentage(data.margemLucro)}
+            icon={IconAnalytics}
+            iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
+            luminous={luminous}
           />
-          <FinancialMiniCard
+          <StatsCard
             label="Ticket Médio/Obra"
-            value={data.ticketMedio}
-            format="currency"
-            color="info"
-            trend="up"
-            delta={data.ticketMedioDelta}
+            value={formatCompactCurrency(data.ticketMedio)}
+            icon={IconAttachMoney}
+            iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+            badge={
+              data.ticketMedioDelta > 0
+                ? { label: `+${data.ticketMedioDelta}%`, variant: 'success' }
+                : undefined
+            }
+            luminous={luminous}
           />
-          <FinancialMiniCard
+          <StatsCard
             label="Taxa Conclusão"
-            value={data.taxaConclusao}
-            format="percentage"
-            color="primary"
-            trend="up"
-            delta={data.taxaConclusaoDelta}
+            value={formatPercentage(data.taxaConclusao)}
+            icon={IconCheckCircle}
+            iconBgColor="bg-primary/10 text-primary"
+            badge={
+              data.taxaConclusaoDelta > 0
+                ? { label: `+${data.taxaConclusaoDelta}%`, variant: 'success' }
+                : undefined
+            }
+            luminous={luminous}
           />
         </div>
 

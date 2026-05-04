@@ -11,26 +11,30 @@ import {
 } from '@shared/components/ui/dialog';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { Button } from '@shared/components/ui/button';
-import type { MinhaObraDetalhe } from '../types';
+import type { MinhaObraDetalhe, MinhaObraTarefa, ObraOcorrencia } from '../types';
+
+type TarefaStatus = MinhaObraTarefa['status'];
+type Prioridade = MinhaObraTarefa['prioridade'];
+type Severidade = ObraOcorrencia['severidade'];
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconDescription, IconConstruction, IconPayments, IconTaskAlt, IconTimeline, IconGroups, IconWarning, IconProgressActivity, IconDownload } from '@shared/components/icons';
 import { STATUS_LABELS } from '@shared/constants/status';
 import { generateObraPdf } from '../utils/generate-obra-pdf';
 
-const TAREFA_STATUS_LABELS: Record<string, string> = {
+const TAREFA_STATUS_LABELS: Record<TarefaStatus, string> = {
   pendente: 'Pendente',
   em_andamento: 'Em Andamento',
   bloqueado: 'Bloqueado',
   concluido: 'Concluído',
 };
 
-const PRIORIDADE_LABELS: Record<string, string> = {
+const PRIORIDADE_LABELS: Record<Prioridade, string> = {
   alta: 'Alta',
   media: 'Média',
   baixa: 'Baixa',
 };
 
-const OCORRENCIA_SEVERIDADE: Record<string, string> = {
+const OCORRENCIA_SEVERIDADE: Record<Severidade, string> = {
   critico: 'Crítico',
   medio: 'Médio',
   baixo: 'Baixo',

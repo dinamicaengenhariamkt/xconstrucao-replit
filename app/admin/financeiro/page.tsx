@@ -11,8 +11,10 @@ import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopE
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
 import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
+import { SatisfactionMetricsSection } from '@features/admin/financeiro/components/SatisfactionMetricsSection';
 import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
 import { mockAdoptionMetrics } from '@features/admin/financeiro/mocks/adoption-metrics.mock';
+import { mockSatisfactionMetrics } from '@features/admin/financeiro/mocks/satisfaction-metrics.mock';
 import {
   getPaymentEvolutionByPeriodo,
   mockStatusDistributionData,
@@ -68,6 +70,9 @@ export default function AdminFinanceiroPage() {
 
       {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) */}
       <AdoptionMetricsSection metrics={mockAdoptionMetrics} />
+
+      {/* Bloco 2.45: Satisfação dos usuários (NPS + CSAT) */}
+      <SatisfactionMetricsSection metrics={mockSatisfactionMetrics} />
 
       {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

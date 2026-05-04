@@ -71,12 +71,6 @@ export interface Activity {
   obraNome?: string;
 }
 
-export interface EfficiencyData {
-  percentage: number;
-  label: string;
-  period: string;
-}
-
 // ---------------------------------------------------------------------------
 // Component prop types
 // ---------------------------------------------------------------------------
@@ -129,11 +123,6 @@ export interface ObrasStatusChartTooltipProps {
 
 export interface ActivityItemProps {
   activity: Activity;
-}
-
-export interface EfficiencyProgressProps {
-  percentage: number;
-  label: string;
 }
 
 export interface FinancialMiniCardProps {

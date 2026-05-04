@@ -1,12 +1,15 @@
+export type PagamentoStatus = 'pago' | 'pendente' | 'atrasado' | 'agendado';
+export type PagamentoTipo = 'entrada' | 'saida';
+
 export interface PagamentoContratante {
   id: string;
   descricao: string;
   obraId: string;
   obraNome: string;
   valor: number;
-  tipo: 'entrada' | 'saida';
+  tipo: PagamentoTipo;
   data: string;
-  status: 'pago' | 'pendente' | 'atrasado' | 'agendado';
+  status: PagamentoStatus;
   categoria: string;
   metodoPagamento: string;
 }

@@ -24,6 +24,8 @@ export interface StatsCardData {
   badge?: StatsCardBadge;
   href?: string;
   testId?: string;
+  /** Aplica o efeito de borda + shimmer (light theme). Default `false`. */
+  luminous?: boolean;
 }
 
 export type StatsCardProps = StatsCardData;

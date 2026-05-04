@@ -2,7 +2,7 @@
  * Dados mockados para atividades recentes
  */
 
-import type { Activity, EfficiencyData } from '../types';
+import type { Activity } from '../types';
 
 const h = (hours: number) => new Date(Date.now() - hours * 3_600_000);
 const d = (days: number, plusHours = 0) => new Date(Date.now() - (days * 24 + plusHours) * 3_600_000);
@@ -291,9 +291,3 @@ export const mockActivities: Activity[] = [
 ];
 
 export const mockEmptyActivities: Activity[] = [];
-
-export const mockEfficiencyData: EfficiencyData = {
-  percentage: 92,
-  label: 'Eficiência da Semana',
-  period: 'Última semana',
-};

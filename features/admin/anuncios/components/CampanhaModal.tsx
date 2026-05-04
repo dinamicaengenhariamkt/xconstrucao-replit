@@ -42,7 +42,7 @@ import {
 import { cn } from '@shared/lib/utils';
 import { editarCampanhaSchema } from '../schemas';
 import type { EditarCampanhaFormData } from '../schemas';
-import type { Campanha, Anunciante, AnuncioZonaId } from '../types';
+import type { Campanha, Anunciante, AnuncioZonaId, AnuncioStatus } from '../types';
 
 const zonaOptions: { value: AnuncioZonaId; label: string }[] = [
   { value: 'sidebar-sup-contratante',      label: 'Sidebar Superior - Contratante' },
@@ -60,14 +60,14 @@ const statusOptions: { value: 'ativa' | 'pausada' | 'agendada'; label: string }[
   { value: 'agendada', label: 'Agendada' },
 ];
 
-const statusClasses: Record<string, string> = {
+const statusClasses: Record<AnuncioStatus, string> = {
   ativa:    'bg-[#22846D]/10 text-[#22846D]',
   pausada:  'bg-amber-50 text-amber-600 dark:bg-amber-900/10 dark:text-amber-400',
   expirada: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
   agendada: 'bg-blue-50 text-blue-600 dark:bg-blue-900/10 dark:text-blue-400',
 };
 
-const statusLabels: Record<string, string> = {
+const statusLabels: Record<AnuncioStatus, string> = {
   ativa: 'Ativa', pausada: 'Pausada', expirada: 'Expirada', agendada: 'Agendada',
 };
 

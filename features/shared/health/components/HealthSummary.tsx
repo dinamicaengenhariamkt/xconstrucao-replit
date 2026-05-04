@@ -17,6 +17,8 @@ interface HealthSummaryProps {
    * Retornar `undefined` para um status específico deixa aquele card não-clicável.
    */
   hrefFor?: (status: HealthStatus) => string | undefined;
+  /** Aplica o efeito de borda + shimmer (light theme). Default `false`. */
+  luminous?: boolean;
 }
 
 const ITEMS: { key: HealthStatus; Icon: typeof IconCheckCircle }[] = [
@@ -32,9 +34,10 @@ interface HealthSummaryItemProps {
   pct: number;
   index: number;
   interactive: boolean;
+  luminous?: boolean;
 }
 
-function HealthSummaryItemContent({ status, Icon, count, pct, index, interactive }: HealthSummaryItemProps) {
+function HealthSummaryItemContent({ status, Icon, count, pct, index, interactive, luminous = false }: HealthSummaryItemProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -44,19 +47,34 @@ function HealthSummaryItemContent({ status, Icon, count, pct, index, interactive
       className={cn(
         'rounded-xl border p-4 flex flex-col gap-2 h-full',
         HEALTH_BADGE_CLASSES[status],
-        interactive && 'cursor-pointer transition-shadow hover:shadow-md'
+        interactive && 'cursor-pointer transition-shadow hover:shadow-md',
+        luminous && 'luminous-card group overflow-hidden'
       )}
     >
-      <div className="flex items-center justify-between">
-        <Icon className="w-4 h-4" />
+      {luminous && (
+        <>
+          {/* Linha temática fina no topo do card — aparece no hover (usa currentColor). */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-current to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[2]"
+          />
+          {/* Bg gradient temático sutil — aparece no hover. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-current/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
+          />
+        </>
+      )}
+      <div className={cn('flex items-center justify-between', luminous && 'relative z-10')}>
+        <Icon className={cn('w-4 h-4', luminous && 'transition-transform duration-300 group-hover:scale-110')} />
         <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">{pct}%</span>
       </div>
-      <div>
+      <div className={cn(luminous && 'relative z-10')}>
         <p className="text-2xl font-extrabold tabular-nums">{count}</p>
         <p className="text-[11px] font-semibold uppercase tracking-wider opacity-90">{HEALTH_LABELS[status]}</p>
       </div>
       {interactive && (
-        <div className="mt-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider opacity-80">
+        <div className={cn('mt-auto flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider opacity-80', luminous && 'relative z-10')}>
           Ver obras <IconArrowForward className="w-3 h-3" />
         </div>
       )}
@@ -69,9 +87,13 @@ export function HealthSummary({
   title = 'Saúde do portfólio de obras',
   className,
   hrefFor,
+  luminous = false,
 }: HealthSummaryProps) {
   return (
-    <Card className={className} data-testid="health-summary">
+    <Card
+      className={cn(luminous && 'luminous-section border-transparent shadow-none', className)}
+      data-testid="health-summary"
+    >
       <CardContent className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h3>
@@ -92,6 +114,7 @@ export function HealthSummary({
                 pct={pct}
                 index={idx}
                 interactive={interactive}
+                luminous={luminous}
               />
             );
 

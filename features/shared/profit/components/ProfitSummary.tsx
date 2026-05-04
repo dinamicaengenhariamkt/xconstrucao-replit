@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import { StatsCard } from '@features/admin/financeiro/components/StatsCard';
+import { cn } from '@shared/lib/utils';
 import { formatCurrencyCompact, formatCurrencyRounded } from '@shared/lib/formatters';
 import { IconAttachMoney, IconTrendingUp, IconAnalytics, IconPayments } from '@shared/components/icons';
 import type { ProfitSummaryData } from '../types';
@@ -13,6 +14,8 @@ interface ProfitSummaryProps {
   title?: string;
   description?: string;
   className?: string;
+  /** Aplica borda luminosa no card grande + efeito luminous nos 3 sub-stats. */
+  luminous?: boolean;
 }
 
 export function ProfitSummary({
@@ -20,6 +23,7 @@ export function ProfitSummary({
   title = 'Lucro consolidado da plataforma',
   description = 'Receita, lucro e margem agregados das obras ativas.',
   className,
+  luminous = false,
 }: ProfitSummaryProps) {
   const { metrics, trend, totalObras } = summary;
   const marginVariant = metrics.margem >= 15 ? 'success' : metrics.margem >= 5 ? 'warning' : 'error';
@@ -31,7 +35,7 @@ export function ProfitSummary({
       transition={{ duration: 0.25 }}
       className={className}
     >
-      <Card>
+      <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
@@ -49,6 +53,7 @@ export function ProfitSummary({
               value={formatCurrencyRounded(metrics.receitaTotal)}
               icon={IconAttachMoney}
               iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+              luminous={luminous}
             />
             <StatsCard
               label="Lucro estimado"
@@ -56,6 +61,7 @@ export function ProfitSummary({
               icon={IconTrendingUp}
               iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
               badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
+              luminous={luminous}
             />
             <StatsCard
               label="Margem média"
@@ -66,6 +72,7 @@ export function ProfitSummary({
                 label: marginVariant === 'success' ? 'Saudável' : marginVariant === 'warning' ? 'Atenção' : 'Crítica',
                 variant: marginVariant,
               }}
+              luminous={luminous}
             />
           </div>
 

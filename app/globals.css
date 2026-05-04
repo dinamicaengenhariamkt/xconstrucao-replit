@@ -342,3 +342,65 @@ input[type="search"]::-webkit-search-cancel-button {
   color: hsl(var(--muted-foreground));
   pointer-events: none;
 }
+
+/* ─── Luminous card border ──────────────────────────────────────────────────
+ *
+ * Duas variantes de borda decorativa via pseudo-elemento + `mask-composite`:
+ *
+ *   .luminous-card    — borda BRANCA sutil. Usada em cards menores (KPIs, mini
+ *                       stats). Combina com o zoom + sombra do framer-motion.
+ *
+ *   .luminous-section — borda CINZA mais marcada. Usada em cards grandes que
+ *                       agrupam outros cards (cards de seção). Sem hover.
+ *
+ * Uso:
+ *   <div class="luminous-card">...</div>
+ *   <div class="luminous-section">...</div>
+ */
+
+.luminous-card,
+.luminous-section {
+  position: relative;
+}
+
+.luminous-card::before,
+.luminous-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.luminous-card::before {
+  background: linear-gradient(
+    225deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.luminous-section::before {
+  background: linear-gradient(
+    225deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.06) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* Degradê interno sutil cinza→branco→cinza para cards de seção (efeito "papel suave"). */
+.luminous-section {
+  background-image: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.015),
+    rgba(0, 0, 0, 0) 50%,
+    rgba(0, 0, 0, 0.015)
+  );
+}

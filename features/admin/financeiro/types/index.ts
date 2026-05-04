@@ -22,6 +22,28 @@ export interface AdminFinanceiroDashboardStats {
 }
 
 /**
+ * Métricas de satisfação coletadas via surveys (NPS + CSAT).
+ */
+export interface SatisfactionMetrics {
+  /** NPS geral da plataforma (-100 a 100). */
+  npsScore: number;
+  /** Variação absoluta do NPS vs. trimestre anterior (positivo = melhorou). */
+  npsDelta: number;
+  /** Total de respostas considerado no NPS atual. */
+  npsResponses: number;
+  /** CSAT médio dos clientes (0 a 5). */
+  csatClientes: number;
+  /** CSAT médio das empreiteiras (0 a 5). */
+  csatEmpreiteiras: number;
+  /** Decomposição do NPS por categoria (% de respostas). */
+  breakdown: {
+    promotores: number;
+    neutros: number;
+    detratores: number;
+  };
+}
+
+/**
  * Métricas de adoção/saúde da plataforma para a visão admin.
  * Não são financeiras — focam em uso real (engagement, conversão, churn).
  */

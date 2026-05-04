@@ -88,5 +88,8 @@ export function StatsGridContainer({ data, healthSummary }: StatsGridContainerPr
     });
   }
 
-  return <StatsGrid stats={stats} />;
+  // Ativa o efeito luminoso em todos os KPIs do dashboard empreiteiro.
+  const luminousStats = stats.map((s) => ({ ...s, luminous: true }));
+
+  return <StatsGrid stats={luminousStats} />;
 }
