@@ -26,6 +26,8 @@ export interface StatsCardData {
   testId?: string;
   /** Aplica o efeito de borda + shimmer (light theme). Default `false`. */
   luminous?: boolean;
+  /** Reduz o tamanho do valor (text-3xl → text-2xl). Útil em grids apertados (ex.: 3 stats num half-width card). */
+  compact?: boolean;
 }
 
 export type StatsCardProps = StatsCardData;

@@ -67,5 +67,8 @@ export function KpiGridContainer({ periodo }: KpiGridContainerProps) {
     },
   ];
 
-  return <StatsGrid stats={stats} />;
+  // Ativa o efeito luminoso em todos os KPIs do caixa admin.
+  const luminousStats = stats.map((s) => ({ ...s, luminous: true }));
+
+  return <StatsGrid stats={luminousStats} />;
 }

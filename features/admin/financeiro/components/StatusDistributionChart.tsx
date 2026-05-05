@@ -2,6 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { StatusDistributionChartProps, StatusDistributionChartTooltipProps } from '../types';
 
 function CustomTooltip({ active, payload }: StatusDistributionChartTooltipProps) {
@@ -16,12 +17,22 @@ function CustomTooltip({ active, payload }: StatusDistributionChartTooltipProps)
   );
 }
 
+interface StatusDistributionChartExtendedProps extends StatusDistributionChartProps {
+  luminous?: boolean;
+}
+
 export function StatusDistributionChart({
   data,
   totalObras = 42,
-}: StatusDistributionChartProps) {
+  luminous = false,
+}: StatusDistributionChartExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Distribuição por status de obra

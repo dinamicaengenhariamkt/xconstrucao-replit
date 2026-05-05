@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { StatsCard } from '@features/shared/components/StatsCard';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
@@ -28,6 +27,7 @@ import {
   RiArrowDownLine,
   RiMoneyDollarCircleLine,
 } from 'react-icons/ri';
+import type { IconType } from 'react-icons';
 import {
   INITIAL_DAYS,
   DAYS_INCREMENT,
@@ -183,42 +183,42 @@ export default function AdminAuditoriaPage() {
     return { totalHoje: todayEvents.length, usuariosUnicos, pagamentos, logins };
   }, [eventos]);
 
-  const kpis = [
+  const kpis: { label: string; value: string | number; icon: IconType; iconBgColor: string }[] = [
     {
       label: 'Ações hoje',
-      value: kpiLoading ? null : todayMetrics.totalHoje,
+      value: kpiLoading ? '—' : todayMetrics.totalHoje,
       icon: RiFlashlightLine,
-      iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
+      iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
       label: 'Logins hoje',
-      value: kpiLoading ? null : todayMetrics.logins,
+      value: kpiLoading ? '—' : todayMetrics.logins,
       icon: RiShieldUserLine,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
+      iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
     },
     {
       label: 'Usuários ativos',
-      value: kpiLoading ? null : todayMetrics.usuariosUnicos,
+      value: kpiLoading ? '—' : todayMetrics.usuariosUnicos,
       icon: RiGroupLine,
-      iconBg: 'bg-primary/10 text-primary',
+      iconBgColor: 'bg-primary/10 text-primary',
     },
     {
       label: 'Pagamentos hoje',
-      value: kpiLoading ? null : todayMetrics.pagamentos,
+      value: kpiLoading ? '—' : todayMetrics.pagamentos,
       icon: RiMoneyDollarCircleLine,
-      iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
+      iconBgColor: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },
     {
       label: 'Alertas',
       value: kpi?.alertas ?? 0,
       icon: RiAlertLine,
-      iconBg: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
+      iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
     },
     {
       label: 'Erros',
       value: kpi?.erros ?? 0,
       icon: RiErrorWarningLine,
-      iconBg: 'bg-red-50 text-red-600 dark:bg-red-900/20',
+      iconBgColor: 'bg-red-50 text-red-600 dark:bg-red-900/20',
     },
   ];
 
@@ -236,28 +236,14 @@ export default function AdminAuditoriaPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {kpis.map((kpiCard) => (
-          <motion.div
+          <StatsCard
             key={kpiCard.label}
-            className="rounded-2xl overflow-visible"
-            whileHover={{ scale: 1.01, boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
-            transition={{ duration: 0.2 }}
-          >
-            <Card className="h-full rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                <div className={cn('p-3 rounded-lg', kpiCard.iconBg)}>
-                  <kpiCard.icon className="w-5 h-5" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{kpiCard.label}</p>
-                {kpiCard.value === null ? (
-                  <Skeleton className="h-8 w-12" />
-                ) : (
-                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpiCard.value}</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+            label={kpiCard.label}
+            value={kpiCard.value}
+            icon={kpiCard.icon}
+            iconBgColor={kpiCard.iconBgColor}
+            luminous
+          />
         ))}
       </div>
 

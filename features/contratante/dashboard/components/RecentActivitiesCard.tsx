@@ -27,9 +27,21 @@ const colorMap: Record<ActivityColor, string> = {
   purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
 };
 
-export function RecentActivitiesCard({ activities }: RecentActivitiesCardProps) {
+interface RecentActivitiesCardExtendedProps extends RecentActivitiesCardProps {
+  luminous?: boolean;
+}
+
+export function RecentActivitiesCard({
+  activities,
+  luminous = false,
+}: RecentActivitiesCardExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
           Atividades Recentes

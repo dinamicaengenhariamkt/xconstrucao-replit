@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { StatsCard } from '@features/shared/components/StatsCard';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
@@ -120,19 +118,19 @@ export default function AdminClientesPage() {
       label: 'Total Clientes',
       value: String(stats.total),
       icon: RiGroupLine,
-      iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
+      iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
       label: 'Volume Contratado',
       value: formatCurrency(stats.volume),
       icon: RiMoneyDollarCircleLine,
-      iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
+      iconBgColor: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },
     {
       label: 'Inadimplência',
       value: `${stats.inadimplencia.toFixed(1)}%`,
       icon: RiAlertLine,
-      iconBg: 'bg-red-50 text-red-600 dark:bg-red-900/20',
+      iconBgColor: 'bg-red-50 text-red-600 dark:bg-red-900/20',
     },
   ];
 
@@ -186,27 +184,15 @@ export default function AdminClientesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map((kpi) => (
-          <motion.div
+          <StatsCard
             key={kpi.label}
-            className="rounded-2xl overflow-visible"
-            whileHover={{
-              scale: 1.01,
-              boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-            }}
-            transition={{ duration: 0.2 }}
-          >
-            <Card className="h-full rounded-2xl" data-testid={`kpi-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}>
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                <div className={cn('p-3 rounded-lg', kpi.iconBg)}>
-                  <kpi.icon className="w-5 h-5" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.label}</p>
-                <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+            label={kpi.label}
+            value={kpi.value}
+            icon={kpi.icon}
+            iconBgColor={kpi.iconBgColor}
+            testId={`kpi-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
+            luminous
+          />
         ))}
       </div>
 

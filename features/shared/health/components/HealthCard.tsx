@@ -12,6 +12,7 @@ import { HealthBadge } from './HealthBadge';
 interface HealthCardProps {
   health: ObraHealth;
   className?: string;
+  luminous?: boolean;
 }
 
 const STATUS_ICON: Record<HealthStatus, typeof IconHealthAndSafety> = {
@@ -22,7 +23,7 @@ const STATUS_ICON: Record<HealthStatus, typeof IconHealthAndSafety> = {
 
 const FACTORS: HealthFactorKey[] = ['atraso', 'financeiro', 'tarefas'];
 
-export function HealthCard({ health, className }: HealthCardProps) {
+export function HealthCard({ health, className, luminous = false }: HealthCardProps) {
   const StatusIcon = STATUS_ICON[health.status];
 
   return (
@@ -32,7 +33,7 @@ export function HealthCard({ health, className }: HealthCardProps) {
       transition={{ duration: 0.25 }}
       className={className}
     >
-      <Card>
+      <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="flex items-start gap-3">
             <div className={cn('p-2.5 rounded-lg border', HEALTH_BADGE_CLASSES[health.status])}>

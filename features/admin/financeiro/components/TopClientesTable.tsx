@@ -1,7 +1,11 @@
 import type { TopClientesTableProps } from '../types';
 import { TopRankingTable } from './TopRankingTable';
 
-export function TopClientesTable({ clientes }: TopClientesTableProps) {
+interface TopClientesTableExtendedProps extends TopClientesTableProps {
+  luminous?: boolean;
+}
+
+export function TopClientesTable({ clientes, luminous = false }: TopClientesTableExtendedProps) {
   return (
     <TopRankingTable
       items={clientes}
@@ -10,6 +14,7 @@ export function TopClientesTable({ clientes }: TopClientesTableProps) {
       entityLabel="Cliente"
       searchPlaceholder="Buscar cliente..."
       testIdPrefix="top-clientes"
+      luminous={luminous}
     />
   );
 }

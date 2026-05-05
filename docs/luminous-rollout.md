@@ -1,7 +1,7 @@
 # PRD — Rollout global do efeito luminous (3 visões)
 
-> **Status**: Wave 0 concluída. Wave 1 pronta pra iniciar.
-> **Última atualização**: 2026-05-04.
+> **Status**: Waves 0–3 concluídas. Wave 4 (configurações) opcional, pendente.
+> **Última atualização**: 2026-05-05.
 
 ## Contexto
 
@@ -55,101 +55,101 @@ export function SectionCard({ luminous, className, ...props }: SectionCardProps)
 - [x] `/empreiteiro/dashboard/atividades-recentes` — container da lista.
 - [x] `/empreiteiro/notificacoes` — `NotificationsListView luminous` (prop opt-in adicionada ao shared).
 
-### Pré-Wave 1 — Componente shared
+### Pré-Wave 1 — Componente shared ✅ DONE
 
-- [ ] Criar `<SectionCard>` em `features/shared/components/SectionCard/`.
+- [x] Criar `<SectionCard>` em `features/shared/components/SectionCard/`.
 
 ---
 
-### Wave 1 — Contratante (10-14 alvos)
+### Wave 1 — Contratante ✅ DONE
 
-#### `/contratante/dashboard`
-- [ ] StatsGrid (5 KPIs) — passar `luminous`
-- [ ] EvolutionChart — adicionar prop + passar
-- [ ] PhaseDistributionChart — adicionar prop + passar
-- [ ] RecentActivitiesCard — adicionar prop + passar
-- [ ] PendenciasCard — adicionar prop + passar
-- [ ] ValoresContratados — adicionar prop + passar
+#### `/contratante/dashboard` ✅
+- [x] StatsGrid (5 KPIs)
+- [x] EvolutionChart
+- [x] PhaseDistributionChart
+- [x] RecentActivitiesCard
+- [x] PendenciasCard
+- [x] ValoresContratados
+- [x] HealthSummary (passar prop existente)
 
-#### `/contratante/pagamentos`
-- [ ] StatsCard (4 KPIs) — passar `luminous`
-- [ ] PagamentosEvolutionChart — adicionar prop + passar
-- [ ] Histórico (Card) — aplicar inline
+#### `/contratante/pagamentos` ✅
+- [x] StatsCard (4 KPIs)
+- [x] PagamentosEvolutionChart
+- [x] Histórico (div inline)
 
-#### `/contratante/medicoes`
-- [ ] StatsCard (5 KPIs) — passar `luminous`
-- [ ] Tabela de medições (div) — aplicar inline
+#### `/contratante/medicoes` ✅
+- [x] StatsCard (5 KPIs)
+- [x] Tabela de medições
 
-#### `/contratante/atividades`
-- [ ] Activities Card — aplicar inline
+#### `/contratante/atividades` ✅
+- [x] Activities Card
 
-#### `/contratante/notificacoes`
-- [ ] `NotificationsListView` — passar `luminous` (prop já existe)
+#### `/contratante/notificacoes` ✅
+- [x] `NotificationsListView`
 
-#### `/contratante/nova-obra` (lower priority)
-- [ ] Form section cards — aplicar inline
+#### `/contratante/nova-obra` ✅
+- [x] Form section cards (cardClass constante atualizada)
 
 **Skip Wave 1**: `/contratante/minhas-obras` (ObraCard ornado), `/contratante/planos` (pricing), `/contratante/chat`, `/contratante/faq`, `/contratante/configuracoes` (Wave 4).
 
 ---
 
-### Wave 2 — Admin (15-22 alvos)
+### Wave 2 — Admin ✅ DONE
 
-#### `/admin/financeiro`
-- [ ] StatsCard (3 KPIs) — passar `luminous`
-- [ ] AdoptionMetricsSection — adicionar prop + passar
-- [ ] SatisfactionMetricsSection — adicionar prop + passar
-- [ ] HealthSummary — passar `luminous` (prop existe)
-- [ ] ProfitSummary — passar `luminous` (prop existe)
-- [ ] PaymentsEvolutionChart — adicionar prop + passar
-- [ ] StatusDistributionChart — adicionar prop + passar
-- [ ] ObrasAtencaoTable — adicionar prop + passar
-- [ ] TopRankingTable (clientes + empreiteiras) — adicionar prop + passar
+#### `/admin/financeiro` ✅
+- [x] StatsCard (6 KPIs)
+- [x] AdoptionMetricsSection (outer Card + 5 KPIs internos)
+- [x] SatisfactionMetricsSection
+- [x] HealthSummary
+- [x] ProfitSummary
+- [x] PaymentsEvolutionChart
+- [x] StatusDistributionChart
+- [x] ObrasAtencaoTable
+- [x] TopClientesTable / TopEmpreiteirasTable (via TopRankingTable)
+- [x] ReceitasPlataformaTable
 
-#### `/admin/caixa`
-- [ ] KpiGridContainer — passar `luminous`
-- [ ] IndicadoresEconomicosSection — adicionar prop + passar
-- [ ] CaixaChart — adicionar prop + passar
-- [ ] FluxoResumo — adicionar prop + passar
-- [ ] MovimentacoesTable — adicionar prop + passar
+#### `/admin/caixa` ✅
+- [x] KpiGridContainer (6 KPIs)
+- [x] IndicadoresEconomicosSection / IndicadorCard — alinhado ao padrão `luminous-card` preservando sparkline e tons temáticos por indicador (iconBgClass/iconColorClass/badgeClass/sparklineColor). Campo `hoverBorderClass` no type marcado como deprecated (não consumido).
+- [x] CaixaChart
+- [x] FluxoResumo
+- [x] MovimentacoesTable
 
-#### `/admin/clientes`
-- [ ] 3 KPIs (Card manual) — refatorar pra `StatsCard` ou aplicar `luminous-card` inline
+#### `/admin/clientes` ✅
+- [x] 3 KPIs — refatorados pra `StatsCard` shared
 
-#### `/admin/obras`
-- [ ] 2 KPIs (Card manual) — mesmo
-- [ ] Tabela de obras (div) — aplicar inline
+#### `/admin/obras` ✅
+- [x] 2 KPIs — refatorados pra `StatsCard` shared
 
-#### `/admin/empreiteiras`
-- [ ] 2 KPIs (Card manual) — mesmo
+#### `/admin/empreiteiras` ✅
+- [x] 2 KPIs — refatorados pra `StatsCard` shared
 
-#### `/admin/anuncios`
-- [ ] StatsCard (6 KPIs) — passar `luminous`
-- [ ] Tabela Campanhas (Card) — aplicar inline
-- [ ] Tabela Anunciantes (Card) — aplicar inline
+#### `/admin/anuncios` ✅
+- [x] StatsCard (6 KPIs)
+- [x] Tabela Campanhas (inline)
+- [x] Tabela Anunciantes (inline)
 
-#### `/admin/auditoria`
-- [ ] 6 KPIs (Card manual) — refatorar ou aplicar inline
+#### `/admin/auditoria` ✅
+- [x] 6 KPIs — refatorados pra `StatsCard` shared (loading state troca skeleton por placeholder `'—'`)
 
-#### `/admin/planos`
-- [ ] 4 KPIs (Card manual) — mesmo
-- [ ] Tabela de assinantes (div) — aplicar inline
+#### `/admin/planos` ✅
+- [x] 4 KPIs — refatorados pra `StatsCard` shared (loading state idem)
 
-#### `/admin/disputas`
-- [ ] StatsCard — passar `luminous`
+#### `/admin/disputas` ✅
+- [x] StatsCard (5 KPIs)
 
-**Skip Wave 2**: ClienteCard, EmpreiteiraCard, ZonaCard, PlanoCard (ornados); audit timeline; `/admin/configuracoes` (Wave 4).
+**Skip Wave 2 confirmado**: ClienteCard, EmpreiteiraCard, ZonaCard, PlanoCard (ornados); IndicadorCard (temático); audit timeline; `/admin/configuracoes` (Wave 4).
 
 ---
 
-### Wave 3 — Shared components (obra detail) (4 alvos)
+### Wave 3 — Shared components (obra detail) ✅ DONE
 
-Componentes shared usados em telas de detalhe de obra:
+Componentes shared usados em telas de detalhe de obra — props adicionados, mas **ainda não consumidos** pelas páginas de detalhe (consumir per-view conforme decisão visual):
 
-- [ ] `HealthCard` ([features/shared/health/components/HealthCard.tsx](../features/shared/health/components/HealthCard.tsx)) — adicionar prop `luminous`
-- [ ] `ProfitCard` ([features/shared/profit/components/ProfitCard.tsx](../features/shared/profit/components/ProfitCard.tsx)) — adicionar prop + propagar pros StatsCards aninhados
-- [ ] `LocalizacaoCard` ([features/shared/components/LocalizacaoCard.tsx](../features/shared/components/LocalizacaoCard.tsx)) — adicionar prop
-- [ ] `HealthDetailPanel` ([features/shared/health/components/HealthDetailPanel.tsx](../features/shared/health/components/HealthDetailPanel.tsx)) — adicionar prop (5 Cards internos — flag global)
+- [x] `HealthCard` ([features/shared/health/components/HealthCard.tsx](../features/shared/health/components/HealthCard.tsx)) — prop `luminous` adicionada
+- [x] `ProfitCard` ([features/shared/profit/components/ProfitCard.tsx](../features/shared/profit/components/ProfitCard.tsx)) — prop adicionada + propagada pros 4 StatsCards internos
+- [x] `LocalizacaoCard` ([features/shared/components/LocalizacaoCard.tsx](../features/shared/components/LocalizacaoCard.tsx)) — prop adicionada
+- [x] `HealthDetailPanel` ([features/shared/health/components/HealthDetailPanel.tsx](../features/shared/health/components/HealthDetailPanel.tsx)) — prop adicionada (4 Cards internos — flag global)
 
 **Pendente decisão**:
 - `ObraCard` shared — tem `border-l-4` colorido por status; luminous pode conflitar. **Skip por padrão**.

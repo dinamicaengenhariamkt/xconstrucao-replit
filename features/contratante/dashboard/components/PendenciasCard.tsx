@@ -36,11 +36,20 @@ const priorityConfig: Record<
   },
 };
 
-export function PendenciasCard({ pendencias }: PendenciasCardProps) {
+interface PendenciasCardExtendedProps extends PendenciasCardProps {
+  luminous?: boolean;
+}
+
+export function PendenciasCard({ pendencias, luminous = false }: PendenciasCardExtendedProps) {
   const total = pendencias.length + 4;
 
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
           Pendências & Conformidades

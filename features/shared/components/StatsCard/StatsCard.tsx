@@ -27,6 +27,7 @@ export function StatsCard({
   href,
   testId,
   luminous = false,
+  compact = false,
 }: StatsCardProps) {
   const inner = (
     <Card
@@ -80,7 +81,7 @@ export function StatsCard({
         >
           {label}
         </p>
-        <p className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">{value}</p>
+        <p className={cn('font-extrabold text-gray-900 dark:text-gray-100', compact ? 'text-2xl' : 'text-3xl')}>{value}</p>
       </CardContent>
     </Card>
   );

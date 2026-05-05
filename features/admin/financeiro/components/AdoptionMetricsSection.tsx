@@ -8,6 +8,7 @@ import {
   RiUserUnfollowLine,
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/shared/components/StatsCard';
 import type {
   StatsCardData,
@@ -28,9 +29,10 @@ function deltaLabel(delta: number, suffix = 'vs período anterior'): string {
 
 interface AdoptionMetricsSectionProps {
   metrics: AdoptionMetrics;
+  luminous?: boolean;
 }
 
-export function AdoptionMetricsSection({ metrics }: AdoptionMetricsSectionProps) {
+export function AdoptionMetricsSection({ metrics, luminous = false }: AdoptionMetricsSectionProps) {
   const cards: StatsCardData[] = [
     {
       label: 'Usuários ativos (30d)',
@@ -97,7 +99,10 @@ export function AdoptionMetricsSection({ metrics }: AdoptionMetricsSectionProps)
 
   return (
     <Card
-      className="border-border-light dark:border-gray-800"
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
       data-testid="adoption-metrics-section"
     >
       <CardHeader className="py-4">
@@ -112,7 +117,7 @@ export function AdoptionMetricsSection({ metrics }: AdoptionMetricsSectionProps)
       <CardContent className="pt-0 pb-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {cards.map((c) => (
-            <StatsCard key={c.label} {...c} />
+            <StatsCard key={c.label} {...c} luminous={luminous} />
           ))}
         </div>
       </CardContent>

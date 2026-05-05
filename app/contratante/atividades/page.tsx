@@ -204,7 +204,7 @@ export default function AtividadesContratantePage() {
         </div>
       </div>
 
-      <Card className="border-border-light dark:border-gray-800">
+      <Card className="luminous-section border-transparent shadow-none">
         <CardContent className="p-0">
           {paginatedActivities.length === 0 ? (
             <div className="py-16 text-center">

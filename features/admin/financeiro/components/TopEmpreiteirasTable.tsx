@@ -1,7 +1,14 @@
 import type { TopEmpreiteirasTableProps } from '../types';
 import { TopRankingTable } from './TopRankingTable';
 
-export function TopEmpreiteirasTable({ empreiteiras }: TopEmpreiteirasTableProps) {
+interface TopEmpreiteirasTableExtendedProps extends TopEmpreiteirasTableProps {
+  luminous?: boolean;
+}
+
+export function TopEmpreiteirasTable({
+  empreiteiras,
+  luminous = false,
+}: TopEmpreiteirasTableExtendedProps) {
   return (
     <TopRankingTable
       items={empreiteiras}
@@ -10,6 +17,7 @@ export function TopEmpreiteirasTable({ empreiteiras }: TopEmpreiteirasTableProps
       entityLabel="Empreiteira"
       searchPlaceholder="Buscar empreiteira..."
       testIdPrefix="top-empreiteiras"
+      luminous={luminous}
     />
   );
 }

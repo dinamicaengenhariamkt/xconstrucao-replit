@@ -69,6 +69,7 @@ export interface IndiceEconomico {
   badgeClass: string;
   iconBgClass: string;
   iconColorClass: string;
+  /** @deprecated Não consumido pelo IndicadorCard desde a unificação com luminous-card. Removido em cleanup futuro. */
   hoverBorderClass: string;
   sparklineColor: string;
   sparklinePath: string;

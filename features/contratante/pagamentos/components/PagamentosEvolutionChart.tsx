@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { PagamentoContratante } from '../types';
 import { formatCurrencyCompact } from '@shared/lib/formatters';
 
@@ -30,9 +31,10 @@ const chartConfig = {
 
 interface PagamentosEvolutionChartProps {
   pagamentos: PagamentoContratante[];
+  luminous?: boolean;
 }
 
-export function PagamentosEvolutionChart({ pagamentos }: PagamentosEvolutionChartProps) {
+export function PagamentosEvolutionChart({ pagamentos, luminous = false }: PagamentosEvolutionChartProps) {
   const chartData = useMemo(() => {
     const byMonth: Record<string, { entradas: number; saidas: number }> = {};
 
@@ -61,7 +63,12 @@ export function PagamentosEvolutionChart({ pagamentos }: PagamentosEvolutionChar
 
   if (chartData.length === 0) {
     return (
-      <Card className="border-border-light dark:border-gray-800">
+      <Card
+        className={cn(
+          'border-border-light dark:border-gray-800',
+          luminous && 'luminous-section border-transparent shadow-none',
+        )}
+      >
         <CardHeader className="py-4">
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
             Evolução Financeira
@@ -75,7 +82,12 @@ export function PagamentosEvolutionChart({ pagamentos }: PagamentosEvolutionChar
   }
 
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 py-4 space-y-0">
         <div>
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">

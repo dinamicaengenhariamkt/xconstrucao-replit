@@ -294,6 +294,7 @@ export default function PagamentosPage() {
               icon={RiArrowUpCircleLine}
               iconBgColor="bg-[#22846D]/10 text-[#22846D]"
               badge={{ label: '+12% mês', variant: 'success' }}
+              luminous
             />
             <StatsCard
               label="Saídas"
@@ -301,6 +302,7 @@ export default function PagamentosPage() {
               icon={RiArrowDownCircleLine}
               iconBgColor="bg-red-50 text-red-600"
               badge={{ label: '-8% mês', variant: 'red' }}
+              luminous
             />
             <StatsCard
               label="A pagar"
@@ -319,22 +321,24 @@ export default function PagamentosPage() {
               }
               href="/contratante/pagamentos?status=pendente,atrasado"
               testId="kpi-a-pagar"
+              luminous
             />
             <StatsCard
               label="Total Contratado"
               value={formatCurrency(kpi?.totalContratado ?? 0)}
               icon={RiMoneyDollarCircleLine}
               iconBgColor="bg-primary/10 text-primary"
+              luminous
             />
           </>
         )}
       </div>
 
       {/* ─── Gráfico de Evolução ───────────────────────────────────── */}
-      <PagamentosEvolutionChart pagamentos={periodFiltered} />
+      <PagamentosEvolutionChart pagamentos={periodFiltered} luminous />
 
       {/* ─── Tabela de Histórico ───────────────────────────────────── */}
-      <div className="bg-white dark:bg-gray-900 p-8 rounded-xl border border-border-light dark:border-gray-800 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl overflow-hidden luminous-section">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">

@@ -55,9 +55,9 @@ export default function AdminCaixaPage() {
 
       <KpiGridContainer periodo={periodo} />
       <IndicadoresEconomicosSection periodo={periodo} />
-      <CaixaChart periodo={periodo} />
-      <FluxoResumo periodo={periodo} />
-      <MovimentacoesTable periodo={periodo} customRange={customRange} />
+      <CaixaChart periodo={periodo} luminous />
+      <FluxoResumo periodo={periodo} luminous />
+      <MovimentacoesTable periodo={periodo} customRange={customRange} luminous />
     </div>
   );
 }

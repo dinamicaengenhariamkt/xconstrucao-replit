@@ -18,7 +18,7 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
 } from 'react-icons/ri';
-import { formatCurrency } from '../utils';
+import { formatCurrencyRounded } from '@shared/lib/formatters';
 
 export interface TopRankingItem {
   id: string;
@@ -37,6 +37,7 @@ interface TopRankingTableProps {
   entityLabel: string;
   searchPlaceholder?: string;
   testIdPrefix?: string;
+  luminous?: boolean;
 }
 
 const PAGE_SIZE = 5;
@@ -48,6 +49,7 @@ export function TopRankingTable({
   entityLabel,
   searchPlaceholder = 'Buscar por nome...',
   testIdPrefix,
+  luminous = false,
 }: TopRankingTableProps) {
   const [obrasMin, setObrasMin] = useState('');
   const [obrasMax, setObrasMax] = useState('');
@@ -105,7 +107,12 @@ export function TopRankingTable({
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <Card className="border-border-light dark:border-gray-800 overflow-hidden">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800 overflow-hidden',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="border-b border-gray-100 dark:border-gray-800 space-y-3">
         <div>
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -214,19 +221,19 @@ export function TopRankingTable({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-                    <th className="text-left py-3 px-6 text-xs font-bold uppercase text-gray-500 tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-bold uppercase text-gray-500 tracking-wider">
                       {entityLabel}
                     </th>
-                    <th className="text-left py-3 px-6 text-xs font-bold uppercase text-gray-500 tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-bold uppercase text-gray-500 tracking-wider">
                       Obras
                     </th>
-                    <th className="text-left py-3 px-6 text-xs font-bold uppercase text-gray-500 tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-bold uppercase text-gray-500 tracking-wider">
                       Vol. contratado
                     </th>
-                    <th className="text-left py-3 px-6 text-xs font-bold uppercase text-gray-500 tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-bold uppercase text-gray-500 tracking-wider">
                       Pago
                     </th>
-                    <th className="text-left py-3 px-6 text-xs font-bold uppercase text-gray-500 tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-bold uppercase text-gray-500 tracking-wider">
                       Saldo
                     </th>
                   </tr>
@@ -242,20 +249,20 @@ export function TopRankingTable({
                           !isLast && 'border-b border-gray-50 dark:border-gray-800'
                         )}
                       >
-                        <td className="py-3 px-6 text-sm font-bold text-gray-900 dark:text-gray-100">
+                        <td className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-gray-100">
                           {item.nome}
                         </td>
-                        <td className="py-3 px-6 text-sm text-gray-700 dark:text-gray-300">
+                        <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 tabular-nums">
                           {item.obras}
                         </td>
-                        <td className="py-3 px-6 text-sm font-bold text-gray-900 dark:text-gray-100">
-                          {formatCurrency(item.volContratado)}
+                        <td className="py-3 px-4 text-sm font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                          {formatCurrencyRounded(item.volContratado)}
                         </td>
-                        <td className="py-3 px-6 text-sm font-semibold text-[#22846D]">
-                          {formatCurrency(item.pago)}
+                        <td className="py-3 px-4 text-sm font-semibold text-[#22846D] tabular-nums">
+                          {formatCurrencyRounded(item.pago)}
                         </td>
-                        <td className="py-3 px-6 text-sm font-semibold text-amber-600">
-                          {formatCurrency(item.saldo)}
+                        <td className="py-3 px-4 text-sm font-semibold text-amber-600 tabular-nums">
+                          {formatCurrencyRounded(item.saldo)}
                         </td>
                       </tr>
                     );

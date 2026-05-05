@@ -54,6 +54,7 @@ export function ProfitSummary({
               icon={IconAttachMoney}
               iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
               luminous={luminous}
+              compact
             />
             <StatsCard
               label="Lucro estimado"
@@ -62,6 +63,7 @@ export function ProfitSummary({
               iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
               badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
               luminous={luminous}
+              compact
             />
             <StatsCard
               label="Margem média"
@@ -73,6 +75,7 @@ export function ProfitSummary({
                 variant: marginVariant,
               }}
               luminous={luminous}
+              compact
             />
           </div>
 

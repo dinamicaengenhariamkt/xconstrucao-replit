@@ -196,6 +196,7 @@ export default function AdminDisputasPage() {
           iconBgColor="bg-amber-100 text-amber-600 dark:bg-amber-900/30"
           badge={{ label: 'Aguardam ação', variant: 'amber' }}
           testId="kpi-disputas-abertas"
+          luminous
         />
         <StatsCard
           label="Em análise"
@@ -203,6 +204,7 @@ export default function AdminDisputasPage() {
           icon={RiTimeLine}
           iconBgColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30"
           testId="kpi-disputas-analise"
+          luminous
         />
         <StatsCard
           label="Resolvidas (30d)"
@@ -211,6 +213,7 @@ export default function AdminDisputasPage() {
           iconBgColor="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30"
           badge={{ label: 'No mês', variant: 'success' }}
           testId="kpi-disputas-resolvidas"
+          luminous
         />
         <StatsCard
           label="Prioridade alta"
@@ -219,6 +222,7 @@ export default function AdminDisputasPage() {
           iconBgColor="bg-red-100 text-red-600 dark:bg-red-900/30"
           badge={{ label: 'Atenção', variant: 'red' }}
           testId="kpi-disputas-alta"
+          luminous
         />
         <StatsCard
           label="Prazo médio resolução"
@@ -234,6 +238,7 @@ export default function AdminDisputasPage() {
               : undefined
           }
           testId="kpi-disputas-prazo-medio"
+          luminous
         />
       </div>
 

@@ -50,9 +50,11 @@ export interface HealthDetailPanelProps {
   health: ObraHealth;
   actionsByFactor?: Partial<Record<HealthFactorKey, { label: string; onClick: () => void }>>;
   className?: string;
+  luminous?: boolean;
 }
 
-export function HealthDetailPanel({ health, actionsByFactor, className }: HealthDetailPanelProps) {
+export function HealthDetailPanel({ health, actionsByFactor, className, luminous = false }: HealthDetailPanelProps) {
+  const luminousClass = luminous ? 'luminous-section border-transparent shadow-none' : '';
   const StatusIcon = STATUS_ICON[health.status];
   const scoreFactorsCount = health.reasons.length;
 
@@ -60,7 +62,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className }: Health
     <div className={cn('space-y-6', className)} data-testid="health-detail-panel">
       {/* Hero */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-        <Card>
+        <Card className={luminousClass}>
           <CardContent className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
               <div
@@ -113,7 +115,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className }: Health
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, delay: idx * 0.05 }}
             >
-              <Card className="h-full flex flex-col">
+              <Card className={cn('h-full flex flex-col', luminousClass)}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -190,7 +192,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className }: Health
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.15 }}
         >
-          <Card>
+          <Card className={luminousClass}>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <IconTrendingUp className="w-4 h-4 text-primary" />
@@ -243,7 +245,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className }: Health
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: 0.2 }}
         >
-          <Card>
+          <Card className={luminousClass}>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <IconTarget className="w-4 h-4 text-primary" />

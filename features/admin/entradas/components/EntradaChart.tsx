@@ -19,9 +19,10 @@ const COLORS = {
 interface EntradaChartProps {
   data?: EntradaChartPoint[];
   insights?: EntradaInsight;
+  luminous?: boolean;
 }
 
-export function EntradaChart({ data = [], insights }: EntradaChartProps) {
+export function EntradaChart({ data = [], insights, luminous = false }: EntradaChartProps) {
   if (data.length === 0) return null;
 
   const maxTotal = Math.max(
@@ -49,7 +50,7 @@ export function EntradaChart({ data = [], insights }: EntradaChartProps) {
   });
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={cn('overflow-hidden', luminous && 'luminous-section border-transparent shadow-none')}>
       <CardHeader className="pb-0">
         <div className="flex justify-between items-center">
           <div>

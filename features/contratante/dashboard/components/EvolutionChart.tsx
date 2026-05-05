@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@shared/components/ui/chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { EvolutionChartProps } from '../types';
 
 const chartConfig = {
@@ -18,9 +19,18 @@ const chartConfig = {
   realizado: { label: 'Realizado', color: '#333333' },
 };
 
-export function EvolutionChart({ data }: EvolutionChartProps) {
+interface EvolutionChartExtendedProps extends EvolutionChartProps {
+  luminous?: boolean;
+}
+
+export function EvolutionChart({ data, luminous = false }: EvolutionChartExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Evolução: Planejado x Realizado

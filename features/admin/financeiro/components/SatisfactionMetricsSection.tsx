@@ -37,9 +37,10 @@ function npsClassification(score: number): { label: string; classes: string } {
 
 interface SatisfactionMetricsSectionProps {
   metrics: SatisfactionMetrics;
+  luminous?: boolean;
 }
 
-export function SatisfactionMetricsSection({ metrics }: SatisfactionMetricsSectionProps) {
+export function SatisfactionMetricsSection({ metrics, luminous = false }: SatisfactionMetricsSectionProps) {
   const npsClass = npsClassification(metrics.npsScore);
   const total =
     metrics.breakdown.promotores +
@@ -49,7 +50,10 @@ export function SatisfactionMetricsSection({ metrics }: SatisfactionMetricsSecti
 
   return (
     <Card
-      className="border-border-light dark:border-gray-800"
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
       data-testid="satisfaction-metrics-section"
     >
       <CardHeader className="py-4">

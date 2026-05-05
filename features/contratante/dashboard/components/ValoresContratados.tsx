@@ -1,11 +1,21 @@
 import { RiBankLine, RiAddCircleLine } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '../utils';
 import type { ValoresContratadosProps } from '../types';
 
-export function ValoresContratados({ data }: ValoresContratadosProps) {
+interface ValoresContratadosExtendedProps extends ValoresContratadosProps {
+  luminous?: boolean;
+}
+
+export function ValoresContratados({ data, luminous = false }: ValoresContratadosExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
           Valores Contratados

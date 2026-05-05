@@ -41,7 +41,11 @@ function ProgressBar({ percent }: ProgressBarProps) {
   );
 }
 
-export function ObrasAtencaoTable({ obras }: ObrasAtencaoTableProps) {
+interface ObrasAtencaoTableExtendedProps extends ObrasAtencaoTableProps {
+  luminous?: boolean;
+}
+
+export function ObrasAtencaoTable({ obras, luminous = false }: ObrasAtencaoTableExtendedProps) {
   const [situacaoSelected, setSituacaoSelected] = useState<SituacaoKey[]>([]);
   const [percentMin, setPercentMin] = useState('');
   const [percentMax, setPercentMax] = useState('');
@@ -221,7 +225,14 @@ export function ObrasAtencaoTable({ obras }: ObrasAtencaoTableProps) {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-border-light dark:border-gray-800 shadow-sm overflow-hidden">
+      <div
+        className={cn(
+          'bg-white dark:bg-gray-900 rounded-xl overflow-hidden',
+          luminous
+            ? 'luminous-section'
+            : 'border border-border-light dark:border-gray-800 shadow-sm',
+        )}
+      >
         {filtered.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">

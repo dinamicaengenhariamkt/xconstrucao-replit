@@ -288,6 +288,7 @@ export default function MedicoesContratantePage() {
           icon={RiMoneyDollarCircleLine}
           iconBgColor="bg-primary/10 text-primary"
           testId="kpi-total-contratado"
+          luminous
         />
         <StatsCard
           label="Aguardando minha aprovação"
@@ -304,6 +305,7 @@ export default function MedicoesContratantePage() {
           }
           href="/contratante/medicoes?status=aguardando_aprovacao"
           testId="kpi-aguardando"
+          luminous
         />
         <StatsCard
           label="Aprovado"
@@ -312,6 +314,7 @@ export default function MedicoesContratantePage() {
           iconBgColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30"
           href="/contratante/medicoes?status=aprovada,paga"
           testId="kpi-aprovado"
+          luminous
         />
         <StatsCard
           label="Rejeitado"
@@ -320,6 +323,7 @@ export default function MedicoesContratantePage() {
           iconBgColor="bg-red-100 text-red-600 dark:bg-red-900/30"
           href="/contratante/medicoes?status=rejeitada"
           testId="kpi-rejeitado"
+          luminous
         />
         <StatsCard
           label="Prazo Médio Avaliação"
@@ -335,6 +339,7 @@ export default function MedicoesContratantePage() {
               : undefined
           }
           testId="kpi-prazo-medio"
+          luminous
         />
       </div>
 
@@ -465,7 +470,7 @@ export default function MedicoesContratantePage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden luminous-section">
         {paginatedMedicoes.length === 0 ? (
           <div className="text-center py-16">
             <RiMoneyDollarCircleLine className="w-12 h-12 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
@@ -474,7 +479,7 @@ export default function MedicoesContratantePage() {
           </div>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            <div className="hidden md:grid grid-cols-[2fr_auto_1fr_1fr_1fr_1fr_auto] gap-4 px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800/50">
+            <div className="hidden md:grid grid-cols-[2fr_4rem_1fr_1fr_1fr_1fr_13rem] gap-4 px-6 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800/50">
               <span>Obra · Empreiteiro</span>
               <span>Medição</span>
               <span>Período</span>
@@ -489,7 +494,7 @@ export default function MedicoesContratantePage() {
               return (
                 <div
                   key={medicao.id}
-                  className="grid grid-cols-1 md:grid-cols-[2fr_auto_1fr_1fr_1fr_1fr_auto] gap-2 md:gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                  className="grid grid-cols-1 md:grid-cols-[2fr_4rem_1fr_1fr_1fr_1fr_13rem] gap-2 md:gap-4 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                   data-testid={`medicao-row-${medicao.id}`}
                 >
                   <div className="flex flex-col">

@@ -53,19 +53,20 @@ export default function ContratanteDashboardPage() {
         summary={healthSummary}
         title="Saúde das suas obras"
         hrefFor={(status) => buildObrasHealthUrl('/contratante/minhas-obras', status)}
+        luminous
       />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <EvolutionChart data={evolution} />
-        <PhaseDistributionChart data={mockPhaseData} totalObras={12} />
+        <EvolutionChart data={evolution} luminous />
+        <PhaseDistributionChart data={mockPhaseData} totalObras={12} luminous />
       </div>
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <RecentActivitiesCard activities={mockActivities.slice(0, 5)} />
-        <PendenciasCard pendencias={mockPendencias} />
-        <ValoresContratados data={mockValoresContratados} />
+        <RecentActivitiesCard activities={mockActivities.slice(0, 5)} luminous />
+        <PendenciasCard pendencias={mockPendencias} luminous />
+        <ValoresContratados data={mockValoresContratados} luminous />
       </div>
     </div>
   );

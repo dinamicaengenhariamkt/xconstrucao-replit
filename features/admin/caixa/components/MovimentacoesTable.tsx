@@ -105,9 +105,10 @@ function MovimentacaoRow({ mov }: { mov: Movimentacao }) {
 interface MovimentacoesTableProps {
   periodo: CaixaPeriodo;
   customRange?: DateRange;
+  luminous?: boolean;
 }
 
-export function MovimentacoesTable({ periodo, customRange }: MovimentacoesTableProps) {
+export function MovimentacoesTable({ periodo, customRange, luminous = false }: MovimentacoesTableProps) {
   const { data: movimentacoes } = useMovimentacoes(periodo, customRange);
   const all = movimentacoes ?? [];
 
@@ -185,7 +186,7 @@ export function MovimentacoesTable({ periodo, customRange }: MovimentacoesTableP
   const isFiltering = advancedActiveCount > 0 || search.trim().length > 0;
 
   return (
-    <Card>
+    <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div>

@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { PaymentsEvolutionChartProps, PaymentsEvolutionChartTooltipProps } from '../types';
 import { ADMIN_DASHBOARD_COLORS } from '../constants';
 
@@ -37,9 +38,18 @@ function CustomTooltip({ active, payload, label }: PaymentsEvolutionChartTooltip
   );
 }
 
-export function PaymentsEvolutionChart({ data }: PaymentsEvolutionChartProps) {
+interface PaymentsEvolutionChartExtendedProps extends PaymentsEvolutionChartProps {
+  luminous?: boolean;
+}
+
+export function PaymentsEvolutionChart({ data, luminous = false }: PaymentsEvolutionChartExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Evolução de pagamentos × medições

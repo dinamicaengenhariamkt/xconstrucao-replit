@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { StatsCard } from '@features/shared/components/StatsCard';
 import { formatCurrency } from '@shared/lib/formatters';
 import {
   usePlanosKpi,
@@ -220,27 +220,27 @@ export default function AdminPlanosPage() {
   const kpis = [
     {
       label: 'Total Assinantes',
-      value: String(kpi?.totalAssinantes ?? 0),
+      value: kpiLoading ? '—' : String(kpi?.totalAssinantes ?? 0),
       icon: RiGroupLine,
-      iconBg: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
+      iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
       label: 'Receita Mensal',
-      value: kpi ? formatCurrency(kpi.receitaMensal) : '—',
+      value: kpiLoading ? '—' : kpi ? formatCurrency(kpi.receitaMensal) : '—',
       icon: RiMoneyDollarCircleLine,
-      iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
+      iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
     },
     {
       label: 'Churn no mês',
-      value: String(kpi?.churnMes ?? 0),
+      value: kpiLoading ? '—' : String(kpi?.churnMes ?? 0),
       icon: RiArrowDownLine,
-      iconBg: 'bg-red-50 text-red-600 dark:bg-red-900/20',
+      iconBgColor: 'bg-red-50 text-red-600 dark:bg-red-900/20',
     },
     {
       label: 'Assinantes Enterprise',
-      value: String(kpi?.enterprise ?? 0),
+      value: kpiLoading ? '—' : String(kpi?.enterprise ?? 0),
       icon: RiVipCrownLine,
-      iconBg: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
+      iconBgColor: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },
   ];
 
@@ -255,29 +255,15 @@ export default function AdminPlanosPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi) => (
-          <motion.div
-            key={kpi.label}
-            className="rounded-2xl overflow-visible"
-            whileHover={{ scale: 1.01, boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
-            transition={{ duration: 0.2 }}
-          >
-            <Card className="h-full rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                <div className={cn('p-3 rounded-lg', kpi.iconBg)}>
-                  <kpi.icon className="w-5 h-5" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{kpi.label}</p>
-                {kpiLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{kpi.value}</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+        {kpis.map((kpiCard) => (
+          <StatsCard
+            key={kpiCard.label}
+            label={kpiCard.label}
+            value={kpiCard.value}
+            icon={kpiCard.icon}
+            iconBgColor={kpiCard.iconBgColor}
+            luminous
+          />
         ))}
       </div>
 

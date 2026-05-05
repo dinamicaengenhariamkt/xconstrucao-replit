@@ -66,7 +66,7 @@ export default function NovaObraPage() {
   }
 
   const inputClass = 'rounded-xl border-gray-200 dark:border-gray-700 focus:ring-primary/20';
-  const cardClass = 'bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800';
+  const cardClass = 'bg-white dark:bg-gray-900 rounded-2xl p-6 overflow-hidden luminous-section';
 
   return (
     <div className="p-10 flex flex-col gap-10" data-testid="nova-obra-page">

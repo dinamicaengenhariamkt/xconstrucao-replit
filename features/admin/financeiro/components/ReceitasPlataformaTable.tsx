@@ -10,9 +10,22 @@ const tipoIconMap: Record<ReceitaTipo, React.ElementType> = {
   outros: RiToolsLine,
 };
 
-export function ReceitasPlataformaTable({ receitas, total }: ReceitasPlataformaTableProps) {
+interface ReceitasPlataformaTableExtendedProps extends ReceitasPlataformaTableProps {
+  luminous?: boolean;
+}
+
+export function ReceitasPlataformaTable({
+  receitas,
+  total,
+  luminous = false,
+}: ReceitasPlataformaTableExtendedProps) {
   return (
-    <Card className="border-border-light dark:border-gray-800 overflow-hidden">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800 overflow-hidden',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="border-b border-gray-100 dark:border-gray-800">
         <div className="flex justify-between items-center">
           <div>

@@ -64,5 +64,8 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
     },
   ];
 
-  return <StatsGrid stats={stats} />;
+  // Ativa o efeito luminoso em todos os KPIs do financeiro admin.
+  const luminousStats = stats.map((s) => ({ ...s, luminous: true }));
+
+  return <StatsGrid stats={luminousStats} />;
 }

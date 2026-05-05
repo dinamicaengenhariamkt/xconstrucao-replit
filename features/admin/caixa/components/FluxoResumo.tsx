@@ -9,13 +9,14 @@ import type { CaixaPeriodo } from '../types';
 
 interface FluxoResumoProps {
   periodo: CaixaPeriodo;
+  luminous?: boolean;
 }
 
-export function FluxoResumo({ periodo }: FluxoResumoProps) {
+export function FluxoResumo({ periodo, luminous = false }: FluxoResumoProps) {
   const items = mockFluxoResumoByPeriodo[periodo];
 
   return (
-    <Card>
+    <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
       <CardContent className="p-6">
         <motion.div
           className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"

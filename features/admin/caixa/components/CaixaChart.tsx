@@ -13,6 +13,7 @@ import {
   type TooltipProps,
 } from 'recharts';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import { formatCompactCurrency, formatCurrency } from '@features/admin/financeiro/utils';
 import { ADMIN_DASHBOARD_COLORS } from '@features/admin/financeiro/constants';
 import { useCaixaChartData } from '../hooks/use-caixa';
@@ -38,15 +39,16 @@ function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) 
 
 interface CaixaChartProps {
   periodo: CaixaPeriodo;
+  luminous?: boolean;
 }
 
-export function CaixaChart({ periodo }: CaixaChartProps) {
+export function CaixaChart({ periodo, luminous = false }: CaixaChartProps) {
   const { data: chartData } = useCaixaChartData(periodo);
 
   if (!chartData) return null;
 
   return (
-    <Card>
+    <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
       <CardHeader className="pb-2">
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Saldo de caixa no tempo

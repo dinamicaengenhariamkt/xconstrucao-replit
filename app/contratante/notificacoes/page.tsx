@@ -5,5 +5,5 @@ import { useContratanteNotifications } from '@features/contratante/notifications
 
 export default function NotificacoesPage() {
   const state = useContratanteNotifications();
-  return <NotificationsListView {...state} />;
+  return <NotificationsListView {...state} luminous />;
 }

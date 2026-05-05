@@ -415,6 +415,7 @@ export default function AdminAnunciosPage() {
               icon={card.icon}
               iconBgColor={card.iconBgColor}
               badge={card.badge}
+              luminous
             />
           </motion.div>
         ))}
@@ -531,7 +532,7 @@ export default function AdminAnunciosPage() {
       </div>
 
       {/* Tabela de campanhas */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden luminous-section border-transparent shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -732,7 +733,7 @@ export default function AdminAnunciosPage() {
         )}
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden luminous-section border-transparent shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

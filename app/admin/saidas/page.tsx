@@ -462,16 +462,16 @@ export default function AdminSaidasPage() {
             key={kpiCard.label}
             variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
           >
-            <StatsCard {...kpiCard} />
+            <StatsCard {...kpiCard} luminous />
           </motion.div>
         ))}
       </motion.div>
 
       {/* ─── BLOCO 4: Gráfico ─── */}
-      <SaidaChart data={chartData?.chart} insights={chartData?.insights} />
+      <SaidaChart data={chartData?.chart} insights={chartData?.insights} luminous />
 
       {/* ─── BLOCO 5: Tabela de Lançamentos ─── */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden luminous-section">
         <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 space-y-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Lançamentos</h2>

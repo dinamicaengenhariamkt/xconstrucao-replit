@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { PhaseDistributionChartProps, PhaseDistributionChartTooltipProps } from '../types';
 
 /**
@@ -37,10 +38,15 @@ function CustomTooltip({ active, payload }: PhaseDistributionChartTooltipProps) 
   );
 }
 
+interface PhaseDistributionChartExtendedProps extends PhaseDistributionChartProps {
+  luminous?: boolean;
+}
+
 export function PhaseDistributionChart({
   data,
   totalObras = 12,
-}: PhaseDistributionChartProps) {
+  luminous = false,
+}: PhaseDistributionChartExtendedProps) {
   const router = useRouter();
 
   const handleSliceClick = (entry: { name: string }) => {
@@ -48,7 +54,12 @@ export function PhaseDistributionChart({
   };
 
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader>
         <CardTitle className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Distribuição por Fase

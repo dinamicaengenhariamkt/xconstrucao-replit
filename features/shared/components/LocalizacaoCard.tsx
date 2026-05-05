@@ -13,16 +13,24 @@ interface Localizacao {
 
 interface LocalizacaoCardProps {
   localizacao: Localizacao;
+  luminous?: boolean;
 }
 
-export function LocalizacaoCard({ localizacao }: LocalizacaoCardProps) {
+export function LocalizacaoCard({ localizacao, luminous = false }: LocalizacaoCardProps) {
   const handleOpenMaps = () => {
     const q = encodeURIComponent(`${localizacao.rua} ${localizacao.bairro} ${localizacao.cidade} ${localizacao.estado}`);
     window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+    <div
+      className={cn(
+        'bg-white dark:bg-gray-900 rounded-2xl overflow-hidden',
+        luminous
+          ? 'luminous-section'
+          : 'border border-gray-100 dark:border-gray-800 shadow-sm',
+      )}
+    >
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
           <IconLocationOn className="text-primary" />

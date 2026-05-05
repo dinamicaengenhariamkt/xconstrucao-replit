@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { cn } from '@shared/lib/utils';
 import type { SaidaChartPoint, SaidaInsight } from '../types';
 import { formatCurrencyCompact, formatCurrency } from '@shared/lib/formatters';
 
@@ -18,9 +19,10 @@ const COLORS = {
 interface SaidaChartProps {
   data?: SaidaChartPoint[];
   insights?: SaidaInsight;
+  luminous?: boolean;
 }
 
-export function SaidaChart({ data = [], insights }: SaidaChartProps) {
+export function SaidaChart({ data = [], insights, luminous = false }: SaidaChartProps) {
   if (data.length === 0) return null;
 
   const maxTotal = Math.max(
@@ -48,7 +50,7 @@ export function SaidaChart({ data = [], insights }: SaidaChartProps) {
   });
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={cn('overflow-hidden', luminous && 'luminous-section border-transparent shadow-none')}>
       <CardHeader className="pb-0">
         <div className="flex justify-between items-center">
           <div>

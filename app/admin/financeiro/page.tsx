@@ -69,24 +69,25 @@ export default function AdminFinanceiroPage() {
       <StatsGridContainer data={mockStatsByPeriodo[periodo]} />
 
       {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) */}
-      <AdoptionMetricsSection metrics={mockAdoptionMetrics} />
+      <AdoptionMetricsSection metrics={mockAdoptionMetrics} luminous />
 
       {/* Bloco 2.45: Satisfação dos usuários (NPS + CSAT) */}
-      <SatisfactionMetricsSection metrics={mockSatisfactionMetrics} />
+      <SatisfactionMetricsSection metrics={mockSatisfactionMetrics} luminous />
 
       {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <HealthSummary
           summary={healthSummary}
           hrefFor={(status) => buildObrasHealthUrl('/admin/obras', status)}
+          luminous
         />
-        <ProfitSummary summary={profitSummary} />
+        <ProfitSummary summary={profitSummary} luminous />
       </div>
 
       {/* Bloco 3: Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <PaymentsEvolutionChart data={getPaymentEvolutionByPeriodo(periodo)} />
-        <StatusDistributionChart data={mockStatusDistributionData} totalObras={42} />
+        <PaymentsEvolutionChart data={getPaymentEvolutionByPeriodo(periodo)} luminous />
+        <StatusDistributionChart data={mockStatusDistributionData} totalObras={42} luminous />
       </div>
 
       {/* Bloco 4: Tabela - Obras com atenção financeira */}
@@ -97,17 +98,17 @@ export default function AdminFinanceiroPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Obras que requerem acompanhamento de pagamentos ou medições
         </p>
-        <ObrasAtencaoTable obras={mockObrasAtencao} />
+        <ObrasAtencaoTable obras={mockObrasAtencao} luminous />
       </div>
 
       {/* Bloco 5: Mini tabelas lado a lado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <TopClientesTable clientes={mockTopClientes} />
-        <TopEmpreiteirasTable empreiteiras={mockTopEmpreiteiras} />
+        <TopClientesTable clientes={mockTopClientes} luminous />
+        <TopEmpreiteirasTable empreiteiras={mockTopEmpreiteiras} luminous />
       </div>
 
       {/* Bloco 6: Resumo de receitas */}
-      <ReceitasPlataformaTable receitas={mockReceitasPlataforma} total={mockTotalReceitas} />
+      <ReceitasPlataformaTable receitas={mockReceitasPlataforma} total={mockTotalReceitas} luminous />
 
     </div>
   );
