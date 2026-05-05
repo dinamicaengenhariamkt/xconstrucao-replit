@@ -23,6 +23,7 @@ import {
   CardDescription,
 } from '@shared/components/ui/card';
 import { formatCurrencyCompact } from '@shared/lib/formatters';
+import { cn } from '@shared/lib/utils';
 import type { MedicaoEmpreiteiro } from '../types';
 
 const MONTH_LABELS: Record<string, string> = {
@@ -38,9 +39,11 @@ const chartConfig = {
 
 interface RecebimentosEvolutionChartProps {
   medicoes: MedicaoEmpreiteiro[];
+  /** Aplica a borda luminosa de seção. */
+  luminous?: boolean;
 }
 
-export function RecebimentosEvolutionChart({ medicoes }: RecebimentosEvolutionChartProps) {
+export function RecebimentosEvolutionChart({ medicoes, luminous = false }: RecebimentosEvolutionChartProps) {
   const chartData = useMemo(() => {
     const byMonth: Record<string, { recebido: number; aguardando: number }> = {};
 
@@ -71,7 +74,12 @@ export function RecebimentosEvolutionChart({ medicoes }: RecebimentosEvolutionCh
 
   if (chartData.length === 0) {
     return (
-      <Card className="border-border-light dark:border-gray-800">
+      <Card
+        className={cn(
+          !luminous && 'border-border-light dark:border-gray-800',
+          luminous && 'luminous-section border-transparent shadow-none',
+        )}
+      >
         <CardHeader className="py-4">
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
             Evolução de Recebimentos
@@ -85,7 +93,12 @@ export function RecebimentosEvolutionChart({ medicoes }: RecebimentosEvolutionCh
   }
 
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        !luminous && 'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 py-4 space-y-0">
         <div>
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">

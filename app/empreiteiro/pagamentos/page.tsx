@@ -189,6 +189,7 @@ export default function PagamentosEmpreteiroPage() {
           icon={RiMoneyDollarCircleLine}
           iconBgColor="bg-primary/10 text-primary"
           testId="kpi-total-contratado"
+          luminous
         />
         <StatsCard
           label="Total Recebido"
@@ -198,6 +199,7 @@ export default function PagamentosEmpreteiroPage() {
           badge={{ label: `${progressoRecebido}% do total`, variant: 'success' }}
           href="/empreiteiro/pagamentos?status=recebido"
           testId="kpi-total-recebido"
+          luminous
         />
         <StatsCard
           label="Aguardando Aprovação"
@@ -207,6 +209,7 @@ export default function PagamentosEmpreteiroPage() {
           badge={{ label: 'Em análise', variant: 'amber' }}
           href="/empreiteiro/pagamentos?status=aguardando_aprovacao"
           testId="kpi-aguardando-aprovacao"
+          luminous
         />
         <StatsCard
           label="A Liberar"
@@ -215,6 +218,7 @@ export default function PagamentosEmpreteiroPage() {
           iconBgColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30"
           href="/empreiteiro/pagamentos?status=pendente"
           testId="kpi-a-liberar"
+          luminous
         />
         <StatsCard
           label="Prazo Médio Recebimento"
@@ -230,6 +234,7 @@ export default function PagamentosEmpreteiroPage() {
               : undefined
           }
           testId="kpi-prazo-medio"
+          luminous
         />
         <StatsCard
           label="Taxa de Rejeição"
@@ -251,12 +256,13 @@ export default function PagamentosEmpreteiroPage() {
           }
           href="/empreiteiro/pagamentos?status=rejeitado"
           testId="kpi-taxa-rejeicao"
+          luminous
         />
       </div>
 
-      {kpi && <RecebimentosBreakdown kpi={kpi} />}
+      {kpi && <RecebimentosBreakdown kpi={kpi} luminous />}
 
-      {medicoes && <RecebimentosEvolutionChart medicoes={medicoes} />}
+      {medicoes && <RecebimentosEvolutionChart medicoes={medicoes} luminous />}
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -364,7 +370,7 @@ export default function PagamentosEmpreteiroPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden luminous-section">
         {paginatedMedicoes.length === 0 ? (
           <div className="text-center py-16">
             <RiMoneyDollarCircleLine className="w-12 h-12 text-gray-200 dark:text-gray-700 mx-auto mb-3" />

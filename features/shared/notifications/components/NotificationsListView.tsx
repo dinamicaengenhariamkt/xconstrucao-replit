@@ -38,6 +38,8 @@ interface NotificationsListViewProps<T extends BaseNotification>
   title?: string;
   subtitleEmpty?: string;
   footerHint?: string;
+  /** Aplica a borda luminosa de seção no container da lista. */
+  luminous?: boolean;
 }
 
 export function NotificationsListView<T extends BaseNotification>({
@@ -63,6 +65,7 @@ export function NotificationsListView<T extends BaseNotification>({
   title = 'Notificações',
   subtitleEmpty = 'Tudo em dia',
   footerHint = 'As notificações são mantidas por 30 dias',
+  luminous = false,
 }: NotificationsListViewProps<T>) {
   const tipoOptions = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -198,7 +201,13 @@ export function NotificationsListView<T extends BaseNotification>({
       </div>
 
       {/* Lista */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div
+        className={cn(
+          'bg-white dark:bg-gray-900 rounded-2xl overflow-hidden',
+          luminous && 'luminous-section',
+          !luminous && 'border border-gray-100 dark:border-gray-800 shadow-sm',
+        )}
+      >
         {notifications.length === 0 ? (
           <div className="py-16 text-center">
             <IconNotificationsOff className="text-4xl text-gray-300 dark:text-gray-600 block mb-3" />

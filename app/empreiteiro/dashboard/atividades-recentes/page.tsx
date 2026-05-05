@@ -272,7 +272,7 @@ export default function AtividadesRecentesPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden luminous-section">
         {isLoading ? (
           <div className="p-6 space-y-4 animate-pulse">
             {[...Array(6)].map((_, i) => (

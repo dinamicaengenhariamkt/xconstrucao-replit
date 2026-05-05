@@ -5,5 +5,5 @@ import { useEmpreiteiroNotifications } from '@features/empreiteiro/notifications
 
 export default function NotificacoesPage() {
   const state = useEmpreiteiroNotifications();
-  return <NotificationsListView {...state} />;
+  return <NotificationsListView {...state} luminous />;
 }

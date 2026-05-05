@@ -7,6 +7,8 @@ import type { PagamentosEmpreiteiroKPI } from '../types';
 
 interface RecebimentosBreakdownProps {
   kpi: PagamentosEmpreiteiroKPI;
+  /** Aplica a borda luminosa de seção. */
+  luminous?: boolean;
 }
 
 interface Segment {
@@ -16,7 +18,7 @@ interface Segment {
   dotClass: string;
 }
 
-export function RecebimentosBreakdown({ kpi }: RecebimentosBreakdownProps) {
+export function RecebimentosBreakdown({ kpi, luminous = false }: RecebimentosBreakdownProps) {
   const total = kpi.totalContratado;
   const ocupado = kpi.totalRecebido + kpi.aguardandoAprovacao + kpi.aLiberar + kpi.rejeitado;
   const naoIniciado = Math.max(0, total - ocupado);
@@ -33,7 +35,12 @@ export function RecebimentosBreakdown({ kpi }: RecebimentosBreakdownProps) {
   const recebidoPct = Math.round(pct(kpi.totalRecebido));
 
   return (
-    <Card className="border-border-light dark:border-gray-800">
+    <Card
+      className={cn(
+        !luminous && 'border-border-light dark:border-gray-800',
+        luminous && 'luminous-section border-transparent shadow-none',
+      )}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 py-4 space-y-0">
         <div>
           <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
