@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ContratanteLayout } from '@features/contratante/components/ContratanteLayout';
+import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
 
 export default function ContratanteRootLayout({
   children,
@@ -40,5 +41,10 @@ export default function ContratanteRootLayout({
     return null;
   }
 
-  return <ContratanteLayout>{children}</ContratanteLayout>;
+  return (
+    <ContratanteLayout>
+      <EmailVerificationBanner />
+      {children}
+    </ContratanteLayout>
+  );
 }

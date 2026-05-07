@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storage } from "@/server/storage";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@/server/auth";
+import { requireVerifiedUser } from "@features/auth/api/auth-utils";
 import { insertClienteSchema } from "@shared/db/schema";
 
 export async function GET(request: NextRequest) {
@@ -22,13 +23,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
-    const payload = token ? verifyAccessToken(token) : null;
-
-    if (!payload?.sub) {
-      return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
-    }
-    const userId = payload.sub;
+    const guard = await requireVerifiedUser(request);
+    if (guard.error) return guard.error;
 
     const body = await request.json();
     const parsed = insertClienteSchema.safeParse(body);

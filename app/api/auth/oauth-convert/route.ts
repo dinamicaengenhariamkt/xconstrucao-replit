@@ -5,6 +5,8 @@ import {
   createRefreshToken
 } from "@features/auth/api/auth-service";
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { getUser, ensureProfileRow } from "@features/auth/api/auth-storage";
+import { storage } from "@/server/storage";
 
 /**
  * Endpoint para converter sessão NextAuth (OAuth) em tokens JWT custom
@@ -24,21 +26,43 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    const user = session.user;
+    const sessionUser = session.user;
+
+    // Buscar user fresco do banco para garantir role/email atualizados
+    // (DrizzleAdapter pode ter persistido com role default, vamos validar)
+    const dbUser = await getUser(sessionUser.id as string);
+    if (!dbUser) {
+      const response = NextResponse.json(
+        { error: "Usuário não encontrado" },
+        { status: 404 }
+      );
+      setNoCacheHeaders(response);
+      return response;
+    }
+
+    // Garante email verificado (OAuth Google) e row de domínio
+    if (!dbUser.emailVerified) {
+      await storage.updateUserEmailVerified(dbUser.id, new Date());
+    }
+    try {
+      await ensureProfileRow(dbUser);
+    } catch (profileErr) {
+      console.error("Falha ao garantir profile row no oauth-convert:", profileErr);
+    }
 
     // Preparar dados do usuário para JWT
     const userData = {
-      id: user.id as string,
-      email: user.email as string,
-      role: user.role as string,
-      name: user.name as string,
-      image: user.image,
-      avatarUrl: user.image, // OAuth usa image
+      id: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      name: dbUser.name,
+      image: dbUser.image,
+      avatarUrl: dbUser.avatarUrl ?? dbUser.image,
     };
 
     // Gerar tokens JWT
     const accessToken = createAccessToken(userData);
-    const refreshToken = createRefreshToken(user.id as string, true); // OAuth = remember me true (30 dias)
+    const refreshToken = createRefreshToken(dbUser.id, true); // OAuth = remember me true (30 dias)
 
     // Criar resposta
     const response = NextResponse.json({

@@ -22,6 +22,7 @@ export const users = pgTable("users", {
 
 export const clientes = pgTable("clientes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }).unique(),
   nome: text("nome").notNull(),
   tipo: text("tipo").notNull().default("Pessoa Jurídica"),
   email: text("email").notNull(),
@@ -34,6 +35,7 @@ export const clientes = pgTable("clientes", {
 
 export const empreiteiras = pgTable("empreiteiras", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }).unique(),
   nome: text("nome").notNull(),
   responsavel: text("responsavel").notNull(),
   email: text("email").notNull(),

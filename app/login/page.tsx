@@ -117,7 +117,13 @@ export default function LoginPage() {
             <div className="space-y-3 mb-6">
               <button
                 type="button"
-                onClick={() => signIn("google", { callbackUrl: "/auth/oauth-success" })}
+                onClick={() => {
+                  // Mesma intenção de persona quando o usuário usa Google a partir
+                  // da tela de login (se for primeiro acesso, vira o perfil escolhido)
+                  const persona = perfil === "empreiteiro" ? "empreiteiro" : "contratante";
+                  document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
+                  signIn("google", { callbackUrl: "/auth/oauth-success" });
+                }}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
                 data-testid="button-google-login"
               >

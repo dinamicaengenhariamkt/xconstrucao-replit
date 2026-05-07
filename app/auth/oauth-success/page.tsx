@@ -39,8 +39,25 @@ export default function OAuthSuccessPage() {
         await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
-      // Sucesso! Redirecionar para dashboard
-      router.replace("/dashboard");
+      // Sucesso! Buscar o user para descobrir a role correta e redirecionar
+      const meRes = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (meRes.ok) {
+        const userData = await meRes.json();
+        const role = userData?.role || userData?.user?.role;
+        const target =
+          role === "empreiteiro"
+            ? "/empreiteiro/dashboard"
+            : role === "admin"
+              ? "/admin/financeiro"
+              : "/contratante/dashboard";
+        router.replace(target);
+      } else {
+        router.replace("/contratante/dashboard");
+      }
     } catch (error) {
       console.error("Erro no callback OAuth:", error);
       setError("Erro ao processar login. Tente novamente.");

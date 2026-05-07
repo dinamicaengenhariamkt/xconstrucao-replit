@@ -4,6 +4,7 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { EmpreiteiroLayout } from '@features/empreiteiro/components/EmpreiteiroLayout';
+import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
 
 export default function EmpreiteiroLayoutWrapper({
   children,
@@ -33,5 +34,10 @@ export default function EmpreiteiroLayoutWrapper({
     return null;
   }
 
-  return <EmpreiteiroLayout>{children}</EmpreiteiroLayout>;
+  return (
+    <EmpreiteiroLayout>
+      <EmailVerificationBanner />
+      {children}
+    </EmpreiteiroLayout>
+  );
 }

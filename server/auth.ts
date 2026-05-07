@@ -1,3 +1,27 @@
+/**
+ * ============================================================================
+ * AUTENTICAÇÃO CANÔNICA — XConstrução
+ * ============================================================================
+ *
+ * Existem DOIS sistemas de auth no projeto e isso é intencional:
+ *
+ * 1. **CANÔNICO (este arquivo + features/auth/)**: JWT custom assinado com
+ *    HMAC-SHA256, armazenado em cookies httpOnly `access_token` (15min) e
+ *    `refresh_token` (7d ou 30d se rememberMe). É o que TODA rota de API
+ *    interna deve consultar via `verifyAccessToken` ou `requireVerifiedUser`.
+ *
+ * 2. **NextAuth (`auth.ts` + `app/api/auth/[...nextauth]`)**: usado APENAS
+ *    para o handshake do Google OAuth. Após o callback, a página
+ *    `/auth/oauth-success` chama `POST /api/auth/oauth-convert` que troca a
+ *    sessão NextAuth pelos cookies JWT acima. NextAuth não deve ser fonte de
+ *    verdade fora do callback OAuth.
+ *
+ * Mexer nessa camada exige cuidado com:
+ * - SESSION_SECRET (precisa ser estável em produção)
+ * - cookies SameSite=lax + secure (Replit só serve via HTTPS)
+ * - propagação do email verificado em ambos os caminhos
+ * ============================================================================
+ */
 import { createHmac, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
 

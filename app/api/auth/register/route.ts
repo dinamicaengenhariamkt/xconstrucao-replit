@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, getUserByUsername, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { getUserByEmail, getUserByUsername, createUserWithProfile } from "@features/auth/api/auth-storage";
 import { hashPassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
 import { registerSchema } from "@features/auth/schemas";
 import { sendVerificationEmail } from "@shared/lib/email";
@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
 
     const hashed = await hashPassword(password);
 
-    // Criar usuário com emailVerified = null
-    const user = await createUser({
+    // Criar usuário + row de domínio (clientes/empreiteiras) numa só operação
+    const user = await createUserWithProfile({
       name,
       email,
       username,
