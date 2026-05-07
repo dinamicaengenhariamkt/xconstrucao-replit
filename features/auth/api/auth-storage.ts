@@ -80,10 +80,63 @@ export async function ensureProfileRow(user: User): Promise<void> {
 
 /**
  * Cria o usuário e, se for contratante/empreiteiro, também a row de domínio
- * vinculada (clientes / empreiteiras) com defaults sensatos.
+ * vinculada (clientes / empreiteiras) com defaults sensatos. Atômico:
+ * se a criação do profile falhar, o user também é descartado.
  */
 export async function createUserWithProfile(data: InsertUser): Promise<User> {
-  const user = await createUser(data);
-  await ensureProfileRow(user);
-  return user;
+  return await db.transaction(async (tx) => {
+    const [user] = await tx.insert(users).values(data).returning();
+
+    if (user.role === "contratante") {
+      await tx
+        .insert(clientes)
+        .values({
+          userId: user.id,
+          nome: user.name,
+          email: user.email,
+          telefone: user.phone ?? null,
+          tipo: "Pessoa Física",
+          status: "aprovacao",
+        })
+        .onConflictDoNothing({ target: clientes.userId });
+    } else if (user.role === "empreiteiro") {
+      await tx
+        .insert(empreiteiras)
+        .values({
+          userId: user.id,
+          nome: user.name,
+          responsavel: user.name,
+          email: user.email,
+          telefone: user.phone ?? null,
+          status: "aprovacao",
+        })
+        .onConflictDoNothing({ target: empreiteiras.userId });
+    }
+
+    return user;
+  });
+}
+
+/**
+ * Verifica se o usuário OAuth recém-logado já tem alguma row de domínio.
+ * Usado pelo oauth-convert para detectar "primeiro login" e aplicar a
+ * persona escolhida na landing antes de criar a row errada.
+ */
+export async function hasAnyProfileRow(userId: string): Promise<boolean> {
+  const [c] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, userId));
+  if (c) return true;
+  const [e] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, userId));
+  return Boolean(e);
+}
+
+/**
+ * Atualiza a role do usuário. Usado no oauth-convert quando a persona
+ * escolhida na landing diverge da role default persistida pelo DrizzleAdapter.
+ */
+export async function updateUserRole(
+  userId: string,
+  role: "admin" | "contratante" | "empreiteiro"
+): Promise<User | undefined> {
+  const [updated] = await db.update(users).set({ role }).where(eq(users.id, userId)).returning();
+  return updated;
 }

@@ -5,8 +5,15 @@ import {
   createRefreshToken
 } from "@features/auth/api/auth-service";
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { getUser, ensureProfileRow } from "@features/auth/api/auth-storage";
+import {
+  getUser,
+  ensureProfileRow,
+  hasAnyProfileRow,
+  updateUserRole,
+} from "@features/auth/api/auth-storage";
 import { storage } from "@/server/storage";
+
+const VALID_PERSONAS = new Set(["contratante", "empreiteiro"]);
 
 /**
  * Endpoint para converter sessão NextAuth (OAuth) em tokens JWT custom
@@ -30,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar user fresco do banco para garantir role/email atualizados
     // (DrizzleAdapter pode ter persistido com role default, vamos validar)
-    const dbUser = await getUser(sessionUser.id as string);
+    let dbUser = await getUser(sessionUser.id as string);
     if (!dbUser) {
       const response = NextResponse.json(
         { error: "Usuário não encontrado" },
@@ -38,6 +45,27 @@ export async function POST(request: NextRequest) {
       );
       setNoCacheHeaders(response);
       return response;
+    }
+
+    // Aplicar persona escolhida na landing: se for um primeiro login
+    // (sem nenhuma row de domínio ainda) e veio cookie x_signup_persona
+    // diferente da role default persistida pelo adapter, atualiza a role
+    // ANTES de criar o profile row para evitar criar a row errada.
+    const personaCookie = request.cookies.get("x_signup_persona")?.value;
+    if (
+      personaCookie &&
+      VALID_PERSONAS.has(personaCookie) &&
+      personaCookie !== dbUser.role &&
+      dbUser.role !== "admin"
+    ) {
+      const isFirstLogin = !(await hasAnyProfileRow(dbUser.id));
+      if (isFirstLogin) {
+        const updated = await updateUserRole(
+          dbUser.id,
+          personaCookie as "contratante" | "empreiteiro"
+        );
+        if (updated) dbUser = updated;
+      }
     }
 
     // Garante email verificado (OAuth Google) e row de domínio
@@ -73,6 +101,9 @@ export async function POST(request: NextRequest) {
     // Configurar headers de segurança e cookies
     setNoCacheHeaders(response);
     createAuthCookies(response, accessToken, refreshToken, true); // OAuth sempre 30 dias
+
+    // Limpar cookie de persona — já foi consumido
+    response.cookies.set("x_signup_persona", "", { path: "/", maxAge: 0 });
 
     return response;
 
