@@ -72,10 +72,22 @@ export async function POST(request: NextRequest) {
     if (!dbUser.emailVerified) {
       await storage.updateUserEmailVerified(dbUser.id, new Date());
     }
+    // Bloqueante: sem profile row vinculada o usuário não consegue usar
+    // as jornadas seguintes (criar obra, candidatar-se). Preferimos abortar
+    // a conversão a entregar uma sessão em estado inconsistente.
     try {
       await ensureProfileRow(dbUser);
     } catch (profileErr) {
       console.error("Falha ao garantir profile row no oauth-convert:", profileErr);
+      const response = NextResponse.json(
+        {
+          error: "PROFILE_PROVISION_FAILED",
+          message: "Não foi possível concluir a configuração da sua conta. Tente novamente.",
+        },
+        { status: 500 }
+      );
+      setNoCacheHeaders(response);
+      return response;
     }
 
     // Preparar dados do usuário para JWT
