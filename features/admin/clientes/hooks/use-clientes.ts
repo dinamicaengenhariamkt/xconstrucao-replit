@@ -229,6 +229,33 @@ export function useBloquearCliente() {
   });
 }
 
+export function useAprovarCliente() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, decisao }: { id: string; decisao: 'aprovar' | 'reprovar' }) => {
+      const res = await fetch(`/api/admin/clientes/${id}/aprovacao`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decisao }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Erro ao processar curadoria do cliente');
+      return res.json();
+    },
+    onSuccess: (_data, { id, decisao }) => {
+      const novoStatus: AdminCliente['status'] = decisao === 'aprovar' ? 'ativo' : 'inativo';
+      queryClient.setQueryData<AdminCliente | undefined>(
+        ['admin', 'clientes', id],
+        (old) => (old ? { ...old, status: novoStatus } : old),
+      );
+      queryClient.setQueryData<AdminCliente[] | undefined>(
+        ['admin', 'clientes'],
+        (old) => old?.map((c) => (c.id === id ? { ...c, status: novoStatus } : c)),
+      );
+    },
+  });
+}
+
 export function useResetarSenhaCliente() {
   return useMutation({
     mutationFn: async (_id: string) => {

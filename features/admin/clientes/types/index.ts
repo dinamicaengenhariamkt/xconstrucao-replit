@@ -1,6 +1,6 @@
 import type { HistoricoBloqueio } from '@features/admin/shared/types/historico-bloqueio';
 
-export type ClienteStatus = 'ativo' | 'inativo' | 'pendente';
+export type ClienteStatus = 'ativo' | 'inativo' | 'pendente' | 'aprovacao';
 
 export type { HistoricoBloqueio };
 

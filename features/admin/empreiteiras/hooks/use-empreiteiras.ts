@@ -189,6 +189,33 @@ export function useBloquearEmpreiteira() {
   });
 }
 
+export function useAprovarEmpreiteira() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, decisao }: { id: string; decisao: 'aprovar' | 'reprovar' }) => {
+      const res = await fetch(`/api/admin/empreiteiras/${id}/aprovacao`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decisao }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Erro ao processar curadoria da empreiteira');
+      return res.json();
+    },
+    onSuccess: (_data, { id, decisao }) => {
+      const novoStatus: AdminEmpreiteira['status'] = decisao === 'aprovar' ? 'ativo' : 'inativo';
+      queryClient.setQueryData<AdminEmpreiteira | undefined>(
+        ['admin', 'empreiteiras', id],
+        (old) => (old ? { ...old, status: novoStatus } : old),
+      );
+      queryClient.setQueryData<AdminEmpreiteira[] | undefined>(
+        ['admin', 'empreiteiras'],
+        (old) => old?.map((e) => (e.id === id ? { ...e, status: novoStatus } : e)),
+      );
+    },
+  });
+}
+
 export function useResetarAcessoEmpreiteira() {
   return useMutation({
     mutationFn: async (_id: string) => {

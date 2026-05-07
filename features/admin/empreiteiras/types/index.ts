@@ -1,6 +1,16 @@
 import type { HistoricoBloqueio } from '@features/admin/shared/types/historico-bloqueio';
 
-export type EmpreiteiraStatus = 'ativa' | 'inativa' | 'suspensa' | 'pendente';
+// Vocabulário canônico do banco usa 'ativo'/'inativo'/'aprovacao';
+// 'ativa'/'inativa'/'suspensa'/'pendente' permanecem como aliases legados
+// usados nos mocks da admin UI.
+export type EmpreiteiraStatus =
+  | 'ativo'
+  | 'inativo'
+  | 'aprovacao'
+  | 'ativa'
+  | 'inativa'
+  | 'suspensa'
+  | 'pendente';
 
 export type { HistoricoBloqueio };
 

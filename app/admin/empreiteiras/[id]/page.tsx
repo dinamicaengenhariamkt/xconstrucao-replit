@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -18,7 +18,9 @@ import { HistoricoBloqueiosTimeline } from '@features/admin/shared/components/Hi
 import {
   useAdminEmpreiteira,
   useAdminEmpreiteiraObras,
+  useAprovarEmpreiteira,
 } from '@features/admin/empreiteiras/hooks/use-empreiteiras';
+import { useToast } from '@shared/hooks/use-toast';
 import {
   RiArrowLeftLine,
   RiArrowRightSLine,
@@ -39,6 +41,8 @@ import {
   RiGlobalLine,
   RiMedalLine,
   RiUserStarLine,
+  RiCheckLine,
+  RiCloseCircleLine,
 } from 'react-icons/ri';
 import type { EmpreiteiraStatus } from '@features/admin/empreiteiras/types';
 import { formatCurrency, formatDate, getInitials } from '@shared/lib/formatters';
@@ -51,7 +55,17 @@ const STATUS_CONFIG: Record<EmpreiteiraStatus, { label: string; className: strin
     className:
       'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
   },
+  ativo: {
+    label: 'Ativa',
+    className:
+      'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+  },
   inativa: {
+    label: 'Inativa',
+    className:
+      'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+  },
+  inativo: {
     label: 'Inativa',
     className:
       'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
@@ -63,6 +77,11 @@ const STATUS_CONFIG: Record<EmpreiteiraStatus, { label: string; className: strin
   },
   pendente: {
     label: 'Pendente',
+    className:
+      'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+  },
+  aprovacao: {
+    label: 'Aguardando curadoria',
     className:
       'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
   },
@@ -98,6 +117,30 @@ export default function AdminEmpreiteiraDetailPage() {
   const [editarOpen, setEditarOpen] = useState(false);
   const [resetarOpen, setResetarOpen] = useState(false);
   const [bloquearOpen, setBloquearOpen] = useState(false);
+  const { toast } = useToast();
+  const { mutateAsync: aprovarEmpreiteira, isPending: aprovando } = useAprovarEmpreiteira();
+
+  const handleCuradoria = useCallback(
+    async (decisao: 'aprovar' | 'reprovar') => {
+      try {
+        await aprovarEmpreiteira({ id, decisao });
+        toast({
+          title: decisao === 'aprovar' ? 'Empreiteira aprovada' : 'Empreiteira reprovada',
+          description:
+            decisao === 'aprovar'
+              ? 'A empreiteira agora está ativa na plataforma.'
+              : 'A empreiteira foi marcada como inativa.',
+        });
+      } catch {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível atualizar a curadoria.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [aprovarEmpreiteira, id, toast],
+  );
 
   const { data: empreiteira, isLoading: loadingEmpreiteira } = useAdminEmpreiteira(id);
   const { data: obras = [], isLoading: loadingObras } = useAdminEmpreiteiraObras(id);
@@ -277,6 +320,28 @@ export default function AdminEmpreiteiraDetailPage() {
 
             {/* Action buttons */}
             <div className="flex flex-wrap gap-3 lg:flex-shrink-0">
+              {(empreiteira.status === 'pendente' || empreiteira.status === 'aprovacao') && (
+                <>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40 disabled:opacity-50"
+                    onClick={() => handleCuradoria('aprovar')}
+                    disabled={aprovando}
+                    data-testid="button-aprovar-empreiteira"
+                  >
+                    <RiCheckLine className="w-4 h-4" />
+                    Aprovar
+                  </button>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40 disabled:opacity-50"
+                    onClick={() => handleCuradoria('reprovar')}
+                    disabled={aprovando}
+                    data-testid="button-reprovar-empreiteira"
+                  >
+                    <RiCloseCircleLine className="w-4 h-4" />
+                    Reprovar
+                  </button>
+                </>
+              )}
               <button
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                 onClick={() => setEditarOpen(true)}

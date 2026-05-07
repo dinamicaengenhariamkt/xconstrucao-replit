@@ -21,6 +21,22 @@ import {
 } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import {
+  usePerfilContratante,
+  useUpdatePerfilContratante,
+  fileToDataUrl,
+} from '@features/perfil/hooks/use-perfil';
+import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
+import { Skeleton } from '@shared/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
+import { RiUploadCloud2Line, RiCheckboxCircleFill, RiTimeLine as RiTimePending } from 'react-icons/ri';
+import { getInitials } from '@shared/lib/formatters';
+import {
   useContratanteTermosStore,
   VERSAO_ATUAL_TERMOS,
   VERSAO_ATUAL_PRIVACIDADE,
@@ -104,33 +120,105 @@ function SwitchRow({
 /* ─────────────────────────────────────────────
    SECTION: Perfil
 ───────────────────────────────────────────── */
+function PerfilStatusBanner({
+  perfilCompleto,
+  status,
+}: {
+  perfilCompleto: boolean;
+  status: 'ativo' | 'inativo' | 'aprovacao';
+}) {
+  if (status === 'ativo') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm" data-testid="banner-perfil-aprovado">
+        <RiCheckboxCircleFill className="w-4 h-4" />
+        Perfil aprovado pela curadoria.
+      </div>
+    );
+  }
+  if (status === 'inativo') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm" data-testid="banner-perfil-reprovado">
+        <RiAlertLine className="w-4 h-4" />
+        Conta inativa. Fale com o suporte.
+      </div>
+    );
+  }
+  if (perfilCompleto) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm" data-testid="banner-perfil-curadoria">
+        <RiTimePending className="w-4 h-4" />
+        Perfil completo. Aguardando curadoria do administrador.
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm" data-testid="banner-perfil-incompleto">
+      <RiAlertLine className="w-4 h-4" />
+      Complete seu perfil (incluindo endereço e foto) para liberar a curadoria.
+    </div>
+  );
+}
+
 function SecaoPerfil() {
-  const { user } = useAuth();
   const { toast } = useToast();
+  const { data: perfil, isLoading } = usePerfilContratante();
+  const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilContratante();
 
-  const [dados, setDados] = useState({
-    nome: user?.name ?? '',
-    email: user?.email ?? '',
-    telefone: '',
-  });
+  const [dados, setDados] = useState({ nome: '', telefone: '', cnpjCpf: '', tipo: 'Pessoa Física' });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const [senha, setSenha] = useState({
-    atual: '',
-    nova: '',
-    confirmar: '',
-  });
+  useEffect(() => {
+    if (perfil) {
+      setDados({
+        nome: perfil.nome ?? '',
+        telefone: perfil.telefone ?? '',
+        cnpjCpf: perfil.cnpjCpf ?? '',
+        tipo: perfil.tipo || 'Pessoa Física',
+      });
+      setAvatarUrl(perfil.avatarUrl ?? null);
+    }
+  }, [perfil]);
 
+  const [senha, setSenha] = useState({ atual: '', nova: '', confirmar: '' });
   const senhaError = senha.nova && senha.confirmar && senha.nova !== senha.confirmar;
   const senhaValida = senha.atual && senha.nova && senha.confirmar && !senhaError;
 
   const setDado = (key: keyof typeof dados) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDados((prev) => ({ ...prev, [key]: e.target.value }));
-
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleSaveDados = () => {
-    toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await fileToDataUrl(file);
+      setAvatarUrl(url);
+      await updatePerfil({ avatarUrl: url });
+      toast({ title: 'Foto atualizada', description: 'Sua foto de perfil foi salva.' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao enviar foto',
+        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveDados = async () => {
+    try {
+      await updatePerfil({
+        nome: dados.nome,
+        telefone: dados.telefone || null,
+        cnpjCpf: dados.cnpjCpf || null,
+        tipo: dados.tipo,
+      });
+      toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar.', variant: 'destructive' });
+    }
   };
 
   const handleAlterarSenha = () => {
@@ -139,33 +227,71 @@ function SecaoPerfil() {
     setSenha({ atual: '', nova: '', confirmar: '' });
   };
 
+  if (isLoading || !perfil) {
+    return <div className="flex flex-col gap-4"><Skeleton className="h-72 rounded-xl" /><Skeleton className="h-64 rounded-xl" /></div>;
+  }
+
+  const isPF = dados.tipo === 'Pessoa Física';
+
   return (
     <div className="flex flex-col gap-6">
+      <PerfilStatusBanner perfilCompleto={perfil.perfilCompleto} status={perfil.status} />
+
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
           <SectionTitle>Dados pessoais</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <FieldRow label="Nome completo">
-            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" />
+          {/* Avatar */}
+          <div className="flex items-center gap-5">
+            <Avatar className="h-20 w-20" data-testid="avatar-perfil-contratante">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={dados.nome || 'avatar'} />}
+              <AvatarFallback className="bg-primary text-white text-xl font-bold">
+                {getInitials(dados.nome || perfil.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 w-fit" data-testid="button-upload-avatar">
+                <RiUploadCloud2Line className="w-4 h-4" />
+                Enviar foto
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  data-testid="input-avatar-file"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">PNG ou JPG até 1.5 MB.</p>
+            </div>
+          </div>
+
+          <FieldRow label="Tipo de pessoa">
+            <Select value={dados.tipo} onValueChange={(v) => setDados((p) => ({ ...p, tipo: v }))}>
+              <SelectTrigger data-testid="select-perfil-tipo"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Pessoa Física">Pessoa Física</SelectItem>
+                <SelectItem value="Pessoa Jurídica">Pessoa Jurídica</SelectItem>
+              </SelectContent>
+            </Select>
           </FieldRow>
-          <FieldRow label="E-mail" description="Usado para login e comunicações da plataforma.">
-            <Input type="email" value={dados.email} onChange={setDado('email')} placeholder="seu@email.com" />
+          <FieldRow label="Nome completo">
+            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" data-testid="input-perfil-nome" />
+          </FieldRow>
+          <FieldRow label="E-mail" description="Usado para login. Contate o suporte para alterar.">
+            <Input type="email" value={perfil.email} disabled className="opacity-60 cursor-not-allowed" data-testid="input-perfil-email" />
           </FieldRow>
           <FieldRow label="Telefone" description="Número de contato para suporte e obras.">
-            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" />
+            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" data-testid="input-perfil-telefone" />
           </FieldRow>
-          <FieldRow label="Perfil" description="Definido pelo sistema. Contate o suporte para alterar.">
-            <Input value="Contratante" disabled className="opacity-60 cursor-not-allowed" />
+          <FieldRow label={isPF ? 'CPF' : 'CNPJ'}>
+            <Input value={dados.cnpjCpf} onChange={setDado('cnpjCpf')} placeholder={isPF ? '000.000.000-00' : '00.000.000/0000-00'} data-testid="input-perfil-cpfcnpj" />
           </FieldRow>
           <div className="flex justify-end">
-            <button
-              onClick={handleSaveDados}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-            >
-              <RiSave3Line className="w-4 h-4" />
-              Salvar dados
-            </button>
+            <Button onClick={handleSaveDados} disabled={saving} data-testid="button-salvar-perfil">
+              <RiSave3Line className="w-4 h-4 mr-2" />
+              {saving ? 'Salvando...' : 'Salvar dados'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -223,108 +349,96 @@ function SecaoPerfil() {
 }
 
 /* ─────────────────────────────────────────────
-   SECTION: Empresa
+   SECTION: Empresa (Endereço)
 ───────────────────────────────────────────── */
-const OBRAS_INTERESSE_OPTIONS = [
-  'Residencial', 'Comercial', 'Industrial', 'Reforma', 'Infraestrutura',
-  'Retrofit', 'Obras Públicas', 'Incorporação', 'Condomínios', 'Hospitalares',
+const UF_OPTIONS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
+  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC',
+  'SP','SE','TO',
 ];
 
 function SecaoEmpresa() {
   const { toast } = useToast();
-  const [empresa, setEmpresa] = useState({
-    razaoSocial: 'Incorporadora Horizonte Ltda',
-    nomeFantasia: 'Horizonte Empreendimentos',
-    cnpj: '98.765.432/0001-10',
-    inscricaoEstadual: '987.654.321.000',
-    estado: 'SP',
-    cidade: 'São Paulo e região',
-  });
-  const [obrasInteresse, setObrasInteresse] = useState<string[]>(['Residencial', 'Comercial', 'Incorporação']);
+  const { data: perfil, isLoading } = usePerfilContratante();
+  const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilContratante();
 
-  const setField = (key: keyof typeof empresa) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
+  const [endereco, setEndereco] = useState({ cep: '', endereco: '', cidade: '', estado: '' });
 
-  const toggleObra = (tipo: string) => {
-    setObrasInteresse((prev) =>
-      prev.includes(tipo) ? prev.filter((o) => o !== tipo) : [...prev, tipo]
-    );
+  useEffect(() => {
+    if (perfil) {
+      setEndereco({
+        cep: perfil.cep ?? '',
+        endereco: perfil.endereco ?? '',
+        cidade: perfil.cidade ?? '',
+        estado: perfil.estado ?? '',
+      });
+    }
+  }, [perfil]);
+
+  const setField = (key: keyof typeof endereco) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setEndereco((prev) => ({ ...prev, [key]: e.target.value }));
+
+  const handleSave = async () => {
+    try {
+      await updatePerfil({
+        cep: endereco.cep || null,
+        endereco: endereco.endereco || null,
+        cidade: endereco.cidade || null,
+        estado: endereco.estado || null,
+      });
+      toast({ title: 'Endereço salvo', description: 'Os dados de endereço foram atualizados.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar endereço.', variant: 'destructive' });
+    }
   };
 
-  const handleSave = () => {
-    toast({ title: 'Empresa atualizada', description: 'Os dados da sua empresa foram salvos.' });
-  };
+  if (isLoading || !perfil) {
+    return <Skeleton className="h-72 rounded-xl" />;
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-0">
-          <SectionTitle>Dados da empresa</SectionTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldRow label="Razão social">
-              <Input value={empresa.razaoSocial} onChange={setField('razaoSocial')} placeholder="Razão social" />
-            </FieldRow>
-            <FieldRow label="Nome fantasia">
-              <Input value={empresa.nomeFantasia} onChange={setField('nomeFantasia')} placeholder="Nome fantasia" />
-            </FieldRow>
-            <FieldRow label="CNPJ" description="Apenas para exibição. Contate o suporte para alterar.">
-              <Input value={empresa.cnpj} disabled className="opacity-60 cursor-not-allowed" />
-            </FieldRow>
-            <FieldRow label="Inscrição estadual">
-              <Input value={empresa.inscricaoEstadual} onChange={setField('inscricaoEstadual')} placeholder="000.000.000.000" />
-            </FieldRow>
-          </div>
-        </CardContent>
-      </Card>
+      <PerfilStatusBanner perfilCompleto={perfil.perfilCompleto} status={perfil.status} />
 
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
-          <SectionTitle>Localização e atuação</SectionTitle>
+          <SectionTitle>Endereço</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldRow label="Estado principal">
-              <Input value={empresa.estado} onChange={setField('estado')} placeholder="Ex: SP" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <FieldRow label="CEP">
+              <Input value={endereco.cep} onChange={setField('cep')} placeholder="00000-000" data-testid="input-empresa-cep" />
             </FieldRow>
-            <FieldRow label="Cidade / Região de atuação">
-              <Input value={empresa.cidade} onChange={setField('cidade')} placeholder="Ex: São Paulo e região" />
-            </FieldRow>
-          </div>
-          <div>
-            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-              Tipos de obras de interesse{' '}
-              <span className="text-xs text-muted-foreground ml-1">({obrasInteresse.length} selecionados)</span>
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {OBRAS_INTERESSE_OPTIONS.map((tipo) => {
-                const ativo = obrasInteresse.includes(tipo);
-                return (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => toggleObra(tipo)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
-                      ativo
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50'
-                    )}
-                  >
-                    {tipo}
-                  </button>
-                );
-              })}
+            <div className="sm:col-span-2">
+              <FieldRow label="Endereço">
+                <Input value={endereco.endereco} onChange={setField('endereco')} placeholder="Rua, número, complemento" data-testid="input-empresa-endereco" />
+              </FieldRow>
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="sm:col-span-2">
+              <FieldRow label="Cidade">
+                <Input value={endereco.cidade} onChange={setField('cidade')} placeholder="Cidade" data-testid="input-empresa-cidade" />
+              </FieldRow>
+            </div>
+            <FieldRow label="Estado">
+              <Select value={endereco.estado} onValueChange={(v) => setEndereco((p) => ({ ...p, estado: v }))}>
+                <SelectTrigger data-testid="select-empresa-estado"><SelectValue placeholder="UF" /></SelectTrigger>
+                <SelectContent>
+                  {UF_OPTIONS.map((uf) => (
+                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
           </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-empresa">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar empresa
+          {saving ? 'Salvando...' : 'Salvar endereço'}
         </Button>
       </div>
     </div>

@@ -20,6 +20,22 @@ import {
   RiAlertLine,
 } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
+import {
+  usePerfilEmpreiteiro,
+  useUpdatePerfilEmpreiteiro,
+  fileToDataUrl,
+} from '@features/perfil/hooks/use-perfil';
+import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
+import { Skeleton } from '@shared/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
+import { RiUploadCloud2Line, RiCheckboxCircleFill, RiTimeLine as RiTimePending, RiCloseLine } from 'react-icons/ri';
+import { getInitials } from '@shared/lib/formatters';
 import { useTermosStore, VERSAO_ATUAL_TERMOS, VERSAO_ATUAL_PRIVACIDADE } from '@features/empreiteiro/termos/store/termos-store';
 import {
   AlertDialog,
@@ -100,33 +116,103 @@ function SwitchRow({
 /* ─────────────────────────────────────────────
    SECTION: Perfil
 ───────────────────────────────────────────── */
+function PerfilStatusBanner({
+  perfilCompleto,
+  status,
+}: {
+  perfilCompleto: boolean;
+  status: 'ativo' | 'inativo' | 'aprovacao';
+}) {
+  if (status === 'ativo') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-sm" data-testid="banner-perfil-aprovado">
+        <RiCheckboxCircleFill className="w-4 h-4" />
+        Perfil aprovado pela curadoria.
+      </div>
+    );
+  }
+  if (status === 'inativo') {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm" data-testid="banner-perfil-reprovado">
+        <RiAlertLine className="w-4 h-4" />
+        Conta inativa. Fale com o suporte.
+      </div>
+    );
+  }
+  if (perfilCompleto) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm" data-testid="banner-perfil-curadoria">
+        <RiTimePending className="w-4 h-4" />
+        Perfil completo. Aguardando curadoria do administrador.
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm" data-testid="banner-perfil-incompleto">
+      <RiAlertLine className="w-4 h-4" />
+      Complete seu perfil (endereço, especialidades, raio de atuação e foto) para liberar a curadoria.
+    </div>
+  );
+}
+
 function SecaoPerfil() {
-  const { user } = useAuth();
   const { toast } = useToast();
+  const { data: perfil, isLoading } = usePerfilEmpreiteiro();
+  const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilEmpreiteiro();
 
-  const [dados, setDados] = useState({
-    nome: user?.name ?? '',
-    email: user?.email ?? '',
-    telefone: '',
-  });
+  const [dados, setDados] = useState({ nome: '', responsavel: '', telefone: '' });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const [senha, setSenha] = useState({
-    atual: '',
-    nova: '',
-    confirmar: '',
-  });
+  useEffect(() => {
+    if (perfil) {
+      setDados({
+        nome: perfil.nome ?? '',
+        responsavel: perfil.responsavel ?? '',
+        telefone: perfil.telefone ?? '',
+      });
+      setAvatarUrl(perfil.avatarUrl ?? null);
+    }
+  }, [perfil]);
 
+  const [senha, setSenha] = useState({ atual: '', nova: '', confirmar: '' });
   const senhaError = senha.nova && senha.confirmar && senha.nova !== senha.confirmar;
   const senhaValida = senha.atual && senha.nova && senha.confirmar && !senhaError;
 
   const setDado = (key: keyof typeof dados) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDados((prev) => ({ ...prev, [key]: e.target.value }));
-
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleSaveDados = () => {
-    toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await fileToDataUrl(file);
+      setAvatarUrl(url);
+      await updatePerfil({ avatarUrl: url });
+      toast({ title: 'Foto atualizada', description: 'Sua foto de perfil foi salva.' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao enviar foto',
+        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveDados = async () => {
+    try {
+      await updatePerfil({
+        nome: dados.nome,
+        responsavel: dados.responsavel,
+        telefone: dados.telefone || null,
+      });
+      toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar.', variant: 'destructive' });
+    }
   };
 
   const handleAlterarSenha = () => {
@@ -135,33 +221,59 @@ function SecaoPerfil() {
     setSenha({ atual: '', nova: '', confirmar: '' });
   };
 
+  if (isLoading || !perfil) {
+    return <div className="flex flex-col gap-4"><Skeleton className="h-72 rounded-xl" /><Skeleton className="h-64 rounded-xl" /></div>;
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      <PerfilStatusBanner perfilCompleto={perfil.perfilCompleto} status={perfil.status} />
+
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
           <SectionTitle>Dados pessoais</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <FieldRow label="Nome completo">
-            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" />
+          <div className="flex items-center gap-5">
+            <Avatar className="h-20 w-20" data-testid="avatar-perfil-empreiteiro">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={dados.nome || 'avatar'} />}
+              <AvatarFallback className="bg-primary text-white text-xl font-bold">
+                {getInitials(dados.nome || perfil.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-1.5">
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 w-fit" data-testid="button-upload-avatar">
+                <RiUploadCloud2Line className="w-4 h-4" />
+                Enviar foto
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  data-testid="input-avatar-file"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">PNG ou JPG até 1.5 MB.</p>
+            </div>
+          </div>
+
+          <FieldRow label="Nome / Razão social">
+            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Nome ou razão social" data-testid="input-perfil-nome" />
           </FieldRow>
-          <FieldRow label="E-mail" description="Usado para login e comunicações da plataforma.">
-            <Input type="email" value={dados.email} onChange={setDado('email')} placeholder="seu@email.com" />
+          <FieldRow label="Responsável técnico">
+            <Input value={dados.responsavel} onChange={setDado('responsavel')} placeholder="Nome do responsável" data-testid="input-perfil-responsavel" />
+          </FieldRow>
+          <FieldRow label="E-mail" description="Usado para login. Contate o suporte para alterar.">
+            <Input type="email" value={perfil.email} disabled className="opacity-60 cursor-not-allowed" data-testid="input-perfil-email" />
           </FieldRow>
           <FieldRow label="Telefone" description="Número de contato para suporte e obras.">
-            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" />
-          </FieldRow>
-          <FieldRow label="Perfil" description="Definido pelo sistema. Contate o suporte para alterar.">
-            <Input value="Empreiteiro" disabled className="opacity-60 cursor-not-allowed" />
+            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" data-testid="input-perfil-telefone" />
           </FieldRow>
           <div className="flex justify-end">
-            <button
-              onClick={handleSaveDados}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-            >
-              <RiSave3Line className="w-4 h-4" />
-              Salvar dados
-            </button>
+            <Button onClick={handleSaveDados} disabled={saving} data-testid="button-salvar-perfil">
+              <RiSave3Line className="w-4 h-4 mr-2" />
+              {saving ? 'Salvando...' : 'Salvar dados'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -225,54 +337,147 @@ const ESPECIALIDADES_OPTIONS = [
   'Alvenaria', 'Elétrica', 'Hidráulica', 'Pintura', 'Acabamento',
   'Fundações', 'Estrutura Metálica', 'Gesso/Drywall', 'Cobertura/Telhado',
   'Paisagismo', 'Reformas', 'Obras Comerciais',
+] as const;
+
+const UF_OPTIONS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
+  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC',
+  'SP','SE','TO',
 ];
 
 function SecaoEmpresa() {
   const { toast } = useToast();
+  const { data: perfil, isLoading } = usePerfilEmpreiteiro();
+  const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilEmpreiteiro();
+
   const [empresa, setEmpresa] = useState({
-    razaoSocial: 'Construtora JV Ltda',
-    nomeFantasia: 'JV Construtora',
-    cnpj: '12.345.678/0001-99',
-    inscricaoEstadual: '123.456.789.000',
-    estado: 'SP',
-    regiao: 'Campinas e região',
-    crea: 'CREA-SP 123456',
-    validadeAlvara: '12/2026',
+    cnpj: '',
+    cep: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    raioKm: '',
   });
-  const [especialidades, setEspecialidades] = useState<string[]>(['Alvenaria', 'Fundações', 'Acabamento']);
+  const [especialidades, setEspecialidades] = useState<string[]>([]);
+  const [portfolio, setPortfolio] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (perfil) {
+      setEmpresa({
+        cnpj: perfil.cnpj ?? '',
+        cep: perfil.cep ?? '',
+        endereco: perfil.endereco ?? '',
+        cidade: perfil.cidade ?? '',
+        estado: perfil.estado ?? '',
+        raioKm: perfil.raioKm != null ? String(perfil.raioKm) : '',
+      });
+      setEspecialidades(perfil.especialidades ?? []);
+      setPortfolio(perfil.portfolioUrls ?? []);
+    }
+  }, [perfil]);
 
   const setField = (key: keyof typeof empresa) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
 
   const toggleEspecialidade = (esp: string) => {
     setEspecialidades((prev) =>
-      prev.includes(esp) ? prev.filter((e) => e !== esp) : [...prev, esp]
+      prev.includes(esp) ? prev.filter((e) => e !== esp) : [...prev, esp],
     );
   };
 
-  const handleSave = () => {
-    toast({ title: 'Empresa atualizada', description: 'Os dados da sua empresa foram salvos.' });
+  const handlePortfolioFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await fileToDataUrl(file);
+      const next = [...portfolio, url];
+      setPortfolio(next);
+      await updatePerfil({ portfolioUrls: next });
+      toast({ title: 'Imagem adicionada', description: 'Foto incluída no portfólio.' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao adicionar foto',
+        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
   };
+
+  const removePortfolioItem = async (idx: number) => {
+    const next = portfolio.filter((_, i) => i !== idx);
+    setPortfolio(next);
+    try {
+      await updatePerfil({ portfolioUrls: next });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao remover item.', variant: 'destructive' });
+    }
+  };
+
+  const handleSave = async () => {
+    const raio = empresa.raioKm.trim() === '' ? null : Number(empresa.raioKm);
+    if (raio != null && (Number.isNaN(raio) || raio < 0)) {
+      toast({ title: 'Raio inválido', description: 'Informe um número válido.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updatePerfil({
+        cnpj: empresa.cnpj || null,
+        cep: empresa.cep || null,
+        endereco: empresa.endereco || null,
+        cidade: empresa.cidade || null,
+        estado: empresa.estado || null,
+        raioKm: raio,
+        especialidades,
+      });
+      toast({ title: 'Empresa atualizada', description: 'Os dados da sua empresa foram salvos.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar empresa.', variant: 'destructive' });
+    }
+  };
+
+  if (isLoading || !perfil) {
+    return <div className="flex flex-col gap-4"><Skeleton className="h-72 rounded-xl" /><Skeleton className="h-64 rounded-xl" /></div>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
+      <PerfilStatusBanner perfilCompleto={perfil.perfilCompleto} status={perfil.status} />
+
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
           <SectionTitle>Dados da empresa</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldRow label="Razão social">
-              <Input value={empresa.razaoSocial} onChange={setField('razaoSocial')} placeholder="Razão social" />
+          <FieldRow label="CNPJ">
+            <Input value={empresa.cnpj} onChange={setField('cnpj')} placeholder="00.000.000/0000-00" data-testid="input-empresa-cnpj" />
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <FieldRow label="CEP">
+              <Input value={empresa.cep} onChange={setField('cep')} placeholder="00000-000" data-testid="input-empresa-cep" />
             </FieldRow>
-            <FieldRow label="Nome fantasia">
-              <Input value={empresa.nomeFantasia} onChange={setField('nomeFantasia')} placeholder="Nome fantasia" />
-            </FieldRow>
-            <FieldRow label="CNPJ" description="Apenas para exibição. Contate o suporte para alterar.">
-              <Input value={empresa.cnpj} disabled className="opacity-60 cursor-not-allowed" />
-            </FieldRow>
-            <FieldRow label="Inscrição estadual">
-              <Input value={empresa.inscricaoEstadual} onChange={setField('inscricaoEstadual')} placeholder="000.000.000.000" />
+            <div className="sm:col-span-2">
+              <FieldRow label="Endereço">
+                <Input value={empresa.endereco} onChange={setField('endereco')} placeholder="Rua, número, complemento" data-testid="input-empresa-endereco" />
+              </FieldRow>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="sm:col-span-2">
+              <FieldRow label="Cidade">
+                <Input value={empresa.cidade} onChange={setField('cidade')} placeholder="Cidade" data-testid="input-empresa-cidade" />
+              </FieldRow>
+            </div>
+            <FieldRow label="Estado">
+              <Select value={empresa.estado} onValueChange={(v) => setEmpresa((p) => ({ ...p, estado: v }))}>
+                <SelectTrigger data-testid="select-empresa-estado"><SelectValue placeholder="UF" /></SelectTrigger>
+                <SelectContent>
+                  {UF_OPTIONS.map((uf) => (
+                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldRow>
           </div>
         </CardContent>
@@ -280,22 +485,25 @@ function SecaoEmpresa() {
 
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
-          <SectionTitle>Atuação e especialidades</SectionTitle>
+          <SectionTitle>Atuação</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldRow label="Estado principal">
-              <Input value={empresa.estado} onChange={setField('estado')} placeholder="Ex: SP" />
-            </FieldRow>
-            <FieldRow label="Região de atuação">
-              <Input value={empresa.regiao} onChange={setField('regiao')} placeholder="Ex: Campinas e região" />
-            </FieldRow>
-          </div>
+          <FieldRow label="Raio de atuação (km)" description="Distância máxima da sua sede em que aceita obras.">
+            <Input
+              type="number"
+              min={0}
+              max={2000}
+              value={empresa.raioKm}
+              onChange={setField('raioKm')}
+              placeholder="Ex: 50"
+              data-testid="input-empresa-raio"
+            />
+          </FieldRow>
           <div>
             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
               Especialidades <span className="text-xs text-muted-foreground ml-1">({especialidades.length} selecionadas)</span>
             </Label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" data-testid="grupo-especialidades">
               {ESPECIALIDADES_OPTIONS.map((esp) => {
                 const ativo = especialidades.includes(esp);
                 return (
@@ -303,11 +511,12 @@ function SecaoEmpresa() {
                     key={esp}
                     type="button"
                     onClick={() => toggleEspecialidade(esp)}
+                    data-testid={`chip-especialidade-${esp}`}
                     className={cn(
                       'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
                       ativo
                         ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                        : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50',
                     )}
                   >
                     {esp}
@@ -321,24 +530,41 @@ function SecaoEmpresa() {
 
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
-          <SectionTitle>Documentação técnica</SectionTitle>
+          <SectionTitle>Portfólio</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <FieldRow label="Número CREA/CAU" description="Registro profissional do responsável técnico.">
-              <Input value={empresa.crea} onChange={setField('crea')} placeholder="CREA-SP 000000" />
-            </FieldRow>
-            <FieldRow label="Validade do alvará" description="Mês/Ano de vencimento do alvará de obras.">
-              <Input value={empresa.validadeAlvara} onChange={setField('validadeAlvara')} placeholder="MM/AAAA" />
-            </FieldRow>
+          <div className="flex flex-wrap gap-3" data-testid="grupo-portfolio">
+            {portfolio.map((url, idx) => (
+              <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Portfólio ${idx + 1}`} className="w-full h-full object-cover" data-testid={`img-portfolio-${idx}`} />
+                <button
+                  type="button"
+                  onClick={() => removePortfolioItem(idx)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                  aria-label="Remover"
+                  data-testid={`button-remover-portfolio-${idx}`}
+                >
+                  <RiCloseLine className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {portfolio.length < 20 && (
+              <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs text-muted-foreground cursor-pointer hover:border-primary/50" data-testid="button-adicionar-portfolio">
+                <RiUploadCloud2Line className="w-5 h-5 mb-1" />
+                Adicionar
+                <input type="file" accept="image/*" className="hidden" onChange={handlePortfolioFile} data-testid="input-portfolio-file" />
+              </label>
+            )}
           </div>
+          <p className="text-xs text-muted-foreground">Até 20 imagens, cada uma de no máximo 1.5 MB.</p>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-empresa">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar empresa
+          {saving ? 'Salvando...' : 'Salvar empresa'}
         </Button>
       </div>
     </div>

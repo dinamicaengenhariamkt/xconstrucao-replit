@@ -28,6 +28,7 @@ import {
   useAdminClienteFinanceiro,
   useAdminClienteDocumentos,
   useAdminClienteAtividades,
+  useAprovarCliente,
 } from '@features/admin/clientes/hooks/use-clientes';
 import {
   RiArrowLeftLine,
@@ -48,6 +49,8 @@ import {
   RiTimeLine,
   RiUserLine,
   RiBuilding2Line,
+  RiCheckLine,
+  RiCloseCircleLine,
 } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import type { ClienteStatus, ClienteAtividade, AdminClienteObra, ClienteDocumento } from '@features/admin/clientes/types';
@@ -66,6 +69,11 @@ const STATUS_CONFIG: Record<ClienteStatus, { label: string; className: string }>
   },
   pendente: {
     label: 'Pendente',
+    className:
+      'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+  },
+  aprovacao: {
+    label: 'Aguardando curadoria',
     className:
       'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
   },
@@ -117,6 +125,29 @@ export default function AdminClienteDetailPage() {
   const [deletedDocumentoIds, setDeletedDocumentoIds] = useState<string[]>([]);
 
   const { data: cliente, isLoading: loadingCliente } = useAdminCliente(id);
+  const { mutateAsync: aprovarCliente, isPending: aprovando } = useAprovarCliente();
+
+  const handleCuradoria = useCallback(
+    async (decisao: 'aprovar' | 'reprovar') => {
+      try {
+        await aprovarCliente({ id, decisao });
+        toast({
+          title: decisao === 'aprovar' ? 'Cliente aprovado' : 'Cliente reprovado',
+          description:
+            decisao === 'aprovar'
+              ? 'O cliente agora está ativo na plataforma.'
+              : 'O cliente foi marcado como inativo.',
+        });
+      } catch {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível atualizar a curadoria.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [aprovarCliente, id, toast],
+  );
   const { data: obras = [], isLoading: loadingObras } = useAdminClienteObras(id);
   const { data: financeiro, isLoading: loadingFinanceiro } = useAdminClienteFinanceiro(id);
   const { data: documentos = [], isLoading: loadingDocumentos } = useAdminClienteDocumentos(id);
@@ -329,6 +360,28 @@ export default function AdminClienteDetailPage() {
 
             {/* Botões de ação */}
             <div className="flex flex-wrap gap-3 lg:flex-shrink-0">
+              {(cliente.status === 'pendente' || cliente.status === 'aprovacao') && (
+                <>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40 disabled:opacity-50"
+                    onClick={() => handleCuradoria('aprovar')}
+                    disabled={aprovando}
+                    data-testid="button-aprovar-cliente"
+                  >
+                    <RiCheckLine className="w-4 h-4" />
+                    Aprovar
+                  </button>
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg border transition-colors cursor-pointer bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40 disabled:opacity-50"
+                    onClick={() => handleCuradoria('reprovar')}
+                    disabled={aprovando}
+                    data-testid="button-reprovar-cliente"
+                  >
+                    <RiCloseCircleLine className="w-4 h-4" />
+                    Reprovar
+                  </button>
+                </>
+              )}
               <button
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
                 onClick={() => setEditarOpen(true)}
