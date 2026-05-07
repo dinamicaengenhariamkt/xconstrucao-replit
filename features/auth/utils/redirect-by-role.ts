@@ -25,6 +25,36 @@ export function canAccessRoute(userRole: string, requiredRole: string): boolean 
 }
 
 /**
+ * Resolve o redirect pós-login com allowlist por role.
+ * Se `nextParam` for um path interno (começa com `/`) cujo prefixo bate
+ * com a role do usuário (ex.: contratante → `/contratante/...`), respeita.
+ * Caso contrário, ignora silenciosamente e usa o dashboard padrão da role.
+ *
+ * Bloqueia: URLs absolutas (open redirect), protocol-relative (`//evil.com`),
+ * paths de outra role (escalação cruzada), `/admin*` para não-admin.
+ */
+export function resolvePostLoginRedirect(role: string, nextParam: string | null): string {
+  const fallback = getRedirectPathByRole(role);
+
+  if (!nextParam) return fallback;
+  // Bloqueia open redirect e URLs absolutas
+  if (!nextParam.startsWith("/") || nextParam.startsWith("//")) return fallback;
+
+  const allowedPrefixes: Record<string, string[]> = {
+    admin: ["/admin"],
+    contratante: ["/contratante"],
+    empreiteiro: ["/empreiteiro"],
+  };
+
+  const prefixes = allowedPrefixes[role] ?? [];
+  const isAllowed = prefixes.some(
+    (p) => nextParam === p || nextParam.startsWith(`${p}/`)
+  );
+
+  return isAllowed ? nextParam : fallback;
+}
+
+/**
  * Verifica se uma rota é pública (não precisa de autenticação)
  */
 export function isPublicRoute(pathname: string): boolean {

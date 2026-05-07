@@ -13,7 +13,7 @@ import { signIn } from "next-auth/react";
 import { loginSchema } from "@features/auth/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
 import { useAuthStore } from "@features/auth/store/auth-store";
-import { getRedirectPathByRole } from "@features/auth/utils/redirect-by-role";
+import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
@@ -52,7 +52,8 @@ export default function LoginPage() {
       await login(values.email, values.password, rememberMe);
       const user = useAuthStore.getState().user;
       if (user) {
-        router.replace(getRedirectPathByRole(user.role));
+        const next = searchParams.get("next");
+        router.replace(resolvePostLoginRedirect(user.role, next));
       }
     } catch (error: unknown) {
       // Tratar erro de email não verificado

@@ -1,4 +1,5 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, MutationCache } from "@tanstack/react-query";
+import { toast } from "@shared/hooks/use-toast";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -23,6 +24,16 @@ export async function apiRequest(
   return res;
 }
 
+/**
+ * Detecta o erro 403 EMAIL_NOT_VERIFIED disparado pelos guards de
+ * `requireVerifiedUser` no backend. Como `apiRequest` joga `${status}: ${text}`,
+ * basta procurar pelo código padronizado dentro da mensagem.
+ */
+function isEmailNotVerifiedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes("EMAIL_NOT_VERIFIED");
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
@@ -42,6 +53,21 @@ export const getQueryFn: <T>(options: {
   };
 
 export const queryClient = new QueryClient({
+  // Toast centralizado para erro 403 EMAIL_NOT_VERIFIED em qualquer mutation.
+  // O banner persistente do dashboard cobre o caso "passivo"; este handler
+  // cobre o caso "ativo" quando o usuário tenta executar uma ação bloqueada.
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (isEmailNotVerifiedError(error)) {
+        toast({
+          title: "Verifique seu email",
+          description:
+            "Esta ação só fica disponível depois que você confirmar seu email. Use o banner no topo para reenviar o link.",
+          variant: "destructive",
+        });
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),

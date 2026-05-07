@@ -67,13 +67,13 @@ Existentes: `users`, `accounts`, `sessions`, `verificationTokens`.
 Nenhum mock relevante aqui — auth é real. Auditar se restou alguma flag.
 
 ## 9. Checklist de implementação
-- [ ] Confirmar que `register` cria `clientes`/`empreiteiras` row vinculada
-- [ ] Adicionar coluna `userId` em `clientes` e `empreiteiras` se ainda não existir
-- [ ] Validar redirect pós-login para dashboard correto por role
-- [ ] Verificar fluxo de email em produção (provider Resend configurado)
-- [ ] Forçar `emailVerified` antes de liberar criação de obra (J03) e candidatura (J05)
-- [ ] Cobrir reset de senha ponta-a-ponta com teste manual
-- [ ] Documentar credenciais seed (`admin@xconstrucao.com`)
+- [x] Confirmar que `register` cria `clientes`/`empreiteiras` row vinculada — `createUserWithProfile` em transação Drizzle
+- [x] Adicionar coluna `userId` em `clientes` e `empreiteiras` se ainda não existir — com `UNIQUE` para idempotência
+- [x] Validar redirect pós-login para dashboard correto por role — `resolvePostLoginRedirect` com allowlist por prefixo
+- [x] Verificar fluxo de email em produção (provider Resend configurado) — domínio `dinamicareforma.com.br` verificado, `EMAIL_FROM=noreply@dinamicareforma.com.br`
+- [x] Forçar `emailVerified` antes de liberar criação de obra (J03) e candidatura (J05) — guard `requireVerifiedUser` em `/api/obras`, `/api/empreiteiro/candidaturas`, `/api/clientes`, `/api/empreiteiras`
+- [x] Cobrir reset de senha ponta-a-ponta — fluxo email→token→nova senha funciona; suíte automatizada fica como follow-up
+- [x] Documentar credenciais seed (`admin@xconstrucao.com / 123456`, `joao@construtora.com / 123456`, `maria@empreiteira.com / 123456`)
 
 ## 10. Critérios de aceite
 1. Cadastrar como contratante → receber email → verificar → fazer login → cair em `/contratante/dashboard`.
@@ -93,4 +93,12 @@ Nenhum mock relevante aqui — auth é real. Auditar se restou alguma flag.
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-07 — **Auth canônica formalizada**: JWT custom em `server/auth.ts` é o caminho oficial; NextAuth `[...nextauth]` existe **só** para handshake do Google OAuth, com `oauth-convert` traduzindo a sessão NextAuth nos cookies httpOnly `access_token`/`refresh_token`. Documentado no header de `server/auth.ts`.
+- 2026-05-07 — **Persona OAuth via cookie short-lived**: a landing/login seta cookie `x_signup_persona` (10min, SameSite=Lax) antes do `signIn("google", ...)`. O `oauth-convert` lê o cookie e, se for primeiro login (sem profile row), atualiza `users.role` para a persona escolhida **antes** de chamar `ensureProfileRow` — evita criar a row errada. Cookie é limpo após consumo.
+- 2026-05-07 — **Atomicidade no register**: `createUserWithProfile` envolve user-insert + profile-insert em uma transação Drizzle. Se o profile falha, o user também é descartado, eliminando o estado "user órfão sem clientes/empreiteiras".
+- 2026-05-07 — **Idempotência via UNIQUE constraint**: `clientes.user_id` e `empreiteiras.user_id` viraram `UNIQUE`, e `ensureProfileRow` usa `onConflictDoNothing` para resistir a chamadas concorrentes do register, do verify-email e do oauth-convert sem condição de corrida.
+- 2026-05-07 — **Defaults de domínio na auto-criação**: contratantes nascem como `tipo='Pessoa Física'`, `status='aprovacao'`; empreiteiros como `status='aprovacao'` com `responsavel = user.name`. O preenchimento rico (CPF/CNPJ, endereço, especialidades, foto) fica para a Jornada 02.
+- 2026-05-07 — **Seed reset automático**: `server/seed.ts` detecta seed legado (sem `user_id` linkado) e zera `financeiro→candidaturas→obras→clientes→empreiteiras→accounts→sessions→verification_tokens→users` antes de re-seedar com `joao@construtora.com → cliente "João Oliveira"` e `maria@empreiteira.com → empreiteira "Maria Fernandes"` já vinculados. Demais clientes/empreiteiras ficam como rows admin-criadas (`userId=NULL`).
+- 2026-05-07 — **Banner persistente + toast em mutations**: `EmailVerificationBanner` (amber, não-dispensável) montado nos layouts de `/contratante` e `/empreiteiro`, com botão "Reenviar email". O `MutationCache` global em `lib/queryClient.ts` faz toast destrutivo padronizado quando qualquer mutation devolve `403 EMAIL_NOT_VERIFIED`.
+- 2026-05-07 — **Redirect pós-login com allowlist por role**: `resolvePostLoginRedirect(role, next)` aceita `?next=` apenas se for path interno (começa com `/`, não com `//`) e o prefixo bater com a role do usuário (`/admin*` para admin, `/contratante*` para contratante, etc.). Bloqueia open redirect e escalação cruzada de role.
+- 2026-05-07 — **Validação E2E (curl)**: login `joão@construtora.com` → `POST /api/obras` = 201; com `email_verified=NULL` → 403 `{ error: "EMAIL_NOT_VERIFIED" }`. Register transacional cria user + empreiteira juntos. Suíte Playwright completa fica como follow-up (#4).
