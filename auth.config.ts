@@ -71,11 +71,11 @@ export default {
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.image = token.picture as string | undefined;
+        if (token.id) session.user.id = token.id;
+        if (token.role) session.user.role = token.role;
+        if (token.email) session.user.email = token.email;
+        if (token.name) session.user.name = token.name;
+        session.user.image = token.picture ?? undefined;
       }
       return session;
     },
