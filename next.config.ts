@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pg", "bcryptjs"],
   allowedDevOrigins: devOrigins,
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
 };
 
 export default nextConfig;

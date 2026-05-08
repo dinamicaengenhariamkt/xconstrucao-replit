@@ -12,6 +12,10 @@ const store = new Map<string, RateLimitEntry>();
  * @param windowMs tamanho da janela em ms
  */
 export function isRateLimited(key: string, max: number, windowMs: number): boolean {
+  // Bypass total quando em modo de teste E2E — evita falsos positivos quando
+  // a suíte registra/loga várias vezes do mesmo IP (127.0.0.1).
+  if (process.env.EMAIL_TEST_MODE === "1") return false;
+
   const now = Date.now();
   const entry = store.get(key);
 

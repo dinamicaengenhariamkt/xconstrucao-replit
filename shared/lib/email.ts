@@ -3,18 +3,25 @@ import { render } from '@react-email/render';
 import PasswordResetEmail from '@features/auth/emails/password-reset';
 import WelcomeEmail from '@features/auth/emails/welcome';
 import VerificationEmail from '@features/auth/emails/verification';
+import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string, userName: string) {
-  try {
-    const emailHtml = await render(PasswordResetEmail({ resetUrl, userName }));
+  const emailHtml = await render(PasswordResetEmail({ resetUrl, userName }));
+  const subject = 'XConstrução - Recuperação de Senha';
 
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html: emailHtml, meta: { kind: 'password-reset', resetUrl, userName } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
       from: `XConstrucao <${emailFrom}>`,
       to,
-      subject: 'XConstrução - Recuperação de Senha',
+      subject,
       html: emailHtml,
     });
 
@@ -35,14 +42,20 @@ export async function sendWelcomeEmail(
   userName: string,
   userRole: 'contratante' | 'empreiteiro'
 ) {
-  try {
-    const emailHtml = await render(WelcomeEmail({ userName, userRole }));
+  const emailHtml = await render(WelcomeEmail({ userName, userRole }));
+  const subject = 'Bem-vindo à XConstrução!';
 
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html: emailHtml, meta: { kind: 'welcome', userName, userRole } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
       from: `XConstrucao <${emailFrom}>`,
       to,
-      subject: 'Bem-vindo à XConstrução!',
+      subject,
       html: emailHtml,
     });
 
@@ -63,14 +76,20 @@ export async function sendVerificationEmail(
   verificationUrl: string,
   userName: string
 ) {
-  try {
-    const emailHtml = await render(VerificationEmail({ verificationUrl, userName }));
+  const emailHtml = await render(VerificationEmail({ verificationUrl, userName }));
+  const subject = 'XConstrução - Confirme seu Email';
 
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html: emailHtml, meta: { kind: 'verification', verificationUrl, userName } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev';
     const { data, error } = await resend.emails.send({
       from: `XConstrucao <${emailFrom}>`,
       to,
-      subject: 'XConstrução - Confirme seu Email',
+      subject,
       html: emailHtml,
     });
 
