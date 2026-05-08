@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/xgestao-inteligente/layout,_N_T_/xgestao-inteligente/page,_N_T_/xgestao-inteligente"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/xgestao-inteligente/__PAGE__",
+    "/xgestao-inteligente",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,3 @@
+module.exports=[424820,a=>{"use strict";var b=a.i(907997);let c=(0,a.i(621747).generateMetadata)({title:"Política de Privacidade - XConstrução",description:"Política de privacidade e proteção de dados da XConstrução. Conformidade com LGPD e transparência no tratamento de informações.",path:"/politica-privacidade",ogImage:"/og-images/legal.png"});function d({children:a}){return(0,b.jsx)(b.Fragment,{children:a})}a.s(["default",()=>d,"dynamic",0,"force-static","metadata",0,c,"revalidate",0,!1])}];
+
+//# sourceMappingURL=app_politica-privacidade_layout_tsx_48d58ec3._.js.map

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/empreiteiro/layout,_N_T_/empreiteiro/minhas-obras/layout,_N_T_/empreiteiro/minhas-obras/page,_N_T_/empreiteiro/minhas-obras"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/empreiteiro/minhas-obras/__PAGE__",
+    "/empreiteiro/minhas-obras",
+    "/empreiteiro",
+    "/_index",
+    "/_head"
+  ]
+}
