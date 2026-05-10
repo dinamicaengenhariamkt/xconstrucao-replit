@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyEmailVerificationToken } from "@features/auth/api/auth-service";
 import { getUser, updateUserEmailVerified, ensureProfileRow } from "@features/auth/api/auth-storage";
 import { sendWelcomeEmail } from "@shared/lib/email";
+import { getBaseUrl } from "@features/auth/api/auth-utils";
 
 export async function GET(request: NextRequest) {
+  // Sempre construir redirects a partir da URL pública (NEXTAUTH_URL),
+  // não a partir de request.url — atrás do proxy do Replit Deploy o
+  // request.url enxerga o host interno (http://0.0.0.0:5000) e quebraria
+  // o navegador do usuário (ERR_ADDRESS_INVALID).
+  const baseUrl = getBaseUrl(request);
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get("token");
 
     if (!token) {
       return NextResponse.redirect(
-        new URL("/verificar-email?error=token_missing", request.url)
+        new URL("/verificar-email?error=token_missing", baseUrl)
       );
     }
 
@@ -18,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     if (!result) {
       return NextResponse.redirect(
-        new URL("/verificar-email?error=token_invalid", request.url)
+        new URL("/verificar-email?error=token_invalid", baseUrl)
       );
     }
 
@@ -26,14 +33,14 @@ export async function GET(request: NextRequest) {
     const user = await getUser(result.userId);
     if (!user) {
       return NextResponse.redirect(
-        new URL("/verificar-email?error=user_not_found", request.url)
+        new URL("/verificar-email?error=user_not_found", baseUrl)
       );
     }
 
     // Verificar se email já foi verificado
     if (user.emailVerified) {
       return NextResponse.redirect(
-        new URL("/verificar-email?success=already_verified", request.url)
+        new URL("/verificar-email?success=already_verified", baseUrl)
       );
     }
 
@@ -60,12 +67,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL("/verificar-email?success=verified", request.url)
+      new URL("/verificar-email?success=verified", baseUrl)
     );
   } catch (error) {
     console.error("Erro ao verificar email:", error);
     return NextResponse.redirect(
-      new URL("/verificar-email?error=server_error", request.url)
+      new URL("/verificar-email?error=server_error", baseUrl)
     );
   }
 }

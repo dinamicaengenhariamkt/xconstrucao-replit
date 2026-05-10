@@ -61,6 +61,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/login?perfil=empreiteiro"
+                prefetch={false}
                 className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                 data-testid="link-sou-empreiteiro"
               >
@@ -68,6 +69,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/login?perfil=contratante"
+                prefetch={false}
                 className="bg-white dark:bg-[#2A2D30] text-[#333333] dark:text-white font-bold h-14 px-10 rounded-full border-2 border-[#333333] dark:border-white/20 hover:brightness-95 transition-all inline-flex items-center justify-center"
                 data-testid="link-sou-contratante"
               >
@@ -161,6 +163,7 @@ export default function HomePage() {
                   <div className="mt-auto">
                     <Link
                       href="/acesso-plataforma"
+                      prefetch={false}
                       className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
                       data-testid="link-comecar-xgestao"
                     >
@@ -445,6 +448,7 @@ export default function HomePage() {
             <div className="flex justify-center">
               <Link
                 href="/acesso-plataforma"
+                prefetch={false}
                 className="bg-white text-[#333333] font-bold h-14 px-10 rounded-full hover:scale-105 transition-transform inline-flex items-center justify-center"
                 data-testid="link-cta-acesso"
               >

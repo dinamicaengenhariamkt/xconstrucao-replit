@@ -86,6 +86,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
           {showAccessButton && !showAdminButton && (
             <Link
               href="/acesso-plataforma"
+              prefetch={false}
               className="bg-[#333333] text-white text-sm font-bold px-6 py-2 rounded-full hover:brightness-110 transition-all"
               data-testid="link-acesso-plataforma"
             >
@@ -151,6 +152,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
             {showAccessButton && !showAdminButton && (
               <Link
                 href="/acesso-plataforma"
+                prefetch={false}
                 className="block w-full bg-[#333333] text-white text-sm font-bold px-6 py-3 rounded-full hover:brightness-110 transition-all text-center"
                 data-testid="link-acesso-plataforma-mobile"
               >
