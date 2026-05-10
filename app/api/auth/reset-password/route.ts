@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
     // Buscar usuário para validar contexto (email/nome) na política de senha
     const user = await getUser(payload.userId);
     const policy = evaluatePasswordPolicy(newPassword, {
-      email: user?.email,
-      name: user?.name,
-      username: user?.username,
+      email: user?.email ?? undefined,
+      name: user?.name ?? undefined,
+      username: user?.username ?? undefined,
     });
     if (!policy.valid) {
       return NextResponse.json(
