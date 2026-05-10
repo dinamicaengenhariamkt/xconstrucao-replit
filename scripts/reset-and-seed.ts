@@ -1,27 +1,29 @@
 /**
  * Reset destrutivo + reseed.
  *
- * Apaga TODOS os dados nas tabelas de usuário/auth/dominio (em ordem
- * compatível com as FKs) e em seguida roda `seedDatabase()` que recria
- * admin/joão/maria com as senhas fortes alinhadas à política "balanced".
+ * Faz TRUNCATE ... RESTART IDENTITY CASCADE em uma única transação nas
+ * tabelas de domínio + auth, e em seguida executa `seedDatabase()` que
+ * recria admin/joão/maria com as senhas fortes da política "balanced".
  *
  * Uso (dev):    DATABASE_URL=... npx tsx scripts/reset-and-seed.ts
  * Uso (prod):   DATABASE_URL=<prod> CONFIRM_PROD_RESET=YES npx tsx scripts/reset-and-seed.ts
  */
+import { sql } from "drizzle-orm";
 import { db } from "../server/db";
-import {
-  users,
-  clientes,
-  empreiteiras,
-  obras,
-  financeiro,
-  candidaturas,
-  marketplaceLeads,
-  accounts,
-  sessions,
-  verificationTokens,
-} from "../shared/db/schema";
 import { seedDatabase } from "../server/seed";
+
+const TABLES = [
+  "financeiro",
+  "candidaturas",
+  "obras",
+  "clientes",
+  "empreiteiras",
+  "marketplace_leads",
+  "accounts",
+  "sessions",
+  "verification_tokens",
+  "users",
+];
 
 async function main() {
   const url = process.env.DATABASE_URL ?? "";
@@ -35,19 +37,15 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("[reset-and-seed] Apagando tabelas (ordem FK-safe)...");
-  // Ordem importante por causa das FKs.
-  await db.delete(financeiro);
-  await db.delete(candidaturas);
-  await db.delete(obras);
-  await db.delete(clientes);
-  await db.delete(empreiteiras);
-  await db.delete(marketplaceLeads);
-  await db.delete(accounts);
-  await db.delete(sessions);
-  await db.delete(verificationTokens);
-  await db.delete(users);
-  console.log("[reset-and-seed] Tabelas limpas.");
+  const tablesList = TABLES.map((t) => `"${t}"`).join(", ");
+  console.log(`[reset-and-seed] TRUNCATE em transação: ${tablesList}`);
+
+  await db.transaction(async (tx) => {
+    await tx.execute(
+      sql.raw(`TRUNCATE TABLE ${tablesList} RESTART IDENTITY CASCADE`)
+    );
+  });
+  console.log("[reset-and-seed] Tabelas truncadas (identity reset, cascade).");
 
   console.log("[reset-and-seed] Rodando seedDatabase()...");
   await seedDatabase();

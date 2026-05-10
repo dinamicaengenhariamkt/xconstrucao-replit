@@ -27,8 +27,10 @@ export async function POST(request: NextRequest) {
 
     const antiBot = validateAntiBot(body);
     if (!antiBot.ok) {
-      // Devolve sucesso "fake" para não vazar nada a bots, mantendo a UX silenciosa.
-      return jsonNoStore({ success: true }, 200);
+      // 400 genérico — alinhado ao comportamento das outras rotas públicas.
+      // A UX em forgot-password já é "sucesso silencioso" para email inexistente,
+      // então o cliente exibe a mesma mensagem neutra independentemente do status.
+      return jsonNoStore({ message: "Não foi possível processar a solicitação." }, 400);
     }
 
     const result = forgotPasswordSchema.safeParse(body);

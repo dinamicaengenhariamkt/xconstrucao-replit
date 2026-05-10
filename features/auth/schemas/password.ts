@@ -94,28 +94,23 @@ export function passwordStrength(password: string): number {
 }
 
 /**
- * Schema Zod reutilizável aplicando a política "balanced".
- * Use com .superRefine para fornecer contexto (email, name, username).
+ * Schema Zod reutilizável aplicando a política "balanced" SEM contexto
+ * (não checa nome/email/usuário). Use quando você não tem esses campos
+ * — por exemplo na confirmação de senha do reset.
+ *
+ * Para registro/reset que precisam validar contra dados do usuário use
+ * `evaluatePasswordPolicy(password, { email, name, username })` em
+ * `superRefine`, como feito em `registerSchema`.
  */
 export const strongPasswordSchema = z
   .string()
-  .min(8, "A senha deve ter no mínimo 8 caracteres.");
-
-export function refinePasswordWithContext<T extends { password: string } & PasswordPolicyContext>(
-  schema: z.ZodType<T>
-): z.ZodEffects<z.ZodType<T>, T, T> {
-  return schema.superRefine((data, ctx) => {
-    const result = evaluatePasswordPolicy(data.password, {
-      email: data.email,
-      name: data.name,
-      username: data.username,
-    });
+  .min(8, "A senha deve ter no mínimo 8 caracteres.")
+  .superRefine((value, ctx) => {
+    const result = evaluatePasswordPolicy(value);
     if (!result.valid) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["password"],
         message: result.message ?? "Senha inválida.",
       });
     }
   });
-}

@@ -44,8 +44,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const perfil = searchParams.get("perfil") || "contratante";
+  const perfilParam = searchParams.get("perfil");
+  const perfil = perfilParam || "contratante";
   const config = perfilConfig[perfil] || perfilConfig.contratante;
+  // Só impõe expectedRole quando o usuário entrou explicitamente
+  // pela tela específica de um perfil; /login sem ?perfil= aceita qualquer role.
+  const enforceRole = !!perfilParam && !!perfilConfig[perfilParam];
   const { login } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
@@ -62,7 +66,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(values.email, values.password, rememberMe, {
-        expectedRole: config.role,
+        expectedRole: enforceRole ? config.role : undefined,
         antiBot: antiBot.getPayload(),
       });
       const user = useAuthStore.getState().user;

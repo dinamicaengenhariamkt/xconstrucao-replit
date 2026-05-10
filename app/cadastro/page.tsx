@@ -69,6 +69,9 @@ export default function CadastroPage() {
   });
 
   const passwordValue = form.watch("password");
+  const nameValue = form.watch("name");
+  const emailValue = form.watch("email");
+  const usernameValue = form.watch("username");
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!acceptTerms) {
@@ -253,7 +256,14 @@ export default function CadastroPage() {
                     )}
                   </button>
                 </div>
-                <PasswordStrengthMeter password={passwordValue ?? ""} />
+                <PasswordStrengthMeter
+                  password={passwordValue ?? ""}
+                  context={{
+                    name: nameValue ?? "",
+                    email: emailValue ?? "",
+                    username: usernameValue ?? "",
+                  }}
+                />
                 {passwordError && (
                   <p className="text-xs text-red-500 mt-1" data-testid="text-password-error">
                     {passwordError}
