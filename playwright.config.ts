@@ -14,7 +14,7 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
  *   com EMAIL_TEST_MODE=1 e E2E_TEST_AUTH=1 — necessários para que os
  *   endpoints test-only (/api/test/emails, /api/test/oauth-simulate)
  *   fiquem ativos e os emails sejam capturados em memória ao invés de
- *   irem para o Resend.
+ *   irem para a Brevo.
  */
 export default defineConfig({
   testDir: "./tests/e2e",

@@ -9,7 +9,7 @@ import {
 /**
  * Jornada 01 — Identidade & Onboarding.
  * Pré-requisitos (env injetado pelo playwright.config.ts):
- *   - EMAIL_TEST_MODE=1   Resend mockado; emails ficam em memória
+ *   - EMAIL_TEST_MODE=1   Brevo mockado; emails ficam em memória
  *   - E2E_TEST_AUTH=1     habilita /api/test/oauth-simulate e /api/test/login-as
  */
 

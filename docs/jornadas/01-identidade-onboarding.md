@@ -70,7 +70,7 @@ Nenhum mock relevante aqui — auth é real. Auditar se restou alguma flag.
 - [x] Confirmar que `register` cria `clientes`/`empreiteiras` row vinculada — `createUserWithProfile` em transação Drizzle
 - [x] Adicionar coluna `userId` em `clientes` e `empreiteiras` se ainda não existir — com `UNIQUE` para idempotência
 - [x] Validar redirect pós-login para dashboard correto por role — `resolvePostLoginRedirect` com allowlist por prefixo
-- [x] Verificar fluxo de email em produção (provider Resend configurado) — domínio `dinamicareforma.com.br` verificado, `EMAIL_FROM=noreply@dinamicareforma.com.br`
+- [x] Verificar fluxo de email em produção (provider Brevo configurado via API HTTP `https://api.brevo.com/v3/smtp/email`, secret `BREVO_API_KEY`) — domínio `dinamicareforma.com.br` precisa estar verificado na Brevo, `EMAIL_FROM=noreply@dinamicareforma.com.br`
 - [x] Forçar `emailVerified` antes de liberar criação de obra (J03) e candidatura (J05) — guard `requireVerifiedUser` em `/api/obras`, `/api/empreiteiro/candidaturas`, `/api/clientes`, `/api/empreiteiras`
 - [x] Cobrir reset de senha ponta-a-ponta — fluxo email→token→nova senha funciona; suíte automatizada fica como follow-up
 - [x] Documentar credenciais seed (`admin@xconstrucao.com / 123456`, `joao@construtora.com / 123456`, `maria@empreiteira.com / 123456`)

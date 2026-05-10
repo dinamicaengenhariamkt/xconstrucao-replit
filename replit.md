@@ -70,6 +70,13 @@ XConstrução is a comprehensive construction management platform that connects 
 - `tsconfig.json` - TypeScript with path aliases (@/, @shared/)
 - Tailwind CSS v4 uses CSS-based config in globals.css (no tailwind.config.ts)
 
+## Transactional Email (Brevo)
+- Provider: **Brevo** via HTTP API `POST https://api.brevo.com/v3/smtp/email` (header `api-key`).
+- Service module: `shared/lib/email.ts` exposes `sendVerificationEmail`, `sendWelcomeEmail`, `sendPasswordResetEmail`. Templates in `features/auth/emails/*.tsx` rendered with `@react-email/render`.
+- Required secret: `BREVO_API_KEY` (Replit Secret). Required env: `EMAIL_FROM=noreply@dinamicareforma.com.br` (domain must be verified inside the Brevo account).
+- Sender exibido: `XConstrução <noreply@dinamicareforma.com.br>`.
+- Test mode: `EMAIL_TEST_MODE=1` → emails são capturados em memória (`shared/lib/test-email-store.ts`) e expostos por `/api/test/emails` para os E2E. A API da Brevo NÃO é chamada nesse modo.
+
 ## Feature Architecture (Empreiteiro & Contratante)
 Feature-based architecture under `features/empreiteiro/` and `features/contratante/`:
 - Each feature has: types/, mocks/, hooks/, api/, components/ folders
@@ -126,6 +133,7 @@ Feature-based architecture under `features/empreiteiro/` and `features/contratan
 - Layout: `features/admin/components/AdminLayout.tsx`
 
 ## Recent Changes
+- 2026-05-10: Email provider migrated from Resend to Brevo (HTTP API, secret `BREVO_API_KEY`). Same function signatures, same templates, same `EMAIL_TEST_MODE` capture path. `resend` package and legacy `lib/email.ts` removed.
 - 2026-02-21: Built complete admin internal views (Clientes, Empreiteiras, Caixa, Entradas, Saídas, Anúncios, FAQ with full CRUD forms)
 - 2026-02-20: Built complete contratante internal views (Minhas Obras, Detalhes da Obra, Nova Obra, Pagamentos, xchat, FAQ)
 - 2026-02-20: Built complete empreiteiro internal views (Minhas Obras, Novas Obras, Detalhes da Obra, xchat, FAQ)

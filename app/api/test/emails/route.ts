@@ -3,7 +3,7 @@
  * Disponível APENAS quando EMAIL_TEST_MODE=1 (vide shared/lib/test-email-store.ts).
  *
  * Usado pelos testes Playwright em tests/e2e/ para extrair o link de verificação
- * sem precisar de SMTP / Resend real.
+ * sem precisar de SMTP / Brevo real.
  *
  *   GET    /api/test/emails?to=...   -> lista emails capturados (filtro opcional)
  *   DELETE /api/test/emails          -> limpa o store em memória

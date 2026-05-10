@@ -2,7 +2,7 @@
  * In-memory captura de emails enviados quando EMAIL_TEST_MODE=1.
  *
  * Usado pelos testes E2E para inspecionar o link de verificação enviado
- * (sem precisar bater no Resend de verdade).
+ * (sem precisar bater na Brevo de verdade).
  *
  * NUNCA usar em produção — só é alimentado quando EMAIL_TEST_MODE=1.
  */
