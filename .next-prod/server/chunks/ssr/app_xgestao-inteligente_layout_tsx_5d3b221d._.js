@@ -1,3 +1,0 @@
-module.exports=[931100,a=>{"use strict";var b=a.i(907997);let c=(0,a.i(621747).generateMetadata)({title:"xgestão inteligente - Gestão de Obras com Inteligência Artificial",description:"Sistema completo para gerenciar orçamentos, equipes, financeiro e documentação da sua obra com IA. Teste grátis por 3 meses.",path:"/xgestao-inteligente",ogImage:"/og-images/xgestao.png",keywords:["xgestão inteligente","gestão de obras IA","orçamento SINAPI","controle de obras","gestão financeira obras"]});function d({children:a}){return(0,b.jsx)(b.Fragment,{children:a})}a.s(["default",()=>d,"dynamic",0,"force-static","metadata",0,c,"revalidate",0,!1])}];
-
-//# sourceMappingURL=app_xgestao-inteligente_layout_tsx_5d3b221d._.js.map

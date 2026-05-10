@@ -1,3 +1,0 @@
-module.exports=[852447,a=>{"use strict";var b=a.i(907997);let c=(0,a.i(621747).generateMetadata)({title:"Termos de Uso - XConstrução",description:"Termos de uso da plataforma XConstrução. Leia atentamente antes de utilizar nossos serviços de gestão de obras.",path:"/termos",ogImage:"/og-images/legal.png"});function d({children:a}){return(0,b.jsx)(b.Fragment,{children:a})}a.s(["default",()=>d,"dynamic",0,"force-static","metadata",0,c,"revalidate",0,!1])}];
-
-//# sourceMappingURL=app_termos_layout_tsx_5877b77a._.js.map
