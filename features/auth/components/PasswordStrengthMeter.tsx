@@ -8,6 +8,7 @@ interface Props {
 }
 
 const LABELS = ['Muito fraca', 'Fraca', 'Razoável', 'Boa', 'Muito boa', 'Forte'];
+// Cores de preenchimento conforme spec:
 // 0 cinza, 1-2 vermelho, 3 amarelo, 4 verde claro, 5 verde escuro
 const SEGMENT_COLORS = [
   'bg-slate-200 dark:bg-slate-700',
@@ -25,33 +26,35 @@ interface Criterion {
 }
 
 function buildCriteria(password: string, ctx: Props['context']): Criterion[] {
-  const lower = password.toLowerCase();
-  const hasLower = /[a-z]/.test(password);
-  const hasUpper = /[A-Z]/.test(password);
-  const hasDigit = /[0-9]/.test(password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(password);
-  const categoriesOk = [hasLower, hasUpper, hasDigit, hasSpecial].filter(Boolean).length >= 3;
+  const lower = /[a-z]/.test(password);
+  const upper = /[A-Z]/.test(password);
+  const digit = /[0-9]/.test(password);
+  const special = /[^A-Za-z0-9]/.test(password);
   const policy = evaluatePasswordPolicy(password, ctx ?? {});
+  const personalErrors = new Set([
+    'A senha não pode conter partes do seu email.',
+    'A senha não pode conter seu nome ou usuário.',
+    'Esta senha é muito comum. Escolha outra mais difícil.',
+  ]);
   const noPersonal =
     !!password &&
-    (policy.valid ||
-      ![
-        'A senha não pode conter partes do seu email.',
-        'A senha não pode conter seu nome ou usuário.',
-        'Esta senha é muito comum. Escolha outra mais difícil.',
-      ].includes(policy.message ?? ''));
+    (policy.valid || !personalErrors.has(policy.message ?? ''));
+
   return [
     { key: 'len', label: 'Pelo menos 8 caracteres', ok: password.length >= 8 },
-    { key: 'cat', label: '3 entre: maiúscula, minúscula, número e símbolo', ok: categoriesOk },
+    { key: 'upper', label: 'Uma letra maiúscula (A-Z)', ok: upper },
+    { key: 'lower', label: 'Uma letra minúscula (a-z)', ok: lower },
+    { key: 'digit', label: 'Um número (0-9)', ok: digit },
+    { key: 'special', label: 'Um caractere especial (!@#…)', ok: special },
     { key: 'personal', label: 'Não usa seu nome, usuário ou email', ok: noPersonal },
   ];
 }
 
 export function PasswordStrengthMeter({ password, context }: Props) {
   if (!password) return null;
-  // Mapeia score 0..4 em 0..5 segmentos preenchidos.
-  const score = passwordStrength(password);
-  const filled = password.length === 0 ? 0 : score === 0 ? 1 : score + 1;
+  const score = passwordStrength(password); // 0..4
+  // Mapeia em 0..5 segmentos preenchidos para o bar de 5 segmentos.
+  const filled = score === 0 ? 1 : score + 1;
   const criteria = buildCriteria(password, context);
 
   return (

@@ -19,16 +19,14 @@ import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
 import { HoneypotField } from "@features/auth/components/HoneypotField";
 import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
+import { PasswordInput } from "@features/auth/components/PasswordInput";
 import {
   IconPerson,
   IconMail,
   IconAlternateEmail,
   IconPhone,
-  IconLock,
   IconBusiness,
   IconConstruction,
-  IconVisibility,
-  IconVisibilityOff,
 } from '@shared/components/icons';
 
 type RegisterValues = z.infer<typeof registerSchema>;
@@ -41,7 +39,6 @@ const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: str
 export default function CadastroPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfil = searchParams.get("perfil") || "contratante";
@@ -232,30 +229,12 @@ export default function CadastroPage() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
-                <div className="relative">
-                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Mínimo 8 caracteres"
-                    autoComplete="new-password"
-                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
-                    data-testid="input-password"
-                    {...form.register("password")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    data-testid="button-toggle-password"
-                  >
-                    {showPassword ? (
-                      <IconVisibilityOff className="text-lg" />
-                    ) : (
-                      <IconVisibility className="text-lg" />
-                    )}
-                  </button>
-                </div>
+                <PasswordInput
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
+                  testId="input-password"
+                  {...form.register("password")}
+                />
                 <PasswordStrengthMeter
                   password={passwordValue ?? ""}
                   context={{

@@ -8,14 +8,13 @@ import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
-import { IconLock, IconVisibility, IconVisibilityOff, IconPassword } from '@shared/components/icons';
+import { PasswordInput } from "@features/auth/components/PasswordInput";
+import { IconPassword } from '@shared/components/icons';
 
 function ResetSenhaContent() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -118,53 +117,27 @@ function ResetSenhaContent() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Nova Senha</label>
-                <div className="relative">
-                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
-                    required
-                    autoComplete="new-password"
-                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
-                    data-testid="input-new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
-                  </button>
-                </div>
+                <PasswordInput
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  autoComplete="new-password"
+                  testId="input-new-password"
+                />
                 <PasswordStrengthMeter password={newPassword} />
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Confirmar Senha</label>
-                <div className="relative">
-                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Digite a senha novamente"
-                    required
-                    autoComplete="new-password"
-                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
-                    data-testid="input-confirm-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showConfirmPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
-                  </button>
-                </div>
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Digite a senha novamente"
+                  required
+                  autoComplete="new-password"
+                  testId="input-confirm-password"
+                />
               </div>
 
               <button

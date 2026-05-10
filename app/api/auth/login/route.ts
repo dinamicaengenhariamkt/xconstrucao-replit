@@ -10,7 +10,7 @@ import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-ut
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { validateAntiBot } from "@features/auth/api/anti-bot";
 
-const GENERIC_INVALID = "Email ou senha incorretos";
+const GENERIC_INVALID = "Email ou senha inválidos";
 
 function jsonNoStore(payload: unknown, status: number) {
   const response = NextResponse.json(payload, { status });

@@ -19,15 +19,13 @@ import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
 import { HoneypotField } from "@features/auth/components/HoneypotField";
+import { PasswordInput } from "@features/auth/components/PasswordInput";
 import React from 'react';
 import {
   IconMail,
-  IconLock,
   IconBusiness,
   IconConstruction,
   IconAdminPanelSettings,
-  IconVisibility,
-  IconVisibilityOff,
 } from '@shared/components/icons';
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -41,7 +39,6 @@ const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: str
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfilParam = searchParams.get("perfil");
@@ -179,30 +176,12 @@ export default function LoginPage() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
-                <div className="relative">
-                  <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Sua senha"
-                    autoComplete="current-password"
-                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
-                    data-testid="input-password"
-                    {...form.register("password")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    data-testid="button-toggle-password"
-                  >
-                    {showPassword ? (
-                      <IconVisibilityOff className="text-lg" />
-                    ) : (
-                      <IconVisibility className="text-lg" />
-                    )}
-                  </button>
-                </div>
+                <PasswordInput
+                  placeholder="Sua senha"
+                  autoComplete="current-password"
+                  testId="input-password"
+                  {...form.register("password")}
+                />
               </div>
 
               <div className="flex items-center justify-between">
