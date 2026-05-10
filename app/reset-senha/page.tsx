@@ -6,6 +6,8 @@ import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
+import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
+import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
 import { IconLock, IconVisibility, IconVisibilityOff, IconPassword } from '@shared/components/icons';
 
 function ResetSenhaContent() {
@@ -21,7 +23,6 @@ function ResetSenhaContent() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Se não houver token, redirecionar para recuperar senha
     if (!token) {
       router.push("/recuperar-senha");
     }
@@ -30,10 +31,11 @@ function ResetSenhaContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (newPassword.length < 6) {
+    const policy = evaluatePasswordPolicy(newPassword);
+    if (!policy.valid) {
       toast({
         title: "Senha inválida",
-        description: "A senha deve ter no mínimo 6 caracteres",
+        description: policy.message ?? "Escolha uma senha mais forte.",
         variant: "destructive",
       });
       return;
@@ -65,7 +67,6 @@ function ResetSenhaContent() {
           description: "Sua senha foi atualizada com sucesso.",
         });
 
-        // Redirecionar para login após 2 segundos
         setTimeout(() => {
           router.push("/login");
         }, 2000);
@@ -123,18 +124,22 @@ function ResetSenhaContent() {
                     type={showPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     required
+                    autoComplete="new-password"
                     className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   >
                     {showPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
                   </button>
                 </div>
+                <PasswordStrengthMeter password={newPassword} />
               </div>
 
               <div>
@@ -147,12 +152,15 @@ function ResetSenhaContent() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Digite a senha novamente"
                     required
+                    autoComplete="new-password"
                     className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-confirm-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
                   >
                     {showConfirmPassword ? <IconVisibilityOff className="text-lg" /> : <IconVisibility className="text-lg" />}
                   </button>
@@ -163,6 +171,7 @@ function ResetSenhaContent() {
                 type="submit"
                 disabled={loading}
                 className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="button-reset-password"
               >
                 {loading ? "Redefinindo..." : "Redefinir Senha"}
               </button>

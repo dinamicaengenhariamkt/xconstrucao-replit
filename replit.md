@@ -59,10 +59,24 @@ XConstrução is a comprehensive construction management platform that connects 
 - Clean, professional design with Manrope font
 - Dark/light mode toggle
 
-## Test Accounts
-- Admin: admin@xconstrucao.com / 123456
-- Contratante: joao@construtora.com / 123456
-- Empreiteiro: maria@empreiteira.com / 123456
+## Test Accounts (senhas fortes — política "balanced")
+- Admin: admin@xconstrucao.com / Admin@2026!Constru
+- Contratante: joao@construtora.com / Joao@2026!Obras
+- Empreiteiro: maria@empreiteira.com / Maria@2026!Reforma
+
+## Política de Senha (Task #10)
+- Mínimo 8 caracteres + 3 das 4 categorias (maiúscula/minúscula/número/especial).
+- Bloqueia senhas comuns e que contenham email/nome/usuário.
+- Implementação: `features/auth/schemas/password.ts` (`evaluatePasswordPolicy`, `passwordStrength`).
+- Aplicada em registerSchema e endpoint `/api/auth/reset-password`. Login só exige `min(1)` (não quebra contas legadas).
+
+## Anti-bot (Task #10)
+- Honeypot DOM (`<HoneypotField>`) + timing min 1.5s (`useAntiBotPayload` / `validateAntiBot`).
+- Aplicado em login, cadastro e recuperar-senha.
+- Em login/registro a falha vira mensagem genérica; em forgot-password vira "sucesso" silencioso.
+
+## Reset destrutivo + reseed
+- `scripts/reset-and-seed.ts` — em produção exige `CONFIRM_PROD_RESET=YES`.
 
 ## Configuration
 - `next.config.ts` - Next.js config (port 5000, allowedDevOrigins)

@@ -54,17 +54,14 @@ export async function seedDatabase() {
 
   console.log("Seeding database...");
 
-  // CREDENCIAIS DE DESENVOLVIMENTO:
-  //   admin@xconstrucao.com / 123456     (admin)
-  //   joao@construtora.com  / 123456     (contratante)
-  //   maria@empreiteira.com / 123456     (empreiteiro)
-  // (Em produção, a senha do admin é diferente por segurança)
-  const devPassword = "123456";
-  const prodAdminPassword = "admin123";
-  const adminPassword = await hashPassword(
-    process.env.NODE_ENV === "production" ? prodAdminPassword : devPassword
-  );
-  const userPassword = await hashPassword(devPassword);
+  // CREDENCIAIS DE DESENVOLVIMENTO (atendem à política "balanced":
+  // mínimo 8 chars + 3 categorias entre maiúscula/minúscula/número/símbolo):
+  //   admin@xconstrucao.com / Admin@2026!Constru
+  //   joao@construtora.com  / Joao@2026!Obras
+  //   maria@empreiteira.com / Maria@2026!Reforma
+  const adminPassword = await hashPassword("Admin@2026!Constru");
+  const joaoPassword = await hashPassword("Joao@2026!Obras");
+  const mariaPassword = await hashPassword("Maria@2026!Reforma");
   const now = new Date();
 
   // 1. Usuários — todos já com email verificado para facilitar dev
@@ -81,7 +78,7 @@ export async function seedDatabase() {
       },
       {
         username: "joao",
-        password: userPassword,
+        password: joaoPassword,
         name: "João Oliveira",
         email: "joao@construtora.com",
         role: "contratante",
@@ -90,7 +87,7 @@ export async function seedDatabase() {
       },
       {
         username: "maria",
-        password: userPassword,
+        password: mariaPassword,
         name: "Maria Fernandes",
         email: "maria@empreiteira.com",
         role: "empreiteiro",

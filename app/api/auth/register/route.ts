@@ -5,46 +5,55 @@ import { registerSchema } from "@features/auth/schemas";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { validateAntiBot } from "@features/auth/api/anti-bot";
+
+const GENERIC_BAD = "Não foi possível processar a solicitação. Tente novamente.";
+
+function jsonNoStore(payload: unknown, status: number) {
+  const response = NextResponse.json(payload, { status });
+  setNoCacheHeaders(response);
+  return response;
+}
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   if (isRateLimited(`register:${ip}`, 5, 60 * 60 * 1000)) {
-    const response = NextResponse.json(
+    return jsonNoStore(
       { message: "Muitas tentativas. Tente novamente em alguns minutos." },
-      { status: 429 }
+      429
     );
-    setNoCacheHeaders(response);
-    return response;
   }
 
   try {
     const body = await request.json();
+
+    const antiBot = validateAntiBot(body);
+    if (!antiBot.ok) {
+      return jsonNoStore({ message: GENERIC_BAD }, 400);
+    }
+
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      const response = NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
-      setNoCacheHeaders(response);
-      return response;
+      return jsonNoStore(
+        { message: "Dados inválidos", errors: parsed.error.flatten() },
+        400
+      );
     }
 
     const { name, email, username, password, role, phone } = parsed.data;
 
     const existingEmail = await getUserByEmail(email);
     if (existingEmail) {
-      const response = NextResponse.json({ message: "Email já cadastrado" }, { status: 409 });
-      setNoCacheHeaders(response);
-      return response;
+      return jsonNoStore({ message: "Email já cadastrado" }, 409);
     }
 
     const existingUsername = await getUserByUsername(username);
     if (existingUsername) {
-      const response = NextResponse.json({ message: "Nome de usuário já cadastrado" }, { status: 409 });
-      setNoCacheHeaders(response);
-      return response;
+      return jsonNoStore({ message: "Nome de usuário já cadastrado" }, 409);
     }
 
     const hashed = await hashPassword(password);
 
-    // Criar usuário + row de domínio (clientes/empreiteiras) numa só operação
     const user = await createUserWithProfile({
       name,
       email,
@@ -52,36 +61,29 @@ export async function POST(request: NextRequest) {
       password: hashed,
       role,
       phone: phone || null,
-      emailVerified: null // Explicitamente null
+      emailVerified: null,
     });
 
-    // Gerar token de verificação
     const verificationToken = createEmailVerificationToken(user.id, user.email);
-
-    // Construir URL de verificação
     const baseUrl = getBaseUrl(request);
     const verificationUrl = `${baseUrl}/api/auth/verify-email?token=${verificationToken}`;
 
-    // Enviar email de verificação (bloqueante para garantir que foi enviado)
     try {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Ainda retornar sucesso, mas logar o erro
-      // Em produção, considere usar fila de emails
+      console.error("Failed to send verification email:", emailError);
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: "Conta criada com sucesso! Verifique seu email para ativar.",
-      email: user.email
-    }, { status: 201 });
-    setNoCacheHeaders(response);
-    return response;
+    return jsonNoStore(
+      {
+        success: true,
+        message: "Conta criada com sucesso! Verifique seu email para ativar.",
+        email: user.email,
+      },
+      201
+    );
   } catch (error) {
     console.error("Erro no registro:", error);
-    const response = NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
-    setNoCacheHeaders(response);
-    return response;
+    return jsonNoStore({ message: "Erro interno do servidor" }, 500);
   }
 }

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@shared/hooks/use-toast';
 import { IconMail } from '@shared/components/icons';
 
+const RESEND_COOLDOWN = 60;
+
 /**
  * Banner persistente exibido no topo dos dashboards quando o usuário ainda
  * não confirmou o email. Bloqueia visualmente as ações principais e oferece
@@ -15,7 +17,14 @@ export function EmailVerificationBanner() {
   const [unverified, setUnverified] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +56,7 @@ export function EmailVerificationBanner() {
   if (!unverified || !email) return null;
 
   async function handleResend() {
-    if (resending) return;
+    if (resending || cooldown > 0) return;
     setResending(true);
     try {
       const res = await fetch('/api/auth/resend-verification', {
@@ -60,6 +69,7 @@ export function EmailVerificationBanner() {
         title: 'Email reenviado',
         description: 'Verifique sua caixa de entrada e a pasta de spam.',
       });
+      setCooldown(RESEND_COOLDOWN);
     } catch {
       toast({
         title: 'Não foi possível reenviar',
@@ -90,11 +100,11 @@ export function EmailVerificationBanner() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resending}
+          disabled={resending || cooldown > 0}
           className="shrink-0 inline-flex items-center justify-center rounded-full bg-amber-900 dark:bg-amber-100 text-amber-50 dark:text-amber-900 text-xs font-bold uppercase tracking-wider px-4 py-2 hover:brightness-110 disabled:opacity-50 transition-all"
           data-testid="button-resend-verification"
         >
-          {resending ? 'Enviando…' : 'Reenviar email'}
+          {cooldown > 0 ? `Aguarde ${cooldown}s` : resending ? 'Enviando…' : 'Reenviar email'}
         </button>
       </div>
     </div>

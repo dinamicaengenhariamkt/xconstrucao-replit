@@ -1,98 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginSchema } from "@features/auth/schemas";
-import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { getUserByEmail } from "@features/auth/api/auth-storage";
 import {
   comparePassword,
   createAccessToken,
-  createRefreshToken
+  createRefreshToken,
 } from "@features/auth/api/auth-service";
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { validateAntiBot } from "@features/auth/api/anti-bot";
+
+const GENERIC_INVALID = "Email ou senha incorretos";
+
+function jsonNoStore(payload: unknown, status: number) {
+  const response = NextResponse.json(payload, { status });
+  setNoCacheHeaders(response);
+  return response;
+}
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   if (isRateLimited(`login:${ip}`, 10, 15 * 60 * 1000)) {
-    const response = NextResponse.json(
+    return jsonNoStore(
       { error: "Muitas tentativas. Tente novamente em alguns minutos." },
-      { status: 429 }
+      429
     );
-    setNoCacheHeaders(response);
-    return response;
   }
 
   try {
     const body = await request.json();
 
-    // Validar dados de entrada com Zod
+    const antiBot = validateAntiBot(body);
+    if (!antiBot.ok) {
+      return jsonNoStore({ error: GENERIC_INVALID }, 400);
+    }
+
     const validation = loginSchema.safeParse(body);
     if (!validation.success) {
-      const response = NextResponse.json(
-        {
-          error: "Dados inválidos",
-          details: validation.error.errors
-        },
-        { status: 400 }
-      );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
-      return response;
+      return jsonNoStore({ error: GENERIC_INVALID }, 400);
     }
 
     const { email, password } = validation.data;
-    const rememberMe = body.rememberMe || false;
+    const rememberMe = body.rememberMe === true;
+    const expectedRole =
+      typeof body.expectedRole === "string" ? body.expectedRole : null;
 
-    // Buscar usuário por email
     const user = await getUserByEmail(email);
-
     if (!user) {
-      const response = NextResponse.json(
-        { error: "Email ou senha incorretos" },
-        { status: 401 }
-      );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
-      return response;
+      return jsonNoStore({ error: GENERIC_INVALID }, 401);
     }
 
-    // Verificar se email foi verificado
+    // Conta criada via OAuth (sem senha local): devolvemos a mensagem genérica
+    // para não confirmar a existência da conta nem o método de autenticação.
+    if (!user.password) {
+      return jsonNoStore({ error: GENERIC_INVALID }, 401);
+    }
+
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      return jsonNoStore({ error: GENERIC_INVALID }, 401);
+    }
+
+    // Email não verificado: só checamos depois da senha estar correta.
     if (user.emailVerified === null) {
-      const response = NextResponse.json(
+      return jsonNoStore(
         {
           error: "EMAIL_NOT_VERIFIED",
-          message: "Por favor, verifique seu email antes de fazer login"
+          message: "Por favor, verifique seu email antes de fazer login",
         },
-        { status: 403 }
+        403
       );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
-      return response;
     }
 
-    // Verificar se usuário tem senha (pode ser OAuth)
-    if (!user.password) {
-      const response = NextResponse.json(
-        { error: "Esta conta usa login via Google. Use o botão 'Continuar com Google'" },
-        { status: 400 }
-      );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
-      return response;
+    // Validação de role esperada — não revela que a conta existe
+    // sob outro role; devolve a mesma mensagem genérica de credencial.
+    if (expectedRole && expectedRole !== user.role) {
+      return jsonNoStore({ error: GENERIC_INVALID }, 401);
     }
 
-    // Comparar senha
-    const isPasswordValid = await comparePassword(password, user.password);
-
-    if (!isPasswordValid) {
-      const response = NextResponse.json(
-        { error: "Email ou senha incorretos" },
-        { status: 401 }
-      );
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      response.headers.set('Pragma', 'no-cache');
-      return response;
-    }
-
-    // Preparar dados do usuário (sem password)
     const userData = {
       id: user.id,
       email: user.email,
@@ -102,30 +87,15 @@ export async function POST(request: NextRequest) {
       avatarUrl: user.avatarUrl,
     };
 
-    // Gerar tokens JWT
     const accessToken = createAccessToken(userData);
     const refreshToken = createRefreshToken(user.id, rememberMe);
 
-    // Criar resposta
-    const response = NextResponse.json({
-      success: true,
-      user: userData,
-    });
-
-    // Configurar headers de segurança e cookies
+    const response = NextResponse.json({ success: true, user: userData });
     setNoCacheHeaders(response);
     createAuthCookies(response, accessToken, refreshToken, rememberMe);
-
     return response;
-
   } catch (error) {
     console.error("Erro no login:", error);
-    const response = NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    );
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    response.headers.set('Pragma', 'no-cache');
-    return response;
+    return jsonNoStore({ error: "Erro interno do servidor" }, 500);
   }
 }

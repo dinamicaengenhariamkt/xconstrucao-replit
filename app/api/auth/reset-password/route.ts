@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { getUser, updateUserPassword } from "@features/auth/api/auth-storage";
 import { verifyPasswordResetToken, hashPassword } from "@features/auth/api/auth-service";
+import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { z } from "zod";
 
 const schema = z.object({
   token: z.string().min(1, "Token é obrigatório"),
-  newPassword: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
+  newPassword: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,9 +23,7 @@ export async function POST(request: NextRequest) {
 
     const { token, newPassword } = result.data;
 
-    // Verificar e decodificar token
     const payload = verifyPasswordResetToken(token);
-
     if (!payload) {
       return NextResponse.json(
         { message: "Token inválido ou expirado. Solicite um novo link de recuperação." },
@@ -32,10 +31,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash da nova senha
-    const hashedPassword = await hashPassword(newPassword);
+    // Buscar usuário para validar contexto (email/nome) na política de senha
+    const user = await getUser(payload.userId);
+    const policy = evaluatePasswordPolicy(newPassword, {
+      email: user?.email,
+      name: user?.name,
+      username: user?.username,
+    });
+    if (!policy.valid) {
+      return NextResponse.json(
+        { message: policy.message ?? "Senha inválida." },
+        { status: 400 }
+      );
+    }
 
-    // Atualizar senha no banco
+    const hashedPassword = await hashPassword(newPassword);
     await updateUserPassword(payload.userId, hashedPassword);
 
     return NextResponse.json({

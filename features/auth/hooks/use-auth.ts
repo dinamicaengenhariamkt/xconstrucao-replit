@@ -29,8 +29,13 @@ export interface RegisterData {
 export interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+    options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
+  ) => Promise<void>;
+  register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth?: () => Promise<void>;

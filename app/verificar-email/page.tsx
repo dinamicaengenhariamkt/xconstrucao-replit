@@ -1,17 +1,26 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { useToast } from "@shared/hooks/use-toast";
 import { IconCheckCircle, IconError, IconMarkEmailUnread } from '@shared/components/icons';
 
+const RESEND_COOLDOWN = 60;
+
 function VerificarEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isResending, setIsResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   const success = searchParams.get("success");
   const error = searchParams.get("error");
@@ -27,7 +36,7 @@ function VerificarEmailContent() {
   const status = getStatus();
 
   const handleResendEmail = async () => {
-    if (!email) return;
+    if (!email || cooldown > 0) return;
 
     setIsResending(true);
     try {
@@ -42,6 +51,7 @@ function VerificarEmailContent() {
           title: "Email reenviado!",
           description: "Verifique sua caixa de entrada e spam.",
         });
+        setCooldown(RESEND_COOLDOWN);
       } else {
         toast({
           title: "Erro",
@@ -116,11 +126,15 @@ function VerificarEmailContent() {
                 {email && (
                   <button
                     onClick={handleResendEmail}
-                    disabled={isResending}
+                    disabled={isResending || cooldown > 0}
                     className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
                     data-testid="button-resend-error"
                   >
-                    {isResending ? "Reenviando..." : "Solicitar Novo Link"}
+                    {cooldown > 0
+                      ? `Aguarde ${cooldown}s`
+                      : isResending
+                        ? "Reenviando..."
+                        : "Solicitar Novo Link"}
                   </button>
                 )}
                 <button
@@ -157,11 +171,15 @@ function VerificarEmailContent() {
 
                 <button
                   onClick={handleResendEmail}
-                  disabled={isResending || !email}
+                  disabled={isResending || !email || cooldown > 0}
                   className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
                   data-testid="button-resend"
                 >
-                  {isResending ? "Reenviando..." : "Reenviar Email"}
+                  {cooldown > 0
+                    ? `Aguarde ${cooldown}s para reenviar`
+                    : isResending
+                      ? "Reenviando..."
+                      : "Reenviar Email"}
                 </button>
 
                 <button

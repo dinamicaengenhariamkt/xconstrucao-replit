@@ -17,26 +17,38 @@ import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role"
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
+import { HoneypotField } from "@features/auth/components/HoneypotField";
 import React from 'react';
-import { IconMail, IconLock, IconBusiness, IconConstruction, IconAdminPanelSettings } from '@shared/components/icons';
+import {
+  IconMail,
+  IconLock,
+  IconBusiness,
+  IconConstruction,
+  IconAdminPanelSettings,
+  IconVisibility,
+  IconVisibilityOff,
+} from '@shared/components/icons';
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
-  contratante: { Icon: IconBusiness, text: "Contratante" },
-  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
-  administrador: { Icon: IconAdminPanelSettings, text: "Administrador" },
+const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string; role: string }> = {
+  contratante: { Icon: IconBusiness, text: "Contratante", role: "contratante" },
+  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro", role: "empreiteiro" },
+  administrador: { Icon: IconAdminPanelSettings, text: "Administrador", role: "admin" },
 };
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfil = searchParams.get("perfil") || "contratante";
   const config = perfilConfig[perfil] || perfilConfig.contratante;
   const { login } = useAuth();
   const { toast } = useToast();
+  const antiBot = useAntiBotPayload();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -49,14 +61,16 @@ export default function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setIsLoading(true);
     try {
-      await login(values.email, values.password, rememberMe);
+      await login(values.email, values.password, rememberMe, {
+        expectedRole: config.role,
+        antiBot: antiBot.getPayload(),
+      });
       const user = useAuthStore.getState().user;
       if (user) {
         const next = searchParams.get("next");
         router.replace(resolvePostLoginRedirect(user.role, next));
       }
     } catch (error: unknown) {
-      // Tratar erro de email não verificado
       if (error instanceof Error && error.message.includes("EMAIL_NOT_VERIFIED")) {
         toast({
           title: "Email não verificado",
@@ -64,7 +78,6 @@ export default function LoginPage() {
           variant: "destructive",
         });
 
-        // Redirecionar para página de verificação
         setTimeout(() => {
           router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
         }, 2000);
@@ -119,8 +132,6 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Mesma intenção de persona quando o usuário usa Google a partir
-                  // da tela de login (se for primeiro acesso, vira o perfil escolhido)
                   const persona = perfil === "empreiteiro" ? "empreiteiro" : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
                   signIn("google", { callbackUrl: "/auth/oauth-success" });
@@ -129,22 +140,10 @@ export default function LoginPage() {
                 data-testid="button-google-login"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
                 Continuar com Google
               </button>
@@ -153,14 +152,13 @@ export default function LoginPage() {
             {/* Divider */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-              <span className="text-xs text-slate-400 font-medium uppercase">
-                ou
-              </span>
+              <span className="text-xs text-slate-400 font-medium uppercase">ou</span>
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
             </div>
 
             {/* Login Form */}
             <form onSubmit={onSubmit} className="space-y-4">
+              <HoneypotField value={antiBot.website} onChange={antiBot.setWebsite} />
               <div>
                 <label className="text-sm font-medium mb-2 block">Email</label>
                 <div className="relative">
@@ -168,6 +166,7 @@ export default function LoginPage() {
                   <input
                     type="email"
                     placeholder="seu@email.com"
+                    autoComplete="email"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-email"
                     {...form.register("email")}
@@ -179,12 +178,26 @@ export default function LoginPage() {
                 <div className="relative">
                   <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Sua senha"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    autoComplete="current-password"
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-password"
                     {...form.register("password")}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    data-testid="button-toggle-password"
+                  >
+                    {showPassword ? (
+                      <IconVisibilityOff className="text-lg" />
+                    ) : (
+                      <IconVisibility className="text-lg" />
+                    )}
+                  </button>
                 </div>
               </div>
 

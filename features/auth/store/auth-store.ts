@@ -42,8 +42,13 @@ interface AuthState {
   setHasCheckedAuth: (checked: boolean) => void;
   setSkipInitialCheck: (skip: boolean) => void;
 
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+    options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
+  ) => Promise<void>;
+  register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth: () => Promise<void>;
@@ -163,7 +168,12 @@ export const useAuthStore = create<AuthState>()(
         },
 
         // Login
-        login: async (email: string, password: string, rememberMe: boolean = false) => {
+        login: async (
+          email: string,
+          password: string,
+          rememberMe: boolean = false,
+          options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
+        ) => {
           const { setUser, setSkipInitialCheck, setHasCheckedAuth, setLoading, confirmSessionReady } =
             get();
 
@@ -172,7 +182,14 @@ export const useAuthStore = create<AuthState>()(
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ email, password, rememberMe }),
+              body: JSON.stringify({
+                email,
+                password,
+                rememberMe,
+                expectedRole: options?.expectedRole,
+                website: options?.antiBot?.website ?? '',
+                mountedAt: options?.antiBot?.mountedAt ?? Date.now() - 2000,
+              }),
             });
 
             if (!res.ok) {
@@ -208,12 +225,17 @@ export const useAuthStore = create<AuthState>()(
         },
 
         // Registro
-        register: async (data: RegisterData) => {
+        register: async (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => {
           try {
+            const { antiBot, ...rest } = data;
             const res = await fetch('/api/auth/register', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(data),
+              body: JSON.stringify({
+                ...rest,
+                website: antiBot?.website ?? '',
+                mountedAt: antiBot?.mountedAt ?? Date.now() - 2000,
+              }),
             });
 
             if (!res.ok) {

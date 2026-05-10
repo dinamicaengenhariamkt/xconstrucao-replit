@@ -16,7 +16,20 @@ import { useAuth } from "@features/auth/hooks/use-auth";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
-import { IconPerson, IconMail, IconAlternateEmail, IconPhone, IconLock, IconBusiness, IconConstruction } from '@shared/components/icons';
+import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
+import { HoneypotField } from "@features/auth/components/HoneypotField";
+import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
+import {
+  IconPerson,
+  IconMail,
+  IconAlternateEmail,
+  IconPhone,
+  IconLock,
+  IconBusiness,
+  IconConstruction,
+  IconVisibility,
+  IconVisibilityOff,
+} from '@shared/components/icons';
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
@@ -28,12 +41,14 @@ const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: str
 export default function CadastroPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfil = searchParams.get("perfil") || "contratante";
   const config = perfilConfig[perfil] || perfilConfig.contratante;
   const { register: registerUser } = useAuth();
   const { toast } = useToast();
+  const antiBot = useAntiBotPayload();
 
   useEffect(() => {
     if (perfil === "administrador") {
@@ -53,6 +68,8 @@ export default function CadastroPage() {
     },
   });
 
+  const passwordValue = form.watch("password");
+
   const onSubmit = form.handleSubmit(async (values) => {
     if (!acceptTerms) {
       toast({
@@ -68,6 +85,7 @@ export default function CadastroPage() {
       await registerUser({
         ...values,
         role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+        antiBot: antiBot.getPayload(),
       });
       toast({
         title: "Conta criada com sucesso!",
@@ -90,6 +108,8 @@ export default function CadastroPage() {
   });
 
   if (perfil === "administrador") return null;
+
+  const passwordError = form.formState.errors.password?.message;
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
@@ -124,9 +144,6 @@ export default function CadastroPage() {
               <button
                 type="button"
                 onClick={() => {
-                  // Persiste a persona escolhida na landing por 10min
-                  // para que o callback NextAuth saiba se o novo usuário OAuth
-                  // deve ser contratante ou empreiteiro.
                   const persona = perfil === "empreiteiro" ? "empreiteiro" : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
                   signIn("google", { callbackUrl: "/auth/oauth-success" });
@@ -153,6 +170,7 @@ export default function CadastroPage() {
 
             {/* Register Form */}
             <form onSubmit={onSubmit} className="space-y-4">
+              <HoneypotField value={antiBot.website} onChange={antiBot.setWebsite} />
               <div>
                 <label className="text-sm font-medium mb-2 block">Nome completo</label>
                 <div className="relative">
@@ -160,6 +178,7 @@ export default function CadastroPage() {
                   <input
                     type="text"
                     placeholder="Seu nome completo"
+                    autoComplete="name"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-name"
                     {...form.register("name")}
@@ -173,6 +192,7 @@ export default function CadastroPage() {
                   <input
                     type="email"
                     placeholder="seu@email.com"
+                    autoComplete="email"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-email"
                     {...form.register("email")}
@@ -186,6 +206,7 @@ export default function CadastroPage() {
                   <input
                     type="text"
                     placeholder="Seu nome de usuário"
+                    autoComplete="username"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-username"
                     {...form.register("username")}
@@ -199,6 +220,7 @@ export default function CadastroPage() {
                   <input
                     type="tel"
                     placeholder="(11) 99999-9999"
+                    autoComplete="tel"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-phone"
                     {...form.register("phone")}
@@ -210,13 +232,33 @@ export default function CadastroPage() {
                 <div className="relative">
                   <IconLock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-password"
                     {...form.register("password")}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                    data-testid="button-toggle-password"
+                  >
+                    {showPassword ? (
+                      <IconVisibilityOff className="text-lg" />
+                    ) : (
+                      <IconVisibility className="text-lg" />
+                    )}
+                  </button>
                 </div>
+                <PasswordStrengthMeter password={passwordValue ?? ""} />
+                {passwordError && (
+                  <p className="text-xs text-red-500 mt-1" data-testid="text-password-error">
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               {/* Terms */}
