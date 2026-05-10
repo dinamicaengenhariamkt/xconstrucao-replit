@@ -133,7 +133,7 @@ Feature-based architecture under `features/empreiteiro/` and `features/contratan
 - Layout: `features/admin/components/AdminLayout.tsx`
 
 ## Recent Changes
-- 2026-05-10: Email provider migrated from Resend to Brevo (HTTP API, secret `BREVO_API_KEY`). Same function signatures, same templates, same `EMAIL_TEST_MODE` capture path. `resend` package and legacy `lib/email.ts` removed.
+- 2026-05-10: Transactional email migrated to Brevo (HTTP API, secret `BREVO_API_KEY`). Same function signatures in `shared/lib/email.ts`, same templates, same `EMAIL_TEST_MODE` capture path. Legacy `lib/email.ts` and previous provider package/secret removed.
 - 2026-02-21: Built complete admin internal views (Clientes, Empreiteiras, Caixa, Entradas, Saídas, Anúncios, FAQ with full CRUD forms)
 - 2026-02-20: Built complete contratante internal views (Minhas Obras, Detalhes da Obra, Nova Obra, Pagamentos, xchat, FAQ)
 - 2026-02-20: Built complete empreiteiro internal views (Minhas Obras, Novas Obras, Detalhes da Obra, xchat, FAQ)
