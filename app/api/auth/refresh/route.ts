@@ -10,7 +10,6 @@ import {
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { db } from "@shared/db/db";
 import { sessions } from "@shared/db/schema";
-import { getClientIp } from "@features/auth/api/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,40 +71,38 @@ export async function POST(request: NextRequest) {
       user: userData,
     });
 
-    // Configurar headers de segurança e cookies
-    setNoCacheHeaders(response);
-    if (newRefreshToken) {
-      createAuthCookies(response, newAccessToken, newRefreshToken, payload.rememberMe);
-
-      // Sincroniza row de sessão: rotaciona sessionToken + atualiza lastUsedAt/expires.
-      try {
-        const oldHash = createHash("sha256").update(refreshToken).digest("hex");
-        const newHash = createHash("sha256").update(newRefreshToken).digest("hex");
-        const refreshMaxAgeMs = (payload.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
-        const updated = await db
-          .update(sessions)
-          .set({
-            sessionToken: newHash,
-            lastUsedAt: new Date(),
-            expires: new Date(Date.now() + refreshMaxAgeMs),
-          })
-          .where(eq(sessions.sessionToken, oldHash))
-          .returning({ id: sessions.id });
-        if (updated.length === 0) {
-          await db.insert(sessions).values({
-            sessionToken: newHash,
-            userId: user.id,
-            expires: new Date(Date.now() + refreshMaxAgeMs),
-            userAgent: request.headers.get("user-agent") ?? null,
-            ip: getClientIp(request),
-            lastUsedAt: new Date(),
-          });
-        }
-      } catch (err) {
-        console.error("Falha ao sincronizar sessão no refresh:", err);
-      }
+    if (!newRefreshToken) {
+      const r = NextResponse.json({ error: "Refresh token expirado" }, { status: 401 });
+      setNoCacheHeaders(r);
+      return r;
     }
 
+    // Sessão precisa existir no banco — sessões revogadas não podem ressuscitar.
+    const oldHash = createHash("sha256").update(refreshToken).digest("hex");
+    const newHash = createHash("sha256").update(newRefreshToken).digest("hex");
+    const refreshMaxAgeMs = (payload.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
+    const updated = await db
+      .update(sessions)
+      .set({
+        sessionToken: newHash,
+        lastUsedAt: new Date(),
+        expires: new Date(Date.now() + refreshMaxAgeMs),
+      })
+      .where(eq(sessions.sessionToken, oldHash))
+      .returning({ id: sessions.id });
+
+    if (updated.length === 0) {
+      const r = NextResponse.json(
+        { error: "Sessão revogada. Faça login novamente." },
+        { status: 401 }
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
+
+    // Configurar headers de segurança e cookies
+    setNoCacheHeaders(response);
+    createAuthCookies(response, newAccessToken, newRefreshToken, payload.rememberMe);
     return response;
 
   } catch (error) {

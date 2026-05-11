@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import {
   comparePassword,
@@ -10,6 +12,8 @@ import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { requireVerifiedUser, createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { updateUserPassword } from "@features/auth/api/auth-storage";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { db } from "@shared/db/db";
+import { sessions } from "@shared/db/schema";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "Senha atual obrigatória"),
@@ -83,6 +87,56 @@ export async function POST(request: NextRequest) {
     avatarUrl: user.avatarUrl,
   });
   const refreshToken = createRefreshToken(user.id, false);
+
+  // Revoga todas as outras sessões do usuário (mantém só a atual, com hash novo).
+  try {
+    const newHash = createHash("sha256").update(refreshToken).digest("hex");
+    const refreshMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    const userAgent = request.headers.get("user-agent") ?? null;
+
+    // Tenta atualizar a row da sessão atual (pelo hash do refresh antigo).
+    const cookieHeader = request.headers.get("cookie");
+    const oldRefreshMatch = cookieHeader?.match(/(?:^|; )refresh_token=([^;]+)/);
+    const oldRefresh = oldRefreshMatch ? decodeURIComponent(oldRefreshMatch[1]) : null;
+    const oldHash = oldRefresh ? createHash("sha256").update(oldRefresh).digest("hex") : null;
+
+    let currentSessionId: string | null = null;
+    if (oldHash) {
+      const updated = await db
+        .update(sessions)
+        .set({
+          sessionToken: newHash,
+          lastUsedAt: new Date(),
+          expires: new Date(Date.now() + refreshMaxAgeMs),
+        })
+        .where(and(eq(sessions.sessionToken, oldHash), eq(sessions.userId, user.id)))
+        .returning({ id: sessions.id });
+      currentSessionId = updated[0]?.id ?? null;
+    }
+    if (!currentSessionId) {
+      const inserted = await db
+        .insert(sessions)
+        .values({
+          sessionToken: newHash,
+          userId: user.id,
+          expires: new Date(Date.now() + refreshMaxAgeMs),
+          userAgent,
+          ip,
+          lastUsedAt: new Date(),
+        })
+        .returning({ id: sessions.id });
+      currentSessionId = inserted[0]?.id ?? null;
+    }
+
+    // Apaga todas as outras sessões do usuário.
+    if (currentSessionId) {
+      await db
+        .delete(sessions)
+        .where(and(eq(sessions.userId, user.id), ne(sessions.id, currentSessionId)));
+    }
+  } catch (err) {
+    console.error("Falha ao revogar sessões após troca de senha:", err);
+  }
 
   const response = NextResponse.json({ success: true, message: "Senha alterada com sucesso." });
   setNoCacheHeaders(response);
