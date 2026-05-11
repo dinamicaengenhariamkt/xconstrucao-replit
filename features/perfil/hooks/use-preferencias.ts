@@ -67,6 +67,38 @@ export function useSessoes() {
   });
 }
 
+export interface PlanoCatalogo {
+  nome: string;
+  precoMensal: number;
+  features: string[];
+  limites: Record<string, number>;
+}
+
+export interface PlanoUsageItem {
+  key: string;
+  label: string;
+  current: number;
+  max: number;
+}
+
+export interface PlanoResponse {
+  persona: 'empreiteiro' | 'contratante';
+  plano: 'free' | 'pro' | 'enterprise';
+  planoStartedAt: string | null;
+  catalogo: PlanoCatalogo;
+  uso: PlanoUsageItem[];
+}
+
+const PLANO_KEY = ['perfil', 'plano'] as const;
+
+export function usePlano() {
+  return useQuery<PlanoResponse>({
+    queryKey: PLANO_KEY,
+    queryFn: () => getJSON<PlanoResponse>('/api/perfil/plano'),
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useRevokeSessao() {
   const qc = useQueryClient();
   return useMutation({

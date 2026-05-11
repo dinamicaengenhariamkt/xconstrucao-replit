@@ -14,6 +14,8 @@ interface TermosState {
   privacidadeAceitaEm: string | null;
   versaoTermosAceita: string | null;
   versaoPrivacidadeAceita: string | null;
+  termosIp: string | null;
+  privacidadeIp: string | null;
   loaded: boolean;
   loading: boolean;
   load: () => Promise<void>;
@@ -28,6 +30,8 @@ interface ConsentRow {
   versao: string;
   aceitoEm: string;
   revogadoEm: string | null;
+  ip: string | null;
+  userAgent: string | null;
 }
 
 export const useTermosStore = create<TermosState>((set, get) => ({
@@ -35,6 +39,8 @@ export const useTermosStore = create<TermosState>((set, get) => ({
   privacidadeAceitaEm: null,
   versaoTermosAceita: null,
   versaoPrivacidadeAceita: null,
+  termosIp: null,
+  privacidadeIp: null,
   loaded: false,
   loading: false,
 
@@ -53,8 +59,10 @@ export const useTermosStore = create<TermosState>((set, get) => ({
       set({
         termosAceitosEm: termos?.aceitoEm ?? null,
         versaoTermosAceita: termos?.versao ?? null,
+        termosIp: termos?.ip ?? null,
         privacidadeAceitaEm: privacidade?.aceitoEm ?? null,
         versaoPrivacidadeAceita: privacidade?.versao ?? null,
+        privacidadeIp: privacidade?.ip ?? null,
         loaded: true,
         loading: false,
       });
@@ -74,6 +82,14 @@ export const useTermosStore = create<TermosState>((set, get) => ({
       }),
     });
     if (!res.ok) throw new Error('Falha ao registrar aceite');
+    const nowIso = new Date().toISOString();
+    set({
+      termosAceitosEm: nowIso,
+      privacidadeAceitaEm: nowIso,
+      versaoTermosAceita: VERSAO_ATUAL_TERMOS,
+      versaoPrivacidadeAceita: VERSAO_ATUAL_PRIVACIDADE,
+    });
+    set({ loaded: false });
     await get().load();
   },
 
@@ -84,6 +100,8 @@ export const useTermosStore = create<TermosState>((set, get) => ({
       privacidadeAceitaEm: null,
       versaoTermosAceita: null,
       versaoPrivacidadeAceita: null,
+      termosIp: null,
+      privacidadeIp: null,
     });
   },
 

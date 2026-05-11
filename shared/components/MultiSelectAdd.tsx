@@ -128,8 +128,12 @@ export function MultiSelectAdd({
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-0 w-[--radix-popover-trigger-width] min-w-[260px]"
+          className="p-0 w-[--radix-popover-trigger-width] min-w-[260px] z-[1100]"
           align="start"
+          side="bottom"
+          sideOffset={6}
+          collisionPadding={12}
+          avoidCollisions
           data-testid={`${testid}-popover`}
         >
           <Command shouldFilter={false}>

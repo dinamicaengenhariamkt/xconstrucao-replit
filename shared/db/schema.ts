@@ -1,11 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "contratante", "empreiteiro"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
+export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -21,6 +22,8 @@ export const users = pgTable("users", {
   bio: text("bio"),
   idioma: varchar("idioma", { length: 16 }).notNull().default("pt-BR"),
   timezone: varchar("timezone", { length: 64 }).notNull().default("America/Sao_Paulo"),
+  plano: planoEnum("plano").notNull().default("free"),
+  planoStartedAt: timestamp("plano_started_at").defaultNow(),
 });
 
 export const clientes = pgTable("clientes", {
@@ -155,16 +158,22 @@ export const sessions = pgTable("sessions", {
 
 export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade"]);
 
-export const userConsents = pgTable("user_consents", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  documento: consentDocumentEnum("documento").notNull(),
-  versao: text("versao").notNull(),
-  aceitoEm: timestamp("aceito_em").defaultNow().notNull(),
-  ip: text("ip"),
-  userAgent: text("user_agent"),
-  revogadoEm: timestamp("revogado_em"),
-});
+export const userConsents = pgTable(
+  "user_consents",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    documento: consentDocumentEnum("documento").notNull(),
+    versao: text("versao").notNull(),
+    aceitoEm: timestamp("aceito_em").defaultNow().notNull(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    revogadoEm: timestamp("revogado_em"),
+  },
+  (t) => ({
+    uniqUserDocVersao: uniqueIndex("user_consents_user_doc_versao_uniq").on(t.userId, t.documento, t.versao),
+  }),
+);
 
 export const userPreferencias = pgTable("user_preferencias", {
   userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),

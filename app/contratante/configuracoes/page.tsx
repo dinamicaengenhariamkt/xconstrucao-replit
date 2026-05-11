@@ -25,7 +25,7 @@ import {
   useUpdatePerfilContratante,
   fileToDataUrl,
 } from '@features/perfil/hooks/use-perfil';
-import { usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
+import { usePreferencias, useUpdatePreferencias, usePlano } from '@features/perfil/hooks/use-preferencias';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
@@ -60,6 +60,7 @@ import { CepInput } from '@features/perfil/components/CepInput';
 import { Switch } from '@shared/components/ui/switch';
 import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
+import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { Textarea } from '@shared/components/ui/textarea';
@@ -693,10 +694,39 @@ function SecaoPrivacidade() {
     privacidadeAceitaEm,
     versaoTermosAceita,
     versaoPrivacidadeAceita,
+    termosIp,
+    privacidadeIp,
+    acceptAll,
     revokeAll,
     load: loadTermos,
     loaded: termosLoaded,
   } = useContratanteTermosStore();
+
+  const [aceiteTermos, setAceiteTermos] = useState(false);
+  const [aceitePriv, setAceitePriv] = useState(false);
+  const [aceitando, setAceitando] = useState(false);
+
+  const precisaAceite =
+    termosLoaded &&
+    (!termosAceitosEm ||
+      !privacidadeAceitaEm ||
+      versaoTermosAceita !== VERSAO_ATUAL_TERMOS ||
+      versaoPrivacidadeAceita !== VERSAO_ATUAL_PRIVACIDADE);
+
+  const handleAceitar = async () => {
+    if (!aceiteTermos || !aceitePriv) return;
+    setAceitando(true);
+    try {
+      await acceptAll();
+      toast({ title: 'Aceite registrado', description: 'Obrigado por aceitar os documentos legais.' });
+      setAceiteTermos(false);
+      setAceitePriv(false);
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível registrar o aceite.', variant: 'destructive' });
+    } finally {
+      setAceitando(false);
+    }
+  };
 
   useEffect(() => {
     if (!termosLoaded) {
@@ -746,6 +776,63 @@ function SecaoPrivacidade() {
           <SectionTitle>Documentos legais</SectionTitle>
         </CardHeader>
         <CardContent className="px-6 pb-6 pt-0 flex flex-col gap-4">
+          {precisaAceite && (
+            <div
+              className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10 p-4 flex flex-col gap-3"
+              data-testid="aceite-inline-contratante"
+            >
+              <div className="flex items-start gap-2">
+                <RiAlertLine className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    Aceite necessário para usar a plataforma
+                  </p>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-200/70 mt-0.5">
+                    Para continuar, leia e confirme os documentos abaixo.
+                  </p>
+                </div>
+              </div>
+              <label className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-100 cursor-pointer">
+                <Checkbox
+                  checked={aceiteTermos}
+                  onCheckedChange={(v) => setAceiteTermos(!!v)}
+                  data-testid="checkbox-aceite-termos"
+                  className="mt-0.5"
+                />
+                <span>
+                  Li e aceito os{' '}
+                  <a href="/termos" target="_blank" rel="noreferrer" className="underline font-medium">
+                    Termos de Uso
+                  </a>{' '}
+                  (versão {VERSAO_ATUAL_TERMOS}).
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-amber-900 dark:text-amber-100 cursor-pointer">
+                <Checkbox
+                  checked={aceitePriv}
+                  onCheckedChange={(v) => setAceitePriv(!!v)}
+                  data-testid="checkbox-aceite-privacidade"
+                  className="mt-0.5"
+                />
+                <span>
+                  Li e aceito a{' '}
+                  <a href="/politica-privacidade" target="_blank" rel="noreferrer" className="underline font-medium">
+                    Política de Privacidade
+                  </a>{' '}
+                  (versão {VERSAO_ATUAL_PRIVACIDADE}).
+                </span>
+              </label>
+              <Button
+                size="sm"
+                disabled={!aceiteTermos || !aceitePriv || aceitando}
+                onClick={handleAceitar}
+                className="self-start mt-1"
+                data-testid="button-aceitar-documentos"
+              >
+                {aceitando ? 'Registrando…' : 'Li e aceito'}
+              </Button>
+            </div>
+          )}
           {/* Termos de Uso */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -758,10 +845,11 @@ function SecaoPrivacidade() {
                   <>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <RiCheckboxCircleLine className="w-3.5 h-3.5 text-green-500" />
-                      <p className="text-xs text-gray-500">Aceito em {formatDate(termosAceitosEm)}</p>
+                      <p className="text-xs text-gray-500" data-testid="termos-aceito-em">Aceito em {formatDate(termosAceitosEm)}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                       Versão {versaoTermosAceita ?? VERSAO_ATUAL_TERMOS}
+                      {termosIp && <span className="ml-2">· IP {termosIp}</span>}
                       {versaoTermosAceita !== VERSAO_ATUAL_TERMOS && (
                         <span className="ml-2 text-amber-500 font-medium">· Nova versão disponível</span>
                       )}
@@ -800,10 +888,11 @@ function SecaoPrivacidade() {
                   <>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <RiCheckboxCircleLine className="w-3.5 h-3.5 text-green-500" />
-                      <p className="text-xs text-gray-500">Aceita em {formatDate(privacidadeAceitaEm)}</p>
+                      <p className="text-xs text-gray-500" data-testid="privacidade-aceita-em">Aceita em {formatDate(privacidadeAceitaEm)}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
                       Versão {versaoPrivacidadeAceita ?? VERSAO_ATUAL_PRIVACIDADE}
+                      {privacidadeIp && <span className="ml-2">· IP {privacidadeIp}</span>}
                       {versaoPrivacidadeAceita !== VERSAO_ATUAL_PRIVACIDADE && (
                         <span className="ml-2 text-amber-500 font-medium">· Nova versão disponível</span>
                       )}
@@ -909,59 +998,66 @@ function SecaoPrivacidade() {
 /* ─────────────────────────────────────────────
    SECTION: Plano
 ───────────────────────────────────────────── */
-const PLANO_FEATURES = [
-  '10 obras publicadas simultâneas',
-  'Propostas ilimitadas por obra',
-  'Acesso completo ao diretório de empreiteiros',
-  'Contratos digitais',
-  'Gestão de medições',
-  'Relatórios de obra',
-  'Análises com IA',
-  'Suporte prioritário',
-  'Exportação de relatórios',
-];
-
-const PLAN_USAGE = [
-  { label: 'Obras abertas',            current: 3,  max: 10 },
-  { label: 'Empreiteiros contratados', current: 7,  max: 20 },
-  { label: 'Documentos gerados',       current: 15, max: 50 },
-  { label: 'Contratos ativos',         current: 2,  max: 10 },
-  { label: 'Medições no mês',          current: 5,  max: 30 },
-  { label: 'Relatórios exportados',    current: 8,  max: 20 },
-];
-
 function UsageMeterBadge({ current, max }: { current: number; max: number }) {
-  const pct = current / max;
-  if (pct > 0.95) return <Badge className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-0 text-xs">{current}/{max}</Badge>;
-  if (pct > 0.8)  return <Badge className="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-0 text-xs">{current}/{max}</Badge>;
-  return <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">{current}/{max}</Badge>;
+  const pct = max > 0 ? current / max : 0;
+  const display = max >= 9999 ? `${current}/∞` : `${current}/${max}`;
+  if (pct > 0.95) return <Badge className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-0 text-xs">{display}</Badge>;
+  if (pct > 0.8)  return <Badge className="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 border-0 text-xs">{display}</Badge>;
+  return <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">{display}</Badge>;
 }
 
 function SecaoPlano() {
   const router = useRouter();
+  const { toast } = useToast();
+  const { data: plano, isLoading } = usePlano();
+
+  if (isLoading || !plano) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  const tierLabel = plano.plano === 'free' ? 'Gratuito' : plano.plano === 'pro' ? 'Profissional' : 'Empresarial';
+  const inicio = plano.planoStartedAt
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(plano.planoStartedAt))
+    : '—';
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Card 1: Plano atual + billing */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center justify-between">
             <SectionTitle>Plano atual</SectionTitle>
-            <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">Ativo</Badge>
+            <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs" data-testid="badge-plano-tier">{tierLabel}</Badge>
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-2 flex flex-col gap-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">Plano Empresarial</p>
-              <div className="flex items-center gap-2 mt-2">
+              <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100" data-testid="text-plano-nome">{plano.catalogo.nome}</p>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <RiBankCardLine className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">R$ 149<span className="text-xs font-normal text-muted-foreground">/mês</span></span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {plano.catalogo.precoMensal === 0
+                    ? 'Grátis'
+                    : <>R$ {plano.catalogo.precoMensal}<span className="text-xs font-normal text-muted-foreground">/mês</span></>}
+                </span>
                 <span className="text-muted-foreground text-xs">•</span>
-                <span className="text-xs text-muted-foreground">Renovação em 15 de julho de 2026</span>
+                <span className="text-xs text-muted-foreground">Início em {inicio}</span>
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="sm" className="text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => toast({ title: 'Em breve', description: 'A gestão de assinatura estará disponível em breve.' })}
+                data-testid="button-gerenciar-assinatura"
+              >
                 Gerenciar assinatura
               </Button>
               <Button variant="ghost" size="sm" className="text-xs" onClick={() => router.push('/contratante/planos')}>
@@ -973,14 +1069,13 @@ function SecaoPlano() {
         </CardContent>
       </Card>
 
-      {/* Card 2: Recursos incluídos */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Recursos incluídos no plano</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-            {PLANO_FEATURES.map((feat) => (
+            {plano.catalogo.features.map((feat) => (
               <div key={feat} className="flex items-center gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-[#22846D]/10 flex items-center justify-center shrink-0">
                   <RiCheckLine className="w-3 h-3 text-[#22846D]" />
@@ -992,37 +1087,38 @@ function SecaoPlano() {
         </CardContent>
       </Card>
 
-      {/* Card 3: Uso do plano */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Uso do plano</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {PLAN_USAGE.map((item) => (
-              <div
-                key={item.label}
-                className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
-              >
-                <p className="text-xs text-gray-400">{item.label}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{item.current}</p>
-                  <UsageMeterBadge current={item.current} max={item.max} />
+            {plano.uso.map((item) => {
+              const pct = item.max > 0 ? Math.min(100, (item.current / item.max) * 100) : 0;
+              return (
+                <div
+                  key={item.key}
+                  className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700 flex flex-col gap-2"
+                  data-testid={`uso-item-${item.key}`}
+                >
+                  <p className="text-xs text-gray-400">{item.label}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{item.current}</p>
+                    <UsageMeterBadge current={item.current} max={item.max} />
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className={cn(
+                        'h-1.5 rounded-full transition-all',
+                        pct > 95 ? 'bg-red-500' : pct > 80 ? 'bg-amber-400' : 'bg-[#22846D]',
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">máx. {item.max >= 9999 ? 'ilimitado' : item.max}</p>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      item.current / item.max > 0.95 ? 'bg-red-500' :
-                      item.current / item.max > 0.8 ? 'bg-amber-400' :
-                      'bg-[#22846D]'
-                    )}
-                    style={{ width: `${Math.min(100, (item.current / item.max) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">máx. {item.max}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
