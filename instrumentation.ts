@@ -3,6 +3,11 @@ export async function register() {
     const { seedDatabase } = await import("./server/seed");
     await seedDatabase().catch(console.error);
     const { backfillConsents } = await import("./server/backfill-consents");
-    await backfillConsents().catch(console.error);
+    const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
+    if (!result.ok) {
+      console.error("[instrumentation] backfillConsents did not complete cleanly:", result.error);
+    } else {
+      console.info(`[instrumentation] backfillConsents complete (inserted=${result.inserted})`);
+    }
   }
 }

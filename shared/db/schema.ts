@@ -24,6 +24,7 @@ export const users = pgTable("users", {
   timezone: varchar("timezone", { length: 64 }).notNull().default("America/Sao_Paulo"),
   plano: planoEnum("plano").notNull().default("free"),
   planoStartedAt: timestamp("plano_started_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const clientes = pgTable("clientes", {
