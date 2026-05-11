@@ -642,8 +642,8 @@ function SecaoSeguranca() {
       senhaMinima: String(seg.senhaMinima ?? '8'),
     });
     setDoisFatores({
-      admins: Boolean(seg.dois_fatores_admins ?? false),
-      todos: Boolean(seg.dois_fatores_todos ?? false),
+      admins: Boolean(seg.doisFatoresAdmins ?? false),
+      todos: Boolean(seg.doisFatoresTodos ?? false),
     });
   }, [config]);
 
@@ -655,8 +655,8 @@ function SecaoSeguranca() {
           timeout: politica.timeout,
           maxTentativas: politica.maxTentativas,
           senhaMinima: politica.senhaMinima,
-          dois_fatores_admins: doisFatores.admins,
-          dois_fatores_todos: doisFatores.todos,
+          doisFatoresAdmins: doisFatores.admins,
+          doisFatoresTodos: doisFatores.todos,
         },
       });
       toast({ title: 'Políticas atualizadas', description: 'As configurações de segurança foram salvas.' });
