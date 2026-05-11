@@ -33,6 +33,8 @@ import { Badge } from '@shared/components/ui/badge';
 import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
+import { useAdminConfig, useUpdateAdminConfig } from '@features/admin/hooks/use-admin-config';
+import { Skeleton } from '@shared/components/ui/skeleton';
 
 /* ── Types ── */
 type Section = 'perfil' | 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
@@ -277,23 +279,40 @@ function SecaoPerfil() {
 /* ─────────────────────────────────────────────
    SECTION: Geral
 ───────────────────────────────────────────── */
+const GERAL_DEFAULTS = {
+  nome: 'XConstrução',
+  descricao: 'Plataforma de gestão de obras e conexão entre contratantes e empreiteiras.',
+  email: 'suporte@xconstrucao.com.br',
+  cnpj: '12.345.678/0001-99',
+  timezone: 'America/Sao_Paulo',
+  idioma: 'pt-BR',
+};
+
 function SecaoGeral() {
   const { toast } = useToast();
-  const [form, setForm] = useState({
-    nome: 'ConectaObra',
-    descricao: 'Plataforma de gestão de obras e conexão entre contratantes e empreiteiras.',
-    email: 'suporte@conectaobra.com.br',
-    cnpj: '12.345.678/0001-99',
-    timezone: 'America/Sao_Paulo',
-    idioma: 'pt-BR',
-  });
+  const { data: config, isLoading } = useAdminConfig();
+  const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
+  const [form, setForm] = useState(GERAL_DEFAULTS);
+
+  useEffect(() => {
+    if (config?.geral) {
+      setForm({ ...GERAL_DEFAULTS, ...(config.geral as typeof GERAL_DEFAULTS) });
+    }
+  }, [config]);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleSave = () => {
-    toast({ title: 'Alterações salvas', description: 'As configurações gerais foram atualizadas.' });
+  const handleSave = async () => {
+    try {
+      await updateConfig({ chave: 'geral', valor: form });
+      toast({ title: 'Alterações salvas', description: 'As configurações gerais foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar configurações.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) return <div className="flex flex-col gap-4"><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-48 rounded-xl" /></div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -356,9 +375,9 @@ function SecaoGeral() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-geral">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar alterações
+          {saving ? 'Salvando...' : 'Salvar alterações'}
         </Button>
       </div>
     </div>
@@ -368,29 +387,44 @@ function SecaoGeral() {
 /* ─────────────────────────────────────────────
    SECTION: Notificações
 ───────────────────────────────────────────── */
+const NOTIF_DEFAULTS_ADMIN = {
+  novoCliente: true,
+  novaObra: true,
+  pagamento: true,
+  contrato: false,
+  campanhaExpirando: true,
+  manutencao: true,
+  relatorioSemanal: false,
+  atualizacoes: true,
+};
+
 function SecaoNotificacoes() {
   const { toast } = useToast();
-  const [email, setEmail] = useState({
-    novoCliente: true,
-    novaObra: true,
-    pagamento: true,
-    contrato: false,
-    campanhaExpirando: true,
-  });
-  const [sistema, setSistema] = useState({
-    manutencao: true,
-    relatorioSemanal: false,
-    atualizacoes: true,
-  });
+  const { data: config, isLoading } = useAdminConfig();
+  const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
+  const [notif, setNotif] = useState<Record<string, boolean>>(NOTIF_DEFAULTS_ADMIN);
 
-  const toggleEmail = (key: keyof typeof email) => () =>
-    setEmail((p) => ({ ...p, [key]: !p[key] }));
-  const toggleSistema = (key: keyof typeof sistema) => () =>
-    setSistema((p) => ({ ...p, [key]: !p[key] }));
+  useEffect(() => {
+    if (config?.notificacoes) {
+      setNotif({ ...NOTIF_DEFAULTS_ADMIN, ...(config.notificacoes as Record<string, boolean>) });
+    }
+  }, [config]);
 
-  const handleSave = () => {
-    toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+  const toggleEmail = (key: string) => () => setNotif((p) => ({ ...p, [key]: !p[key] }));
+  const toggleSistema = toggleEmail;
+  const email = notif;
+  const sistema = notif;
+
+  const handleSave = async () => {
+    try {
+      await updateConfig({ chave: 'notificacoes', valor: notif });
+      toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) return <div className="flex flex-col gap-4"><Skeleton className="h-64 rounded-xl" /><Skeleton className="h-48 rounded-xl" /></div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -465,9 +499,9 @@ function SecaoNotificacoes() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-notificacoes">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar preferências
+          {saving ? 'Salvando...' : 'Salvar preferências'}
         </Button>
       </div>
     </div>
@@ -479,22 +513,40 @@ function SecaoNotificacoes() {
 ───────────────────────────────────────────── */
 
 
+const PLATAFORMA_DEFAULTS = {
+  anuncios: true,
+  faq: true,
+  empreiteiras: true,
+  clienteLogin: true,
+  manutencao: false,
+  relatorios: false,
+};
+
 function SecaoPlataforma() {
   const { toast } = useToast();
-  const [features, setFeatures] = useState({
-    anuncios: true,
-    faq: true,
-    empreiteiras: true,
-    clienteLogin: true,
-    manutencao: false,
-    relatorios: false,
-  });
-  const toggle = (key: keyof typeof features) => (v: boolean) =>
+  const { data: config, isLoading } = useAdminConfig();
+  const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
+  const [features, setFeatures] = useState<Record<string, boolean>>(PLATAFORMA_DEFAULTS);
+
+  useEffect(() => {
+    if (config?.plataforma) {
+      setFeatures({ ...PLATAFORMA_DEFAULTS, ...(config.plataforma as Record<string, boolean>) });
+    }
+  }, [config]);
+
+  const toggle = (key: string) => (v: boolean) =>
     setFeatures((p) => ({ ...p, [key]: v }));
 
-  const handleSave = () => {
-    toast({ title: 'Configurações salvas', description: 'As funcionalidades da plataforma foram atualizadas.' });
+  const handleSave = async () => {
+    try {
+      await updateConfig({ chave: 'plataforma', valor: features });
+      toast({ title: 'Configurações salvas', description: 'As funcionalidades da plataforma foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar configurações.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) return <Skeleton className="h-64 rounded-xl" />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -552,9 +604,9 @@ function SecaoPlataforma() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-plataforma">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar configurações
+          {saving ? 'Salvando...' : 'Salvar configurações'}
         </Button>
       </div>
     </div>

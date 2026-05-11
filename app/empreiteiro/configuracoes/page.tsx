@@ -24,7 +24,12 @@ import {
   usePerfilEmpreiteiro,
   useUpdatePerfilEmpreiteiro,
   fileToDataUrl,
+  MAX_PORTFOLIO_IMAGE_BYTES,
+  MAX_PORTFOLIO_DOC_BYTES,
 } from '@features/perfil/hooks/use-perfil';
+import { usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
+import { Textarea } from '@shared/components/ui/textarea';
+import { RiFilePdf2Line } from 'react-icons/ri';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
@@ -386,9 +391,17 @@ function SecaoEmpresa() {
     cidade: '',
     estado: '',
     raioKm: '',
+    descricao: '',
+    anoFundacao: '',
+    tamanhoEquipe: '',
+    siteUrl: '',
+    instagramUrl: '',
+    linkedinUrl: '',
+    registroProfissional: '',
   });
   const [especialidades, setEspecialidades] = useState<string[]>([]);
   const [portfolio, setPortfolio] = useState<string[]>([]);
+  const [portfolioDocs, setPortfolioDocs] = useState<string[]>([]);
 
   useEffect(() => {
     if (perfil) {
@@ -399,14 +412,23 @@ function SecaoEmpresa() {
         cidade: perfil.cidade ?? '',
         estado: perfil.estado ?? '',
         raioKm: perfil.raioKm != null ? String(perfil.raioKm) : '',
+        descricao: perfil.descricao ?? '',
+        anoFundacao: perfil.anoFundacao != null ? String(perfil.anoFundacao) : '',
+        tamanhoEquipe: perfil.tamanhoEquipe ?? '',
+        siteUrl: perfil.siteUrl ?? '',
+        instagramUrl: perfil.instagramUrl ?? '',
+        linkedinUrl: perfil.linkedinUrl ?? '',
+        registroProfissional: perfil.registroProfissional ?? '',
       });
       setEspecialidades(perfil.especialidades ?? []);
       setPortfolio(perfil.portfolioUrls ?? []);
+      setPortfolioDocs(perfil.portfolioDocs ?? []);
     }
   }, [perfil]);
 
-  const setField = (key: keyof typeof empresa) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
+  const setField = (key: keyof typeof empresa) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
 
   const toggleEspecialidade = (esp: string) => {
     setEspecialidades((prev) =>
@@ -414,11 +436,22 @@ function SecaoEmpresa() {
     );
   };
 
+  const BLOCKED_DOCS = /\.(docx?|pptx?|xlsx?)$/i;
+
   const handlePortfolioFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await fileToDataUrl(file);
+      if (BLOCKED_DOCS.test(file.name)) {
+        throw new Error('Use PDF para garantir a visualização.');
+      }
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Selecione uma imagem JPG, PNG ou WebP.');
+      }
+      if (portfolio.length >= 10) {
+        throw new Error('Limite de 10 imagens atingido.');
+      }
+      const url = await fileToDataUrl(file, MAX_PORTFOLIO_IMAGE_BYTES);
       const next = [...portfolio, url];
       setPortfolio(next);
       await updatePerfil({ portfolioUrls: next });
@@ -426,6 +459,36 @@ function SecaoEmpresa() {
     } catch (err) {
       toast({
         title: 'Erro ao adicionar foto',
+        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handlePortfolioDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (BLOCKED_DOCS.test(file.name)) {
+        throw new Error('Use PDF para garantir a visualização.');
+      }
+      if (file.type !== 'application/pdf') {
+        throw new Error('Apenas PDF é aceito neste campo.');
+      }
+      if (portfolioDocs.length >= 3) {
+        throw new Error('Limite de 3 PDFs atingido.');
+      }
+      const url = await fileToDataUrl(file, MAX_PORTFOLIO_DOC_BYTES);
+      const stamped = `${file.name}::${url}`;
+      const next = [...portfolioDocs, stamped];
+      setPortfolioDocs(next);
+      await updatePerfil({ portfolioDocs: next });
+      toast({ title: 'Documento adicionado', description: 'PDF incluído no portfólio.' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao adicionar documento',
         description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
         variant: 'destructive',
       });
@@ -444,10 +507,25 @@ function SecaoEmpresa() {
     }
   };
 
+  const removePortfolioDoc = async (idx: number) => {
+    const next = portfolioDocs.filter((_, i) => i !== idx);
+    setPortfolioDocs(next);
+    try {
+      await updatePerfil({ portfolioDocs: next });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao remover documento.', variant: 'destructive' });
+    }
+  };
+
   const handleSave = async () => {
     const raio = empresa.raioKm.trim() === '' ? null : Number(empresa.raioKm);
     if (raio != null && (Number.isNaN(raio) || raio < 0)) {
       toast({ title: 'Raio inválido', description: 'Informe um número válido.', variant: 'destructive' });
+      return;
+    }
+    const ano = empresa.anoFundacao.trim() === '' ? null : Number(empresa.anoFundacao);
+    if (ano != null && (Number.isNaN(ano) || ano < 1800 || ano > new Date().getFullYear())) {
+      toast({ title: 'Ano inválido', description: 'Informe um ano válido.', variant: 'destructive' });
       return;
     }
     try {
@@ -459,6 +537,13 @@ function SecaoEmpresa() {
         estado: empresa.estado || null,
         raioKm: raio,
         especialidades,
+        descricao: empresa.descricao.trim() || null,
+        anoFundacao: ano,
+        tamanhoEquipe: empresa.tamanhoEquipe || null,
+        siteUrl: empresa.siteUrl.trim() || null,
+        instagramUrl: empresa.instagramUrl.trim() || null,
+        linkedinUrl: empresa.linkedinUrl.trim() || null,
+        registroProfissional: empresa.registroProfissional.trim() || null,
       });
       toast({ title: 'Empresa atualizada', description: 'Os dados da sua empresa foram salvos.' });
     } catch {
@@ -585,34 +670,183 @@ function SecaoEmpresa() {
 
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-0">
-          <SectionTitle>Portfólio</SectionTitle>
+          <SectionTitle>Sobre a empresa</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <div className="flex flex-wrap gap-3" data-testid="grupo-portfolio">
-            {portfolio.map((url, idx) => (
-              <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt={`Portfólio ${idx + 1}`} className="w-full h-full object-cover" data-testid={`img-portfolio-${idx}`} />
-                <button
-                  type="button"
-                  onClick={() => removePortfolioItem(idx)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                  aria-label="Remover"
-                  data-testid={`button-remover-portfolio-${idx}`}
-                >
-                  <RiCloseLine className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            {portfolio.length < 20 && (
-              <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs text-muted-foreground cursor-pointer hover:border-primary/50" data-testid="button-adicionar-portfolio">
-                <RiUploadCloud2Line className="w-5 h-5 mb-1" />
-                Adicionar
-                <input type="file" accept="image/*" className="hidden" onChange={handlePortfolioFile} data-testid="input-portfolio-file" />
-              </label>
-            )}
+          <FieldRow label="Apresentação" description="Quem é a empresa, especializações e diferenciais (até 600 caracteres).">
+            <Textarea
+              value={empresa.descricao}
+              onChange={setField('descricao')}
+              maxLength={600}
+              rows={4}
+              placeholder="Conte um pouco sobre sua empresa..."
+              className="resize-none"
+              data-testid="input-empresa-descricao"
+            />
+            <p className="text-xs text-muted-foreground text-right">{empresa.descricao.length}/600</p>
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <FieldRow label="Ano de fundação">
+              <Input
+                type="number"
+                min={1800}
+                max={new Date().getFullYear()}
+                value={empresa.anoFundacao}
+                onChange={setField('anoFundacao')}
+                placeholder="Ex: 2015"
+                data-testid="input-empresa-ano"
+              />
+            </FieldRow>
+            <FieldRow label="Tamanho da equipe">
+              <Select
+                value={empresa.tamanhoEquipe}
+                onValueChange={(v) => setEmpresa((p) => ({ ...p, tamanhoEquipe: v }))}
+              >
+                <SelectTrigger data-testid="select-empresa-equipe"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {['1-5', '6-10', '11-25', '26-50', '50+'].map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt} profissionais</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
           </div>
-          <p className="text-xs text-muted-foreground">Até 20 imagens, cada uma de no máximo 1.5 MB.</p>
+          <FieldRow label="Registro profissional" description="Ex.: CREA-SP 1234567, CAU A12345-6, ART nº ...">
+            <Input
+              value={empresa.registroProfissional}
+              onChange={setField('registroProfissional')}
+              placeholder="CREA / CAU / ART"
+              data-testid="input-empresa-crea"
+            />
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <FieldRow label="Site">
+              <Input
+                type="url"
+                value={empresa.siteUrl}
+                onChange={setField('siteUrl')}
+                placeholder="https://suaempresa.com.br"
+                data-testid="input-empresa-site"
+              />
+            </FieldRow>
+            <FieldRow label="Instagram">
+              <Input
+                type="url"
+                value={empresa.instagramUrl}
+                onChange={setField('instagramUrl')}
+                placeholder="https://instagram.com/..."
+                data-testid="input-empresa-instagram"
+              />
+            </FieldRow>
+            <FieldRow label="LinkedIn">
+              <Input
+                type="url"
+                value={empresa.linkedinUrl}
+                onChange={setField('linkedinUrl')}
+                placeholder="https://linkedin.com/company/..."
+                data-testid="input-empresa-linkedin"
+              />
+            </FieldRow>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-0">
+          <SectionTitle>Portfólio</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-4 flex flex-col gap-6">
+          <div>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
+              Imagens de obras <span className="text-xs text-muted-foreground">({portfolio.length}/10)</span>
+            </Label>
+            <div className="flex flex-wrap gap-3" data-testid="grupo-portfolio">
+              {portfolio.map((url, idx) => (
+                <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Portfólio ${idx + 1}`} className="w-full h-full object-cover" data-testid={`img-portfolio-${idx}`} />
+                  <button
+                    type="button"
+                    onClick={() => removePortfolioItem(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                    aria-label="Remover"
+                    data-testid={`button-remover-portfolio-${idx}`}
+                  >
+                    <RiCloseLine className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              {portfolio.length < 10 && (
+                <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs text-muted-foreground cursor-pointer hover:border-primary/50" data-testid="button-adicionar-portfolio">
+                  <RiUploadCloud2Line className="w-5 h-5 mb-1" />
+                  Adicionar
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePortfolioFile} data-testid="input-portfolio-file" />
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Até 10 imagens (JPG/PNG/WebP), 2 MB cada.</p>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
+              Documentos PDF <span className="text-xs text-muted-foreground">({portfolioDocs.length}/3)</span>
+            </Label>
+            <div className="flex flex-col gap-2" data-testid="grupo-portfolio-docs">
+              {portfolioDocs.map((entry, idx) => {
+                const sepIdx = entry.indexOf('::');
+                const name = sepIdx > 0 ? entry.slice(0, sepIdx) : `Documento ${idx + 1}.pdf`;
+                const url = sepIdx > 0 ? entry.slice(sepIdx + 2) : entry;
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700"
+                    data-testid={`doc-portfolio-${idx}`}
+                  >
+                    <RiFilePdf2Line className="w-5 h-5 text-red-500 shrink-0" />
+                    <span className="text-sm flex-1 truncate" title={name}>{name}</span>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline"
+                      data-testid={`link-doc-portfolio-${idx}`}
+                    >
+                      Abrir
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => removePortfolioDoc(idx)}
+                      className="w-6 h-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                      aria-label="Remover"
+                      data-testid={`button-remover-doc-${idx}`}
+                    >
+                      <RiCloseLine className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {portfolioDocs.length < 3 && (
+                <label
+                  className="inline-flex items-center justify-center gap-2 px-3 py-3 rounded-md border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 w-fit"
+                  data-testid="button-adicionar-doc"
+                >
+                  <RiUploadCloud2Line className="w-4 h-4" />
+                  Adicionar PDF
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={handlePortfolioDoc}
+                    data-testid="input-portfolio-doc"
+                  />
+                </label>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Até 3 PDFs, 5 MB cada (portfólio institucional, ART/RRT, certificações).
+              DOC/DOCX/PPT/XLS não são aceitos — converta para PDF.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -629,27 +863,41 @@ function SecaoEmpresa() {
 /* ─────────────────────────────────────────────
    SECTION: Notificações
 ───────────────────────────────────────────── */
+const NOTIF_DEFAULTS_EMP = {
+  email_novaObra: true,
+  email_prazo: true,
+  email_contrato: true,
+  email_medicao: true,
+  sis_documentos: true,
+  sis_reuniao: true,
+};
+
 function SecaoNotificacoes() {
   const { toast } = useToast();
-  const [email, setEmail] = useState({
-    novaObra: true,
-    prazo: true,
-    contrato: true,
-    medicao: true,
-  });
-  const [sistema, setSistema] = useState({
-    documentos: true,
-    reuniao: true,
-  });
+  const { data: prefsRemote, isLoading } = usePreferencias();
+  const { mutateAsync: updatePrefs, isPending: saving } = useUpdatePreferencias();
 
-  const toggleEmail = (key: keyof typeof email) => () =>
-    setEmail((p) => ({ ...p, [key]: !p[key] }));
-  const toggleSistema = (key: keyof typeof sistema) => () =>
-    setSistema((p) => ({ ...p, [key]: !p[key] }));
+  const [notif, setNotif] = useState<Record<string, boolean>>(NOTIF_DEFAULTS_EMP);
 
-  const handleSave = () => {
-    toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+  useEffect(() => {
+    if (prefsRemote?.notificacoes) {
+      setNotif({ ...NOTIF_DEFAULTS_EMP, ...prefsRemote.notificacoes });
+    }
+  }, [prefsRemote]);
+
+  const toggle = (key: string) => () => setNotif((p) => ({ ...p, [key]: !p[key] }));
+  const get = (k: string) => notif[k] ?? true;
+
+  const handleSave = async () => {
+    try {
+      await updatePrefs({ notificacoes: notif });
+      toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) return <div className="flex flex-col gap-4"><Skeleton className="h-48 rounded-xl" /><Skeleton className="h-32 rounded-xl" /></div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -661,26 +909,26 @@ function SecaoNotificacoes() {
           <SwitchRow
             label="Nova obra disponível"
             description="Receba um e-mail quando uma nova obra compatível com suas especialidades for publicada."
-            checked={email.novaObra}
-            onCheckedChange={toggleEmail('novaObra')}
+            checked={get('email_novaObra')}
+            onCheckedChange={toggle('email_novaObra')}
           />
           <SwitchRow
             label="Atualização de prazo"
             description="Notificação quando um prazo de entrega em obra ativa for alterado ou se aproximar."
-            checked={email.prazo}
-            onCheckedChange={toggleEmail('prazo')}
+            checked={get('email_prazo')}
+            onCheckedChange={toggle('email_prazo')}
           />
           <SwitchRow
             label="Contrato gerado para assinatura"
             description="Aviso quando um contrato digital estiver disponível para sua assinatura."
-            checked={email.contrato}
-            onCheckedChange={toggleEmail('contrato')}
+            checked={get('email_contrato')}
+            onCheckedChange={toggle('email_contrato')}
           />
           <SwitchRow
             label="Medição aprovada pelo contratante"
             description="Confirmação quando o contratante aprovar uma medição de etapa."
-            checked={email.medicao}
-            onCheckedChange={toggleEmail('medicao')}
+            checked={get('email_medicao')}
+            onCheckedChange={toggle('email_medicao')}
           />
         </CardContent>
       </Card>
@@ -693,22 +941,22 @@ function SecaoNotificacoes() {
           <SwitchRow
             label="Alertas de documentos próximos ao vencimento"
             description="Aviso automático 30 dias antes do vencimento de documentos cadastrados."
-            checked={sistema.documentos}
-            onCheckedChange={toggleSistema('documentos')}
+            checked={get('sis_documentos')}
+            onCheckedChange={toggle('sis_documentos')}
           />
           <SwitchRow
             label="Lembretes de reunião"
             description="Notificação 1 hora antes de reuniões agendadas com contratantes."
-            checked={sistema.reuniao}
-            onCheckedChange={toggleSistema('reuniao')}
+            checked={get('sis_reuniao')}
+            onCheckedChange={toggle('sis_reuniao')}
           />
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-notificacoes">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar preferências
+          {saving ? 'Salvando...' : 'Salvar preferências'}
         </Button>
       </div>
     </div>
@@ -738,18 +986,27 @@ function SecaoPrivacidade() {
     }
   }, [termosLoaded, loadTermos]);
 
-  const [prefs, setPrefs] = useState({
-    perfilPublico: true,
-    portfolio: true,
-    telefone: false,
-    convites: true,
-  });
+  const PRIV_DEFAULTS = { perfilPublico: true, portfolio: true, telefone: false, convites: true };
+  const { data: prefsRemote } = usePreferencias();
+  const { mutateAsync: updatePrefs, isPending: savingPriv } = useUpdatePreferencias();
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(PRIV_DEFAULTS);
 
-  const toggle = (key: keyof typeof prefs) => (v: boolean) =>
+  useEffect(() => {
+    if (prefsRemote?.privacidade) {
+      setPrefs({ ...PRIV_DEFAULTS, ...prefsRemote.privacidade });
+    }
+  }, [prefsRemote]);
+
+  const toggle = (key: string) => (v: boolean) =>
     setPrefs((p) => ({ ...p, [key]: v }));
 
-  const handleSave = () => {
-    toast({ title: 'Privacidade atualizada', description: 'Suas preferências de visibilidade foram salvas.' });
+  const handleSave = async () => {
+    try {
+      await updatePrefs({ privacidade: prefs });
+      toast({ title: 'Privacidade atualizada', description: 'Suas preferências de visibilidade foram salvas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
+    }
   };
 
   const handleRevoke = async () => {
@@ -922,9 +1179,9 @@ function SecaoPrivacidade() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={savingPriv} data-testid="button-salvar-privacidade">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar privacidade
+          {savingPriv ? 'Salvando...' : 'Salvar privacidade'}
         </Button>
       </div>
     </div>

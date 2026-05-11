@@ -25,6 +25,7 @@ import {
   useUpdatePerfilContratante,
   fileToDataUrl,
 } from '@features/perfil/hooks/use-perfil';
+import { usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
@@ -488,27 +489,40 @@ function SecaoEmpresa() {
 /* ─────────────────────────────────────────────
    SECTION: Notificações
 ───────────────────────────────────────────── */
+const NOTIF_DEFAULTS_CON = {
+  email_novaProposta: true,
+  email_medicao: true,
+  email_prazo: true,
+  email_contrato: true,
+  sis_documentos: true,
+  sis_reuniao: true,
+};
+
 function SecaoNotificacoes() {
   const { toast } = useToast();
-  const [email, setEmail] = useState({
-    novaProposta: true,
-    medicao: true,
-    prazo: true,
-    contrato: true,
-  });
-  const [sistema, setSistema] = useState({
-    documentos: true,
-    reuniao: true,
-  });
+  const { data: prefsRemote, isLoading } = usePreferencias();
+  const { mutateAsync: updatePrefs, isPending: saving } = useUpdatePreferencias();
+  const [notif, setNotif] = useState<Record<string, boolean>>(NOTIF_DEFAULTS_CON);
 
-  const toggleEmail = (key: keyof typeof email) => () =>
-    setEmail((p) => ({ ...p, [key]: !p[key] }));
-  const toggleSistema = (key: keyof typeof sistema) => () =>
-    setSistema((p) => ({ ...p, [key]: !p[key] }));
+  useEffect(() => {
+    if (prefsRemote?.notificacoes) {
+      setNotif({ ...NOTIF_DEFAULTS_CON, ...prefsRemote.notificacoes });
+    }
+  }, [prefsRemote]);
 
-  const handleSave = () => {
-    toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+  const toggle = (key: string) => () => setNotif((p) => ({ ...p, [key]: !p[key] }));
+  const get = (k: string) => notif[k] ?? true;
+
+  const handleSave = async () => {
+    try {
+      await updatePrefs({ notificacoes: notif });
+      toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) return <div className="flex flex-col gap-4"><Skeleton className="h-48 rounded-xl" /><Skeleton className="h-32 rounded-xl" /></div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -520,26 +534,26 @@ function SecaoNotificacoes() {
           <SwitchRow
             label="Nova proposta recebida"
             description="Receba um e-mail quando um empreiteiro enviar uma proposta para uma obra publicada."
-            checked={email.novaProposta}
-            onCheckedChange={toggleEmail('novaProposta')}
+            checked={get('email_novaProposta')}
+            onCheckedChange={toggle('email_novaProposta')}
           />
           <SwitchRow
             label="Medição submetida pelo empreiteiro"
             description="Notificação quando um empreiteiro submeter uma medição de etapa para sua aprovação."
-            checked={email.medicao}
-            onCheckedChange={toggleEmail('medicao')}
+            checked={get('email_medicao')}
+            onCheckedChange={toggle('email_medicao')}
           />
           <SwitchRow
             label="Prazo de etapa próximo"
             description="Aviso quando um prazo de entrega de etapa estiver se aproximando."
-            checked={email.prazo}
-            onCheckedChange={toggleEmail('prazo')}
+            checked={get('email_prazo')}
+            onCheckedChange={toggle('email_prazo')}
           />
           <SwitchRow
             label="Contrato disponível para assinatura"
             description="Aviso quando um contrato digital estiver disponível para sua assinatura."
-            checked={email.contrato}
-            onCheckedChange={toggleEmail('contrato')}
+            checked={get('email_contrato')}
+            onCheckedChange={toggle('email_contrato')}
           />
         </CardContent>
       </Card>
@@ -552,22 +566,22 @@ function SecaoNotificacoes() {
           <SwitchRow
             label="Alertas de documentos próximos ao vencimento"
             description="Aviso automático 30 dias antes do vencimento de documentos cadastrados."
-            checked={sistema.documentos}
-            onCheckedChange={toggleSistema('documentos')}
+            checked={get('sis_documentos')}
+            onCheckedChange={toggle('sis_documentos')}
           />
           <SwitchRow
             label="Lembretes de reunião"
             description="Notificação 1 hora antes de reuniões agendadas com empreiteiros."
-            checked={sistema.reuniao}
-            onCheckedChange={toggleSistema('reuniao')}
+            checked={get('sis_reuniao')}
+            onCheckedChange={toggle('sis_reuniao')}
           />
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-notificacoes">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar preferências
+          {saving ? 'Salvando...' : 'Salvar preferências'}
         </Button>
       </div>
     </div>
@@ -597,18 +611,27 @@ function SecaoPrivacidade() {
     }
   }, [termosLoaded, loadTermos]);
 
-  const [prefs, setPrefs] = useState({
-    perfilPublico: true,
-    portfOlioObras: true,
-    telefone: false,
-    convites: true,
-  });
+  const PRIV_DEFAULTS_CON = { perfilPublico: true, portfOlioObras: true, telefone: false, convites: true };
+  const { data: prefsRemote } = usePreferencias();
+  const { mutateAsync: updatePrefs, isPending: savingPriv } = useUpdatePreferencias();
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(PRIV_DEFAULTS_CON);
 
-  const toggle = (key: keyof typeof prefs) => (v: boolean) =>
+  useEffect(() => {
+    if (prefsRemote?.privacidade) {
+      setPrefs({ ...PRIV_DEFAULTS_CON, ...prefsRemote.privacidade });
+    }
+  }, [prefsRemote]);
+
+  const toggle = (key: string) => (v: boolean) =>
     setPrefs((p) => ({ ...p, [key]: v }));
 
-  const handleSave = () => {
-    toast({ title: 'Privacidade atualizada', description: 'Suas preferências de visibilidade foram salvas.' });
+  const handleSave = async () => {
+    try {
+      await updatePrefs({ privacidade: prefs });
+      toast({ title: 'Privacidade atualizada', description: 'Suas preferências de visibilidade foram salvas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
+    }
   };
 
   const handleRevoke = async () => {
@@ -781,9 +804,9 @@ function SecaoPrivacidade() {
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={savingPriv} data-testid="button-salvar-privacidade">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar privacidade
+          {savingPriv ? 'Salvando...' : 'Salvar privacidade'}
         </Button>
       </div>
     </div>
