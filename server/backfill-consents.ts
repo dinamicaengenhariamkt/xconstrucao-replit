@@ -11,21 +11,23 @@ export async function backfillConsents() {
   try {
     await db.execute(sql`
       INSERT INTO user_consents (user_id, documento, versao, aceito_em)
-      SELECT u.id, 'termos'::consent_document, '1.0', NOW()
+      SELECT u.id, 'termos'::consent_document, '1.0', COALESCE(u.created_at, NOW())
       FROM users u
       WHERE NOT EXISTS (
         SELECT 1 FROM user_consents c
         WHERE c.user_id = u.id AND c.documento = 'termos'
-      );
+      )
+      ON CONFLICT (user_id, documento, versao) DO NOTHING;
     `);
     await db.execute(sql`
       INSERT INTO user_consents (user_id, documento, versao, aceito_em)
-      SELECT u.id, 'privacidade'::consent_document, '1.0', NOW()
+      SELECT u.id, 'privacidade'::consent_document, '1.0', COALESCE(u.created_at, NOW())
       FROM users u
       WHERE NOT EXISTS (
         SELECT 1 FROM user_consents c
         WHERE c.user_id = u.id AND c.documento = 'privacidade'
-      );
+      )
+      ON CONFLICT (user_id, documento, versao) DO NOTHING;
     `);
   } catch (err) {
     console.error("[backfillConsents] failed:", err);

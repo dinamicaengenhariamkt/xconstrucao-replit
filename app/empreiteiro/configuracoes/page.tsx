@@ -1098,6 +1098,10 @@ function SecaoPrivacidade() {
 
   const handleRevoke = async () => {
     await revokeAll();
+    toast({
+      title: 'Consentimento revogado',
+      description: 'Você será desconectado. Para voltar a usar a plataforma, será necessário aceitar os termos novamente.',
+    });
     const { redirect } = await logout();
     router.push(redirect);
   };
@@ -1321,6 +1325,14 @@ function SecaoPrivacidade() {
             checked={prefs.convites}
             onCheckedChange={toggle('convites')}
           />
+          {prefsRemote?.updatedAt && (
+            <p
+              className="text-xs text-muted-foreground mt-3"
+              data-testid="text-prefs-updated-at"
+            >
+              Última atualização: {formatDate(prefsRemote.updatedAt)}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -1348,15 +1360,36 @@ function UsageMeterBadge({ current, max }: { current: number; max: number }) {
 function SecaoPlano() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: plano, isLoading } = usePlano();
+  const { data: plano, isLoading, isError, refetch } = usePlano();
 
-  if (isLoading || !plano) {
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
         <Skeleton className="h-64 rounded-xl" />
       </div>
+    );
+  }
+
+  if (isError || !plano) {
+    return (
+      <Card className="rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-900/10">
+        <CardContent className="p-6 flex flex-col items-start gap-3" data-testid="plano-error">
+          <div className="flex items-center gap-2">
+            <RiAlertLine className="w-5 h-5 text-red-500" />
+            <p className="text-sm font-semibold text-red-900 dark:text-red-200">
+              Não foi possível carregar seu plano.
+            </p>
+          </div>
+          <p className="text-xs text-red-800/80 dark:text-red-200/70">
+            Tente novamente em instantes ou recarregue a página.
+          </p>
+          <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-plano">
+            Tentar novamente
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

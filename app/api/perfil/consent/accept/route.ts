@@ -25,22 +25,27 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const userAgent = request.headers.get("user-agent") || null;
 
-  await db.insert(userConsents).values([
-    {
-      userId: guard.user.id,
-      documento: "termos",
-      versao: parsed.data.versaoTermos,
-      ip,
-      userAgent,
-    },
-    {
-      userId: guard.user.id,
-      documento: "privacidade",
-      versao: parsed.data.versaoPrivacidade,
-      ip,
-      userAgent,
-    },
-  ]);
+  await db
+    .insert(userConsents)
+    .values([
+      {
+        userId: guard.user.id,
+        documento: "termos",
+        versao: parsed.data.versaoTermos,
+        ip,
+        userAgent,
+      },
+      {
+        userId: guard.user.id,
+        documento: "privacidade",
+        versao: parsed.data.versaoPrivacidade,
+        ip,
+        userAgent,
+      },
+    ])
+    .onConflictDoNothing({
+      target: [userConsents.userId, userConsents.documento, userConsents.versao],
+    });
 
   const response = NextResponse.json({ success: true });
   setNoCacheHeaders(response);
