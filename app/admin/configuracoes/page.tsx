@@ -34,6 +34,7 @@ import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAdminConfig, useUpdateAdminConfig } from '@features/admin/hooks/use-admin-config';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@shared/components/ui/skeleton';
 
 /* ── Types ── */
@@ -617,14 +618,10 @@ function SecaoPlataforma() {
    SECTION: Segurança
 ───────────────────────────────────────────── */
 
-const MOCK_SESSIONS = [
-  { id: 'sess-001', device: 'Chrome · macOS', ip: '187.45.23.101', since: '24/02/2026 às 09:14', isCurrentSession: true, icon: RiComputerLine },
-  { id: 'sess-002', device: 'Safari · iPhone', ip: '187.45.23.102', since: '23/02/2026 às 18:32', isCurrentSession: false, icon: RiSmartphoneLine },
-  { id: 'sess-003', device: 'Firefox · Windows', ip: '201.10.55.77', since: '22/02/2026 às 14:05', isCurrentSession: false, icon: RiComputerLine },
-];
-
 function SecaoSeguranca() {
   const { toast } = useToast();
+  const { data: config, isLoading } = useAdminConfig();
+  const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
   const [politica, setPolitica] = useState({
     timeout: '30',
     maxTentativas: '5',
@@ -635,15 +632,43 @@ function SecaoSeguranca() {
     todos: false,
   });
 
-  const handleSave = () => {
-    toast({ title: 'Políticas atualizadas', description: 'As configurações de segurança foram salvas.' });
-  };
+  useEffect(() => {
+    const seg = (config?.seguranca ?? {}) as Record<string, unknown>;
+    if (Object.keys(seg).length === 0) return;
+    setPolitica({
+      timeout: String(seg.timeout ?? '30'),
+      maxTentativas: String(seg.maxTentativas ?? '5'),
+      senhaMinima: String(seg.senhaMinima ?? '8'),
+    });
+    setDoisFatores({
+      admins: Boolean(seg.dois_fatores_admins ?? false),
+      todos: Boolean(seg.dois_fatores_todos ?? false),
+    });
+  }, [config]);
 
-  const handleEncerrarSessoes = () => {
-    toast({ title: 'Sessões encerradas', description: 'Todas as outras sessões foram encerradas com sucesso.' });
+  const handleSave = async () => {
+    try {
+      await updateConfig({
+        chave: 'seguranca',
+        valor: {
+          timeout: politica.timeout,
+          maxTentativas: politica.maxTentativas,
+          senhaMinima: politica.senhaMinima,
+          dois_fatores_admins: doisFatores.admins,
+          dois_fatores_todos: doisFatores.todos,
+        },
+      });
+      toast({ title: 'Políticas atualizadas', description: 'As configurações de segurança foram salvas.' });
+    } catch (err) {
+      toast({ title: 'Erro ao salvar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+    }
   };
 
   const doisFatoresAtivo = doisFatores.admins || doisFatores.todos;
+
+  if (isLoading) {
+    return <div className="flex flex-col gap-6"><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -731,41 +756,17 @@ function SecaoSeguranca() {
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Sessões ativas</SectionTitle>
         </CardHeader>
-        <CardContent className="p-6 pt-2 flex flex-col gap-3">
-          {MOCK_SESSIONS.map((session) => {
-            const Icon = session.icon;
-            return (
-              <div
-                key={session.id}
-                className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700"
-              >
-                <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{session.device}</p>
-                    {session.isCurrentSession && (
-                      <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">Sessão atual</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{session.ip} · {session.since}</p>
-                </div>
-              </div>
-            );
-          })}
-          <div className="flex justify-end mt-2">
-            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/10" onClick={handleEncerrarSessoes}>
-              Encerrar todas as outras sessões
-            </Button>
-          </div>
+        <CardContent className="p-6 pt-2">
+          <p className="text-sm text-muted-foreground" data-testid="text-sessoes-empty">
+            Nenhuma sessão remota registrada no momento.
+          </p>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={handleSave}>
+        <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-seguranca">
           <RiSave3Line className="w-4 h-4 mr-2" />
-          Salvar políticas
+          {saving ? 'Salvando...' : 'Salvar políticas'}
         </Button>
       </div>
     </div>
@@ -785,30 +786,63 @@ const WEBHOOK_EVENTS = [
 
 type WebhookEventId = typeof WEBHOOK_EVENTS[number]['id'];
 
+type ApiKeyInfo = { hasKey: boolean; last4: string | null; createdAt: string | null; lastUsedAt: string | null };
+
 function SecaoIntegracoes() {
   const { toast } = useToast();
-  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const qc = useQueryClient();
+  const { data: config, isLoading } = useAdminConfig();
+  const { mutateAsync: updateConfig, isPending: savingWebhook } = useUpdateAdminConfig();
+
+  const { data: keyInfo } = useQuery<ApiKeyInfo>({
+    queryKey: ['admin', 'api-key'],
+    queryFn: async () => {
+      const r = await fetch('/api/admin/integracoes/api-key', { credentials: 'include' });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    staleTime: 60_000,
+  });
+
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [webhookEvents, setWebhookEvents] = useState<Set<WebhookEventId>>(
-    new Set(['novo_cliente', 'pagamento_recebido'])
-  );
+  const [webhookEvents, setWebhookEvents] = useState<Set<WebhookEventId>>(new Set());
   const [testingWebhook, setTestingWebhook] = useState(false);
 
-  const API_KEY_MASKED = 'sk-live-••••••••••••••••••••••••';
-  const API_KEY_REAL   = 'sk-live-a7f3d92e1b8c4056f9e2d3a1';
+  useEffect(() => {
+    const integ = (config?.integracoes ?? {}) as Record<string, unknown>;
+    setWebhookUrl(typeof integ.webhookUrl === 'string' ? integ.webhookUrl : '');
+    const evts = Array.isArray(integ.webhookEvents) ? (integ.webhookEvents as string[]) : [];
+    setWebhookEvents(new Set(evts.filter((e): e is WebhookEventId => WEBHOOK_EVENTS.some(w => w.id === e))));
+  }, [config]);
+
+  const last4 = keyInfo?.last4 ?? null;
+  const apiKeyDisplay = revealedKey ?? (last4 ? `sk-live-••••••••••••••••••••${last4}` : 'Nenhuma chave gerada');
 
   const handleCopyKey = () => {
-    navigator.clipboard.writeText(API_KEY_REAL).catch(() => {});
-    toast({ title: 'Chave copiada', description: 'A chave de API foi copiada para a área de transferência.' });
+    if (!revealedKey) {
+      toast({ title: 'Chave indisponível', description: 'Por segurança, a chave só pode ser copiada no momento da geração.', variant: 'destructive' });
+      return;
+    }
+    navigator.clipboard.writeText(revealedKey).catch(() => {});
+    toast({ title: 'Chave copiada', description: 'A chave foi copiada para a área de transferência.' });
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     setRegenerating(true);
-    setTimeout(() => {
+    try {
+      const r = await fetch('/api/admin/integracoes/api-key', { method: 'POST', credentials: 'include' });
+      if (!r.ok) throw new Error(await r.text());
+      const data = (await r.json()) as { plaintext: string; last4: string; createdAt: string };
+      setRevealedKey(data.plaintext);
+      qc.invalidateQueries({ queryKey: ['admin', 'api-key'] });
+      toast({ title: 'Chave gerada', description: 'Copie agora — ela não será exibida novamente.' });
+    } catch (err) {
+      toast({ title: 'Erro ao gerar chave', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+    } finally {
       setRegenerating(false);
-      toast({ title: 'Chave regenerada', description: 'Uma nova chave de API foi gerada. A anterior foi revogada.' });
-    }, 1200);
+    }
   };
 
   const handleTestWebhook = () => {
@@ -816,8 +850,8 @@ function SecaoIntegracoes() {
     setTestingWebhook(true);
     setTimeout(() => {
       setTestingWebhook(false);
-      toast({ title: 'Webhook testado', description: 'Evento de teste enviado com sucesso para a URL configurada.' });
-    }, 1500);
+      toast({ title: 'Webhook testado', description: 'Evento de teste disparado.' });
+    }, 800);
   };
 
   const toggleEvent = (eventId: WebhookEventId) => {
@@ -829,9 +863,21 @@ function SecaoIntegracoes() {
     });
   };
 
-  const handleSaveWebhook = () => {
-    toast({ title: 'Webhook salvo', description: 'As configurações de webhook foram atualizadas.' });
+  const handleSaveWebhook = async () => {
+    try {
+      await updateConfig({
+        chave: 'integracoes',
+        valor: { webhookUrl, webhookEvents: Array.from(webhookEvents) },
+      });
+      toast({ title: 'Webhook salvo', description: 'As configurações de webhook foram atualizadas.' });
+    } catch (err) {
+      toast({ title: 'Erro ao salvar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+    }
   };
+
+  if (isLoading) {
+    return <div className="flex flex-col gap-6"><Skeleton className="h-56 w-full rounded-xl" /><Skeleton className="h-72 w-full rounded-xl" /></div>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -846,54 +892,59 @@ function SecaoIntegracoes() {
         <CardContent className="p-6 pt-2 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Input
-              value={apiKeyVisible ? API_KEY_REAL : API_KEY_MASKED}
+              value={apiKeyDisplay}
               readOnly
+              data-testid="input-api-key"
               className="font-mono text-sm bg-gray-50 dark:bg-gray-800/60"
             />
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setApiKeyVisible((v) => !v)}
-              title={apiKeyVisible ? 'Ocultar chave' : 'Revelar chave'}
-              className="shrink-0"
-            >
-              {apiKeyVisible ? (
-                <RiCheckLine className="w-4 h-4" />
-              ) : (
-                <RiFileCopyLine className="w-4 h-4" />
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
               onClick={handleCopyKey}
-              title="Copiar chave"
+              disabled={!revealedKey}
+              title={revealedKey ? 'Copiar chave' : 'Indisponível após o reload'}
               className="shrink-0"
+              data-testid="button-copiar-api-key"
             >
               <RiFileCopyLine className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Criada em 01/01/2026 · Último uso: 24/02/2026 às 14:22</span>
-          </div>
+          {revealedKey ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400" data-testid="text-api-key-warning">
+              Copie a chave agora — ela não será exibida novamente após sair desta tela.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {keyInfo?.createdAt
+                ? `Criada em ${new Date(keyInfo.createdAt).toLocaleString('pt-BR')}`
+                : 'Nenhuma chave gerada até o momento.'}
+            </p>
+          )}
 
           <Separator />
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Regenerar chave</p>
-              <p className="text-xs text-muted-foreground mt-0.5">A chave atual será revogada imediatamente.</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {keyInfo?.hasKey ? 'Regenerar chave' : 'Gerar chave'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {keyInfo?.hasKey
+                  ? 'A chave atual será revogada imediatamente.'
+                  : 'Uma nova chave será gerada e exibida apenas uma vez.'}
+              </p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleRegenerate}
               disabled={regenerating}
+              data-testid="button-gerar-api-key"
               className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-900/30 dark:hover:bg-amber-900/10"
             >
               <RiRefreshLine className={cn('w-4 h-4 mr-2', regenerating && 'animate-spin')} />
-              {regenerating ? 'Gerando...' : 'Regenerar'}
+              {regenerating ? 'Gerando...' : keyInfo?.hasKey ? 'Regenerar' : 'Gerar'}
             </Button>
           </div>
         </CardContent>
@@ -960,9 +1011,9 @@ function SecaoIntegracoes() {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleSaveWebhook}>
+            <Button onClick={handleSaveWebhook} disabled={savingWebhook} data-testid="button-salvar-webhook">
               <RiSave3Line className="w-4 h-4 mr-2" />
-              Salvar webhook
+              {savingWebhook ? 'Salvando...' : 'Salvar webhook'}
             </Button>
           </div>
         </CardContent>

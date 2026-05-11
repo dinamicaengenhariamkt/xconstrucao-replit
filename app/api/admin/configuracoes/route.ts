@@ -91,7 +91,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { chave, valor } = parsed.data;
-  const merged = { ...DEFAULTS[chave], ...valor };
+  const [existing] = await db.select().from(platformSettings).where(eq(platformSettings.chave, chave));
+  const existingValor = (existing?.valor as Record<string, unknown> | null) ?? {};
+  const merged = { ...DEFAULTS[chave], ...existingValor, ...valor };
 
   await db
     .insert(platformSettings)
