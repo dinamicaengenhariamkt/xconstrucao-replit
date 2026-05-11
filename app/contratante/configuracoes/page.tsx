@@ -62,6 +62,13 @@ import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
+import { Textarea } from '@shared/components/ui/textarea';
+import {
+  formatPhone, unformatPhone, isPhoneValid,
+  formatCpf, unformatCpf, isCpfValid,
+  formatCnpj, unformatCnpj, isCnpjValid,
+} from '@shared/lib/masks';
+import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS } from '@features/perfil/constants';
 
 /* ── Types ── */
 type Section = 'perfil' | 'empresa' | 'notificacoes' | 'privacidade' | 'plano';
@@ -166,7 +173,15 @@ function SecaoPerfil() {
   const { data: perfil, isLoading } = usePerfilContratante();
   const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilContratante();
 
-  const [dados, setDados] = useState({ nome: '', telefone: '', cnpjCpf: '', tipo: 'Pessoa Física' });
+  const [dados, setDados] = useState({
+    nome: '',
+    telefone: '',
+    cnpjCpf: '',
+    tipo: 'Pessoa Física',
+    bio: '',
+    idioma: 'pt-BR',
+    timezone: 'America/Sao_Paulo',
+  });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -176,6 +191,9 @@ function SecaoPerfil() {
         telefone: perfil.telefone ?? '',
         cnpjCpf: perfil.cnpjCpf ?? '',
         tipo: perfil.tipo || 'Pessoa Física',
+        bio: perfil.bio ?? '',
+        idioma: perfil.idioma || 'pt-BR',
+        timezone: perfil.timezone || 'America/Sao_Paulo',
       });
       setAvatarUrl(perfil.avatarUrl ?? null);
     }
@@ -210,12 +228,33 @@ function SecaoPerfil() {
   };
 
   const handleSaveDados = async () => {
+    if (dados.telefone && !isPhoneValid(dados.telefone)) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDD + número completo.', variant: 'destructive' });
+      return;
+    }
+    const isPF = dados.tipo === 'Pessoa Física';
+    if (dados.cnpjCpf) {
+      const valid = isPF ? isCpfValid(dados.cnpjCpf) : isCnpjValid(dados.cnpjCpf);
+      if (!valid) {
+        toast({
+          title: isPF ? 'CPF inválido' : 'CNPJ inválido',
+          description: 'Verifique os dígitos verificadores.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     try {
       await updatePerfil({
         nome: dados.nome,
-        telefone: dados.telefone || null,
-        cnpjCpf: dados.cnpjCpf || null,
+        telefone: dados.telefone ? unformatPhone(dados.telefone) : null,
+        cnpjCpf: dados.cnpjCpf
+          ? (isPF ? unformatCpf(dados.cnpjCpf) : unformatCnpj(dados.cnpjCpf))
+          : null,
         tipo: dados.tipo,
+        bio: dados.bio.trim() || null,
+        idioma: dados.idioma,
+        timezone: dados.timezone,
       });
       toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
     } catch {
@@ -311,11 +350,61 @@ function SecaoPerfil() {
             <Input type="email" value={perfil.email} disabled className="opacity-60 cursor-not-allowed" data-testid="input-perfil-email" />
           </FieldRow>
           <FieldRow label="Telefone" description="Número de contato para suporte e obras.">
-            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" data-testid="input-perfil-telefone" />
+            <Input
+              type="tel"
+              value={formatPhone(dados.telefone)}
+              onChange={(e) => setDados((p) => ({ ...p, telefone: unformatPhone(e.target.value) }))}
+              placeholder="(11) 90000-0000"
+              data-testid="input-perfil-telefone"
+            />
           </FieldRow>
           <FieldRow label={isPF ? 'CPF' : 'CNPJ'}>
-            <Input value={dados.cnpjCpf} onChange={setDado('cnpjCpf')} placeholder={isPF ? '000.000.000-00' : '00.000.000/0000-00'} data-testid="input-perfil-cpfcnpj" />
+            <Input
+              value={isPF ? formatCpf(dados.cnpjCpf) : formatCnpj(dados.cnpjCpf)}
+              onChange={(e) => setDados((p) => ({
+                ...p,
+                cnpjCpf: isPF ? unformatCpf(e.target.value) : unformatCnpj(e.target.value),
+              }))}
+              placeholder={isPF ? '000.000.000-00' : '00.000.000/0000-00'}
+              inputMode="numeric"
+              maxLength={isPF ? 14 : 18}
+              data-testid="input-perfil-cpfcnpj"
+            />
           </FieldRow>
+          <FieldRow label="Bio" description="Apresentação curta sobre você (até 400 caracteres).">
+            <Textarea
+              value={dados.bio}
+              onChange={(e) => setDados((p) => ({ ...p, bio: e.target.value }))}
+              maxLength={400}
+              rows={3}
+              placeholder="Conte um pouco sobre você..."
+              className="resize-none"
+              data-testid="input-perfil-bio"
+            />
+            <p className="text-xs text-muted-foreground text-right">{dados.bio.length}/400</p>
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <FieldRow label="Idioma">
+              <Select value={dados.idioma} onValueChange={(v) => setDados((p) => ({ ...p, idioma: v }))}>
+                <SelectTrigger data-testid="select-perfil-idioma"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {IDIOMA_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Fuso horário">
+              <Select value={dados.timezone} onValueChange={(v) => setDados((p) => ({ ...p, timezone: v }))}>
+                <SelectTrigger data-testid="select-perfil-timezone"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {TIMEZONE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+          </div>
           <div className="flex justify-end">
             <Button onClick={handleSaveDados} disabled={saving} data-testid="button-salvar-perfil">
               <RiSave3Line className="w-4 h-4 mr-2" />
@@ -439,6 +528,10 @@ function SecaoEmpresa() {
               <CepInput
                 value={endereco.cep}
                 onChange={(cep) => setEndereco((p) => ({ ...p, cep }))}
+                onClear={() => setEndereco((p) => ({ ...p, endereco: '', cidade: '', estado: '' }))}
+                onLookupFailed={() =>
+                  toast({ title: 'CEP não encontrado', description: 'Preencha o endereço manualmente.', variant: 'destructive' })
+                }
                 onAutofill={(addr) =>
                   setEndereco((p) => ({
                     ...p,

@@ -10,13 +10,25 @@ const updateSchema = z.object({
   nome: z.string().min(3).optional(),
   telefone: z.string().min(8).optional().nullable(),
   cnpjCpf: z.string().optional().nullable(),
-  tipo: z.enum(["pessoa_fisica", "pessoa_juridica"]).optional(),
+  // Aceita tanto a label PT (vinda do select atual) quanto a normalização snake_case.
+  tipo: z.enum(["Pessoa Física", "Pessoa Jurídica", "pessoa_fisica", "pessoa_juridica"]).optional(),
   cep: z.string().optional().nullable(),
   endereco: z.string().optional().nullable(),
   cidade: z.string().optional().nullable(),
   estado: z.string().optional().nullable(),
   avatarUrl: z.string().max(2_500_000).optional().nullable(),
+  // user-level fields (persisted in users table)
+  bio: z.string().max(400).optional().nullable(),
+  idioma: z.string().max(16).optional(),
+  timezone: z.string().max(64).optional(),
 });
+
+function normalizeTipo(t: string | undefined): string | undefined {
+  if (!t) return undefined;
+  if (t === "pessoa_fisica") return "Pessoa Física";
+  if (t === "pessoa_juridica") return "Pessoa Jurídica";
+  return t;
+}
 
 function isProfileComplete(c: typeof clientes.$inferSelect) {
   return Boolean(
@@ -43,6 +55,20 @@ async function loadOrCreate(userId: string) {
   return row ?? null;
 }
 
+async function loadUser(userId: string) {
+  const [u] = await db.select().from(users).where(eq(users.id, userId));
+  return u ?? null;
+}
+
+function withUserFields(row: typeof clientes.$inferSelect, u: typeof users.$inferSelect | null) {
+  return {
+    ...row,
+    bio: u?.bio ?? null,
+    idioma: u?.idioma ?? "pt-BR",
+    timezone: u?.timezone ?? "America/Sao_Paulo",
+  };
+}
+
 export async function GET(request: NextRequest) {
   const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
   const payload = token ? verifyAccessToken(token) : null;
@@ -51,7 +77,8 @@ export async function GET(request: NextRequest) {
 
   const row = await loadOrCreate(payload.sub);
   if (!row) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
-  return NextResponse.json(row);
+  const u = await loadUser(payload.sub);
+  return NextResponse.json(withUserFields(row, u));
 }
 
 export async function PATCH(request: NextRequest) {
@@ -69,7 +96,10 @@ export async function PATCH(request: NextRequest) {
   const existing = await loadOrCreate(payload.sub);
   if (!existing) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
 
-  const merged = { ...existing, ...parsed.data } as typeof clientes.$inferSelect;
+  const { bio, idioma, timezone, tipo, ...rest } = parsed.data;
+  const clienteData = { ...rest, ...(tipo !== undefined ? { tipo: normalizeTipo(tipo)! } : {}) };
+
+  const merged = { ...existing, ...clienteData } as typeof clientes.$inferSelect;
   const perfilCompleto = isProfileComplete(merged);
 
   // Status transition: só promove para fila de curadoria ('aprovacao')
@@ -82,9 +112,18 @@ export async function PATCH(request: NextRequest) {
 
   const [updated] = await db
     .update(clientes)
-    .set({ ...parsed.data, perfilCompleto, status })
+    .set({ ...clienteData, perfilCompleto, status })
     .where(eq(clientes.id, existing.id))
     .returning();
 
-  return NextResponse.json(updated);
+  const userPatch: Partial<typeof users.$inferInsert> = {};
+  if (bio !== undefined) userPatch.bio = bio;
+  if (idioma !== undefined) userPatch.idioma = idioma;
+  if (timezone !== undefined) userPatch.timezone = timezone;
+  if (Object.keys(userPatch).length > 0) {
+    await db.update(users).set(userPatch).where(eq(users.id, payload.sub));
+  }
+  const u = await loadUser(payload.sub);
+
+  return NextResponse.json(withUserFields(updated, u));
 }

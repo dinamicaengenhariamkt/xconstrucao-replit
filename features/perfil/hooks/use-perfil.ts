@@ -17,6 +17,9 @@ export interface PerfilContratante {
   avatarUrl: string | null;
   perfilCompleto: boolean;
   status: 'ativo' | 'inativo' | 'aprovacao';
+  bio: string | null;
+  idioma: string;
+  timezone: string;
 }
 
 export interface PerfilEmpreiteiro {
@@ -45,6 +48,21 @@ export interface PerfilEmpreiteiro {
   registroProfissional: string | null;
   perfilCompleto: boolean;
   status: 'ativo' | 'inativo' | 'aprovacao';
+  bio: string | null;
+  idioma: string;
+  timezone: string;
+}
+
+export interface PerfilAdmin {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin';
+  phone: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  idioma: string;
+  timezone: string;
 }
 
 async function getJSON<T>(url: string): Promise<T> {
@@ -98,6 +116,25 @@ export function useUpdatePerfilEmpreiteiro() {
     mutationFn: (data: Partial<PerfilEmpreiteiro>) =>
       patchJSON<PerfilEmpreiteiro>('/api/perfil/empreiteiro', data),
     onSuccess: (data) => qc.setQueryData(KEY_E, data),
+  });
+}
+
+const KEY_A = ['perfil', 'admin'] as const;
+
+export function usePerfilAdmin() {
+  return useQuery<PerfilAdmin>({
+    queryKey: KEY_A,
+    queryFn: () => getJSON<PerfilAdmin>('/api/perfil/admin'),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdatePerfilAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<Omit<PerfilAdmin, 'id' | 'email' | 'role'>>) =>
+      patchJSON<PerfilAdmin>('/api/perfil/admin', data),
+    onSuccess: (data) => qc.setQueryData(KEY_A, data),
   });
 }
 

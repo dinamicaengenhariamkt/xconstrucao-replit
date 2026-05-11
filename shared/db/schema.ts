@@ -18,6 +18,9 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("contratante"),
   phone: text("phone"),
   avatarUrl: text("avatar_url"),
+  bio: text("bio"),
+  idioma: varchar("idioma", { length: 16 }).notNull().default("pt-BR"),
+  timezone: varchar("timezone", { length: 64 }).notNull().default("America/Sao_Paulo"),
 });
 
 export const clientes = pgTable("clientes", {

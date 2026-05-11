@@ -94,10 +94,21 @@ export default function MapaRaioInner({ cep, cidade, estado, raioKm, className }
     );
   }
 
+  if (!loading && !coords && error) {
+    return (
+      <div
+        className={`w-full h-64 rounded-xl bg-gray-50 dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center text-center px-6 text-xs text-muted-foreground ${className ?? ''}`}
+        data-testid="mapa-raio-indisponivel"
+      >
+        Não foi possível pré-visualizar este endereço no mapa.
+      </div>
+    );
+  }
+
   if (loading || !coords) {
     return (
       <div className={`w-full h-64 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse flex items-center justify-center text-xs text-muted-foreground ${className ?? ''}`}>
-        {error ?? 'Localizando…'}
+        Localizando…
       </div>
     );
   }

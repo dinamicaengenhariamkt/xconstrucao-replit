@@ -21,6 +21,23 @@ export const ESPECIALIDADES_PERMITIDAS = [
   "Obras Comerciais",
 ] as const;
 
+const especialidadesSchema = z
+  .array(z.string().trim().min(2).max(60))
+  .max(25)
+  .transform((items) => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of items) {
+      const t = raw.trim();
+      if (!t) continue;
+      const k = t.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(t);
+    }
+    return out;
+  });
+
 const updateSchema = z.object({
   nome: z.string().min(3).optional(),
   responsavel: z.string().min(3).optional(),
@@ -31,7 +48,7 @@ const updateSchema = z.object({
   cidade: z.string().optional().nullable(),
   estado: z.string().optional().nullable(),
   avatarUrl: z.string().max(2_500_000).optional().nullable(),
-  especialidades: z.array(z.enum(ESPECIALIDADES_PERMITIDAS)).optional(),
+  especialidades: especialidadesSchema.optional(),
   raioKm: z.number().int().min(0).max(2000).optional().nullable(),
   portfolioUrls: z.array(z.string().max(2_500_000)).max(10).optional(),
   portfolioDocs: z.array(z.string().max(7_000_000)).max(3).optional(),
@@ -42,6 +59,10 @@ const updateSchema = z.object({
   instagramUrl: z.string().url().max(300).optional().nullable().or(z.literal("")),
   linkedinUrl: z.string().url().max(300).optional().nullable().or(z.literal("")),
   registroProfissional: z.string().max(80).optional().nullable(),
+  // user-level fields (persisted in users table)
+  bio: z.string().max(400).optional().nullable(),
+  idioma: z.string().max(16).optional(),
+  timezone: z.string().max(64).optional(),
 });
 
 function isProfileComplete(e: typeof empreiteiras.$inferSelect) {
@@ -76,6 +97,20 @@ async function loadOrCreate(userId: string) {
   return row ?? null;
 }
 
+async function loadUser(userId: string) {
+  const [u] = await db.select().from(users).where(eq(users.id, userId));
+  return u ?? null;
+}
+
+function withUserFields(row: typeof empreiteiras.$inferSelect, u: typeof users.$inferSelect | null) {
+  return {
+    ...row,
+    bio: u?.bio ?? null,
+    idioma: u?.idioma ?? "pt-BR",
+    timezone: u?.timezone ?? "America/Sao_Paulo",
+  };
+}
+
 export async function GET(request: NextRequest) {
   const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
   const payload = token ? verifyAccessToken(token) : null;
@@ -84,7 +119,8 @@ export async function GET(request: NextRequest) {
 
   const row = await loadOrCreate(payload.sub);
   if (!row) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
-  return NextResponse.json(row);
+  const u = await loadUser(payload.sub);
+  return NextResponse.json(withUserFields(row, u));
 }
 
 export async function PATCH(request: NextRequest) {
@@ -102,7 +138,9 @@ export async function PATCH(request: NextRequest) {
   const existing = await loadOrCreate(payload.sub);
   if (!existing) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
 
-  const merged = { ...existing, ...parsed.data } as typeof empreiteiras.$inferSelect;
+  const { bio, idioma, timezone, ...empreiteiraData } = parsed.data;
+
+  const merged = { ...existing, ...empreiteiraData } as typeof empreiteiras.$inferSelect;
   const perfilCompleto = isProfileComplete(merged);
 
   // Status transition: só promove para fila de curadoria ('aprovacao')
@@ -115,9 +153,19 @@ export async function PATCH(request: NextRequest) {
 
   const [updated] = await db
     .update(empreiteiras)
-    .set({ ...parsed.data, perfilCompleto, status })
+    .set({ ...empreiteiraData, perfilCompleto, status })
     .where(eq(empreiteiras.id, existing.id))
     .returning();
 
-  return NextResponse.json(updated);
+  // Persist user-level fields (bio, idioma, timezone) atomically
+  const userPatch: Partial<typeof users.$inferInsert> = {};
+  if (bio !== undefined) userPatch.bio = bio;
+  if (idioma !== undefined) userPatch.idioma = idioma;
+  if (timezone !== undefined) userPatch.timezone = timezone;
+  if (Object.keys(userPatch).length > 0) {
+    await db.update(users).set(userPatch).where(eq(users.id, payload.sub));
+  }
+  const u = await loadUser(payload.sub);
+
+  return NextResponse.json(withUserFields(updated, u));
 }

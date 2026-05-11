@@ -63,6 +63,9 @@ import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
+import { MultiSelectAdd } from '@shared/components/MultiSelectAdd';
+import { formatPhone, unformatPhone, isPhoneValid, formatCnpj, unformatCnpj, isCnpjValid } from '@shared/lib/masks';
+import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS, ESPECIALIDADES_SUGGESTIONS } from '@features/perfil/constants';
 
 /* ── Types ── */
 type Section = 'perfil' | 'empresa' | 'notificacoes' | 'privacidade' | 'plano';
@@ -167,7 +170,14 @@ function SecaoPerfil() {
   const { data: perfil, isLoading } = usePerfilEmpreiteiro();
   const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilEmpreiteiro();
 
-  const [dados, setDados] = useState({ nome: '', responsavel: '', telefone: '' });
+  const [dados, setDados] = useState({
+    nome: '',
+    responsavel: '',
+    telefone: '',
+    bio: '',
+    idioma: 'pt-BR',
+    timezone: 'America/Sao_Paulo',
+  });
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -176,6 +186,9 @@ function SecaoPerfil() {
         nome: perfil.nome ?? '',
         responsavel: perfil.responsavel ?? '',
         telefone: perfil.telefone ?? '',
+        bio: perfil.bio ?? '',
+        idioma: perfil.idioma || 'pt-BR',
+        timezone: perfil.timezone || 'America/Sao_Paulo',
       });
       setAvatarUrl(perfil.avatarUrl ?? null);
     }
@@ -210,11 +223,18 @@ function SecaoPerfil() {
   };
 
   const handleSaveDados = async () => {
+    if (dados.telefone && !isPhoneValid(dados.telefone)) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDD + número completo.', variant: 'destructive' });
+      return;
+    }
     try {
       await updatePerfil({
         nome: dados.nome,
         responsavel: dados.responsavel,
-        telefone: dados.telefone || null,
+        telefone: dados.telefone ? unformatPhone(dados.telefone) : null,
+        bio: dados.bio.trim() || null,
+        idioma: dados.idioma,
+        timezone: dados.timezone,
       });
       toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
     } catch {
@@ -301,8 +321,48 @@ function SecaoPerfil() {
             <Input type="email" value={perfil.email} disabled className="opacity-60 cursor-not-allowed" data-testid="input-perfil-email" />
           </FieldRow>
           <FieldRow label="Telefone" description="Número de contato para suporte e obras.">
-            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" data-testid="input-perfil-telefone" />
+            <Input
+              type="tel"
+              value={formatPhone(dados.telefone)}
+              onChange={(e) => setDados((p) => ({ ...p, telefone: unformatPhone(e.target.value) }))}
+              placeholder="(11) 90000-0000"
+              data-testid="input-perfil-telefone"
+            />
           </FieldRow>
+          <FieldRow label="Bio" description="Apresentação curta sobre você (até 400 caracteres).">
+            <Textarea
+              value={dados.bio}
+              onChange={(e) => setDados((p) => ({ ...p, bio: e.target.value }))}
+              maxLength={400}
+              rows={3}
+              placeholder="Conte um pouco sobre você..."
+              className="resize-none"
+              data-testid="input-perfil-bio"
+            />
+            <p className="text-xs text-muted-foreground text-right">{dados.bio.length}/400</p>
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <FieldRow label="Idioma">
+              <Select value={dados.idioma} onValueChange={(v) => setDados((p) => ({ ...p, idioma: v }))}>
+                <SelectTrigger data-testid="select-perfil-idioma"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {IDIOMA_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Fuso horário">
+              <Select value={dados.timezone} onValueChange={(v) => setDados((p) => ({ ...p, timezone: v }))}>
+                <SelectTrigger data-testid="select-perfil-timezone"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {TIMEZONE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+          </div>
           <div className="flex justify-end">
             <Button onClick={handleSaveDados} disabled={saving} data-testid="button-salvar-perfil">
               <RiSave3Line className="w-4 h-4 mr-2" />
@@ -367,12 +427,6 @@ function SecaoPerfil() {
 /* ─────────────────────────────────────────────
    SECTION: Empresa
 ───────────────────────────────────────────── */
-const ESPECIALIDADES_OPTIONS = [
-  'Alvenaria', 'Elétrica', 'Hidráulica', 'Pintura', 'Acabamento',
-  'Fundações', 'Estrutura Metálica', 'Gesso/Drywall', 'Cobertura/Telhado',
-  'Paisagismo', 'Reformas', 'Obras Comerciais',
-] as const;
-
 const UF_OPTIONS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
   'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC',
@@ -429,12 +483,6 @@ function SecaoEmpresa() {
   const setField = (key: keyof typeof empresa) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
-
-  const toggleEspecialidade = (esp: string) => {
-    setEspecialidades((prev) =>
-      prev.includes(esp) ? prev.filter((e) => e !== esp) : [...prev, esp],
-    );
-  };
 
   const BLOCKED_DOCS = /\.(docx?|pptx?|xlsx?)$/i;
 
@@ -528,9 +576,13 @@ function SecaoEmpresa() {
       toast({ title: 'Ano inválido', description: 'Informe um ano válido.', variant: 'destructive' });
       return;
     }
+    if (empresa.cnpj && !isCnpjValid(empresa.cnpj)) {
+      toast({ title: 'CNPJ inválido', description: 'Verifique os dígitos.', variant: 'destructive' });
+      return;
+    }
     try {
       await updatePerfil({
-        cnpj: empresa.cnpj || null,
+        cnpj: empresa.cnpj ? unformatCnpj(empresa.cnpj) : null,
         cep: empresa.cep || null,
         endereco: empresa.endereco || null,
         cidade: empresa.cidade || null,
@@ -565,13 +617,26 @@ function SecaoEmpresa() {
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
           <FieldRow label="CNPJ">
-            <Input value={empresa.cnpj} onChange={setField('cnpj')} placeholder="00.000.000/0000-00" data-testid="input-empresa-cnpj" />
+            <Input
+              value={formatCnpj(empresa.cnpj)}
+              onChange={(e) => setEmpresa((p) => ({ ...p, cnpj: unformatCnpj(e.target.value) }))}
+              placeholder="00.000.000/0000-00"
+              inputMode="numeric"
+              maxLength={18}
+              data-testid="input-empresa-cnpj"
+            />
           </FieldRow>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <FieldRow label="CEP">
               <CepInput
                 value={empresa.cep}
                 onChange={(cep) => setEmpresa((p) => ({ ...p, cep }))}
+                onClear={() =>
+                  setEmpresa((p) => ({ ...p, endereco: '', cidade: '', estado: '' }))
+                }
+                onLookupFailed={() =>
+                  toast({ title: 'CEP não encontrado', description: 'Preencha o endereço manualmente.', variant: 'destructive' })
+                }
                 onAutofill={(addr) =>
                   setEmpresa((p) => ({
                     ...p,
@@ -640,30 +705,22 @@ function SecaoEmpresa() {
             </p>
           </div>
           <div>
-            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
               Especialidades <span className="text-xs text-muted-foreground ml-1">({especialidades.length} selecionadas)</span>
             </Label>
-            <div className="flex flex-wrap gap-2" data-testid="grupo-especialidades">
-              {ESPECIALIDADES_OPTIONS.map((esp) => {
-                const ativo = especialidades.includes(esp);
-                return (
-                  <button
-                    key={esp}
-                    type="button"
-                    onClick={() => toggleEspecialidade(esp)}
-                    data-testid={`chip-especialidade-${esp}`}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors',
-                      ativo
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary/50',
-                    )}
-                  >
-                    {esp}
-                  </button>
-                );
-              })}
-            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Busque entre as sugestões ou adicione uma especialidade própria. Até 25 itens.
+            </p>
+            <MultiSelectAdd
+              value={especialidades}
+              onChange={setEspecialidades}
+              suggestions={ESPECIALIDADES_SUGGESTIONS}
+              placeholder="Buscar ou adicionar especialidade…"
+              maxItems={25}
+              minLength={2}
+              maxLength={60}
+              data-testid="multiselect-especialidades"
+            />
           </div>
         </CardContent>
       </Card>

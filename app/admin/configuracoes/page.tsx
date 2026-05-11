@@ -21,7 +21,6 @@ import {
   RiAlertLine,
   RiUser3Line,
 } from 'react-icons/ri';
-import { useAuth } from '@features/auth/hooks/use-auth';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -34,9 +33,13 @@ import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAdminConfig, useUpdateAdminConfig } from '@features/admin/hooks/use-admin-config';
-import { useSessoes, useRevokeSessao } from '@features/perfil/hooks/use-preferencias';
+import { useSessoes, useRevokeSessao, usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
+import { usePerfilAdmin, useUpdatePerfilAdmin } from '@features/perfil/hooks/use-perfil';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
+import { formatPhone, unformatPhone, isPhoneValid } from '@shared/lib/masks';
+import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS } from '@features/perfil/constants';
 
 /* ── Types ── */
 type Section = 'perfil' | 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
@@ -132,14 +135,33 @@ function SelectField({
    SECTION: Perfil
 ───────────────────────────────────────────── */
 function SecaoPerfil() {
-  const { user } = useAuth();
   const { toast } = useToast();
+  const { data: perfil, isLoading } = usePerfilAdmin();
+  const { mutateAsync: updatePerfil, isPending: saving } = useUpdatePerfilAdmin();
 
   const [dados, setDados] = useState({
-    nome: user?.name ?? '',
-    email: user?.email ?? '',
+    nome: '',
+    email: '',
     telefone: '',
+    bio: '',
+    idioma: 'pt-BR',
+    timezone: 'America/Sao_Paulo',
   });
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (perfil) {
+      setDados({
+        nome: perfil.name ?? '',
+        email: perfil.email ?? '',
+        telefone: perfil.phone ?? '',
+        bio: perfil.bio ?? '',
+        idioma: perfil.idioma || 'pt-BR',
+        timezone: perfil.timezone || 'America/Sao_Paulo',
+      });
+      setAvatarUrl(perfil.avatarUrl ?? null);
+    }
+  }, [perfil]);
 
   const [senha, setSenha] = useState({
     atual: '',
@@ -156,8 +178,23 @@ function SecaoPerfil() {
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const handleSaveDados = () => {
-    toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+  const handleSaveDados = async () => {
+    if (dados.telefone && !isPhoneValid(dados.telefone)) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDD + número completo.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updatePerfil({
+        name: dados.nome,
+        phone: dados.telefone ? unformatPhone(dados.telefone) : null,
+        bio: dados.bio.trim() || null,
+        idioma: dados.idioma,
+        timezone: dados.timezone,
+      });
+      toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao salvar.', variant: 'destructive' });
+    }
   };
 
   const [senhaLoading, setSenhaLoading] = useState(false);
@@ -193,6 +230,13 @@ function SecaoPerfil() {
     }
   };
 
+  if (isLoading || !perfil) {
+    return <div className="flex flex-col gap-4"><Skeleton className="h-72 rounded-xl" /><Skeleton className="h-64 rounded-xl" /></div>;
+  }
+
+  const initials = (dados.nome || dados.email || 'A')
+    .split(/\s+/).map((s) => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
   return (
     <div className="flex flex-col gap-6">
       {/* Dados pessoais */}
@@ -201,26 +245,65 @@ function SecaoPerfil() {
           <SectionTitle>Dados pessoais</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
+          <div className="flex items-center gap-5">
+            <Avatar className="h-20 w-20" data-testid="avatar-perfil-admin">
+              {avatarUrl && <AvatarImage src={avatarUrl} alt={dados.nome || 'avatar'} />}
+              <AvatarFallback className="bg-primary text-white text-xl font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <FieldRow label="Nome completo">
-            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" />
+            <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" data-testid="input-perfil-nome" />
           </FieldRow>
-          <FieldRow label="E-mail" description="Usado para login e comunicações da plataforma.">
-            <Input type="email" value={dados.email} onChange={setDado('email')} placeholder="seu@email.com" />
+          <FieldRow label="E-mail" description="Usado para login. Contate o suporte para alterar.">
+            <Input type="email" value={dados.email} disabled className="opacity-60 cursor-not-allowed" data-testid="input-perfil-email" />
           </FieldRow>
           <FieldRow label="Telefone" description="Número de contato para suporte e autenticação.">
-            <Input type="tel" value={dados.telefone} onChange={setDado('telefone')} placeholder="(11) 9 0000-0000" />
+            <Input
+              type="tel"
+              value={formatPhone(dados.telefone)}
+              onChange={(e) => setDados((p) => ({ ...p, telefone: unformatPhone(e.target.value) }))}
+              placeholder="(11) 90000-0000"
+              data-testid="input-perfil-telefone"
+            />
           </FieldRow>
+          <FieldRow label="Bio" description="Apresentação curta sobre você (até 400 caracteres).">
+            <Textarea
+              value={dados.bio}
+              onChange={(e) => setDados((p) => ({ ...p, bio: e.target.value }))}
+              maxLength={400}
+              rows={3}
+              placeholder="Conte um pouco sobre você..."
+              className="resize-none"
+              data-testid="input-perfil-bio"
+            />
+            <p className="text-xs text-muted-foreground text-right">{dados.bio.length}/400</p>
+          </FieldRow>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <FieldRow label="Idioma">
+              <SelectField
+                value={dados.idioma}
+                onChange={(v) => setDados((p) => ({ ...p, idioma: v }))}
+                options={IDIOMA_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+              />
+            </FieldRow>
+            <FieldRow label="Fuso horário">
+              <SelectField
+                value={dados.timezone}
+                onChange={(v) => setDados((p) => ({ ...p, timezone: v }))}
+                options={TIMEZONE_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+              />
+            </FieldRow>
+          </div>
           <FieldRow label="Cargo" description="Definido pelo sistema. Contate o suporte para alterar.">
             <Input value="Administrador" disabled className="opacity-60 cursor-not-allowed" />
           </FieldRow>
           <div className="flex justify-end">
-            <button
-              onClick={handleSaveDados}
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-            >
-              <RiSave3Line className="w-4 h-4" />
-              Salvar dados
-            </button>
+            <Button onClick={handleSaveDados} disabled={saving} data-testid="button-salvar-perfil">
+              <RiSave3Line className="w-4 h-4 mr-2" />
+              {saving ? 'Salvando...' : 'Salvar dados'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -389,37 +472,55 @@ function SecaoGeral() {
 /* ─────────────────────────────────────────────
    SECTION: Notificações
 ───────────────────────────────────────────── */
-const NOTIF_DEFAULTS_ADMIN = {
+const NOTIF_PESSOAL_DEFAULTS = {
   novoCliente: true,
   novaObra: true,
   pagamento: true,
   contrato: false,
   campanhaExpirando: true,
-  manutencao: true,
   relatorioSemanal: false,
+};
+
+const NOTIF_PLATAFORMA_DEFAULTS = {
+  manutencao: true,
   atualizacoes: true,
+  alertasSeguranca: true,
 };
 
 function SecaoNotificacoes() {
   const { toast } = useToast();
-  const { data: config, isLoading } = useAdminConfig();
-  const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
-  const [notif, setNotif] = useState<Record<string, boolean>>(NOTIF_DEFAULTS_ADMIN);
+  const { data: config, isLoading: loadingPlat } = useAdminConfig();
+  const { data: prefs, isLoading: loadingPess } = usePreferencias();
+  const { mutateAsync: updateConfig, isPending: savingPlat } = useUpdateAdminConfig();
+  const { mutateAsync: updatePrefs, isPending: savingPess } = useUpdatePreferencias();
+
+  const [pessoal, setPessoal] = useState<Record<string, boolean>>(NOTIF_PESSOAL_DEFAULTS);
+  const [plataforma, setPlataforma] = useState<Record<string, boolean>>(NOTIF_PLATAFORMA_DEFAULTS);
+
+  useEffect(() => {
+    if (prefs?.notificacoes) {
+      setPessoal({ ...NOTIF_PESSOAL_DEFAULTS, ...(prefs.notificacoes as Record<string, boolean>) });
+    }
+  }, [prefs]);
 
   useEffect(() => {
     if (config?.notificacoes) {
-      setNotif({ ...NOTIF_DEFAULTS_ADMIN, ...(config.notificacoes as Record<string, boolean>) });
+      setPlataforma({ ...NOTIF_PLATAFORMA_DEFAULTS, ...(config.notificacoes as Record<string, boolean>) });
     }
   }, [config]);
 
-  const toggleEmail = (key: string) => () => setNotif((p) => ({ ...p, [key]: !p[key] }));
-  const toggleSistema = toggleEmail;
-  const email = notif;
-  const sistema = notif;
+  const togglePessoal = (key: string) => (v: boolean) => setPessoal((p) => ({ ...p, [key]: v }));
+  const togglePlataforma = (key: string) => (v: boolean) => setPlataforma((p) => ({ ...p, [key]: v }));
+
+  const saving = savingPlat || savingPess;
+  const isLoading = loadingPlat || loadingPess;
 
   const handleSave = async () => {
     try {
-      await updateConfig({ chave: 'notificacoes', valor: notif });
+      await Promise.all([
+        updatePrefs({ notificacoes: pessoal }),
+        updateConfig({ chave: 'notificacoes', valor: plataforma }),
+      ]);
       toast({ title: 'Preferências salvas', description: 'Suas notificações foram atualizadas.' });
     } catch {
       toast({ title: 'Erro', description: 'Falha ao salvar preferências.', variant: 'destructive' });
@@ -433,40 +534,47 @@ function SecaoNotificacoes() {
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center gap-2">
-            <RiGlobalLine className="w-4 h-4 text-gray-400" />
-            <SectionTitle>Notificações por e-mail</SectionTitle>
+            <RiUser3Line className="w-4 h-4 text-gray-400" />
+            <SectionTitle>Notificações pessoais</SectionTitle>
           </div>
+          <p className="text-xs text-muted-foreground -mt-2">Aplicam-se apenas à sua conta de administrador.</p>
         </CardHeader>
         <CardContent className="px-6 pb-4 pt-0">
           <SwitchRow
             label="Novo cliente cadastrado"
             description="Receba um e-mail quando um novo cliente completar o cadastro."
-            checked={email.novoCliente}
-            onCheckedChange={toggleEmail('novoCliente')}
+            checked={pessoal.novoCliente}
+            onCheckedChange={togglePessoal('novoCliente')}
           />
           <SwitchRow
             label="Nova obra criada"
             description="Notificação quando uma nova obra for cadastrada na plataforma."
-            checked={email.novaObra}
-            onCheckedChange={toggleEmail('novaObra')}
+            checked={pessoal.novaObra}
+            onCheckedChange={togglePessoal('novaObra')}
           />
           <SwitchRow
             label="Pagamento recebido"
             description="Confirmação de pagamento processado com sucesso."
-            checked={email.pagamento}
-            onCheckedChange={toggleEmail('pagamento')}
+            checked={pessoal.pagamento}
+            onCheckedChange={togglePessoal('pagamento')}
           />
           <SwitchRow
             label="Contrato assinado"
             description="Aviso quando um contrato for assinado entre as partes."
-            checked={email.contrato}
-            onCheckedChange={toggleEmail('contrato')}
+            checked={pessoal.contrato}
+            onCheckedChange={togglePessoal('contrato')}
           />
           <SwitchRow
             label="Campanha de anúncio expirando"
             description="Alerta 3 dias antes do vencimento de uma campanha ativa."
-            checked={email.campanhaExpirando}
-            onCheckedChange={toggleEmail('campanhaExpirando')}
+            checked={pessoal.campanhaExpirando}
+            onCheckedChange={togglePessoal('campanhaExpirando')}
+          />
+          <SwitchRow
+            label="Relatório semanal automático"
+            description="Resumo de métricas enviado toda segunda-feira às 8h."
+            checked={pessoal.relatorioSemanal}
+            onCheckedChange={togglePessoal('relatorioSemanal')}
           />
         </CardContent>
       </Card>
@@ -474,28 +582,29 @@ function SecaoNotificacoes() {
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center gap-2">
-            <RiBellLine className="w-4 h-4 text-gray-400" />
-            <SectionTitle>Notificações do sistema</SectionTitle>
+            <RiGlobalLine className="w-4 h-4 text-gray-400" />
+            <SectionTitle>Notificações da plataforma</SectionTitle>
           </div>
+          <p className="text-xs text-muted-foreground -mt-2">Configurações que afetam todos os usuários da plataforma.</p>
         </CardHeader>
         <CardContent className="px-6 pb-4 pt-0">
           <SwitchRow
             label="Alertas de manutenção"
-            description="Avisos sobre janelas de manutenção programada."
-            checked={sistema.manutencao}
-            onCheckedChange={toggleSistema('manutencao')}
-          />
-          <SwitchRow
-            label="Relatório semanal automático"
-            description="Resumo de métricas enviado toda segunda-feira às 8h."
-            checked={sistema.relatorioSemanal}
-            onCheckedChange={toggleSistema('relatorioSemanal')}
+            description="Avisos sobre janelas de manutenção programada para todos os usuários."
+            checked={plataforma.manutencao}
+            onCheckedChange={togglePlataforma('manutencao')}
           />
           <SwitchRow
             label="Atualizações da plataforma"
-            description="Novidades e melhorias publicadas na plataforma."
-            checked={sistema.atualizacoes}
-            onCheckedChange={toggleSistema('atualizacoes')}
+            description="Comunicar novidades e melhorias publicadas para todos os usuários."
+            checked={plataforma.atualizacoes}
+            onCheckedChange={togglePlataforma('atualizacoes')}
+          />
+          <SwitchRow
+            label="Alertas de segurança"
+            description="Avisos críticos de segurança enviados a todos os usuários."
+            checked={plataforma.alertasSeguranca}
+            onCheckedChange={togglePlataforma('alertasSeguranca')}
           />
         </CardContent>
       </Card>
