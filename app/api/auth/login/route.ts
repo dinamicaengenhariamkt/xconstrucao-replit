@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { loginSchema } from "@features/auth/schemas";
 import { getUserByEmail } from "@features/auth/api/auth-storage";
 import {
@@ -9,6 +10,8 @@ import {
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { validateAntiBot } from "@features/auth/api/anti-bot";
+import { db } from "@shared/db/db";
+import { sessions } from "@shared/db/schema";
 
 const GENERIC_INVALID = "Email ou senha inválidos";
 
@@ -89,6 +92,22 @@ export async function POST(request: NextRequest) {
 
     const accessToken = createAccessToken(userData);
     const refreshToken = createRefreshToken(user.id, rememberMe);
+
+    try {
+      const sessionToken = createHash("sha256").update(refreshToken).digest("hex");
+      const refreshMaxAgeMs = (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
+      const userAgent = request.headers.get("user-agent") ?? null;
+      await db.insert(sessions).values({
+        sessionToken,
+        userId: user.id,
+        expires: new Date(Date.now() + refreshMaxAgeMs),
+        userAgent,
+        ip,
+        lastUsedAt: new Date(),
+      });
+    } catch (err) {
+      console.error("Falha ao registrar sessão:", err);
+    }
 
     const response = NextResponse.json({ success: true, user: userData });
     setNoCacheHeaders(response);

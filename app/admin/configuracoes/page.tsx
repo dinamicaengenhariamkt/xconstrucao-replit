@@ -34,6 +34,7 @@ import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAdminConfig, useUpdateAdminConfig } from '@features/admin/hooks/use-admin-config';
+import { useSessoes, useRevokeSessao } from '@features/perfil/hooks/use-preferencias';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@shared/components/ui/skeleton';
 
@@ -752,16 +753,7 @@ function SecaoSeguranca() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-2">
-          <SectionTitle>Sessões ativas</SectionTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-2">
-          <p className="text-sm text-muted-foreground" data-testid="text-sessoes-empty">
-            Nenhuma sessão remota registrada no momento.
-          </p>
-        </CardContent>
-      </Card>
+      <SessoesAtivasCard />
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-seguranca">
@@ -770,6 +762,80 @@ function SecaoSeguranca() {
         </Button>
       </div>
     </div>
+  );
+}
+
+function SessoesAtivasCard() {
+  const { toast } = useToast();
+  const { data: sessoes, isLoading } = useSessoes();
+  const { mutateAsync: revoke, isPending: revoking } = useRevokeSessao();
+
+  const handleRevoke = async (id: string) => {
+    try {
+      await revoke(id);
+      toast({ title: 'Sessão encerrada', description: 'A sessão remota foi encerrada com sucesso.' });
+    } catch (err) {
+      toast({ title: 'Erro ao encerrar sessão', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
+    }
+  };
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; }
+  };
+
+  return (
+    <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+      <CardHeader className="p-6 pb-2">
+        <SectionTitle>Sessões ativas</SectionTitle>
+      </CardHeader>
+      <CardContent className="p-6 pt-2 flex flex-col gap-3">
+        {isLoading ? (
+          <Skeleton className="h-20 w-full rounded-xl" />
+        ) : !sessoes || sessoes.length === 0 ? (
+          <p className="text-sm text-muted-foreground" data-testid="text-sessoes-empty">
+            Nenhuma sessão registrada no momento.
+          </p>
+        ) : (
+          sessoes.map((session) => (
+            <div
+              key={session.id}
+              data-testid={`row-sessao-${session.id}`}
+              className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700"
+            >
+              <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                <RiComputerLine className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                    {session.userAgent || 'Dispositivo desconhecido'}
+                  </p>
+                  {session.current && (
+                    <Badge className="bg-[#22846D]/10 text-[#22846D] border-0 text-xs">Sessão atual</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {(session.ip || 'IP desconhecido')} · último uso {formatDate(session.lastUsedAt)}
+                </p>
+              </div>
+              {!session.current && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRevoke(session.id)}
+                  disabled={revoking}
+                  data-testid={`button-revogar-sessao-${session.id}`}
+                  className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-900/30 dark:hover:bg-red-900/10"
+                >
+                  Encerrar
+                </Button>
+              )}
+            </div>
+          ))
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
