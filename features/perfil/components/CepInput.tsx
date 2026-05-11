@@ -43,13 +43,15 @@ export function CepInput({
       return;
     }
     if (digits === lastLookupRef.current) return;
+    const isFirstLookup = lastLookupRef.current === '';
     lastLookupRef.current = digits;
     const ctrl = new AbortController();
     setLoading(true);
     setNotFound(false);
-    // Limpa endereço/cidade/UF antes da nova busca, evitando misturar
-    // dados de um CEP antigo com a nova consulta.
-    if (onClear) onClear();
+    // Limpa endereço/cidade/UF antes da nova busca apenas quando o CEP
+    // realmente mudou em relação ao anterior — evita apagar endereço
+    // pré-carregado do banco no primeiro render.
+    if (!isFirstLookup && onClear) onClear();
     lookupCep(digits, ctrl.signal)
       .then((res) => {
         if (res && onAutofill) {
