@@ -33,7 +33,15 @@ const updateSchema = z.object({
   avatarUrl: z.string().max(2_500_000).optional().nullable(),
   especialidades: z.array(z.enum(ESPECIALIDADES_PERMITIDAS)).optional(),
   raioKm: z.number().int().min(0).max(2000).optional().nullable(),
-  portfolioUrls: z.array(z.string().max(2_500_000)).max(20).optional(),
+  portfolioUrls: z.array(z.string().max(2_500_000)).max(10).optional(),
+  portfolioDocs: z.array(z.string().max(7_000_000)).max(3).optional(),
+  descricao: z.string().max(2000).optional().nullable(),
+  anoFundacao: z.number().int().min(1900).max(new Date().getFullYear()).optional().nullable(),
+  tamanhoEquipe: z.string().max(50).optional().nullable(),
+  siteUrl: z.string().url().max(300).optional().nullable().or(z.literal("")),
+  instagramUrl: z.string().url().max(300).optional().nullable().or(z.literal("")),
+  linkedinUrl: z.string().url().max(300).optional().nullable().or(z.literal("")),
+  registroProfissional: z.string().max(80).optional().nullable(),
 });
 
 function isProfileComplete(e: typeof empreiteiras.$inferSelect) {
@@ -48,6 +56,7 @@ function isProfileComplete(e: typeof empreiteiras.$inferSelect) {
       e.cidade &&
       e.estado &&
       e.avatarUrl &&
+      e.descricao &&
       Array.isArray(e.especialidades) &&
       e.especialidades.length > 0 &&
       typeof e.raioKm === "number" && e.raioKm > 0 &&

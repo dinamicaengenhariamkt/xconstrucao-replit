@@ -156,10 +156,37 @@ function SecaoPerfil() {
     toast({ title: 'Dados salvos', description: 'Suas informações pessoais foram atualizadas.' });
   };
 
-  const handleAlterarSenha = () => {
+  const [senhaLoading, setSenhaLoading] = useState(false);
+  const handleAlterarSenha = async () => {
     if (!senhaValida) return;
-    toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
-    setSenha({ atual: '', nova: '', confirmar: '' });
+    setSenhaLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: senha.atual,
+          newPassword: senha.nova,
+          confirmPassword: senha.confirmar,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({
+          title: 'Não foi possível alterar a senha',
+          description: data.message ?? 'Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: 'Senha alterada', description: data.message ?? 'Sua senha foi atualizada com sucesso.' });
+      setSenha({ atual: '', nova: '', confirmar: '' });
+    } catch {
+      toast({ title: 'Erro de rede', description: 'Não foi possível contatar o servidor.', variant: 'destructive' });
+    } finally {
+      setSenhaLoading(false);
+    }
   };
 
   return (

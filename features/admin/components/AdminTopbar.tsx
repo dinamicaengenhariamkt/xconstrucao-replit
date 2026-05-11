@@ -93,8 +93,8 @@ export function AdminTopbar() {
   const { notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } = useAdminNotifications();
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/');
+    const { redirect } = await logout();
+    router.push(redirect);
   };
   const [searchOpen, setSearchOpen] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(() => new Date());

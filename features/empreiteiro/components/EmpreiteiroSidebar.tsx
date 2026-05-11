@@ -31,8 +31,8 @@ export function EmpreiteiroSidebar() {
   const { logout } = useAuth();
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    router.push('/');
+    const { redirect } = await logout();
+    router.push(redirect);
   }, [logout, router]);
 
   const PLANO_ATUAL_ID: string = 'profissional'; // 'basico' | 'profissional' | 'enterprise'

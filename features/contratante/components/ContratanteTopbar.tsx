@@ -76,8 +76,8 @@ export function ContratanteTopbar() {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/');
+    const { redirect } = await logout();
+    router.push(redirect);
   };
 
   // Atalho de teclado Cmd/Ctrl + K para abrir busca global

@@ -85,6 +85,7 @@ export default function CadastroPage() {
       await registerUser({
         ...values,
         role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+        acceptTerms: true,
         antiBot: antiBot.getPayload(),
       });
       toast({

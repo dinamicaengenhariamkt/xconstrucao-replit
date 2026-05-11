@@ -26,8 +26,8 @@ export function AdminSidebar() {
   const { logout } = useAuth();
 
   const handleLogout = useCallback(async () => {
-    await logout();
-    router.push('/');
+    const { redirect } = await logout();
+    router.push(redirect);
   }, [logout, router]);
 
   const isActive = (url: string): boolean => pathname.startsWith(url);

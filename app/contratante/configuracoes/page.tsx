@@ -55,6 +55,7 @@ import {
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
+import { CepInput } from '@features/perfil/components/CepInput';
 import { Switch } from '@shared/components/ui/switch';
 import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
@@ -221,10 +222,37 @@ function SecaoPerfil() {
     }
   };
 
-  const handleAlterarSenha = () => {
+  const [senhaLoading, setSenhaLoading] = useState(false);
+  const handleAlterarSenha = async () => {
     if (!senhaValida) return;
-    toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
-    setSenha({ atual: '', nova: '', confirmar: '' });
+    setSenhaLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: senha.atual,
+          newPassword: senha.nova,
+          confirmPassword: senha.confirmar,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({
+          title: 'Não foi possível alterar a senha',
+          description: data.message ?? 'Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: 'Senha alterada', description: data.message ?? 'Sua senha foi atualizada com sucesso.' });
+      setSenha({ atual: '', nova: '', confirmar: '' });
+    } catch {
+      toast({ title: 'Erro de rede', description: 'Não foi possível contatar o servidor.', variant: 'destructive' });
+    } finally {
+      setSenhaLoading(false);
+    }
   };
 
   if (isLoading || !perfil) {
@@ -407,7 +435,19 @@ function SecaoEmpresa() {
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <FieldRow label="CEP">
-              <Input value={endereco.cep} onChange={setField('cep')} placeholder="00000-000" data-testid="input-empresa-cep" />
+              <CepInput
+                value={endereco.cep}
+                onChange={(cep) => setEndereco((p) => ({ ...p, cep }))}
+                onAutofill={(addr) =>
+                  setEndereco((p) => ({
+                    ...p,
+                    endereco: p.endereco || addr.endereco,
+                    cidade: addr.cidade,
+                    estado: addr.estado,
+                  }))
+                }
+                data-testid="input-empresa-cep"
+              />
             </FieldRow>
             <div className="sm:col-span-2">
               <FieldRow label="Endereço">
@@ -424,7 +464,7 @@ function SecaoEmpresa() {
             <FieldRow label="Estado">
               <Select value={endereco.estado} onValueChange={(v) => setEndereco((p) => ({ ...p, estado: v }))}>
                 <SelectTrigger data-testid="select-empresa-estado"><SelectValue placeholder="UF" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-72">
                   {UF_OPTIONS.map((uf) => (
                     <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                   ))}
@@ -547,7 +587,15 @@ function SecaoPrivacidade() {
     versaoTermosAceita,
     versaoPrivacidadeAceita,
     revokeAll,
+    load: loadTermos,
+    loaded: termosLoaded,
   } = useContratanteTermosStore();
+
+  useEffect(() => {
+    if (!termosLoaded) {
+      loadTermos();
+    }
+  }, [termosLoaded, loadTermos]);
 
   const [prefs, setPrefs] = useState({
     perfilPublico: true,
@@ -564,9 +612,9 @@ function SecaoPrivacidade() {
   };
 
   const handleRevoke = async () => {
-    revokeAll();
-    await logout();
-    router.push('/login');
+    await revokeAll();
+    const { redirect } = await logout();
+    router.push(redirect);
   };
 
   const formatDate = (iso: string | null) => {

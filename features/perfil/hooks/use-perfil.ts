@@ -35,6 +35,14 @@ export interface PerfilEmpreiteiro {
   especialidades: string[];
   raioKm: number | null;
   portfolioUrls: string[];
+  portfolioDocs: string[];
+  descricao: string | null;
+  anoFundacao: number | null;
+  tamanhoEquipe: string | null;
+  siteUrl: string | null;
+  instagramUrl: string | null;
+  linkedinUrl: string | null;
+  registroProfissional: string | null;
   perfilCompleto: boolean;
   status: 'ativo' | 'inativo' | 'aprovacao';
 }
@@ -98,10 +106,13 @@ export function useUpdatePerfilEmpreiteiro() {
  * Limita o tamanho máximo aceito para não estourar payload do banco.
  */
 export const MAX_AVATAR_BYTES = 1_500_000; // ~1.5 MB
+export const MAX_PORTFOLIO_IMAGE_BYTES = 2_000_000; // ~2 MB
+export const MAX_PORTFOLIO_DOC_BYTES = 5_000_000; // ~5 MB
 
-export function fileToDataUrl(file: File): Promise<string> {
-  if (file.size > MAX_AVATAR_BYTES) {
-    return Promise.reject(new Error('Arquivo muito grande. Máximo 1.5MB.'));
+export function fileToDataUrl(file: File, maxBytes: number = MAX_AVATAR_BYTES): Promise<string> {
+  if (file.size > maxBytes) {
+    const mb = (maxBytes / 1_000_000).toFixed(1);
+    return Promise.reject(new Error(`Arquivo muito grande. Máximo ${mb}MB.`));
   }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -56,6 +56,14 @@ export const empreiteiras = pgTable("empreiteiras", {
   estado: text("estado"),
   avatarUrl: text("avatar_url"),
   portfolioUrls: text("portfolio_urls").array().notNull().default(sql`ARRAY[]::text[]`),
+  portfolioDocs: text("portfolio_docs").array().notNull().default(sql`ARRAY[]::text[]`),
+  descricao: text("descricao"),
+  anoFundacao: integer("ano_fundacao"),
+  tamanhoEquipe: text("tamanho_equipe"),
+  siteUrl: text("site_url"),
+  instagramUrl: text("instagram_url"),
+  linkedinUrl: text("linkedin_url"),
+  registroProfissional: text("registro_profissional"),
   perfilCompleto: boolean("perfil_completo").notNull().default(false),
   obrasCount: integer("obras_count").default(0),
   avaliacao: numeric("avaliacao", { precision: 3, scale: 1 }).default("0"),
@@ -136,6 +144,37 @@ export const sessions = pgTable("sessions", {
   sessionToken: text("session_token").notNull().unique(),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   expires: timestamp("expires").notNull(),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade"]);
+
+export const userConsents = pgTable("user_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  documento: consentDocumentEnum("documento").notNull(),
+  versao: text("versao").notNull(),
+  aceitoEm: timestamp("aceito_em").defaultNow().notNull(),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  revogadoEm: timestamp("revogado_em"),
+});
+
+export const userPreferencias = pgTable("user_preferencias", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  notificacoes: jsonb("notificacoes").$type<Record<string, boolean>>().notNull().default({}),
+  privacidade: jsonb("privacidade").$type<Record<string, boolean>>().notNull().default({}),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const platformSettings = pgTable("platform_settings", {
+  chave: text("chave").primaryKey(),
+  valor: jsonb("valor").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
 });
 
 export const verificationTokens = pgTable("verification_tokens", {
@@ -151,6 +190,9 @@ export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
 export const insertFinanceiroSchema = createInsertSchema(financeiro).omit({ id: true });
 export const insertCandidaturaSchema = createInsertSchema(candidaturas).omit({ id: true, createdAt: true });
 export const insertMarketplaceLeadSchema = createInsertSchema(marketplaceLeads).omit({ id: true, createdAt: true, status: true });
+export const insertUserConsentSchema = createInsertSchema(userConsents).omit({ id: true, aceitoEm: true, revogadoEm: true });
+export const insertUserPreferenciasSchema = createInsertSchema(userPreferencias).omit({ updatedAt: true });
+export const insertPlatformSettingSchema = createInsertSchema(platformSettings).omit({ updatedAt: true });
 
 export const marketplaceLeadSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter no mínimo 2 caracteres").max(120, "Nome muito longo"),
@@ -171,6 +213,7 @@ export const registerSchema = z.object({
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
   role: z.enum(["contratante", "empreiteiro"]),
   phone: z.string().optional(),
+  acceptTerms: z.literal(true, { errorMap: () => ({ message: "Você deve aceitar os Termos de Uso e a Política de Privacidade" }) }),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

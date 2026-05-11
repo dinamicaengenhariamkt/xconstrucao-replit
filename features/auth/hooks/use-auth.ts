@@ -24,6 +24,12 @@ export interface RegisterData {
   password: string;
   role: string;
   phone?: string;
+  acceptTerms: true;
+}
+
+export interface LogoutResult {
+  persona: 'contratante' | 'empreiteiro' | 'administrador';
+  redirect: string;
 }
 
 export interface AuthContextType {
@@ -36,7 +42,7 @@ export interface AuthContextType {
     options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
   ) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => Promise<LogoutResult>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth?: () => Promise<void>;
 }

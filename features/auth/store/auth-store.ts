@@ -24,6 +24,7 @@ interface RegisterData {
   password: string;
   role: string;
   phone?: string;
+  acceptTerms: true;
 }
 
 interface AuthState {
@@ -49,7 +50,7 @@ interface AuthState {
     options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
   ) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => Promise<{ persona: 'contratante' | 'empreiteiro' | 'administrador'; redirect: string }>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth: () => Promise<void>;
   confirmSessionReady: () => Promise<boolean>;
@@ -249,23 +250,38 @@ export const useAuthStore = create<AuthState>()(
 
         // Logout
         logout: async () => {
-          const { setUser } = get();
+          const { setUser, user } = get();
+          const fallbackPersona =
+            user?.role === 'admin'
+              ? 'administrador'
+              : user?.role === 'empreiteiro'
+                ? 'empreiteiro'
+                : 'contratante';
+          const fallback = {
+            persona: fallbackPersona as 'contratante' | 'empreiteiro' | 'administrador',
+            redirect: `/login?perfil=${fallbackPersona}`,
+          };
 
           try {
-            // Limpar cache do React Query
             queryClient.clear();
-
-            // Chamar API de logout (limpa cookies)
-            await fetch('/api/auth/logout', {
+            const res = await fetch('/api/auth/logout', {
               method: 'POST',
               credentials: 'include',
             });
-
             setUser(null);
+            if (!res.ok) return fallback;
+            const data = (await res.json().catch(() => ({}))) as {
+              persona?: 'contratante' | 'empreiteiro' | 'administrador';
+              redirect?: string;
+            };
+            return {
+              persona: data.persona ?? fallback.persona,
+              redirect: data.redirect ?? fallback.redirect,
+            };
           } catch (error) {
             console.error('Erro ao fazer logout:', error);
-            // Mesmo com erro, limpar estado local
             setUser(null);
+            return fallback;
           }
         },
       }),

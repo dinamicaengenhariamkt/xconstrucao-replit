@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import { ENABLE_MOCK } from '@features/empreiteiro/novas-obras/constants';
-import { useTermosStore } from '@features/empreiteiro/termos/store/termos-store';
+import { useTermosStore } from '@features/auth/store/termos-store';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconArrowBack, IconChevronRight, IconCheckCircle, IconCheck, IconSend, IconDelete, IconAddCircle, IconUploadFile, IconDescription, IconConstruction, IconLocationOn, IconHomeRepairService, IconStraighten, IconAttachMoney, IconSchedule, IconSignalCellularAlt } from '@shared/components/icons';
 
@@ -87,8 +87,12 @@ export default function AplicarPage() {
   const handleSubmit = async () => {
     if (!aceitouTermos) return;
     setIsSubmitting(true);
-    acceptAll();
     try {
+      try {
+        await acceptAll();
+      } catch (consentErr) {
+        console.error('Falha ao registrar aceite (prosseguindo):', consentErr);
+      }
       if (ENABLE_MOCK) {
         await new Promise(resolve => setTimeout(resolve, 1500));
       } else {

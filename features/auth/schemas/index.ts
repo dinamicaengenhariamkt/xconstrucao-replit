@@ -30,6 +30,11 @@ export const registerSchema = z
     password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
     role: z.enum(["contratante", "empreiteiro"]),
     phone: z.string().optional(),
+    acceptTerms: z.literal(true, {
+      errorMap: () => ({
+        message: "Você deve aceitar os Termos de Uso e a Política de Privacidade",
+      }),
+    }),
   })
   .superRefine((data, ctx) => {
     const result = evaluatePasswordPolicy(data.password, {

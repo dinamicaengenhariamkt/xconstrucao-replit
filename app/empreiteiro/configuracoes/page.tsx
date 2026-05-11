@@ -51,6 +51,8 @@ import {
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
+import { CepInput } from '@features/perfil/components/CepInput';
+import { MapaRaio } from '@features/perfil/components/MapaRaio';
 import { Switch } from '@shared/components/ui/switch';
 import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
@@ -215,10 +217,37 @@ function SecaoPerfil() {
     }
   };
 
-  const handleAlterarSenha = () => {
+  const [senhaLoading, setSenhaLoading] = useState(false);
+  const handleAlterarSenha = async () => {
     if (!senhaValida) return;
-    toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
-    setSenha({ atual: '', nova: '', confirmar: '' });
+    setSenhaLoading(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword: senha.atual,
+          newPassword: senha.nova,
+          confirmPassword: senha.confirmar,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({
+          title: 'Não foi possível alterar a senha',
+          description: data.message ?? 'Tente novamente.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      toast({ title: 'Senha alterada', description: data.message ?? 'Sua senha foi atualizada com sucesso.' });
+      setSenha({ atual: '', nova: '', confirmar: '' });
+    } catch {
+      toast({ title: 'Erro de rede', description: 'Não foi possível contatar o servidor.', variant: 'destructive' });
+    } finally {
+      setSenhaLoading(false);
+    }
   };
 
   if (isLoading || !perfil) {
@@ -455,7 +484,19 @@ function SecaoEmpresa() {
           </FieldRow>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <FieldRow label="CEP">
-              <Input value={empresa.cep} onChange={setField('cep')} placeholder="00000-000" data-testid="input-empresa-cep" />
+              <CepInput
+                value={empresa.cep}
+                onChange={(cep) => setEmpresa((p) => ({ ...p, cep }))}
+                onAutofill={(addr) =>
+                  setEmpresa((p) => ({
+                    ...p,
+                    endereco: p.endereco || addr.endereco,
+                    cidade: addr.cidade,
+                    estado: addr.estado,
+                  }))
+                }
+                data-testid="input-empresa-cep"
+              />
             </FieldRow>
             <div className="sm:col-span-2">
               <FieldRow label="Endereço">
@@ -472,7 +513,7 @@ function SecaoEmpresa() {
             <FieldRow label="Estado">
               <Select value={empresa.estado} onValueChange={(v) => setEmpresa((p) => ({ ...p, estado: v }))}>
                 <SelectTrigger data-testid="select-empresa-estado"><SelectValue placeholder="UF" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-72">
                   {UF_OPTIONS.map((uf) => (
                     <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                   ))}
@@ -499,6 +540,20 @@ function SecaoEmpresa() {
               data-testid="input-empresa-raio"
             />
           </FieldRow>
+          <div>
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
+              Cobertura no mapa
+            </Label>
+            <MapaRaio
+              cep={empresa.cep}
+              cidade={empresa.cidade}
+              estado={empresa.estado}
+              raioKm={empresa.raioKm.trim() === '' ? null : Number(empresa.raioKm)}
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Visualização aproximada do alcance com base no CEP/cidade. Dados © OpenStreetMap.
+            </p>
+          </div>
           <div>
             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
               Especialidades <span className="text-xs text-muted-foreground ml-1">({especialidades.length} selecionadas)</span>
@@ -667,7 +722,21 @@ function SecaoPrivacidade() {
   const { toast, } = useToast();
   const { logout } = useAuth();
   const router = useRouter();
-  const { termosAceitosEm, privacidadeAceitaEm, versaoTermosAceita, versaoPrivacidadeAceita, revokeAll } = useTermosStore();
+  const {
+    termosAceitosEm,
+    privacidadeAceitaEm,
+    versaoTermosAceita,
+    versaoPrivacidadeAceita,
+    revokeAll,
+    load: loadTermos,
+    loaded: termosLoaded,
+  } = useTermosStore();
+
+  useEffect(() => {
+    if (!termosLoaded) {
+      loadTermos();
+    }
+  }, [termosLoaded, loadTermos]);
 
   const [prefs, setPrefs] = useState({
     perfilPublico: true,
@@ -684,9 +753,9 @@ function SecaoPrivacidade() {
   };
 
   const handleRevoke = async () => {
-    revokeAll();
-    await logout();
-    router.push('/login');
+    await revokeAll();
+    const { redirect } = await logout();
+    router.push(redirect);
   };
 
   const formatDate = (iso: string | null) => {
