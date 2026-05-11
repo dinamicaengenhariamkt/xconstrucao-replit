@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { userConsents } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -43,8 +44,14 @@ export async function POST(request: NextRequest) {
         userAgent,
       },
     ])
-    .onConflictDoNothing({
+    .onConflictDoUpdate({
       target: [userConsents.userId, userConsents.documento, userConsents.versao],
+      set: {
+        aceitoEm: sql`NOW()`,
+        ip: sql`EXCLUDED.ip`,
+        userAgent: sql`EXCLUDED.user_agent`,
+        revogadoEm: null,
+      },
     });
 
   const response = NextResponse.json({ success: true });
