@@ -60,7 +60,7 @@ XConstrução is a comprehensive construction management platform that connects 
 - Dark/light mode toggle
 
 ## Test Accounts (senhas fortes — política "balanced")
-- Admin: admin@xconstrucao.com / Admin@2026!Constru
+- Super Admin (auto-promovido): admin@xconstrucao.com / Admin@2026!Constru
 - Contratante: joao@construtora.com / Joao@2026!Obras
 - Empreiteiro: maria@empreiteira.com / Maria@2026!Reforma
 
@@ -146,7 +146,24 @@ Feature-based architecture under `features/empreiteiro/` and `features/contratan
 - Topbar: `features/admin/components/AdminTopbar.tsx`
 - Layout: `features/admin/components/AdminLayout.tsx`
 
+## Super Admin & Gestão de Usuários (Task #20)
+- **Bootstrap automático**: `server/bootstrap-superadmin.ts` roda em toda inicialização — adiciona enum `superadmin`, colunas `must_change_password`/`created_by`/`ativo`, tabelas `audit_logs` + `password_setup_tokens`, e promove `admin@xconstrucao.com` para `superadmin` (idempotente).
+- **Aba Usuários**: `/admin/configuracoes?tab=usuarios` (`features/admin/components/UsuariosTab.tsx`) — listar/criar/editar/desativar/resetar senha. Super admin gerencia todos; admin gerencia apenas contratante/empreiteiro. Filtros + busca + paginação.
+- **3 modos de senha** (criação ou reset): `manual` (define + força troca), `random` (gera 16 chars + força troca), `link` (envia e-mail Brevo com token URL-safe TTL 24h).
+- **Troca obrigatória 1º login**: `must_change_password=true` → `AuthSessionGuard` (`features/auth/components/AuthSessionGuard.tsx`) redireciona para `/trocar-senha-obrigatoria`. Endpoint `POST /api/auth/change-password-forced` valida política e remove flag.
+- **Definição inicial via link**: `/definir-senha-inicial?token=...` consome token (sha256 hash em DB) e ativa conta. Endpoint `POST /api/auth/definir-senha-inicial`.
+- **Modo "Ver como" (impersonation)**: `POST /api/admin/impersonate/[id]` (apenas super admin) emite cookie HMAC `impersonation_token` (TTL 1h). `requireVerifiedUser` substitui o `user` pelo target em verbos read-only. **Bloqueio global**: `proxy.ts` (Edge) intercepta TODAS rotas `/api/*` em verbos mutáveis e devolve **403 IMPERSONATION_READ_ONLY** sempre que o cookie `impersonation_token` está presente — cobre rotas legadas sem `requireVerifiedUser`. Layouts contratante/empreiteiro permitem `superadmin` quando impersonando, redirect por target.role. Banner persistente `ImpersonationBanner.tsx`. `POST /api/admin/impersonate/exit` encerra.
+- **Conta inativa**: login devolve `403 ACCOUNT_DISABLED`; `requireVerifiedUser` bloqueia idem.
+- **Audit log**: toda criação/edição/reset/impersonate é gravada em `audit_logs` (actor, action, target, payload, IP, UA).
+- **Endpoints novos**:
+  - `GET/POST /api/admin/usuarios`, `GET/PATCH/DELETE /api/admin/usuarios/[id]`
+  - `POST /api/admin/usuarios/[id]/reset-password`, `POST /api/admin/usuarios/[id]/ativo`
+  - `POST /api/admin/impersonate/[id]`, `POST /api/admin/impersonate/exit`
+  - `POST /api/auth/change-password-forced`, `POST /api/auth/definir-senha-inicial`
+- **Helpers**: `features/auth/api/{audit,password-generator,impersonation,password-setup-tokens}.ts`.
+
 ## Recent Changes
+- 2026-05-12: Task #20 — super admin auto-promovido, aba Usuários CRUD, modo Ver como (read-only), troca obrigatória de senha 1º login, fix do cadastro silencioso (toast + erros inline), bloqueio de login para conta inativa.
 - 2026-05-10: Transactional email migrated to Brevo (HTTP API, secret `BREVO_API_KEY`). Same function signatures in `shared/lib/email.ts`, same templates, same `EMAIL_TEST_MODE` capture path. Legacy `lib/email.ts` and previous provider package/secret removed.
 - 2026-02-21: Built complete admin internal views (Clientes, Empreiteiras, Caixa, Entradas, Saídas, Anúncios, FAQ with full CRUD forms)
 - 2026-02-20: Built complete contratante internal views (Minhas Obras, Detalhes da Obra, Nova Obra, Pagamentos, xchat, FAQ)

@@ -2,6 +2,7 @@ import { render } from '@react-email/render';
 import PasswordResetEmail from '@features/auth/emails/password-reset';
 import WelcomeEmail from '@features/auth/emails/welcome';
 import VerificationEmail from '@features/auth/emails/verification';
+import PasswordSetupEmail from '@features/auth/emails/password-setup';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -94,6 +95,31 @@ export async function sendWelcomeEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'welcome' });
   } catch (error) {
     console.error('Erro ao enviar email de boas-vindas:', error);
+    throw error;
+  }
+}
+
+export async function sendPasswordSetupEmail(
+  to: string,
+  setupUrl: string,
+  userName: string,
+  invitedByName: string | null,
+  roleLabel: string,
+) {
+  const html = await render(
+    PasswordSetupEmail({ setupUrl, userName, invitedByName: invitedByName ?? undefined, roleLabel }),
+  );
+  const subject = 'XConstrução - Defina sua senha de acesso';
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'password-setup', setupUrl, userName, invitedByName, roleLabel } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'password-setup' });
+  } catch (error) {
+    console.error('Erro ao enviar email de definição de senha:', error);
     throw error;
   }
 }

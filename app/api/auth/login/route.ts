@@ -64,6 +64,13 @@ export async function POST(request: NextRequest) {
       return jsonNoStore({ error: GENERIC_INVALID }, 401);
     }
 
+    if (user.ativo === false) {
+      return jsonNoStore(
+        { error: "ACCOUNT_DISABLED", message: "Conta desativada. Contate o administrador." },
+        403,
+      );
+    }
+
     // Email não verificado: só checamos depois da senha estar correta.
     if (user.emailVerified === null) {
       return jsonNoStore(

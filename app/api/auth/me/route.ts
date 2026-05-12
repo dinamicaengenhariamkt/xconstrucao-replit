@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
+import { getUser } from "@features/auth/api/auth-storage";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
+import { readImpersonationFromRequest } from "@features/auth/api/impersonation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +11,46 @@ export async function GET(request: NextRequest) {
     if (!payload?.sub) {
       return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
     }
-    const userId = payload.sub;
+    const actor = await getUser(payload.sub);
+    if (!actor) return NextResponse.json({ message: "Usuário não encontrado" }, { status: 404 });
 
-    const user = await getUser(userId);
-    if (!user) return NextResponse.json({ message: "Usuário não encontrado" }, { status: 404 });
+    let viewer = actor;
+    let impersonation: null | {
+      actorId: string;
+      actorName: string;
+      actorEmail: string;
+      targetId: string;
+      targetName: string;
+      targetEmail: string;
+      targetRole: string;
+    } = null;
 
-    const { password: _, ...userData } = user;
-    return NextResponse.json(userData);
+    const imp = readImpersonationFromRequest(request);
+    if (imp && imp.actorId === actor.id && actor.role === "superadmin") {
+      const target = await getUser(imp.targetId);
+      if (target && target.ativo) {
+        viewer = target;
+        impersonation = {
+          actorId: actor.id,
+          actorName: actor.name,
+          actorEmail: actor.email,
+          targetId: target.id,
+          targetName: target.name,
+          targetEmail: target.email,
+          targetRole: target.role,
+        };
+      }
+    }
+
+    const { password: _pw, ...userData } = viewer;
+    return NextResponse.json({
+      ...userData,
+      mustChangePassword: viewer.mustChangePassword ?? false,
+      ativo: viewer.ativo ?? true,
+      impersonation,
+    });
   } catch (error) {
+    console.error("/api/auth/me error:", error);
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
   }
 }

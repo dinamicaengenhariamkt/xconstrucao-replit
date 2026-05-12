@@ -16,9 +16,35 @@ import type { NextRequest } from "next/server";
  * - Frontend: validação + UX (useAuth redireciona usuários não autenticados)
  * - Backend: validação final (APIs rejeitam requests com tokens inválidos)
  */
+const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const pathname = request.nextUrl.pathname;
+
+  // Modo "Ver como" (impersonation) — bloqueio GLOBAL de mutações em /api/*
+  // Independe do `requireVerifiedUser` interno; cobre rotas legadas também.
+  if (
+    pathname.startsWith("/api/") &&
+    pathname !== "/api/admin/impersonate/exit" &&
+    !READ_ONLY_METHODS.has(request.method) &&
+    !!request.cookies.get("impersonation_token")?.value
+  ) {
+    return NextResponse.json(
+      {
+        error: "IMPERSONATION_READ_ONLY",
+        message: "Modo somente leitura ativo. Saia do modo visualização para fazer alterações.",
+      },
+      {
+        status: 403,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, private",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      },
+    );
+  }
 
   // Debug em desenvolvimento
   const isDev = process.env.NODE_ENV === 'development';
@@ -70,5 +96,6 @@ export const config = {
     "/empreiteiro/:path*",
     "/contratante/:path*",
     "/administrador/:path*",
+    "/api/:path*",
   ],
 };

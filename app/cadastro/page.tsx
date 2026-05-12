@@ -70,47 +70,61 @@ export default function CadastroPage() {
   const emailValue = form.watch("email");
   const usernameValue = form.watch("username");
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    if (!acceptTerms) {
-      toast({
-        title: "Termos obrigatórios",
-        description: "Aceite os termos de uso para continuar.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const onSubmit = form.handleSubmit(
+    async (values) => {
+      if (!acceptTerms) {
+        toast({
+          title: "Termos obrigatórios",
+          description: "Aceite os termos de uso para continuar.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    setIsLoading(true);
-    try {
-      await registerUser({
-        ...values,
-        role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
-        acceptTerms: true,
-        antiBot: antiBot.getPayload(),
-      });
+      setIsLoading(true);
+      try {
+        await registerUser({
+          ...values,
+          role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+          acceptTerms: true,
+          antiBot: antiBot.getPayload(),
+        });
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Enviamos um email de confirmação. Verifique sua caixa de entrada.",
+        });
+        router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente.";
+        toast({ title: "Erro no cadastro", description: message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    (errors) => {
+      const order = ["name", "email", "username", "phone", "password", "acceptTerms"] as const;
+      const firstField = order.find((f) => errors[f]?.message);
+      const firstMsg = firstField
+        ? (errors[firstField]?.message as string)
+        : "Verifique os campos destacados.";
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Enviamos um email de confirmação. Verifique sua caixa de entrada.",
-      });
-      router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Erro ao criar conta. Tente novamente.";
-      toast({
-        title: "Erro no cadastro",
-        description: message,
+        title: "Não foi possível criar a conta",
+        description: firstMsg,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-    }
-  });
+    },
+  );
 
   if (perfil === "administrador") return null;
 
-  const passwordError = form.formState.errors.password?.message;
+  const errs = form.formState.errors;
+  const passwordError = errs.password?.message;
+  const nameError = errs.name?.message;
+  const emailError = errs.email?.message;
+  const usernameError = errs.username?.message;
+  const phoneError = errs.phone?.message;
+  const termsError = !acceptTerms && form.formState.isSubmitted ? "Você deve aceitar os Termos de Uso e a Política de Privacidade" : undefined;
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
@@ -185,6 +199,9 @@ export default function CadastroPage() {
                     {...form.register("name")}
                   />
                 </div>
+                {nameError && (
+                  <p className="text-xs text-red-500 mt-1" data-testid="text-name-error">{nameError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Email</label>
@@ -199,6 +216,9 @@ export default function CadastroPage() {
                     {...form.register("email")}
                   />
                 </div>
+                {emailError && (
+                  <p className="text-xs text-red-500 mt-1" data-testid="text-email-error">{emailError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Usuário</label>
@@ -213,6 +233,9 @@ export default function CadastroPage() {
                     {...form.register("username")}
                   />
                 </div>
+                {usernameError && (
+                  <p className="text-xs text-red-500 mt-1" data-testid="text-username-error">{usernameError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Telefone</label>
@@ -227,6 +250,9 @@ export default function CadastroPage() {
                     {...form.register("phone")}
                   />
                 </div>
+                {phoneError && (
+                  <p className="text-xs text-red-500 mt-1" data-testid="text-phone-error">{phoneError}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
@@ -271,6 +297,9 @@ export default function CadastroPage() {
                   </Link>
                 </span>
               </label>
+              {termsError && (
+                <p className="text-xs text-red-500 -mt-2" data-testid="text-terms-error">{termsError}</p>
+              )}
 
               <button
                 type="submit"

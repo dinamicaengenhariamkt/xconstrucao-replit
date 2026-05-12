@@ -11,6 +11,7 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ContratanteLayout } from '@features/contratante/components/ContratanteLayout';
 import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
+import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function ContratanteRootLayout({
   children,
@@ -20,11 +21,14 @@ export default function ContratanteRootLayout({
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  // superadmin pode acessar qualquer área quando estiver no modo "Ver como"
+  const allowed = user?.role === 'contratante' || user?.role === 'superadmin';
+
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'contratante')) {
+    if (!isLoading && (!user || !allowed)) {
       router.push('/login');
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, allowed, router]);
 
   if (isLoading) {
     return (
@@ -37,14 +41,16 @@ export default function ContratanteRootLayout({
     );
   }
 
-  if (!user || user.role !== 'contratante') {
+  if (!user || !allowed) {
     return null;
   }
 
   return (
-    <ContratanteLayout>
-      <EmailVerificationBanner />
-      {children}
-    </ContratanteLayout>
+    <AuthSessionGuard>
+      <ContratanteLayout>
+        <EmailVerificationBanner />
+        {children}
+      </ContratanteLayout>
+    </AuthSessionGuard>
   );
 }

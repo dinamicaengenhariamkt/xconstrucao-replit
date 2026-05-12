@@ -2,6 +2,12 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { seedDatabase } = await import("./server/seed");
     await seedDatabase().catch(console.error);
+
+    const { bootstrapSuperAdmin } = await import("./server/bootstrap-superadmin");
+    await bootstrapSuperAdmin().catch((err) => {
+      console.error("[instrumentation] bootstrapSuperAdmin failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {

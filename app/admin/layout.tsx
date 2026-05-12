@@ -5,16 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { AdminLayout } from '@features/admin/components/AdminLayout';
+import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  const isAdminLike = user?.role === 'admin' || user?.role === 'superadmin';
+
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
+    if (!isLoading && (!user || !isAdminLike)) {
       router.push('/login');
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, isAdminLike, router]);
 
   if (isLoading) {
     return (
@@ -27,9 +30,11 @@ export default function AdminRootLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user || user.role !== 'admin') {
-    return null;
-  }
+  if (!user || !isAdminLike) return null;
 
-  return <AdminLayout>{children}</AdminLayout>;
+  return (
+    <AuthSessionGuard>
+      <AdminLayout>{children}</AdminLayout>
+    </AuthSessionGuard>
+  );
 }

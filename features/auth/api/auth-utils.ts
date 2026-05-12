@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "./auth-service";
 import { getUser } from "./auth-storage";
+import { readImpersonationFromRequest, isReadOnlyMethod, type ImpersonationPayload } from "./impersonation";
+import { recordAudit } from "./audit";
 import type { User } from "@shared/db/schema";
 
 /**
  * Resultado padronizado para guards de autenticação em rotas API.
  * - `error: NextResponse` quando o usuário não pode prosseguir (401/403)
  * - `user: User`           quando está autenticado e com email verificado
+ *                          (durante impersonation read-only este será o
+ *                           target — use `impersonation` para identificar)
  */
-type AuthGuardResult =
-  | { user: User; error: null }
-  | { user: null; error: NextResponse };
+export type AuthGuardResult =
+  | { user: User; error: null; impersonation: ImpersonationContext | null; actor: User | null }
+  | { user: null; error: NextResponse; impersonation: null; actor: null };
+
+export interface ImpersonationContext {
+  actorId: string;
+  targetId: string;
+}
 
 /**
  * Garante que a request veio de um usuário autenticado COM email verificado.
- * Use em endpoints downstream (criar obra, candidatar-se, etc.) que devem ser
- * bloqueados até a verificação do email.
- *
- * - 401 se token inválido / ausente
- * - 403 com `EMAIL_NOT_VERIFIED` se email ainda não foi confirmado
- * - 404 se o user_id do token não existe mais no banco
+ * Suporta o modo "Ver como" (impersonation) — apenas super admin pode ativar
+ * e somente verbos de leitura passam (mutações retornam 403 padronizado).
  */
 export async function requireVerifiedUser(request: NextRequest): Promise<AuthGuardResult> {
   const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
@@ -28,29 +33,67 @@ export async function requireVerifiedUser(request: NextRequest): Promise<AuthGua
   if (!payload?.sub) {
     const response = NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     setNoCacheHeaders(response);
-    return { user: null, error: response };
+    return { user: null, error: response, impersonation: null, actor: null };
   }
 
-  const user = await getUser(payload.sub);
-  if (!user) {
+  const actorUser = await getUser(payload.sub);
+  if (!actorUser) {
     const response = NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     setNoCacheHeaders(response);
-    return { user: null, error: response };
+    return { user: null, error: response, impersonation: null, actor: null };
   }
 
-  if (!user.emailVerified) {
+  if (!actorUser.emailVerified) {
     const response = NextResponse.json(
-      {
-        error: "EMAIL_NOT_VERIFIED",
-        message: "Verifique seu email para liberar esta ação.",
-      },
-      { status: 403 }
+      { error: "EMAIL_NOT_VERIFIED", message: "Verifique seu email para liberar esta ação." },
+      { status: 403 },
     );
     setNoCacheHeaders(response);
-    return { user: null, error: response };
+    return { user: null, error: response, impersonation: null, actor: null };
   }
 
-  return { user, error: null };
+  if (!actorUser.ativo) {
+    const response = NextResponse.json(
+      { error: "ACCOUNT_DISABLED", message: "Sua conta está desativada. Contate o administrador." },
+      { status: 403 },
+    );
+    setNoCacheHeaders(response);
+    return { user: null, error: response, impersonation: null, actor: null };
+  }
+
+  // ----- Impersonation -----
+  const imp = readImpersonationFromRequest(request);
+  if (imp && imp.actorId === actorUser.id && actorUser.role === "superadmin") {
+    const target = await getUser(imp.targetId);
+    if (target && target.ativo) {
+      if (!isReadOnlyMethod(request.method)) {
+        const response = NextResponse.json(
+          {
+            error: "IMPERSONATION_READ_ONLY",
+            message: "Modo somente leitura ativo. Saia do modo visualização para fazer alterações.",
+          },
+          { status: 403 },
+        );
+        setNoCacheHeaders(response);
+        return { user: null, error: response, impersonation: null, actor: null };
+      }
+      // Auditar GET tocada em modo impersonation (best-effort, não bloqueia)
+      void recordAudit({
+        actorId: actorUser.id,
+        targetUserId: target.id,
+        action: `impersonate:${new URL(request.url).pathname}`,
+        request,
+      });
+      return {
+        user: target,
+        error: null,
+        impersonation: { actorId: actorUser.id, targetId: target.id },
+        actor: actorUser,
+      };
+    }
+  }
+
+  return { user: actorUser, error: null, impersonation: null, actor: actorUser };
 }
 
 /**
@@ -84,26 +127,12 @@ export function createAuthCookies(
  * Limpa os cookies de autenticação (access_token + refresh_token)
  */
 export function clearAuthCookies(response: NextResponse): void {
-  response.cookies.set("access_token", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-
-  response.cookies.set("refresh_token", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  response.cookies.set("access_token", "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
+  response.cookies.set("refresh_token", "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
 }
 
 /**
  * Configura headers de no-cache para respostas de autenticação
- * Previne caching de endpoints sensíveis
  */
 export function setNoCacheHeaders(response: NextResponse): void {
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -111,10 +140,6 @@ export function setNoCacheHeaders(response: NextResponse): void {
   response.headers.set('Expires', '0');
 }
 
-/**
- * Obtém a URL base da aplicação
- * Usa NEXTAUTH_URL do env ou constrói a partir da request
- */
 export function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
   return process.env.NEXTAUTH_URL || `${url.protocol}//${url.host}`;

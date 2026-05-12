@@ -3,7 +3,7 @@ import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "contratante", "empreiteiro"]);
+export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
 export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise"]);
@@ -24,7 +24,31 @@ export const users = pgTable("users", {
   timezone: varchar("timezone", { length: 64 }).notNull().default("America/Sao_Paulo"),
   plano: planoEnum("plano").notNull().default("free"),
   planoStartedAt: timestamp("plano_started_at").defaultNow(),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
+  createdBy: varchar("created_by"),
+  ativo: boolean("ativo").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actorId: varchar("actor_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  targetUserId: varchar("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const passwordSetupTokens = pgTable("password_setup_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
 });
 
 export const clientes = pgTable("clientes", {

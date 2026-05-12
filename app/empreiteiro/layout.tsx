@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { EmpreiteiroLayout } from '@features/empreiteiro/components/EmpreiteiroLayout';
 import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
+import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function EmpreiteiroLayoutWrapper({
   children,
@@ -14,11 +15,13 @@ export default function EmpreiteiroLayoutWrapper({
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  const allowed = user?.role === 'empreiteiro' || user?.role === 'superadmin';
+
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'empreiteiro')) {
+    if (!isLoading && (!user || !allowed)) {
       router.push('/login');
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, allowed, router]);
 
   // Loading state
   if (isLoading) {
@@ -29,15 +32,16 @@ export default function EmpreiteiroLayoutWrapper({
     );
   }
 
-  // Não autorizado
-  if (!user || user.role !== 'empreiteiro') {
+  if (!user || !allowed) {
     return null;
   }
 
   return (
-    <EmpreiteiroLayout>
-      <EmailVerificationBanner />
-      {children}
-    </EmpreiteiroLayout>
+    <AuthSessionGuard>
+      <EmpreiteiroLayout>
+        <EmailVerificationBanner />
+        {children}
+      </EmpreiteiroLayout>
+    </AuthSessionGuard>
   );
 }

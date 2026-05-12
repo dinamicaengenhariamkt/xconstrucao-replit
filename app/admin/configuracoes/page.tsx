@@ -20,7 +20,9 @@ import {
   RiCheckLine,
   RiAlertLine,
   RiUser3Line,
+  RiTeamLine,
 } from 'react-icons/ri';
+import { UsuariosTab } from '@features/admin/components/UsuariosTab';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -42,12 +44,13 @@ import { formatPhone, unformatPhone, isPhoneValid } from '@shared/lib/masks';
 import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS } from '@features/perfil/constants';
 
 /* ── Types ── */
-type Section = 'perfil' | 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
+type Section = 'perfil' | 'usuarios' | 'geral' | 'notificacoes' | 'plataforma' | 'seguranca' | 'integracoes';
 
-const VALID_SECTIONS: Section[] = ['perfil', 'geral', 'notificacoes', 'plataforma', 'seguranca', 'integracoes'];
+const VALID_SECTIONS: Section[] = ['perfil', 'usuarios', 'geral', 'notificacoes', 'plataforma', 'seguranca', 'integracoes'];
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: 'perfil',       label: 'Perfil',         icon: RiUser3Line },
+  { id: 'perfil',       label: 'Perfil',          icon: RiUser3Line },
+  { id: 'usuarios',     label: 'Usuários',        icon: RiTeamLine },
   { id: 'geral',        label: 'Geral',           icon: RiSettings3Line },
   { id: 'notificacoes', label: 'Notificações',    icon: RiBellLine },
   { id: 'plataforma',   label: 'Plataforma',      icon: RiToggleLine },
@@ -1217,6 +1220,7 @@ function SecaoIntegracoes() {
 
 const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   perfil:       SecaoPerfil,
+  usuarios:     UsuariosTab,
   geral:        SecaoGeral,
   notificacoes: SecaoNotificacoes,
   plataforma:   SecaoPlataforma,
