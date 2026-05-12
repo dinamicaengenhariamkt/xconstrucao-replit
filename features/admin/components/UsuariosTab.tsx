@@ -36,6 +36,7 @@ interface UserRow {
   role: Role;
   phone: string | null;
   ativo: boolean;
+  canManageUsers?: boolean;
   mustChangePassword: boolean;
   emailVerified: string | null;
   createdAt: string;
@@ -354,28 +355,65 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
   const { toast } = useToast();
   const qc = useQueryClient();
   const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
+  const [canManageUsers, setCanManageUsers] = useState<boolean>(user.canManageUsers === true);
 
   const save = useMutation({
-    mutationFn: async () => apiRequest('PATCH', `/api/admin/usuarios/${user.id}`, {
-      name,
-      phone: phone || null,
-      ...(isSuper ? { role } : {}),
-    }),
+    mutationFn: async () => {
+      const payload: Record<string, unknown> = {
+        name,
+        phone: phone || null,
+      };
+      if (email && email.toLowerCase() !== user.email.toLowerCase()) {
+        payload.email = email.toLowerCase().trim();
+      }
+      if (isSuper) {
+        payload.role = role;
+        if (role === 'admin') payload.canManageUsers = canManageUsers;
+      }
+      const r = await fetch(`/api/admin/usuarios/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg = r.status === 409
+          ? (data.message ?? 'Já existe um usuário com este email.')
+          : (data.message ?? 'Falha ao salvar.');
+        throw new Error(msg);
+      }
+      return data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['/api/admin/usuarios'] });
       toast({ title: 'Usuário atualizado' });
       onClose();
     },
-    onError: (e: unknown) => toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }),
+    onError: (e: unknown) => toast({
+      title: 'Erro ao salvar',
+      description: e instanceof Error ? e.message : '',
+      variant: 'destructive',
+    }),
   });
 
   return (
     <DialogContent>
       <DialogHeader><DialogTitle>Editar {user.name}</DialogTitle></DialogHeader>
       <div className="space-y-3">
-        <div><Label>Email (não editável)</Label><Input value={user.email} disabled /></div>
+        <div>
+          <Label>Email</Label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            data-testid="input-edit-email"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Alterar o email muda o login do usuário.</p>
+        </div>
         <div><Label>Nome completo</Label><Input value={name} onChange={(e) => setName(e.target.value)} data-testid="input-edit-name" /></div>
         <div><Label>Telefone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="input-edit-phone" /></div>
         {isSuper && (
@@ -391,6 +429,23 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
               </SelectContent>
             </Select>
           </div>
+        )}
+        {isSuper && role === 'admin' && (
+          <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={canManageUsers}
+              onChange={(e) => setCanManageUsers(e.target.checked)}
+              className="mt-0.5"
+              data-testid="checkbox-can-manage-users"
+            />
+            <span className="text-sm">
+              <span className="font-medium">Permissão: gerenciar usuários</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                Quando ativo, este admin vê e usa a aba Usuários para gerenciar contratantes e empreiteiros.
+              </span>
+            </span>
+          </label>
         )}
       </div>
       <DialogFooter>

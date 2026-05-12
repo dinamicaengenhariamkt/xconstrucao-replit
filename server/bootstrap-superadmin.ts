@@ -26,6 +26,7 @@ export async function bootstrapSuperAdmin(): Promise<void> {
   await ensureColumn("users", "must_change_password", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE`);
   await ensureColumn("users", "created_by", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by VARCHAR REFERENCES users(id) ON DELETE SET NULL`);
   await ensureColumn("users", "ativo", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ativo BOOLEAN NOT NULL DEFAULT TRUE`);
+  await ensureColumn("users", "can_manage_users", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS can_manage_users BOOLEAN NOT NULL DEFAULT FALSE`);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS audit_logs (

@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
       ...userData,
       mustChangePassword: viewer.mustChangePassword ?? false,
       ativo: viewer.ativo ?? true,
+      canManageUsers:
+        (viewer.role === "superadmin") || ((viewer as { canManageUsers?: boolean }).canManageUsers ?? false),
       impersonation,
     });
   } catch (error) {

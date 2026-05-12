@@ -11,7 +11,7 @@ import { generateStrongPassword } from "@features/auth/api/password-generator";
 import { issueSetupToken } from "@features/auth/api/password-setup-tokens";
 import { sendPasswordSetupEmail } from "@shared/lib/email";
 import { recordAudit } from "@features/auth/api/audit";
-import { canManage, roleLabel } from "../../route";
+import { canManage, hasUsersTabAccess, roleLabel } from "../../route";
 
 type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const { id } = await ctx.params;
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   const target = await getUser(id);

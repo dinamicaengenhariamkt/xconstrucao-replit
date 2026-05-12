@@ -36,10 +36,16 @@ export function canManage(actorRole: string, targetRole: Role): boolean {
   return false;
 }
 
+export function hasUsersTabAccess(actor: { role: string; canManageUsers?: boolean | null }): boolean {
+  if (actor.role === "superadmin") return true;
+  if (actor.role === "admin") return actor.canManageUsers === true;
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
 
@@ -94,7 +100,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
 

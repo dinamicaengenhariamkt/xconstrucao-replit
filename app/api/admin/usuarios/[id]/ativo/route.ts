@@ -6,7 +6,7 @@ import { users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { getUser } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
-import { canManage } from "../../route";
+import { canManage, hasUsersTabAccess } from "../../route";
 
 type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const { id } = await ctx.params;
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   const target = await getUser(id);

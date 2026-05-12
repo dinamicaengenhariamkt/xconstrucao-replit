@@ -15,6 +15,7 @@ interface User {
   role: string;
   image?: string | null;
   avatarUrl?: string | null;
+  canManageUsers?: boolean;
 }
 
 interface RegisterData {

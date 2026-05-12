@@ -4,17 +4,19 @@ import { z } from "zod";
 import { db } from "@shared/db/db";
 import { users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { getUser } from "@features/auth/api/auth-storage";
+import { getUser, getUserByEmail } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
-import { canManage } from "../route";
+import { canManage, hasUsersTabAccess } from "../route";
 
 type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
 
 const patchSchema = z.object({
   name: z.string().trim().min(2).optional(),
+  email: z.string().trim().toLowerCase().email("Email inválido").optional(),
   phone: z.string().nullable().optional(),
   role: z.enum(["superadmin", "admin", "contratante", "empreiteiro"]).optional(),
   ativo: z.boolean().optional(),
+  canManageUsers: z.boolean().optional(),
 });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const { id } = await ctx.params;
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   const target = await getUser(id);
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     role: target.role,
     phone: target.phone,
     ativo: target.ativo,
+    canManageUsers: (target as { canManageUsers?: boolean }).canManageUsers ?? false,
     mustChangePassword: target.mustChangePassword,
     emailVerified: target.emailVerified,
     createdAt: target.createdAt,
@@ -60,7 +63,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   const { id } = await ctx.params;
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   const target = await getUser(id);
@@ -88,13 +91,34 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (!ok) return jsonNoStore({ message: "Não é possível desativar o último super admin ativo." }, 400);
   }
 
+  // canManageUsers só pode ser modificado por superadmin e somente para admins
+  if (updates.canManageUsers !== undefined) {
+    if (guard.user.role !== "superadmin") {
+      return jsonNoStore({ message: "Apenas super admin pode alterar permissões." }, 403);
+    }
+    const finalRole = (updates.role ?? target.role) as Role;
+    if (finalRole !== "admin") {
+      return jsonNoStore({ message: "Permissão de gestão de usuários só se aplica a admins." }, 400);
+    }
+  }
+
+  // Email change: validate uniqueness → 409 conflict
+  if (updates.email && updates.email !== target.email) {
+    const conflict = await getUserByEmail(updates.email);
+    if (conflict && conflict.id !== target.id) {
+      return jsonNoStore({ message: "Já existe um usuário com este email." }, 409);
+    }
+  }
+
   const [updated] = await db
     .update(users)
     .set({
       ...(updates.name !== undefined ? { name: updates.name } : {}),
+      ...(updates.email !== undefined ? { email: updates.email } : {}),
       ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
       ...(updates.role !== undefined ? { role: updates.role } : {}),
       ...(updates.ativo !== undefined ? { ativo: updates.ativo } : {}),
+      ...(updates.canManageUsers !== undefined ? { canManageUsers: updates.canManageUsers } : {}),
     })
     .where(eq(users.id, id))
     .returning();
@@ -114,6 +138,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     role: updated.role,
     phone: updated.phone,
     ativo: updated.ativo,
+    canManageUsers: (updated as { canManageUsers?: boolean }).canManageUsers ?? false,
   });
 }
 
@@ -121,7 +146,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   const { id } = await ctx.params;
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "superadmin" && guard.user.role !== "admin") {
+  if (!hasUsersTabAccess(guard.user as { role: string; canManageUsers?: boolean | null })) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   const target = await getUser(id);

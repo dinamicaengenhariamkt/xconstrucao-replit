@@ -27,6 +27,7 @@ export const users = pgTable("users", {
   mustChangePassword: boolean("must_change_password").notNull().default(false),
   createdBy: varchar("created_by"),
   ativo: boolean("ativo").notNull().default(true),
+  canManageUsers: boolean("can_manage_users").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

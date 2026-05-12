@@ -23,6 +23,7 @@ import {
   RiTeamLine,
 } from 'react-icons/ri';
 import { UsuariosTab } from '@features/admin/components/UsuariosTab';
+import { useUser } from '@features/auth/store/auth-store';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -1250,7 +1251,11 @@ function AdminConfiguracoesInner({
   activeSection: Section;
   setActiveSection: (s: Section) => void;
 }) {
-  const SectionComponent = SECTION_COMPONENTS[activeSection];
+  const me = useUser();
+  const canSeeUsers = me?.role === 'superadmin' || me?.canManageUsers === true;
+  const navItems = NAV_ITEMS.filter((it) => (it.id === 'usuarios' ? canSeeUsers : true));
+  const safeSection: Section = !canSeeUsers && activeSection === 'usuarios' ? 'perfil' : activeSection;
+  const SectionComponent = SECTION_COMPONENTS[safeSection];
 
   return (
     <div className="p-6 md:p-10 min-h-full" data-testid="admin-configuracoes-page">
@@ -1266,9 +1271,9 @@ function AdminConfiguracoesInner({
 
       {/* Mobile nav — horizontal scroll */}
       <div className="lg:hidden flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeSection === item.id;
+          const isActive = safeSection === item.id;
           return (
             <button
               key={item.id}
@@ -1292,16 +1297,16 @@ function AdminConfiguracoesInner({
         {/* Left nav */}
         <nav className="hidden lg:flex flex-col w-56 shrink-0 sticky top-6">
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-            {NAV_ITEMS.map((item, idx) => {
+            {navItems.map((item, idx) => {
               const Icon = item.icon;
-              const isActive = activeSection === item.id;
+              const isActive = safeSection === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-4 py-3.5 text-sm transition-colors text-left',
-                    idx < NAV_ITEMS.length - 1 && 'border-b border-gray-50 dark:border-gray-800',
+                    idx < navItems.length - 1 && 'border-b border-gray-50 dark:border-gray-800',
                     isActive
                       ? 'bg-primary/5 text-primary font-semibold border-r-2 border-primary'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60'
