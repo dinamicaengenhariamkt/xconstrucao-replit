@@ -1,0 +1,10 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/financeiro/route.js")
+R.c("server/chunks/[root-of-the-server]__176c8963._.js")
+R.c("server/chunks/node_modules_drizzle-orm_a1ac78d1._.js")
+R.c("server/chunks/[root-of-the-server]__68865da1._.js")
+R.c("server/chunks/[root-of-the-server]__6ac8ec31._.js")
+R.c("server/chunks/node_modules_drizzle-orm_1a8c1a25._.js")
+R.c("server/chunks/_13b5b533._.js")
+R.c("server/chunks/_next-internal_server_app_api_financeiro_route_actions_a876ee93.js")
+R.m(393995)
+module.exports=R.m(393995).exports

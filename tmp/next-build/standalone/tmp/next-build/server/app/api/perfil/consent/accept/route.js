@@ -1,0 +1,10 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/perfil/consent/accept/route.js")
+R.c("server/chunks/[root-of-the-server]__176c8963._.js")
+R.c("server/chunks/node_modules_drizzle-orm_3256c9cb._.js")
+R.c("server/chunks/[root-of-the-server]__a19b4fe8._.js")
+R.c("server/chunks/_13b5b533._.js")
+R.c("server/chunks/node_modules_drizzle-orm_1a8c1a25._.js")
+R.c("server/chunks/[root-of-the-server]__6ac8ec31._.js")
+R.c("server/chunks/_next-internal_server_app_api_perfil_consent_accept_route_actions_910ecc30.js")
+R.m(999065)
+module.exports=R.m(999065).exports

@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/reset-senha/layout,_N_T_/reset-senha/page,_N_T_/reset-senha"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/reset-senha/__PAGE__",
+    "/reset-senha",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,3 @@
+{
+  "/api/auth/change-password-forced/route": "app/api/auth/change-password-forced/route.js"
+}
