@@ -15,7 +15,10 @@ export default function EmpreiteiroLayoutWrapper({
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  const allowed = user?.role === 'empreiteiro' || user?.role === 'superadmin';
+  // No modo "Ver como" o servidor projeta `user` como o target em verbos
+  // read-only (/api/auth/me incluso), então a role já vem como
+  // 'empreiteiro'. Super admin sem impersonation cookie não entra aqui.
+  const allowed = user?.role === 'empreiteiro';
 
   useEffect(() => {
     if (!isLoading && (!user || !allowed)) {

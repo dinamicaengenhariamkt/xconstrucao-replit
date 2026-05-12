@@ -21,8 +21,11 @@ export default function ContratanteRootLayout({
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  // superadmin pode acessar qualquer área quando estiver no modo "Ver como"
-  const allowed = user?.role === 'contratante' || user?.role === 'superadmin';
+  // No modo "Ver como" o servidor já projeta `user` como o target
+  // (requireVerifiedUser + /api/auth/me retornam o usuário impersonado em
+  // verbos read-only). Portanto basta liberar quando role === 'contratante'.
+  // Super admin sem impersonation cookie NÃO entra direto nesta área.
+  const allowed = user?.role === 'contratante';
 
   useEffect(() => {
     if (!isLoading && (!user || !allowed)) {

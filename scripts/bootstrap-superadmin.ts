@@ -184,6 +184,24 @@ async function main() {
   const forceReset = args.forceReset === true || process.env.FORCE_RESET === "YES";
   const [existing] = await db.select().from(users).where(eq(users.email, email));
 
+  // Gate estrito: se já existe pelo menos 1 super admin ativo e a operação
+  // resultaria em um NOVO super admin (conta inexistente, ou conta existente
+  // que ainda não é superadmin), exija --force-reset-password explicitamente.
+  // Promoção/reset da conta que já é superadmin não exige o flag.
+  const [{ count: activeSuperCount }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(users)
+    .where(sql`role = 'superadmin' AND ativo = true`);
+  const wouldAddNewSuper = !existing || existing.role !== "superadmin" || existing.ativo === false;
+  if (activeSuperCount > 0 && wouldAddNewSuper && !forceReset) {
+    console.error(
+      `[bootstrap] Já existe ${activeSuperCount} super admin(s) ativo(s). ` +
+        `Para criar/promover/reativar outra conta como super admin, ` +
+        `re-execute com --force-reset-password (ou env FORCE_RESET=YES).`,
+    );
+    process.exit(1);
+  }
+
   let action: "created" | "promoted" | "reset" = "created";
   let targetId: string;
 
