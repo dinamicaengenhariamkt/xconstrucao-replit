@@ -2,7 +2,7 @@
  * Função para determinar a rota de redirecionamento baseada no role do usuário
  */
 
-export type UserRole = 'admin' | 'contratante' | 'empreiteiro';
+export type UserRole = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro';
 
 export function getRedirectPathByRole(role: string): string {
   switch (role) {
@@ -10,6 +10,7 @@ export function getRedirectPathByRole(role: string): string {
       return '/empreiteiro/dashboard';
     case 'contratante':
       return '/contratante/dashboard';
+    case 'superadmin':
     case 'admin':
       return '/admin/financeiro';
     default:
@@ -41,6 +42,8 @@ export function resolvePostLoginRedirect(role: string, nextParam: string | null)
   if (!nextParam.startsWith("/") || nextParam.startsWith("//")) return fallback;
 
   const allowedPrefixes: Record<string, string[]> = {
+    // superadmin pode acessar qualquer área (modo "Ver como")
+    superadmin: ["/admin", "/contratante", "/empreiteiro"],
     admin: ["/admin"],
     contratante: ["/contratante"],
     empreiteiro: ["/empreiteiro"],

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { users } from "@shared/db/schema";
@@ -50,14 +50,16 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") ?? "20")));
 
-  const conds: ReturnType<typeof eq>[] = [];
-  if (q) conds.push(or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`))!);
+  const conds: SQL<unknown>[] = [];
+  const qOr = q ? or(ilike(users.name, `%${q}%`), ilike(users.email, `%${q}%`)) : undefined;
+  if (qOr) conds.push(qOr);
   if (role && (ROLE_VALUES as readonly string[]).includes(role)) conds.push(eq(users.role, role as Role));
   if (ativoStr === "true") conds.push(eq(users.ativo, true));
   if (ativoStr === "false") conds.push(eq(users.ativo, false));
 
   if (guard.user.role === "admin") {
-    conds.push(or(eq(users.role, "contratante"), eq(users.role, "empreiteiro"))!);
+    const adminScope = or(eq(users.role, "contratante"), eq(users.role, "empreiteiro"));
+    if (adminScope) conds.push(adminScope);
   }
 
   const where = conds.length > 0 ? and(...conds) : undefined;
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(users)
-    .where(where as never);
+    .where(where);
 
   const rows = await db
     .select({
@@ -81,7 +83,7 @@ export async function GET(request: NextRequest) {
       createdBy: users.createdBy,
     })
     .from(users)
-    .where(where as never)
+    .where(where)
     .orderBy(desc(users.createdAt), asc(users.email))
     .limit(pageSize)
     .offset((page - 1) * pageSize);

@@ -6,7 +6,7 @@ import { users } from "@shared/db/schema";
 import { hashPassword } from "@features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { consumeSetupToken } from "@features/auth/api/password-setup-tokens";
+import { peekSetupToken, consumeSetupToken } from "@features/auth/api/password-setup-tokens";
 import { getUser } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
 
@@ -30,18 +30,24 @@ export async function POST(request: NextRequest) {
   const { token, password, confirmPassword } = parsed.data;
   if (password !== confirmPassword) return jsonNoStore({ message: "As senhas não conferem." }, 400);
 
-  const consumed = await consumeSetupToken(token);
-  if (!consumed) return jsonNoStore({ message: "Link inválido ou expirado. Solicite um novo link." }, 400);
+  // Valida o token SEM consumir — para que senhas fracas não queimem o link.
+  const peek = await peekSetupToken(token);
+  if (!peek) return jsonNoStore({ message: "Link inválido ou expirado. Solicite um novo link." }, 400);
 
-  const user = await getUser(consumed.userId);
+  const user = await getUser(peek.userId);
   if (!user) return jsonNoStore({ message: "Usuário não encontrado." }, 404);
 
+  // Política de senha PRIMEIRO. Se falhar, o token segue válido para nova tentativa.
   const policy = evaluatePasswordPolicy(password, {
     email: user.email,
     name: user.name,
     username: user.username || undefined,
   });
   if (!policy.valid) return jsonNoStore({ message: policy.message }, 400);
+
+  // Só agora consome o token (atomicamente, evita corrida).
+  const consumed = await consumeSetupToken(token);
+  if (!consumed) return jsonNoStore({ message: "Link inválido ou expirado. Solicite um novo link." }, 400);
 
   const hashed = await hashPassword(password);
   await db

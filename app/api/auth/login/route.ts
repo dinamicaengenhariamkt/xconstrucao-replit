@@ -84,8 +84,12 @@ export async function POST(request: NextRequest) {
 
     // Validação de role esperada — não revela que a conta existe
     // sob outro role; devolve a mesma mensagem genérica de credencial.
+    // Exceção: super admin pode entrar pela tela de admin (super engloba admin).
     if (expectedRole && expectedRole !== user.role) {
-      return jsonNoStore({ error: GENERIC_INVALID }, 401);
+      const superadminEnteringAdmin = expectedRole === "admin" && user.role === "superadmin";
+      if (!superadminEnteringAdmin) {
+        return jsonNoStore({ error: GENERIC_INVALID }, 401);
+      }
     }
 
     const userData = {

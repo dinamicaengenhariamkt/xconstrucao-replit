@@ -99,8 +99,8 @@ export default function TrocarSenhaObrigatoriaPage() {
                 />
               </div>
               {strength && (
-                <p className={`text-xs ${strength.score >= 3 ? 'text-green-600' : 'text-amber-600'}`}>
-                  Força: {strength.label}
+                <p className={`text-xs ${(strength ?? 0) >= 3 ? 'text-green-600' : 'text-amber-600'}`}>
+                  Força: {(strength ?? 0) >= 4 ? 'forte' : (strength ?? 0) >= 3 ? 'boa' : (strength ?? 0) >= 2 ? 'média' : 'fraca'}
                 </p>
               )}
             </div>

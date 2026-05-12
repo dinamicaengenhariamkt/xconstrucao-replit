@@ -27,6 +27,25 @@ export async function issueSetupToken(userId: string, createdBy: string | null):
   return { token, expiresAt };
 }
 
+/**
+ * Verifica se um token é válido SEM marcá-lo como usado.
+ * Usado para validar a política de senha antes de queimar o link.
+ */
+export async function peekSetupToken(rawToken: string): Promise<{ userId: string } | null> {
+  const tokenHash = hashToken(rawToken);
+  const [row] = await db
+    .select({ userId: passwordSetupTokens.userId })
+    .from(passwordSetupTokens)
+    .where(
+      and(
+        eq(passwordSetupTokens.tokenHash, tokenHash),
+        isNull(passwordSetupTokens.usedAt),
+        gt(passwordSetupTokens.expiresAt, new Date()),
+      ),
+    );
+  return row ? { userId: row.userId } : null;
+}
+
 export async function consumeSetupToken(rawToken: string): Promise<{ userId: string } | null> {
   const tokenHash = hashToken(rawToken);
   const [row] = await db

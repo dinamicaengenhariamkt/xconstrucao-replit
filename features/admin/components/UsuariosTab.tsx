@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
@@ -21,11 +21,13 @@ import { apiRequest } from '@shared/lib/queryClient';
 import { useUser } from '@features/auth/store/auth-store';
 import {
   RiUserAddLine, RiKeyLine, RiUserUnfollowLine, RiUserFollowLine,
-  RiEyeLine, RiCheckLine, RiFileCopyLine, RiSearchLine,
+  RiEyeLine, RiCheckLine, RiFileCopyLine, RiSearchLine, RiEditLine,
+  RiArrowLeftSLine, RiArrowRightSLine,
 } from 'react-icons/ri';
 
 type Role = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro';
 type SenhaModo = 'manual' | 'random' | 'link';
+type AtivoFilter = 'all' | 'true' | 'false';
 
 interface UserRow {
   id: string;
@@ -48,6 +50,8 @@ const ROLE_LABEL: Record<Role, string> = {
   empreiteiro: 'Empreiteiro',
 };
 
+const PAGE_SIZE = 20;
+
 export function UsuariosTab() {
   const me = useUser();
   const isSuper = me?.role === 'superadmin';
@@ -55,16 +59,21 @@ export function UsuariosTab() {
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | Role>('all');
+  const [ativoFilter, setAtivoFilter] = useState<AtivoFilter>('all');
+  const [page, setPage] = useState(1);
   const [openCreate, setOpenCreate] = useState(false);
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
+  const [editTarget, setEditTarget] = useState<UserRow | null>(null);
 
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (roleFilter !== 'all') params.set('role', roleFilter);
-  params.set('pageSize', '50');
+  if (ativoFilter !== 'all') params.set('ativo', ativoFilter);
+  params.set('page', String(page));
+  params.set('pageSize', String(PAGE_SIZE));
 
   const { data, isLoading } = useQuery<ListResponse>({
-    queryKey: ['/api/admin/usuarios', { q, roleFilter }],
+    queryKey: ['/api/admin/usuarios', { q, roleFilter, ativoFilter, page }],
     queryFn: async () => {
       const r = await fetch(`/api/admin/usuarios?${params.toString()}`, { credentials: 'include', cache: 'no-store' });
       if (!r.ok) throw new Error('Falha ao carregar usuários');
@@ -73,9 +82,8 @@ export function UsuariosTab() {
   });
 
   const toggleAtivo = useMutation({
-    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) => {
-      return apiRequest('POST', `/api/admin/usuarios/${id}/ativo`, { ativo });
-    },
+    mutationFn: async ({ id, ativo }: { id: string; ativo: boolean }) =>
+      apiRequest('POST', `/api/admin/usuarios/${id}/ativo`, { ativo }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['/api/admin/usuarios'] });
       toast({ title: 'Status atualizado' });
@@ -99,6 +107,8 @@ export function UsuariosTab() {
   });
 
   const rows = useMemo(() => data?.rows ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-4">
@@ -109,11 +119,11 @@ export function UsuariosTab() {
             placeholder="Buscar por nome ou email"
             className="pl-9"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
             data-testid="input-search-usuarios"
           />
         </div>
-        <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as 'all' | Role)}>
+        <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v as 'all' | Role); setPage(1); }}>
           <SelectTrigger className="w-[180px]" data-testid="select-role-filter"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os perfis</SelectItem>
@@ -121,6 +131,14 @@ export function UsuariosTab() {
             {isSuper && <SelectItem value="admin">Admin</SelectItem>}
             <SelectItem value="contratante">Contratante</SelectItem>
             <SelectItem value="empreiteiro">Empreiteiro</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={ativoFilter} onValueChange={(v) => { setAtivoFilter(v as AtivoFilter); setPage(1); }}>
+          <SelectTrigger className="w-[160px]" data-testid="select-ativo-filter"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="true">Apenas ativos</SelectItem>
+            <SelectItem value="false">Apenas inativos</SelectItem>
           </SelectContent>
         </Select>
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
@@ -174,6 +192,11 @@ export function UsuariosTab() {
                           </Button>
                         )}
                         {canManage && (
+                          <Button size="sm" variant="ghost" onClick={() => setEditTarget(u)} title="Editar" data-testid={`button-edit-${u.id}`}>
+                            <RiEditLine />
+                          </Button>
+                        )}
+                        {canManage && (
                           <Button size="sm" variant="ghost" onClick={() => setResetTarget(u)} title="Resetar senha" data-testid={`button-reset-${u.id}`}>
                             <RiKeyLine />
                           </Button>
@@ -199,8 +222,41 @@ export function UsuariosTab() {
         </CardContent>
       </Card>
 
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground" data-testid="text-pagination-info">
+            Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} de {total}
+          </span>
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              data-testid="button-prev-page"
+            >
+              <RiArrowLeftSLine />
+            </Button>
+            <span className="px-3 py-1.5 text-sm">{page} / {totalPages}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              data-testid="button-next-page"
+            >
+              <RiArrowRightSLine />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!resetTarget} onOpenChange={(o) => !o && setResetTarget(null)}>
         {resetTarget && <ResetPasswordDialog user={resetTarget} onClose={() => setResetTarget(null)} />}
+      </Dialog>
+
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        {editTarget && <EditUserDialog user={editTarget} isSuper={isSuper} onClose={() => setEditTarget(null)} />}
       </Dialog>
     </div>
   );
@@ -286,6 +342,61 @@ function NewUserDialog({ isSuper, onClose }: { isSuper: boolean; onClose: () => 
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
         <Button onClick={() => create.mutate()} disabled={create.isPending} data-testid="button-confirm-create">
           {create.isPending ? 'Criando…' : 'Criar usuário'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+/* ─────────────── Dialog: Editar usuário ─────────────── */
+
+function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [name, setName] = useState(user.name);
+  const [phone, setPhone] = useState(user.phone ?? '');
+  const [role, setRole] = useState<Role>(user.role);
+
+  const save = useMutation({
+    mutationFn: async () => apiRequest('PATCH', `/api/admin/usuarios/${user.id}`, {
+      name,
+      phone: phone || null,
+      ...(isSuper ? { role } : {}),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['/api/admin/usuarios'] });
+      toast({ title: 'Usuário atualizado' });
+      onClose();
+    },
+    onError: (e: unknown) => toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }),
+  });
+
+  return (
+    <DialogContent>
+      <DialogHeader><DialogTitle>Editar {user.name}</DialogTitle></DialogHeader>
+      <div className="space-y-3">
+        <div><Label>Email (não editável)</Label><Input value={user.email} disabled /></div>
+        <div><Label>Nome completo</Label><Input value={name} onChange={(e) => setName(e.target.value)} data-testid="input-edit-name" /></div>
+        <div><Label>Telefone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="input-edit-phone" /></div>
+        {isSuper && (
+          <div>
+            <Label>Perfil</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+              <SelectTrigger data-testid="select-edit-role"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="superadmin">Super Admin</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="contratante">Contratante</SelectItem>
+                <SelectItem value="empreiteiro">Empreiteiro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>Cancelar</Button>
+        <Button onClick={() => save.mutate()} disabled={save.isPending} data-testid="button-save-edit">
+          {save.isPending ? 'Salvando…' : 'Salvar alterações'}
         </Button>
       </DialogFooter>
     </DialogContent>

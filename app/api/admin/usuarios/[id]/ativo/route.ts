@@ -8,6 +8,8 @@ import { getUser } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
 import { canManage } from "../../route";
 
+type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
+
 const schema = z.object({ ativo: z.boolean() });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
   const target = await getUser(id);
   if (!target) return jsonNoStore({ message: "Usuário não encontrado" }, 404);
-  if (!canManage(guard.user.role, target.role as never)) {
+  if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
 

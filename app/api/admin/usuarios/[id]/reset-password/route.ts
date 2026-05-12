@@ -13,6 +13,8 @@ import { sendPasswordSetupEmail } from "@shared/lib/email";
 import { recordAudit } from "@features/auth/api/audit";
 import { canManage, roleLabel } from "../../route";
 
+type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
+
 const schema = z.object({
   senhaModo: z.enum(["manual", "random", "link"]),
   senhaManual: z.string().optional(),
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
   const target = await getUser(id);
   if (!target) return jsonNoStore({ message: "Usuário não encontrado" }, 404);
-  if (!canManage(guard.user.role, target.role as never)) {
+  if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
 
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     const base = getBaseUrl(request);
     setupUrl = `${base}/definir-senha-inicial?token=${encodeURIComponent(token)}`;
     try {
-      await sendPasswordSetupEmail(target.email, setupUrl, target.name, guard.user.name, roleLabel(target.role as never));
+      await sendPasswordSetupEmail(target.email, setupUrl, target.name, guard.user.name, roleLabel(target.role as Role));
     } catch (err) {
       console.error("[reset-password] falha ao enviar e-mail:", err);
     }

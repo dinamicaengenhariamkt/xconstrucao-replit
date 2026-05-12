@@ -65,8 +65,10 @@ function Inner() {
               <div className="space-y-1.5">
                 <Label htmlFor="pwd">Nova senha</Label>
                 <Input id="pwd" type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} required minLength={8} autoComplete="new-password" data-testid="input-password" />
-                {strength && (
-                  <p className={`text-xs ${strength.score >= 3 ? 'text-green-600' : 'text-amber-600'}`}>Força: {strength.label}</p>
+                {pwd && strength !== null && (
+                  <p className={`text-xs ${strength >= 3 ? 'text-green-600' : 'text-amber-600'}`}>
+                    Força: {strength >= 4 ? 'forte' : strength >= 3 ? 'boa' : strength >= 2 ? 'média' : 'fraca'}
+                  </p>
                 )}
               </div>
               <div className="space-y-1.5">

@@ -8,6 +8,8 @@ import { getUser } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
 import { canManage } from "../route";
 
+type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
+
 const patchSchema = z.object({
   name: z.string().trim().min(2).optional(),
   phone: z.string().nullable().optional(),
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   }
   const target = await getUser(id);
   if (!target) return jsonNoStore({ message: "Usuário não encontrado" }, 404);
-  if (!canManage(guard.user.role, target.role as never)) {
+  if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   return jsonNoStore({
@@ -63,7 +65,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
   const target = await getUser(id);
   if (!target) return jsonNoStore({ message: "Usuário não encontrado" }, 404);
-  if (!canManage(guard.user.role, target.role as never)) {
+  if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
 
@@ -124,7 +126,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   }
   const target = await getUser(id);
   if (!target) return jsonNoStore({ message: "Usuário não encontrado" }, 404);
-  if (!canManage(guard.user.role, target.role as never)) {
+  if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
   if (target.role === "superadmin") {
