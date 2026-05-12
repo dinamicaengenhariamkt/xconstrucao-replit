@@ -22,6 +22,8 @@ const createSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   senhaModo: z.enum(["manual", "random", "link"]),
   senhaManual: z.string().optional(),
+  // default ON — admin pode desmarcar explicitamente em modo manual.
+  forceChangeOnFirstLogin: z.boolean().optional().default(true),
 });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -124,19 +126,28 @@ export async function POST(request: NextRequest) {
   let mustChange = false;
   let hashed: string | null = null;
 
+  // Sempre garantimos uma credencial válida no momento da criação,
+  // mesmo em modo "link" (hash aleatório descartado). Isso evita
+  // contas com password=null e respeita o invariante de que toda
+  // sessão corresponde a uma credencial conhecida pelo sistema.
   if (data.senhaModo === "manual") {
     if (!data.senhaManual) return jsonNoStore({ message: "Informe a senha temporária." }, 400);
     const policy = evaluatePasswordPolicy(data.senhaManual, { email: data.email, name: data.name });
     if (!policy.valid) return jsonNoStore({ message: policy.message }, 400);
     passwordPlain = data.senhaManual;
     hashed = await hashPassword(data.senhaManual);
-    mustChange = true;
+    // Manual respeita a checkbox; outros modos sempre forçam.
+    mustChange = data.forceChangeOnFirstLogin !== false;
   } else if (data.senhaModo === "random") {
     passwordPlain = generateStrongPassword(16);
     hashed = await hashPassword(passwordPlain);
     mustChange = true;
+  } else {
+    // link: hash aleatório descartado, força troca obrigatoriamente.
+    const throwaway = generateStrongPassword(32);
+    hashed = await hashPassword(throwaway);
+    mustChange = true;
   }
-  // link: hashed permanece null — usuário define ao clicar no link
 
   const created = await createUserWithProfile({
     name: data.name,

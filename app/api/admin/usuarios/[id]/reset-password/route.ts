@@ -18,6 +18,7 @@ type Role = "superadmin" | "admin" | "contratante" | "empreiteiro";
 const schema = z.object({
   senhaModo: z.enum(["manual", "random", "link"]),
   senhaManual: z.string().optional(),
+  forceChangeOnFirstLogin: z.boolean().optional().default(true),
 });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -47,6 +48,10 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   let passwordPlain: string | null = null;
   let setupUrl: string | null = null;
 
+  // Em qualquer modo, o reset INVALIDA a credencial anterior imediatamente:
+  // grava um hash novo (manual, aleatório explícito ou aleatório descartado
+  // no caso "link") e força a troca no próximo login. No modo "link", o
+  // usuário ainda recebe um token para definir a senha definitiva.
   if (data.senhaModo === "manual") {
     if (!data.senhaManual) return jsonNoStore({ message: "Informe a senha temporária." }, 400);
     const policy = evaluatePasswordPolicy(data.senhaManual, { email: target.email, name: target.name });
@@ -59,6 +64,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     const hashed = await hashPassword(passwordPlain);
     await db.update(users).set({ password: hashed, mustChangePassword: true }).where(eq(users.id, id));
   } else {
+    // "link": invalida a credencial atual com um hash aleatório DESCARTADO
+    // (não revelado), força mustChangePassword e envia o token. Assim a
+    // senha antiga deixa de funcionar no instante do reset.
+    const throwaway = generateStrongPassword(32);
+    const hashed = await hashPassword(throwaway);
+    await db
+      .update(users)
+      .set({ password: hashed, mustChangePassword: true })
+      .where(eq(users.id, id));
+
     const { token } = await issueSetupToken(target.id, guard.user.id);
     const base = getBaseUrl(request);
     setupUrl = `${base}/definir-senha-inicial?token=${encodeURIComponent(token)}`;

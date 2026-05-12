@@ -272,13 +272,16 @@ function NewUserDialog({ isSuper, onClose }: { isSuper: boolean; onClose: () => 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<Role>('contratante');
   const [phone, setPhone] = useState('');
-  const [senhaModo, setSenhaModo] = useState<SenhaModo>('link');
+  const [senhaModo, setSenhaModo] = useState<SenhaModo>('random');
   const [senhaManual, setSenhaManual] = useState('');
+  const [forceChange, setForceChange] = useState<boolean>(true);
   const [result, setResult] = useState<{ passwordPlain: string | null; setupUrl: string | null } | null>(null);
 
   const create = useMutation({
     mutationFn: async () => apiRequest('POST', '/api/admin/usuarios', {
-      name, email, role, phone: phone || null, senhaModo, senhaManual: senhaManual || undefined,
+      name, email, role, phone: phone || null, senhaModo,
+      senhaManual: senhaManual || undefined,
+      forceChangeOnFirstLogin: forceChange,
     }),
     onSuccess: async (res) => {
       const data = await res.json();
@@ -325,9 +328,9 @@ function NewUserDialog({ isSuper, onClose }: { isSuper: boolean; onClose: () => 
           <Select value={senhaModo} onValueChange={(v) => setSenhaModo(v as SenhaModo)}>
             <SelectTrigger data-testid="select-senha-modo"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="link">Enviar link por e-mail (recomendado)</SelectItem>
-              <SelectItem value="random">Gerar senha aleatória</SelectItem>
+              <SelectItem value="random">Gerar senha temporária (recomendado)</SelectItem>
               <SelectItem value="manual">Definir senha manualmente</SelectItem>
+              <SelectItem value="link">Enviar link por e-mail</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -335,9 +338,26 @@ function NewUserDialog({ isSuper, onClose }: { isSuper: boolean; onClose: () => 
           <div>
             <Label>Senha temporária</Label>
             <Input type="text" value={senhaManual} onChange={(e) => setSenhaManual(e.target.value)} placeholder="Min 8 chars, 3 categorias" data-testid="input-senha-manual" />
-            <p className="text-xs text-muted-foreground mt-1">O usuário será obrigado a trocar no 1º login.</p>
           </div>
         )}
+        <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={senhaModo === 'manual' ? forceChange : true}
+            disabled={senhaModo !== 'manual'}
+            onChange={(e) => setForceChange(e.target.checked)}
+            className="mt-0.5"
+            data-testid="checkbox-force-change"
+          />
+          <span className="text-sm">
+            <span className="font-medium">Exigir troca de senha no 1º login</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">
+              {senhaModo === 'manual'
+                ? 'Recomendado. O usuário será obrigado a definir uma nova senha ao entrar.'
+                : 'Sempre exigido neste modo (não pode ser desativado).'}
+            </span>
+          </span>
+        </label>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
@@ -462,7 +482,7 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
 
 function ResetPasswordDialog({ user, onClose }: { user: UserRow; onClose: () => void }) {
   const { toast } = useToast();
-  const [senhaModo, setSenhaModo] = useState<SenhaModo>('link');
+  const [senhaModo, setSenhaModo] = useState<SenhaModo>('random');
   const [senhaManual, setSenhaManual] = useState('');
   const [result, setResult] = useState<{ passwordPlain: string | null; setupUrl: string | null } | null>(null);
 
@@ -497,11 +517,14 @@ function ResetPasswordDialog({ user, onClose }: { user: UserRow; onClose: () => 
           <Select value={senhaModo} onValueChange={(v) => setSenhaModo(v as SenhaModo)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="link">Enviar link por e-mail</SelectItem>
-              <SelectItem value="random">Gerar senha aleatória</SelectItem>
+              <SelectItem value="random">Gerar senha temporária (recomendado)</SelectItem>
               <SelectItem value="manual">Definir manualmente</SelectItem>
+              <SelectItem value="link">Enviar link por e-mail</SelectItem>
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Em qualquer modo, a senha atual deixa de funcionar imediatamente após o reset.
+          </p>
         </div>
         {senhaModo === 'manual' && (
           <div>

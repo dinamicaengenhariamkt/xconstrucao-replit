@@ -32,7 +32,7 @@ import { eq, sql } from "drizzle-orm";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { db } from "../shared/db/db";
-import { users, auditLogs } from "../shared/db/schema";
+import { users, auditLogs, userConsents } from "../shared/db/schema";
 import { hashPassword } from "../features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "../features/auth/schemas/password";
 import { bootstrapSuperAdmin } from "../server/bootstrap-superadmin";
@@ -105,6 +105,24 @@ async function prompt(question: string, secret = false): Promise<string> {
   const answer = await rl.question(question);
   rl.close();
   return answer.trim();
+}
+
+/**
+ * Garante que o super admin tem registro nos termos vigentes (v1.0).
+ * Idempotente via uniqueIndex (user_id, documento, versao).
+ */
+async function ensureSuperAdminConsents(userId: string) {
+  const docs: Array<"termos" | "privacidade"> = ["termos", "privacidade"];
+  for (const documento of docs) {
+    try {
+      await db
+        .insert(userConsents)
+        .values({ userId, documento, versao: "1.0", ip: "cli", userAgent: "cli/bootstrap-superadmin" })
+        .onConflictDoNothing();
+    } catch (err) {
+      console.warn(`[bootstrap] não foi possível gravar consent ${documento} v1.0:`, err);
+    }
+  }
 }
 
 async function recordCliAudit(targetUserId: string, payload: Record<string, unknown>) {
@@ -222,7 +240,8 @@ async function main() {
     process.exit(1);
   }
 
-  await recordCliAudit(targetId, { email, action, forceReset });
+  await ensureSuperAdminConsents(targetId);
+  await recordCliAudit(targetId, { email, action, forceReset, consents: ["termos@1.0", "privacidade@1.0"] });
 
   console.log(`[bootstrap] OK (${action}). Super admins ativos: ${count}.`);
   process.exit(0);
