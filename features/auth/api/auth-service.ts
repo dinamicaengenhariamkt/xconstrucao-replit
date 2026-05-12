@@ -93,6 +93,8 @@ export interface UserData {
   name: string;
   image?: string | null;
   avatarUrl?: string | null;
+  canManageUsers?: boolean;
+  mustChangePassword?: boolean;
 }
 
 export function getAccessTokenFromCookieHeader(cookieHeader: string | null): string | null {
@@ -121,6 +123,8 @@ export function createAccessToken(user: UserData): string {
     name: user.name,
     image: user.image,
     avatarUrl: user.avatarUrl,
+    canManageUsers: user.canManageUsers === true,
+    mustChangePassword: user.mustChangePassword === true,
     type: "access",
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 15 * 60, // 15 minutos

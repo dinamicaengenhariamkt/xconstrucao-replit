@@ -18,9 +18,61 @@ import type { NextRequest } from "next/server";
  */
 const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+const PASSWORD_CHANGE_API_ALLOWLIST = new Set<string>([
+  "/api/auth/change-password-forced",
+  "/api/auth/logout",
+  "/api/auth/me",
+  "/api/auth/refresh",
+  "/api/auth/definir-senha-inicial",
+]);
+
+/**
+ * Lê o claim `mustChangePassword` do access token sem validar assinatura
+ * (Edge Runtime não tem `crypto.createHmac`). A validação completa acontece
+ * no `requireVerifiedUser`. Aqui só precisamos do hint para bloquear
+ * todas as rotas /api/* enquanto a senha não foi trocada.
+ */
+function decodeMustChangePassword(token: string | undefined): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length < 2) return false;
+  try {
+    const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
+    const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+    const claims = JSON.parse(json) as { mustChangePassword?: boolean };
+    return claims.mustChangePassword === true;
+  } catch {
+    return false;
+  }
+}
+
 export function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const pathname = request.nextUrl.pathname;
+
+  // Bloqueio GLOBAL: enquanto must_change_password=true, todas as rotas
+  // /api/* são bloqueadas (com allowlist mínima). Cobre rotas legadas que
+  // não usam `requireVerifiedUser` (ex.: GET /api/clientes).
+  if (
+    pathname.startsWith("/api/") &&
+    !PASSWORD_CHANGE_API_ALLOWLIST.has(pathname) &&
+    decodeMustChangePassword(accessToken)
+  ) {
+    return NextResponse.json(
+      {
+        error: "PASSWORD_CHANGE_REQUIRED",
+        message: "Troca de senha obrigatória. Acesse /trocar-senha-obrigatoria para continuar.",
+      },
+      {
+        status: 403,
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, private",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      },
+    );
+  }
 
   // Modo "Ver como" (impersonation) — bloqueio GLOBAL de mutações em /api/*
   // Independe do `requireVerifiedUser` interno; cobre rotas legadas também.

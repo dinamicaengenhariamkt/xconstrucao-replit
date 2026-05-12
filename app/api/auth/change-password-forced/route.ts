@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { users } from "@shared/db/schema";
+import { users, sessions } from "@shared/db/schema";
 import {
   hashPassword,
   createAccessToken,
@@ -68,10 +69,33 @@ export async function POST(request: NextRequest) {
     name: user.name,
     image: user.image,
     avatarUrl: user.avatarUrl,
+    canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
+    mustChangePassword: false,
   });
-  const refreshToken = createRefreshToken(user.id, false);
+  const rememberMe = false;
+  const refreshToken = createRefreshToken(user.id, rememberMe);
+
+  // Persiste a nova sessão para o /api/auth/refresh não devolver
+  // "Sessão revogada" no próximo ciclo.
+  try {
+    const sessionToken = createHash("sha256").update(refreshToken).digest("hex");
+    const refreshMaxAgeMs = (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? request.headers.get("x-real-ip")
+      ?? null;
+    await db.insert(sessions).values({
+      sessionToken,
+      userId: user.id,
+      expires: new Date(Date.now() + refreshMaxAgeMs),
+      userAgent: request.headers.get("user-agent") ?? null,
+      ip,
+      lastUsedAt: new Date(),
+    });
+  } catch (err) {
+    console.error("Falha ao registrar sessão (change-password-forced):", err);
+  }
 
   const response = jsonNoStore({ success: true }, 200);
-  createAuthCookies(response, accessToken, refreshToken, false);
+  createAuthCookies(response, accessToken, refreshToken, rememberMe);
   return response;
 }

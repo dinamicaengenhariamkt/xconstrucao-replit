@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
       name: user.name,
       image: user.image,
       avatarUrl: user.avatarUrl,
+      canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
+      mustChangePassword: user.mustChangePassword === true,
     };
 
     // Gerar novo access token

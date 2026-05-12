@@ -61,6 +61,25 @@ export async function requireVerifiedUser(request: NextRequest): Promise<AuthGua
     return { user: null, error: response, impersonation: null, actor: null };
   }
 
+  // ----- Forced password change gate -----
+  // Quando must_change_password=true, bloqueia toda navegação autenticada
+  // até a troca, exceto para um conjunto pequeno de endpoints essenciais
+  // (troca de senha, logout, /me, refresh).
+  if (actorUser.mustChangePassword) {
+    const pathname = new URL(request.url).pathname;
+    if (!isPasswordChangeAllowedPath(pathname)) {
+      const response = NextResponse.json(
+        {
+          error: "PASSWORD_CHANGE_REQUIRED",
+          message: "Troca de senha obrigatória. Acesse /trocar-senha-obrigatoria para continuar.",
+        },
+        { status: 403 },
+      );
+      setNoCacheHeaders(response);
+      return { user: null, error: response, impersonation: null, actor: null };
+    }
+  }
+
   // ----- Impersonation -----
   const imp = readImpersonationFromRequest(request);
   if (imp && imp.actorId === actorUser.id && actorUser.role === "superadmin") {
@@ -138,6 +157,22 @@ export function setNoCacheHeaders(response: NextResponse): void {
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   response.headers.set('Pragma', 'no-cache');
   response.headers.set('Expires', '0');
+}
+
+/**
+ * Endpoints que continuam acessíveis enquanto a conta tem must_change_password=true.
+ * Inclui: a própria troca, logout, /me (para o front detectar a flag), refresh
+ * (para manter o cookie vivo) e o setup inicial via link.
+ */
+const PASSWORD_CHANGE_ALLOWLIST = new Set<string>([
+  "/api/auth/change-password-forced",
+  "/api/auth/logout",
+  "/api/auth/me",
+  "/api/auth/refresh",
+  "/api/auth/definir-senha-inicial",
+]);
+function isPasswordChangeAllowedPath(pathname: string): boolean {
+  return PASSWORD_CHANGE_ALLOWLIST.has(pathname);
 }
 
 export function getBaseUrl(request: Request): string {
