@@ -41,6 +41,8 @@ import { usePerfilAdmin, useUpdatePerfilAdmin } from '@features/perfil/hooks/use
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
+import { useUpload } from '@features/shared/hooks/use-uploads';
+import { RiUploadCloud2Line, RiLoader4Line } from 'react-icons/ri';
 import { formatPhone, unformatPhone, isPhoneValid } from '@shared/lib/masks';
 import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS } from '@features/perfil/constants';
 
@@ -182,6 +184,27 @@ function SecaoPerfil() {
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
+  const { upload: uploadAvatarFile, pending: avatarUploading, progress: avatarProgress } = useUpload();
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const result = await uploadAvatarFile({ file, kind: 'avatar' });
+      const url = result.publicUrl ?? null;
+      setAvatarUrl(url);
+      await updatePerfil({ avatarUrl: url });
+      toast({ title: 'Foto atualizada', description: 'Sua foto de perfil foi salva.' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao enviar foto',
+        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleSaveDados = async () => {
     if (dados.telefone && !isPhoneValid(dados.telefone)) {
       toast({ title: 'Telefone inválido', description: 'Informe DDD + número completo.', variant: 'destructive' });
@@ -256,6 +279,28 @@ function SecaoPerfil() {
                 {initials}
               </AvatarFallback>
             </Avatar>
+            <div className="flex flex-col gap-1.5">
+              <label
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 w-fit"
+                data-testid="button-upload-avatar"
+              >
+                {avatarUploading ? (
+                  <RiLoader4Line className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RiUploadCloud2Line className="w-4 h-4" />
+                )}
+                {avatarUploading ? `Enviando... ${avatarProgress}%` : 'Enviar foto'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  data-testid="input-avatar-file"
+                  disabled={avatarUploading}
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">JPG, PNG ou WebP até 2 MB.</p>
+            </div>
           </div>
           <FieldRow label="Nome completo">
             <Input value={dados.nome} onChange={setDado('nome')} placeholder="Seu nome completo" data-testid="input-perfil-nome" />

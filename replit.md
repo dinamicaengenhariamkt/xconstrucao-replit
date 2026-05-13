@@ -164,7 +164,25 @@ Feature-based architecture under `features/empreiteiro/` and `features/contratan
   - `POST /api/auth/change-password-forced`, `POST /api/auth/definir-senha-inicial`
 - **Helpers**: `features/auth/api/{audit,password-generator,impersonation,password-setup-tokens}.ts`.
 
+## Cloudflare R2 + Uploads (Task #26)
+- **Storage layer genérico**: `shared/lib/storage/r2.ts` (S3Client v3, presign PUT, sign GET, delete, head), `key-builder.ts` (rotas: `public/avatars/{role}/{userId}/...`, `public/empreiteiro/{userId}/portfolio/...`, `private/empreiteiro/{userId}/documentos/{tipo}/...`), `validation.ts` (`KIND_RULES` com mime/limite por kind: avatar 2MB, portfolio 8MB, documento 15MB).
+- **Schema**: tabela `user_files` (kind, visibility public/private, key, mime, sizeBytes, ownerUserId) + `empreiteiro_documentos` (fileId, tipo, observacao). Bootstrap idempotente em `server/bootstrap-storage.ts` (chamado por `instrumentation.ts`).
+- **API**:
+  - `POST /api/uploads/presign` — devolve `{ url, key, headers }` (presign PUT 5min, valida kind/mime/size, anti-tamper checa userId na key).
+  - `POST /api/uploads/commit` — HEAD R2 para confirmar upload + cria `user_files` row + side-effects (avatar→atualiza `users.avatarUrl` + perfil empreiteira/cliente; documento→cria `empreiteiro_documentos` + audit log; portfolio sem side-effect — page chama `updatePerfil`).
+  - `GET /api/uploads/sign?id=...` e `GET /api/uploads/[id]` (signed URL TTL 15min, valida ownership ou superadmin).
+  - `DELETE /api/uploads/[id]` — remove no R2 + DB + audit (`uploads.delete.documento`).
+  - `GET /api/perfil/empreiteiro/documentos` — lista documentos do empreiteiro logado com signed URLs.
+- **Hook + UI**: `features/shared/hooks/use-uploads.ts` (`useUpload` com XHR PUT + progresso, `deleteUpload`), `features/shared/components/FileUploader.tsx`, `features/perfil/hooks/use-documentos.ts` (`useEmpreiteiroDocumentos`, `useDeleteDocumento`).
+- **Páginas migradas**:
+  - `/empreiteiro/configuracoes` — avatar via R2, portfolio (imagens) via R2 + `updatePerfil({portfolioUrls})`, portfolioDocs stamped `${name}::${url}`. Nova aba **Documentos** (`SecaoDocumentos`) lista privada com upload (tipo + observação), baixar (link signed) e remover.
+  - `/contratante/configuracoes` — avatar via R2 (`fileToDataUrl` removido).
+  - `/admin/configuracoes` — avatar via R2 (botão "Enviar foto" ao lado do `<Avatar>`).
+- **Secrets necessários** (Replit Secrets, NUNCA logar valores): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_S3_ENDPOINT`, `R2_PUBLIC_BASE_URL`.
+- **Segurança**: presign + commit dependem de `requireVerifiedUser`. Em impersonation, `proxy.ts` (Edge) já bloqueia mutações `/api/*` com 403 IMPERSONATION_READ_ONLY. Documentos privados nunca expõem URL pública — sempre via signed URL com TTL curto.
+
 ## Recent Changes
+- 2026-05-13: Task #26 — integração Cloudflare R2 + uploads (avatar/portfolio público, documentos privados via URL assinada). Aba Documentos no empreiteiro, uploaders de avatar nas três visões.
 - 2026-05-12: Task #20 — super admin auto-promovido, aba Usuários CRUD, modo Ver como (read-only), troca obrigatória de senha 1º login, fix do cadastro silencioso (toast + erros inline), bloqueio de login para conta inativa.
 - 2026-05-10: Transactional email migrated to Brevo (HTTP API, secret `BREVO_API_KEY`). Same function signatures in `shared/lib/email.ts`, same templates, same `EMAIL_TEST_MODE` capture path. Legacy `lib/email.ts` and previous provider package/secret removed.
 - 2026-02-21: Built complete admin internal views (Clientes, Empreiteiras, Caixa, Entradas, Saídas, Anúncios, FAQ with full CRUD forms)

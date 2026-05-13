@@ -23,10 +23,9 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import {
   usePerfilEmpreiteiro,
   useUpdatePerfilEmpreiteiro,
-  fileToDataUrl,
-  MAX_PORTFOLIO_IMAGE_BYTES,
-  MAX_PORTFOLIO_DOC_BYTES,
 } from '@features/perfil/hooks/use-perfil';
+import { useUpload, deleteUpload } from '@features/shared/hooks/use-uploads';
+import { useEmpreiteiroDocumentos } from '@features/perfil/hooks/use-documentos';
 import { usePreferencias, useUpdatePreferencias, usePlano } from '@features/perfil/hooks/use-preferencias';
 import { Textarea } from '@shared/components/ui/textarea';
 import { RiFilePdf2Line } from 'react-icons/ri';
@@ -69,13 +68,14 @@ import { formatPhone, unformatPhone, isPhoneValid, formatCnpj, unformatCnpj, isC
 import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS, ESPECIALIDADES_SUGGESTIONS } from '@features/perfil/constants';
 
 /* ── Types ── */
-type Section = 'perfil' | 'empresa' | 'notificacoes' | 'privacidade' | 'plano';
+type Section = 'perfil' | 'empresa' | 'documentos' | 'notificacoes' | 'privacidade' | 'plano';
 
-const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'notificacoes', 'privacidade', 'plano'];
+const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'documentos', 'notificacoes', 'privacidade', 'plano'];
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'perfil',        label: 'Perfil',          icon: RiUser3Line },
   { id: 'empresa',       label: 'Minha Empresa',   icon: RiBuilding2Line },
+  { id: 'documentos',    label: 'Documentos',      icon: RiFileTextLine },
   { id: 'notificacoes',  label: 'Notificações',    icon: RiBellLine },
   { id: 'privacidade',   label: 'Privacidade',     icon: RiShieldLine },
   { id: 'plano',         label: 'Plano & Uso',     icon: RiStarLine },
@@ -204,12 +204,16 @@ function SecaoPerfil() {
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
+  const { upload: uploadAvatarFile, pending: uploadingAvatar, progress: avatarProgress } = useUpload();
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await fileToDataUrl(file);
+      const result = await uploadAvatarFile({ file, kind: 'avatar' });
+      const url = result.publicUrl ?? null;
       setAvatarUrl(url);
+      // commit já persistiu users.avatarUrl + empreiteiras.avatarUrl;
+      // chamamos updatePerfil para reavaliar perfilCompleto/status corretamente.
       await updatePerfil({ avatarUrl: url });
       toast({ title: 'Foto atualizada', description: 'Sua foto de perfil foi salva.' });
     } catch (err) {
@@ -485,6 +489,9 @@ function SecaoEmpresa() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
 
+  const { upload: uploadPortfolioFile } = useUpload();
+  const { upload: uploadPortfolioDoc } = useUpload();
+
   const BLOCKED_DOCS = /\.(docx?|pptx?|xlsx?)$/i;
 
   const handlePortfolioFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -500,7 +507,8 @@ function SecaoEmpresa() {
       if (portfolio.length >= 10) {
         throw new Error('Limite de 10 imagens atingido.');
       }
-      const url = await fileToDataUrl(file, MAX_PORTFOLIO_IMAGE_BYTES);
+      const result = await uploadPortfolioFile({ file, kind: 'portfolio_imagem' });
+      const url = result.publicUrl!;
       const next = [...portfolio, url];
       setPortfolio(next);
       await updatePerfil({ portfolioUrls: next });
@@ -529,7 +537,8 @@ function SecaoEmpresa() {
       if (portfolioDocs.length >= 3) {
         throw new Error('Limite de 3 PDFs atingido.');
       }
-      const url = await fileToDataUrl(file, MAX_PORTFOLIO_DOC_BYTES);
+      const result = await uploadPortfolioDoc({ file, kind: 'portfolio_doc' });
+      const url = result.publicUrl!;
       const stamped = `${file.name}::${url}`;
       const next = [...portfolioDocs, stamped];
       setPortfolioDocs(next);
@@ -1502,11 +1511,170 @@ function SecaoPlano() {
 }
 
 /* ─────────────────────────────────────────────
+   SECTION: Documentos privados (R2 signed URLs)
+───────────────────────────────────────────── */
+const TIPOS_DOCUMENTO = [
+  { value: 'contrato', label: 'Contrato Social' },
+  { value: 'cnh', label: 'CNH/RG do responsável' },
+  { value: 'art-rrt', label: 'ART / RRT' },
+  { value: 'certidao', label: 'Certidão / Comprovante' },
+  { value: 'cnpj', label: 'Comprovante CNPJ' },
+  { value: 'outro', label: 'Outro' },
+] as const;
+
+function SecaoDocumentos() {
+  const { toast } = useToast();
+  const { data, isLoading, refetch } = useEmpreiteiroDocumentos();
+  const { upload, pending, progress } = useUpload();
+  const [tipo, setTipo] = useState<string>('contrato');
+  const [observacao, setObservacao] = useState('');
+  const inputRef = useState<{ el: HTMLInputElement | null }>({ el: null })[0];
+
+  const handlePick = () => inputRef.el?.click();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await upload({ file, kind: 'empreiteiro_documento', extras: { tipoDocumento: tipo, observacao } });
+      toast({ title: 'Documento enviado', description: file.name });
+      setObservacao('');
+      await refetch();
+    } catch (err) {
+      toast({
+        title: 'Falha no envio',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleDelete = async (fileId: string) => {
+    try {
+      await deleteUpload(fileId);
+      toast({ title: 'Documento removido' });
+      await refetch();
+    } catch (err) {
+      toast({
+        title: 'Falha ao remover',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const items = data?.items ?? [];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Documentos privados</SectionTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Arquivos visíveis apenas para você e a administração. Acesso temporário (link expira em 15 minutos).
+          </p>
+        </CardHeader>
+        <CardContent className="p-6 pt-2 flex flex-col gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FieldRow label="Tipo do documento">
+              <Select value={tipo} onValueChange={setTipo}>
+                <SelectTrigger data-testid="select-tipo-documento"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_DOCUMENTO.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldRow>
+            <FieldRow label="Observação (opcional)">
+              <Input
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                maxLength={200}
+                placeholder="Ex: válido até 2027"
+                data-testid="input-observacao-documento"
+              />
+            </FieldRow>
+          </div>
+          <div>
+            <input
+              ref={(el) => { inputRef.el = el; }}
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleFile}
+              data-testid="input-documento-file"
+            />
+            <Button onClick={handlePick} disabled={pending} variant="outline" data-testid="button-enviar-documento">
+              <RiUploadCloud2Line className="w-4 h-4 mr-2" />
+              {pending ? `Enviando... ${progress}%` : 'Enviar documento'}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              PDF, JPG, PNG ou WebP até 15 MB.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Meus documentos ({items.length})</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-2">
+          {isLoading ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : items.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Nenhum documento enviado ainda.</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800" data-testid="lista-documentos">
+              {items.map((item) => (
+                <li key={item.id} className="flex items-center gap-3 py-3" data-testid={`row-documento-${item.id}`}>
+                  <RiFilePdf2Line className="w-5 h-5 text-red-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" title={item.originalName}>{item.originalName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {TIPOS_DOCUMENTO.find((t) => t.value === item.tipo)?.label ?? item.tipo}
+                      {item.observacao ? ` · ${item.observacao}` : ''}
+                      {' · '}{(item.sizeBytes / 1000).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <a
+                    href={item.signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline px-2"
+                    data-testid={`link-baixar-documento-${item.id}`}
+                  >
+                    Baixar
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.fileId)}
+                    className="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                    aria-label="Remover documento"
+                    data-testid={`button-remover-documento-${item.id}`}
+                  >
+                    <RiCloseLine className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    PAGE ROOT
 ───────────────────────────────────────────── */
 const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   perfil:        SecaoPerfil,
   empresa:       SecaoEmpresa,
+  documentos:    SecaoDocumentos,
   notificacoes:  SecaoNotificacoes,
   privacidade:   SecaoPrivacidade,
   plano:         SecaoPlano,

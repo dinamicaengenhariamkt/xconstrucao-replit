@@ -23,9 +23,9 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import {
   usePerfilContratante,
   useUpdatePerfilContratante,
-  fileToDataUrl,
 } from '@features/perfil/hooks/use-perfil';
 import { usePreferencias, useUpdatePreferencias, usePlano } from '@features/perfil/hooks/use-preferencias';
+import { useUpload } from '@features/shared/hooks/use-uploads';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
@@ -209,11 +209,13 @@ function SecaoPerfil() {
   const setSenhaField = (key: keyof typeof senha) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setSenha((prev) => ({ ...prev, [key]: e.target.value }));
 
+  const { upload: uploadAvatarFile } = useUpload();
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const url = await fileToDataUrl(file);
+      const result = await uploadAvatarFile({ file, kind: 'avatar' });
+      const url = result.publicUrl ?? null;
       setAvatarUrl(url);
       await updatePerfil({ avatarUrl: url });
       toast({ title: 'Foto atualizada', description: 'Sua foto de perfil foi salva.' });

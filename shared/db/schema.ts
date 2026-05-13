@@ -221,6 +221,34 @@ export const verificationTokens = pgTable("verification_tokens", {
   expires: timestamp("expires").notNull(),
 });
 
+export const userFileVisibilityEnum = pgEnum("user_file_visibility", ["public", "private"]);
+
+export const userFiles = pgTable("user_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerUserId: varchar("owner_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  visibility: userFileVisibilityEnum("visibility").notNull(),
+  bucketKey: text("bucket_key").notNull().unique(),
+  originalName: text("original_name").notNull(),
+  mime: text("mime").notNull(),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+  publicUrl: text("public_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const empreiteiroDocumentos = pgTable("empreiteiro_documentos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  empreiteiroUserId: varchar("empreiteiro_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  tipo: text("tipo").notNull(),
+  observacao: text("observacao"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UserFile = typeof userFiles.$inferSelect;
+export type EmpreiteiroDocumento = typeof empreiteiroDocumentos.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertClienteSchema = createInsertSchema(clientes).omit({ id: true });
 export const insertEmpreiteiraSchema = createInsertSchema(empreiteiras).omit({ id: true });
