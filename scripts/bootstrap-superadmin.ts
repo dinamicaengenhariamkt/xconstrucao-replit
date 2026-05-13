@@ -214,28 +214,25 @@ async function main() {
 
   if (existing) {
     targetId = existing.id;
-    if (forceReset) {
-      const hashed = await hashPassword(password);
-      await db
-        .update(users)
-        .set({
-          password: hashed,
-          role: "superadmin",
-          ativo: true,
-          mustChangePassword: true,
-          emailVerified: existing.emailVerified ?? new Date(),
-        })
-        .where(eq(users.id, existing.id));
-      action = "reset";
-      console.log(`[bootstrap] Conta ${email} resetada e promovida a superadmin (troca de senha exigida no 1º login).`);
-    } else {
-      await db
-        .update(users)
-        .set({ role: "superadmin", ativo: true })
-        .where(eq(users.id, existing.id));
-      action = "promoted";
-      console.log(`[bootstrap] Conta ${email} já existe — promovida a superadmin (use --force-reset-password para redefinir senha).`);
-    }
+    // Sempre persistimos a senha (informada ou gerada) na conta existente:
+    // o objetivo do CLI é deixar um super admin utilizável imediatamente.
+    // Mantemos must_change_password=true para forçar troca no 1º login,
+    // garantindo que a senha mostrada (caso gerada) só vale uma vez.
+    const hashed = await hashPassword(password);
+    await db
+      .update(users)
+      .set({
+        password: hashed,
+        role: "superadmin",
+        ativo: true,
+        mustChangePassword: true,
+        emailVerified: existing.emailVerified ?? new Date(),
+      })
+      .where(eq(users.id, existing.id));
+    action = forceReset ? "reset" : "promoted";
+    console.log(
+      `[bootstrap] Conta ${email} ${action === "reset" ? "resetada" : "atualizada"} e promovida a superadmin (troca de senha exigida no 1º login).`,
+    );
   } else {
     const hashed = await hashPassword(password);
     const [created] = await db
