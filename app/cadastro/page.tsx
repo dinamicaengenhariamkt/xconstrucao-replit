@@ -30,6 +30,10 @@ import {
 } from '@shared/components/icons';
 
 type RegisterValues = z.infer<typeof registerSchema>;
+// Tipo de input do formulário: o checkbox precisa começar como `false`,
+// mas o schema exige `literal(true)` no parse. Separar input vs. output evita
+// cast unsafe e mantém a validação do zodResolver intacta.
+type RegisterFormInput = Omit<RegisterValues, "acceptTerms"> & { acceptTerms: boolean };
 
 const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
   contratante: { Icon: IconBusiness, text: "Contratante" },
@@ -52,8 +56,8 @@ export default function CadastroPage() {
     }
   }, [perfil, router]);
 
-  const form = useForm<RegisterValues>({
-    resolver: zodResolver(registerSchema),
+  const form = useForm<RegisterFormInput>({
+    resolver: zodResolver(registerSchema) as never,
     defaultValues: {
       name: "",
       email: "",
@@ -61,8 +65,7 @@ export default function CadastroPage() {
       password: "",
       role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
       phone: "",
-      // Checkbox starts unchecked; zod literal(true) garante a validação no submit.
-      acceptTerms: false as unknown as true,
+      acceptTerms: false,
     },
   });
 
