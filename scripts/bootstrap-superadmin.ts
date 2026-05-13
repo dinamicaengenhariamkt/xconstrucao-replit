@@ -5,28 +5,43 @@
  *   npx tsx scripts/bootstrap-superadmin.ts \
  *     --email admin@xconstrucao.com \
  *     --name "Rafael Santos" \
- *     --password "Admin@2026!Constru" \
+ *     [--password "Admin@2026!Constru"] \
  *     [--force-reset-password]
  *
  * Variáveis de ambiente (alternativa equivalente):
  *   SUPERADMIN_EMAIL=admin@xconstrucao.com
- *   SUPERADMIN_PASSWORD=Admin@2026!Constru
+ *   SUPERADMIN_PASSWORD=Admin@2026!Constru   (opcional)
  *   SUPERADMIN_NAME="Rafael Santos"
  *   FORCE_RESET=YES
  *
- * Se nenhuma das duas formas for passada, o script entra em modo
- * interativo (prompts).
+ * Senha:
+ *   - Se --password / SUPERADMIN_PASSWORD não vierem e o stdin for um TTY,
+ *     pergunta interativamente (vazio = gerar automática).
+ *   - Se não vierem e o stdin NÃO for TTY (ex.: shell de produção em CI/SSH),
+ *     gera uma senha forte de 16 chars automaticamente.
+ *   - Em qualquer caso a senha gerada é mostrada UMA ÚNICA VEZ no fim do
+ *     output.
  *
  * Comportamento:
  *   1. Garante que o schema (enum superadmin, colunas, tabelas) está aplicado
  *      via bootstrapSuperAdmin().
- *   2. Se a conta com o email existir:
- *        - sem --force-reset-password: garante que role=superadmin e ativo=true.
- *        - com --force-reset-password: redefine senha e desliga
- *          must_change_password.
- *   3. Se NÃO existir: cria com a senha informada.
- *   4. Em qualquer caso, garante que existe pelo menos um superadmin ativo.
- *   5. Registra entrada em audit_logs (action="cli.bootstrap-superadmin").
+ *   2. Se a conta com o email existir: persiste a senha hasheada,
+ *      promove para role=superadmin, marca ativo=true e
+ *      must_change_password=true (independente de --force-reset-password —
+ *      o flag só muda o rótulo no log de auditoria entre "promoted" e "reset").
+ *   3. Se NÃO existir: cria com a senha (informada ou gerada),
+ *      role=superadmin, ativo=true, must_change_password=true.
+ *   4. Em qualquer caso, garante que existe pelo menos um superadmin ativo
+ *      após a operação.
+ *   5. Insere user_consents v1.0 (termos+privacidade) idempotentes e registra
+ *      audit_logs (action="cli.bootstrap-superadmin", payload com action,
+ *      forceReset, generated, consents).
+ *
+ * Gate estrito (anti-acidente):
+ *   - Se já existe ≥1 super admin ativo e a operação resultaria em uma conta
+ *     DIFERENTE virando super admin (criação ou promoção/reativação de outro
+ *     usuário), exige --force-reset-password explicitamente.
+ *   - Operações idempotentes na mesma conta super existente seguem permitidas.
  */
 import { eq, sql } from "drizzle-orm";
 import readline from "node:readline/promises";
@@ -68,10 +83,13 @@ function printHelp() {
   console.log(`Uso: npx tsx scripts/bootstrap-superadmin.ts [opções]
 
 Opções:
-  --email <email>            Email do super admin
+  --email <email>            Email do super admin (obrigatório)
   --name <nome>              Nome completo
-  --password <senha>         Senha (min 8 chars, 3 categorias)
-  --force-reset-password     Se a conta existir, redefine a senha
+  --password <senha>         Senha (min 8 chars, 3 categorias). Opcional —
+                             se omitida e stdin não for TTY, é gerada uma
+                             senha forte de 16 chars e mostrada no fim.
+  --force-reset-password     Necessário para criar/promover uma conta
+                             DIFERENTE quando já existe um super admin ativo.
   -h, --help                 Mostra esta ajuda
 
 Equivalente via env: SUPERADMIN_EMAIL, SUPERADMIN_NAME,
