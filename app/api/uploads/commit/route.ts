@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql as dsql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, empreiteiroDocumentos, userFiles, users } from "@shared/db/schema";
+import { clientes, empreiteiras, empreiteiroDocumentos, empreiteiroPortfolio, userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import {
@@ -109,24 +109,61 @@ export async function POST(request: NextRequest) {
   let signedUrl: string | null = null;
   let documentoId: string | null = null;
 
+  let portfolioItemId: string | null = null;
+
   if (kind === "avatar") {
-    await db.update(users).set({ avatarUrl: publicUrl }).where(eq(users.id, guard.user.id));
+    await db
+      .update(users)
+      .set({ avatarUrl: publicUrl, avatarFileId: file.id })
+      .where(eq(users.id, guard.user.id));
     if (guard.user.role === "empreiteiro") {
       await db.update(empreiteiras).set({ avatarUrl: publicUrl }).where(eq(empreiteiras.userId, guard.user.id));
     } else if (guard.user.role === "contratante") {
       await db.update(clientes).set({ avatarUrl: publicUrl }).where(eq(clientes.userId, guard.user.id));
     }
-  } else if (kind === "portfolio_imagem" || kind === "portfolio_doc") {
-    // Persistência da lista (portfolioUrls / portfolioDocs) fica a cargo
-    // do PATCH /api/perfil/empreiteiro chamado pelo frontend, que respeita
-    // formatos específicos da UI (ex.: stamping "nome::url" para PDFs).
-  } else if (kind === "empreiteiro_documento" && guard.user.role === "empreiteiro") {
+  } else if ((kind === "portfolio_imagem" || kind === "portfolio_doc") && (guard.user.role === "empreiteiro" || guard.user.role === "superadmin")) {
+    // Insere registro em empreiteiro_portfolio (source of truth do domínio)
+    const [{ ordem: maxOrdem } = { ordem: -1 as number | null }] = await db
+      .select({ ordem: dsql<number>`COALESCE(MAX(${empreiteiroPortfolio.ordem}), -1)` })
+      .from(empreiteiroPortfolio)
+      .where(eq(empreiteiroPortfolio.empreiteiroUserId, guard.user.id));
+    const nextOrdem = (maxOrdem ?? -1) + 1;
+    const [item] = await db
+      .insert(empreiteiroPortfolio)
+      .values({
+        empreiteiroUserId: guard.user.id,
+        fileId: file.id,
+        titulo: extras?.observacao || originalName,
+        ordem: nextOrdem,
+      })
+      .returning();
+    portfolioItemId = item.id;
+    // Source of truth = empreiteiro_portfolio. Não duplicar em portfolioUrls/portfolioDocs.
+  } else if (kind === "empreiteiro_documento" && (guard.user.role === "empreiteiro" || guard.user.role === "superadmin")) {
+    const tipoFinal = extras?.tipoDocumento || "outro";
+    // Replace-by-tipo: soft-delete docs ativos do mesmo tipo deste usuário.
+    const previas = await db
+      .select({ id: empreiteiroDocumentos.id, fileId: empreiteiroDocumentos.fileId })
+      .from(empreiteiroDocumentos)
+      .innerJoin(userFiles, eq(userFiles.id, empreiteiroDocumentos.fileId))
+      .where(
+        and(
+          eq(empreiteiroDocumentos.empreiteiroUserId, guard.user.id),
+          eq(empreiteiroDocumentos.tipo, tipoFinal),
+          isNull(userFiles.deletedAt),
+        ),
+      );
+    for (const prev of previas) {
+      await db.update(userFiles).set({ deletedAt: new Date() }).where(eq(userFiles.id, prev.fileId));
+      await db.delete(empreiteiroDocumentos).where(eq(empreiteiroDocumentos.id, prev.id));
+    }
     const [doc] = await db
       .insert(empreiteiroDocumentos)
       .values({
         empreiteiroUserId: guard.user.id,
         fileId: file.id,
-        tipo: extras?.tipoDocumento || "outro",
+        tipo: tipoFinal,
+        status: "enviado",
         observacao: extras?.observacao || null,
       })
       .returning();
@@ -135,7 +172,7 @@ export async function POST(request: NextRequest) {
     await recordAudit({
       actorId: guard.user.id,
       action: "uploads.commit.documento",
-      payload: { fileId: file.id, kind, tipo: extras?.tipoDocumento || "outro", size },
+      payload: { fileId: file.id, kind, tipo: tipoFinal, size, replaced: previas.length },
       request,
     });
   }
@@ -143,6 +180,7 @@ export async function POST(request: NextRequest) {
   const r = NextResponse.json({
     id: file.id,
     documentoId,
+    portfolioItemId,
     kind,
     visibility,
     publicUrl,

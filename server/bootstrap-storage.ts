@@ -49,12 +49,37 @@ export async function bootstrapStorageSchema(): Promise<void> {
         empreiteiro_user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         file_id VARCHAR NOT NULL REFERENCES user_files(id) ON DELETE CASCADE,
         tipo TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'enviado',
         observacao TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    await db.execute(sql`ALTER TABLE empreiteiro_documentos ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'enviado'`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_emp_docs_user ON empreiteiro_documentos(empreiteiro_user_id)`);
   } catch (err) {
     console.error("[bootstrap-storage] tabela empreiteiro_documentos:", err);
+  }
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS empreiteiro_portfolio (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        empreiteiro_user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        file_id VARCHAR NOT NULL REFERENCES user_files(id) ON DELETE CASCADE,
+        titulo TEXT,
+        descricao TEXT,
+        ordem INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_emp_portfolio_user ON empreiteiro_portfolio(empreiteiro_user_id)`);
+  } catch (err) {
+    console.error("[bootstrap-storage] tabela empreiteiro_portfolio:", err);
+  }
+
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_file_id VARCHAR REFERENCES user_files(id) ON DELETE SET NULL`);
+  } catch (err) {
+    console.error("[bootstrap-storage] users.avatar_file_id:", err);
   }
 }

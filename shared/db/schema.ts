@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   createdBy: varchar("created_by"),
   ativo: boolean("ativo").notNull().default(true),
   canManageUsers: boolean("can_manage_users").notNull().default(false),
+  avatarFileId: varchar("avatar_file_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -242,12 +243,24 @@ export const empreiteiroDocumentos = pgTable("empreiteiro_documentos", {
   empreiteiroUserId: varchar("empreiteiro_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
   tipo: text("tipo").notNull(),
+  status: text("status").notNull().default("enviado"),
   observacao: text("observacao"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const empreiteiroPortfolio = pgTable("empreiteiro_portfolio", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  empreiteiroUserId: varchar("empreiteiro_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  titulo: text("titulo"),
+  descricao: text("descricao"),
+  ordem: integer("ordem").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type UserFile = typeof userFiles.$inferSelect;
 export type EmpreiteiroDocumento = typeof empreiteiroDocumentos.$inferSelect;
+export type EmpreiteiroPortfolioItem = typeof empreiteiroPortfolio.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertClienteSchema = createInsertSchema(clientes).omit({ id: true });

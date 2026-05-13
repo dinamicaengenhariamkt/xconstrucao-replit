@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useAuthStore } from '@features/auth/store/auth-store';
 
 export type UploadKind = 'avatar' | 'portfolio_imagem' | 'portfolio_doc' | 'empreiteiro_documento';
 
@@ -78,7 +79,7 @@ export function useUpload() {
         kind: opts.kind,
         mime: opts.file.type || 'application/octet-stream',
         size: opts.file.size,
-        originalName: opts.file.name,
+        filename: opts.file.name,
         extras: opts.extras,
       });
 
@@ -96,6 +97,14 @@ export function useUpload() {
         extras: opts.extras,
       });
       setProgress(100);
+      // Avatar mudou → recarrega o usuário no store (reflete em topbar/sidebar imediatamente).
+      if (opts.kind === 'avatar') {
+        try {
+          await useAuthStore.getState().refreshToken();
+        } catch {
+          /* noop */
+        }
+      }
       return commit;
     } finally {
       setPending(false);

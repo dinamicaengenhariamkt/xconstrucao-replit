@@ -9,14 +9,18 @@ export async function GET(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
 
-  const id = new URL(request.url).searchParams.get("id");
-  if (!id) {
-    const r = NextResponse.json({ message: "id obrigatório" }, { status: 400 });
+  const sp = new URL(request.url).searchParams;
+  const key = sp.get("key");
+  const id = sp.get("id");
+  if (!key && !id) {
+    const r = NextResponse.json({ message: "key ou id obrigatório" }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
   }
 
-  const [file] = await db.select().from(userFiles).where(eq(userFiles.id, id));
+  const [file] = key
+    ? await db.select().from(userFiles).where(eq(userFiles.bucketKey, key))
+    : await db.select().from(userFiles).where(eq(userFiles.id, id!));
   if (!file || file.deletedAt) {
     const r = NextResponse.json({ message: "Arquivo não encontrado" }, { status: 404 });
     setNoCacheHeaders(r);

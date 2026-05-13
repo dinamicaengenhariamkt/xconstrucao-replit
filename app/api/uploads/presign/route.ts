@@ -13,8 +13,13 @@ const bodySchema = z.object({
   kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento"]),
   mime: z.string().min(3).max(120),
   size: z.number().int().min(1).max(20_000_000),
-  originalName: z.string().min(1).max(240),
+  // contrato: presign usa `filename`; aceitamos `originalName` por compat.
+  filename: z.string().min(1).max(240).optional(),
+  originalName: z.string().min(1).max(240).optional(),
   extras: z.object({ tipoDocumento: z.string().max(60).optional() }).optional(),
+}).refine((v) => !!(v.filename || v.originalName), {
+  message: "filename obrigatório",
+  path: ["filename"],
 });
 
 export async function POST(request: NextRequest) {
@@ -53,11 +58,12 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
+  const filename = (parsed.data.filename || parsed.data.originalName)!;
   const key = buildKey({
     kind: parsed.data.kind as UploadKind,
     role: guard.user.role as "admin" | "contratante" | "empreiteiro" | "superadmin",
     userId: guard.user.id,
-    originalName: parsed.data.originalName,
+    originalName: filename,
     extras: parsed.data.extras,
   });
 

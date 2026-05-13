@@ -25,7 +25,8 @@ import {
   useUpdatePerfilEmpreiteiro,
 } from '@features/perfil/hooks/use-perfil';
 import { useUpload, deleteUpload } from '@features/shared/hooks/use-uploads';
-import { useEmpreiteiroDocumentos } from '@features/perfil/hooks/use-documentos';
+import { useEmpreiteiroDocumentos, TIPOS_DOCUMENTO_OBRIGATORIOS } from '@features/perfil/hooks/use-documentos';
+import { useEmpreiteiroPortfolio, useUpdatePortfolio } from '@features/perfil/hooks/use-portfolio';
 import { usePreferencias, useUpdatePreferencias, usePlano } from '@features/perfil/hooks/use-preferencias';
 import { Textarea } from '@shared/components/ui/textarea';
 import { RiFilePdf2Line } from 'react-icons/ri';
@@ -459,8 +460,6 @@ function SecaoEmpresa() {
     registroProfissional: '',
   });
   const [especialidades, setEspecialidades] = useState<string[]>([]);
-  const [portfolio, setPortfolio] = useState<string[]>([]);
-  const [portfolioDocs, setPortfolioDocs] = useState<string[]>([]);
 
   useEffect(() => {
     if (perfil) {
@@ -480,100 +479,12 @@ function SecaoEmpresa() {
         registroProfissional: perfil.registroProfissional ?? '',
       });
       setEspecialidades(perfil.especialidades ?? []);
-      setPortfolio(perfil.portfolioUrls ?? []);
-      setPortfolioDocs(perfil.portfolioDocs ?? []);
     }
   }, [perfil]);
 
   const setField = (key: keyof typeof empresa) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setEmpresa((prev) => ({ ...prev, [key]: e.target.value }));
-
-  const { upload: uploadPortfolioFile } = useUpload();
-  const { upload: uploadPortfolioDoc } = useUpload();
-
-  const BLOCKED_DOCS = /\.(docx?|pptx?|xlsx?)$/i;
-
-  const handlePortfolioFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      if (BLOCKED_DOCS.test(file.name)) {
-        throw new Error('Use PDF para garantir a visualização.');
-      }
-      if (!file.type.startsWith('image/')) {
-        throw new Error('Selecione uma imagem JPG, PNG ou WebP.');
-      }
-      if (portfolio.length >= 10) {
-        throw new Error('Limite de 10 imagens atingido.');
-      }
-      const result = await uploadPortfolioFile({ file, kind: 'portfolio_imagem' });
-      const url = result.publicUrl!;
-      const next = [...portfolio, url];
-      setPortfolio(next);
-      await updatePerfil({ portfolioUrls: next });
-      toast({ title: 'Imagem adicionada', description: 'Foto incluída no portfólio.' });
-    } catch (err) {
-      toast({
-        title: 'Erro ao adicionar foto',
-        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
-        variant: 'destructive',
-      });
-    } finally {
-      e.target.value = '';
-    }
-  };
-
-  const handlePortfolioDoc = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      if (BLOCKED_DOCS.test(file.name)) {
-        throw new Error('Use PDF para garantir a visualização.');
-      }
-      if (file.type !== 'application/pdf') {
-        throw new Error('Apenas PDF é aceito neste campo.');
-      }
-      if (portfolioDocs.length >= 3) {
-        throw new Error('Limite de 3 PDFs atingido.');
-      }
-      const result = await uploadPortfolioDoc({ file, kind: 'portfolio_doc' });
-      const url = result.publicUrl!;
-      const stamped = `${file.name}::${url}`;
-      const next = [...portfolioDocs, stamped];
-      setPortfolioDocs(next);
-      await updatePerfil({ portfolioDocs: next });
-      toast({ title: 'Documento adicionado', description: 'PDF incluído no portfólio.' });
-    } catch (err) {
-      toast({
-        title: 'Erro ao adicionar documento',
-        description: err instanceof Error ? err.message : 'Tente um arquivo menor.',
-        variant: 'destructive',
-      });
-    } finally {
-      e.target.value = '';
-    }
-  };
-
-  const removePortfolioItem = async (idx: number) => {
-    const next = portfolio.filter((_, i) => i !== idx);
-    setPortfolio(next);
-    try {
-      await updatePerfil({ portfolioUrls: next });
-    } catch {
-      toast({ title: 'Erro', description: 'Falha ao remover item.', variant: 'destructive' });
-    }
-  };
-
-  const removePortfolioDoc = async (idx: number) => {
-    const next = portfolioDocs.filter((_, i) => i !== idx);
-    setPortfolioDocs(next);
-    try {
-      await updatePerfil({ portfolioDocs: next });
-    } catch {
-      toast({ title: 'Erro', description: 'Falha ao remover documento.', variant: 'destructive' });
-    }
-  };
 
   const handleSave = async () => {
     const raio = empresa.raioKm.trim() === '' ? null : Number(empresa.raioKm);
@@ -818,104 +729,7 @@ function SecaoEmpresa() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-0">
-          <SectionTitle>Portfólio</SectionTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-4 flex flex-col gap-6">
-          <div>
-            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-              Imagens de obras <span className="text-xs text-muted-foreground">({portfolio.length}/10)</span>
-            </Label>
-            <div className="flex flex-wrap gap-3" data-testid="grupo-portfolio">
-              {portfolio.map((url, idx) => (
-                <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Portfólio ${idx + 1}`} className="w-full h-full object-cover" data-testid={`img-portfolio-${idx}`} />
-                  <button
-                    type="button"
-                    onClick={() => removePortfolioItem(idx)}
-                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-                    aria-label="Remover"
-                    data-testid={`button-remover-portfolio-${idx}`}
-                  >
-                    <RiCloseLine className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-              {portfolio.length < 10 && (
-                <label className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-xs text-muted-foreground cursor-pointer hover:border-primary/50" data-testid="button-adicionar-portfolio">
-                  <RiUploadCloud2Line className="w-5 h-5 mb-1" />
-                  Adicionar
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePortfolioFile} data-testid="input-portfolio-file" />
-                </label>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">Até 10 imagens (JPG/PNG/WebP), 2 MB cada.</p>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 block">
-              Documentos PDF <span className="text-xs text-muted-foreground">({portfolioDocs.length}/3)</span>
-            </Label>
-            <div className="flex flex-col gap-2" data-testid="grupo-portfolio-docs">
-              {portfolioDocs.map((entry, idx) => {
-                const sepIdx = entry.indexOf('::');
-                const name = sepIdx > 0 ? entry.slice(0, sepIdx) : `Documento ${idx + 1}.pdf`;
-                const url = sepIdx > 0 ? entry.slice(sepIdx + 2) : entry;
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-3 px-3 py-2 rounded-md border border-gray-200 dark:border-gray-700"
-                    data-testid={`doc-portfolio-${idx}`}
-                  >
-                    <RiFilePdf2Line className="w-5 h-5 text-red-500 shrink-0" />
-                    <span className="text-sm flex-1 truncate" title={name}>{name}</span>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline"
-                      data-testid={`link-doc-portfolio-${idx}`}
-                    >
-                      Abrir
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => removePortfolioDoc(idx)}
-                      className="w-6 h-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
-                      aria-label="Remover"
-                      data-testid={`button-remover-doc-${idx}`}
-                    >
-                      <RiCloseLine className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-              {portfolioDocs.length < 3 && (
-                <label
-                  className="inline-flex items-center justify-center gap-2 px-3 py-3 rounded-md border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 w-fit"
-                  data-testid="button-adicionar-doc"
-                >
-                  <RiUploadCloud2Line className="w-4 h-4" />
-                  Adicionar PDF
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    className="hidden"
-                    onChange={handlePortfolioDoc}
-                    data-testid="input-portfolio-doc"
-                  />
-                </label>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Até 3 PDFs, 5 MB cada (portfólio institucional, ART/RRT, certificações).
-              DOC/DOCX/PPT/XLS não são aceitos — converta para PDF.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <PortfolioGridSection />
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} data-testid="button-salvar-empresa">
@@ -1511,34 +1325,201 @@ function SecaoPlano() {
 }
 
 /* ─────────────────────────────────────────────
+   SECTION: Portfólio (cards com título + reorder + remove)
+───────────────────────────────────────────── */
+function PortfolioGridSection() {
+  const { toast } = useToast();
+  const { data, isLoading, refetch } = useEmpreiteiroPortfolio();
+  const updatePortfolio = useUpdatePortfolio();
+  const { upload, pending } = useUpload();
+  const items = data?.items ?? [];
+  const [edits, setEdits] = useState<Record<string, string>>({});
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    try {
+      for (const file of files) {
+        const isImg = file.type.startsWith('image/');
+        await upload({
+          file,
+          kind: isImg ? 'portfolio_imagem' : 'portfolio_doc',
+          extras: { observacao: file.name },
+        });
+      }
+      toast({ title: 'Portfólio atualizado', description: `${files.length} arquivo(s) adicionado(s).` });
+      await refetch();
+    } catch (err) {
+      toast({
+        title: 'Falha no upload',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleRemove = async (fileId: string) => {
+    try {
+      await deleteUpload(fileId);
+      toast({ title: 'Item removido' });
+      await refetch();
+    } catch (err) {
+      toast({ title: 'Falha ao remover', description: err instanceof Error ? err.message : '', variant: 'destructive' });
+    }
+  };
+
+  const move = async (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= items.length) return;
+    const a = items[idx];
+    const b = items[target];
+    await updatePortfolio.mutateAsync([
+      { id: a.id, ordem: b.ordem },
+      { id: b.id, ordem: a.ordem },
+    ]);
+  };
+
+  const saveTitle = async (id: string) => {
+    const titulo = (edits[id] ?? '').trim();
+    if (!titulo) return;
+    await updatePortfolio.mutateAsync([{ id, titulo }]);
+    setEdits((prev) => {
+      const n = { ...prev };
+      delete n[id];
+      return n;
+    });
+    toast({ title: 'Título atualizado' });
+  };
+
+  return (
+    <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+      <CardHeader className="p-6 pb-0">
+        <SectionTitle>Portfólio</SectionTitle>
+        <p className="text-xs text-muted-foreground mt-1">
+          Mostre fotos e documentos das suas obras. Cards podem ter título personalizado e ser reordenados.
+        </p>
+      </CardHeader>
+      <CardContent className="p-6 pt-4 flex flex-col gap-4">
+        <div>
+          <label
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border-2 border-dashed border-gray-300 dark:border-gray-700 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 w-fit"
+            data-testid="button-adicionar-portfolio"
+          >
+            <RiUploadCloud2Line className="w-4 h-4" />
+            {pending ? 'Enviando…' : 'Adicionar foto ou PDF'}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              multiple
+              className="hidden"
+              onChange={handleUpload}
+              data-testid="input-portfolio-multi"
+            />
+          </label>
+        </div>
+
+        {isLoading ? (
+          <Skeleton className="h-40 rounded-lg" />
+        ) : items.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">Nenhum item no portfólio ainda.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" data-testid="grid-portfolio-cards">
+            {items.map((item, idx) => {
+              const isImg = item.kind === 'portfolio_imagem';
+              const editing = edits[item.id] !== undefined;
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
+                  data-testid={`card-portfolio-${item.id}`}
+                >
+                  <div className="aspect-video bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                    {isImg && item.publicUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.publicUrl} alt={item.titulo ?? ''} className="w-full h-full object-cover" />
+                    ) : (
+                      <RiFilePdf2Line className="w-10 h-10 text-red-500" />
+                    )}
+                  </div>
+                  <div className="p-3 flex flex-col gap-2 text-sm">
+                    {editing ? (
+                      <Input
+                        value={edits[item.id]}
+                        onChange={(e) => setEdits((p) => ({ ...p, [item.id]: e.target.value }))}
+                        onBlur={() => saveTitle(item.id)}
+                        autoFocus
+                        maxLength={120}
+                        data-testid={`input-titulo-${item.id}`}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-left font-medium truncate hover:underline"
+                        onClick={() => setEdits((p) => ({ ...p, [item.id]: item.titulo ?? '' }))}
+                        data-testid={`button-editar-titulo-${item.id}`}
+                      >
+                        {item.titulo || item.originalName}
+                      </button>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{(item.sizeBytes / 1000).toFixed(0)} KB</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => move(idx, -1)}
+                          disabled={idx === 0}
+                          className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+                          aria-label="Mover para cima"
+                          data-testid={`button-up-${item.id}`}
+                        >↑</button>
+                        <button
+                          type="button"
+                          onClick={() => move(idx, 1)}
+                          disabled={idx === items.length - 1}
+                          className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+                          aria-label="Mover para baixo"
+                          data-testid={`button-down-${item.id}`}
+                        >↓</button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(item.fileId)}
+                          className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500"
+                          aria-label="Remover"
+                          data-testid={`button-remover-portfolio-${item.id}`}
+                        >
+                          <RiCloseLine className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─────────────────────────────────────────────
    SECTION: Documentos privados (R2 signed URLs)
 ───────────────────────────────────────────── */
-const TIPOS_DOCUMENTO = [
-  { value: 'contrato', label: 'Contrato Social' },
-  { value: 'cnh', label: 'CNH/RG do responsável' },
-  { value: 'art-rrt', label: 'ART / RRT' },
-  { value: 'certidao', label: 'Certidão / Comprovante' },
-  { value: 'cnpj', label: 'Comprovante CNPJ' },
-  { value: 'outro', label: 'Outro' },
-] as const;
 
 function SecaoDocumentos() {
   const { toast } = useToast();
   const { data, isLoading, refetch } = useEmpreiteiroDocumentos();
-  const { upload, pending, progress } = useUpload();
-  const [tipo, setTipo] = useState<string>('contrato');
-  const [observacao, setObservacao] = useState('');
-  const inputRef = useState<{ el: HTMLInputElement | null }>({ el: null })[0];
+  const { upload, pending } = useUpload();
+  const items = data?.items ?? [];
+  const byTipo = new Map(items.map((i) => [i.tipo, i] as const));
 
-  const handlePick = () => inputRef.el?.click();
-
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFile = async (tipo: string, file: File | null) => {
     if (!file) return;
     try {
-      await upload({ file, kind: 'empreiteiro_documento', extras: { tipoDocumento: tipo, observacao } });
+      await upload({ file, kind: 'empreiteiro_documento', extras: { tipoDocumento: tipo } });
       toast({ title: 'Documento enviado', description: file.name });
-      setObservacao('');
       await refetch();
     } catch (err) {
       toast({
@@ -1546,8 +1527,6 @@ function SecaoDocumentos() {
         description: err instanceof Error ? err.message : 'Tente novamente.',
         variant: 'destructive',
       });
-    } finally {
-      e.target.value = '';
     }
   };
 
@@ -1565,103 +1544,95 @@ function SecaoDocumentos() {
     }
   };
 
-  const items = data?.items ?? [];
-
   return (
     <div className="flex flex-col gap-6">
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
-          <SectionTitle>Documentos privados</SectionTitle>
+          <SectionTitle>Documentos obrigatórios</SectionTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Arquivos visíveis apenas para você e a administração. Acesso temporário (link expira em 15 minutos).
+            Envie cada documento no campo correspondente. Apenas você e a administração têm acesso (link de download expira em 15 minutos).
           </p>
-        </CardHeader>
-        <CardContent className="p-6 pt-2 flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FieldRow label="Tipo do documento">
-              <Select value={tipo} onValueChange={setTipo}>
-                <SelectTrigger data-testid="select-tipo-documento"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TIPOS_DOCUMENTO.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldRow>
-            <FieldRow label="Observação (opcional)">
-              <Input
-                value={observacao}
-                onChange={(e) => setObservacao(e.target.value)}
-                maxLength={200}
-                placeholder="Ex: válido até 2027"
-                data-testid="input-observacao-documento"
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <input
-              ref={(el) => { inputRef.el = el; }}
-              type="file"
-              accept="application/pdf,image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFile}
-              data-testid="input-documento-file"
-            />
-            <Button onClick={handlePick} disabled={pending} variant="outline" data-testid="button-enviar-documento">
-              <RiUploadCloud2Line className="w-4 h-4 mr-2" />
-              {pending ? `Enviando... ${progress}%` : 'Enviar documento'}
-            </Button>
-            <p className="text-xs text-muted-foreground mt-2">
-              PDF, JPG, PNG ou WebP até 15 MB.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
-        <CardHeader className="p-6 pb-2">
-          <SectionTitle>Meus documentos ({items.length})</SectionTitle>
         </CardHeader>
         <CardContent className="p-6 pt-2">
           {isLoading ? (
-            <Skeleton className="h-24 rounded-lg" />
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">Nenhum documento enviado ainda.</p>
+            <Skeleton className="h-40 rounded-lg" />
           ) : (
-            <ul className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800" data-testid="lista-documentos">
-              {items.map((item) => (
-                <li key={item.id} className="flex items-center gap-3 py-3" data-testid={`row-documento-${item.id}`}>
-                  <RiFilePdf2Line className="w-5 h-5 text-red-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" title={item.originalName}>{item.originalName}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {TIPOS_DOCUMENTO.find((t) => t.value === item.tipo)?.label ?? item.tipo}
-                      {item.observacao ? ` · ${item.observacao}` : ''}
-                      {' · '}{(item.sizeBytes / 1000).toFixed(0)} KB
-                    </p>
-                  </div>
-                  <a
-                    href={item.signedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline px-2"
-                    data-testid={`link-baixar-documento-${item.id}`}
-                  >
-                    Baixar
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.fileId)}
-                    className="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
-                    aria-label="Remover documento"
-                    data-testid={`button-remover-documento-${item.id}`}
-                  >
-                    <RiCloseLine className="w-4 h-4" />
-                  </button>
-                </li>
-              ))}
+            <ul className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800" data-testid="lista-documentos-tipos">
+              {TIPOS_DOCUMENTO_OBRIGATORIOS.map((t) => {
+                const item = byTipo.get(t.value);
+                const enviado = !!item;
+                return (
+                  <li key={t.value} className="flex items-center gap-3 py-4" data-testid={`row-doc-tipo-${t.value}`}>
+                    <RiFilePdf2Line className={`w-6 h-6 shrink-0 ${enviado ? 'text-red-500' : 'text-gray-300 dark:text-gray-700'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{t.label}</p>
+                        <span
+                          className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                            enviado
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                          }`}
+                          data-testid={`badge-status-${t.value}`}
+                        >
+                          {enviado ? 'enviado' : 'pendente'}
+                        </span>
+                      </div>
+                      {item ? (
+                        <p className="text-xs text-muted-foreground truncate" title={item.originalName}>
+                          {item.originalName} · {(item.sizeBytes / 1000).toFixed(0)} KB
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Aguardando envio</p>
+                      )}
+                    </div>
+                    {item && (
+                      <a
+                        href={item.signedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline px-2"
+                        data-testid={`link-baixar-doc-${t.value}`}
+                      >
+                        Baixar
+                      </a>
+                    )}
+                    <label
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 text-xs cursor-pointer hover:border-primary/50"
+                      data-testid={`button-enviar-doc-${t.value}`}
+                    >
+                      <RiUploadCloud2Line className="w-4 h-4" />
+                      {item ? 'Substituir' : 'Enviar'}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        disabled={pending}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null;
+                          handleFile(t.value, f);
+                          e.target.value = '';
+                        }}
+                        data-testid={`input-doc-${t.value}`}
+                      />
+                    </label>
+                    {item && (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.fileId)}
+                        className="w-7 h-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                        aria-label="Remover documento"
+                        data-testid={`button-remover-doc-${t.value}`}
+                      >
+                        <RiCloseLine className="w-4 h-4" />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
+          <p className="text-xs text-muted-foreground mt-4">PDF, JPG, PNG ou WebP até 15 MB cada.</p>
         </CardContent>
       </Card>
     </div>
