@@ -36,6 +36,7 @@ import { users, auditLogs, userConsents } from "../shared/db/schema";
 import { hashPassword } from "../features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "../features/auth/schemas/password";
 import { bootstrapSuperAdmin } from "../server/bootstrap-superadmin";
+import { generateStrongPassword } from "../features/auth/api/password-generator";
 
 interface Args {
   email?: string;
@@ -165,14 +166,20 @@ async function main() {
     ?? (await prompt("Nome completo: "))
     ?? "Super Admin"
   ).trim() || "Super Admin";
-  const password = (
-    args.password
-    ?? process.env.SUPERADMIN_PASSWORD
-    ?? (await prompt("Senha: ", true))
-  );
+  // Senha: prioriza arg/env. Se nada vier, gera uma senha forte (16 chars)
+  // automaticamente — usada para o primeiro super admin em produção.
+  // A senha é mostrada UMA ÚNICA VEZ no fim da execução.
+  let password = args.password ?? process.env.SUPERADMIN_PASSWORD ?? "";
+  let generated = false;
   if (!password) {
-    console.error("Senha é obrigatória.");
-    process.exit(1);
+    // Modo interativo só se for um TTY real; caso contrário gera automático.
+    if (process.stdin.isTTY) {
+      password = await prompt("Senha (deixe vazio para gerar uma forte): ", true);
+    }
+    if (!password) {
+      password = generateStrongPassword(16);
+      generated = true;
+    }
   }
 
   const policy = evaluatePasswordPolicy(password, { email, name });
@@ -215,12 +222,12 @@ async function main() {
           password: hashed,
           role: "superadmin",
           ativo: true,
-          mustChangePassword: false,
+          mustChangePassword: true,
           emailVerified: existing.emailVerified ?? new Date(),
         })
         .where(eq(users.id, existing.id));
       action = "reset";
-      console.log(`[bootstrap] Conta ${email} resetada e promovida a superadmin.`);
+      console.log(`[bootstrap] Conta ${email} resetada e promovida a superadmin (troca de senha exigida no 1º login).`);
     } else {
       await db
         .update(users)
@@ -239,13 +246,13 @@ async function main() {
         role: "superadmin",
         password: hashed,
         ativo: true,
-        mustChangePassword: false,
+        mustChangePassword: true,
         emailVerified: new Date(),
         username: email.split("@")[0],
       })
       .returning({ id: users.id });
     targetId = created.id;
-    console.log(`[bootstrap] Super Admin ${email} criado.`);
+    console.log(`[bootstrap] Super Admin ${email} criado (troca de senha exigida no 1º login).`);
   }
 
   // Garante invariante: pelo menos 1 superadmin ativo (ele mesmo, agora).
@@ -259,9 +266,20 @@ async function main() {
   }
 
   await ensureSuperAdminConsents(targetId);
-  await recordCliAudit(targetId, { email, action, forceReset, consents: ["termos@1.0", "privacidade@1.0"] });
+  await recordCliAudit(targetId, { email, action, forceReset, generated, consents: ["termos@1.0", "privacidade@1.0"] });
 
   console.log(`[bootstrap] OK (${action}). Super admins ativos: ${count}.`);
+
+  if (generated) {
+    const banner = "═".repeat(72);
+    console.log(`\n${banner}`);
+    console.log("  SENHA TEMPORÁRIA (mostrada UMA ÚNICA VEZ — copie agora):");
+    console.log(`  Email:  ${email}`);
+    console.log(`  Senha:  ${password}`);
+    console.log("  → No primeiro login o sistema vai exigir a troca da senha.");
+    console.log(`${banner}\n`);
+  }
+
   process.exit(0);
 }
 
