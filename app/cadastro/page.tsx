@@ -38,7 +38,6 @@ const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: str
 
 export default function CadastroPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfil = searchParams.get("perfil") || "contratante";
@@ -62,6 +61,8 @@ export default function CadastroPage() {
       password: "",
       role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
       phone: "",
+      // Checkbox starts unchecked; zod literal(true) garante a validação no submit.
+      acceptTerms: false as unknown as true,
     },
   });
 
@@ -72,15 +73,6 @@ export default function CadastroPage() {
 
   const onSubmit = form.handleSubmit(
     async (values) => {
-      if (!acceptTerms) {
-        toast({
-          title: "Termos obrigatórios",
-          description: "Aceite os termos de uso para continuar.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsLoading(true);
       try {
         await registerUser({
@@ -124,7 +116,7 @@ export default function CadastroPage() {
   const emailError = errs.email?.message;
   const usernameError = errs.username?.message;
   const phoneError = errs.phone?.message;
-  const termsError = !acceptTerms && form.formState.isSubmitted ? "Você deve aceitar os Termos de Uso e a Política de Privacidade" : undefined;
+  const termsError = errs.acceptTerms?.message;
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
@@ -281,10 +273,9 @@ export default function CadastroPage() {
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={acceptTerms}
-                  onChange={(e) => setAcceptTerms(e.target.checked)}
                   className="w-4 h-4 rounded border-slate-300 text-[#333333] focus:ring-[#333333]/20 mt-0.5"
                   data-testid="checkbox-terms"
+                  {...form.register("acceptTerms")}
                 />
                 <span className="text-xs text-slate-500 leading-relaxed">
                   Aceito os{" "}
