@@ -440,3 +440,66 @@ export type Candidatura = typeof candidaturas.$inferSelect;
 export type InsertMarketplaceLead = z.infer<typeof insertMarketplaceLeadSchema>;
 export type MarketplaceLead = typeof marketplaceLeads.$inferSelect;
 export type MarketplaceLeadInput = z.infer<typeof marketplaceLeadSchema>;
+
+// =============================================================
+// J06 — Medições & Diário de Obra (Task #72)
+// =============================================================
+
+export const obraEtapaStatusEnum = pgEnum("obra_etapa_status", ["pendente", "em_andamento", "bloqueado", "concluido"]);
+export const obraOcorrenciaGravidadeEnum = pgEnum("obra_ocorrencia_gravidade", ["critico", "medio", "baixo"]);
+export const obraOcorrenciaStatusEnum = pgEnum("obra_ocorrencia_status", ["aberta", "resolvida"]);
+export const obraFotoFaseEnum = pgEnum("obra_foto_fase", ["antes", "durante", "agora"]);
+
+export const obraEtapas = pgTable("obra_etapas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(),
+  descricao: text("descricao"),
+  ordem: integer("ordem").notNull().default(0),
+  progresso: integer("progresso").notNull().default(0),
+  status: obraEtapaStatusEnum("status").notNull().default("pendente"),
+  responsavel: text("responsavel"),
+  prazo: timestamp("prazo"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const obraDiario = pgTable("obra_diario", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  autorId: varchar("autor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  texto: text("texto").notNull(),
+  fotoFileIds: text("foto_file_ids").array().notNull().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const obraOcorrencias = pgTable("obra_ocorrencias", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  autorId: varchar("autor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao").notNull(),
+  gravidade: obraOcorrenciaGravidadeEnum("gravidade").notNull().default("medio"),
+  status: obraOcorrenciaStatusEnum("status").notNull().default("aberta"),
+  fotoFileId: varchar("foto_file_id").references(() => userFiles.id, { onDelete: "set null" }),
+  resolvidoPorId: varchar("resolvido_por_id").references(() => users.id, { onDelete: "set null" }),
+  resolvidoEm: timestamp("resolvido_em"),
+  notificacaoDisparada: boolean("notificacao_disparada").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const obraFotos = pgTable("obra_fotos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  autorId: varchar("autor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  fase: obraFotoFaseEnum("fase"),
+  tag: text("tag"),
+  enviadaAoContratante: boolean("enviada_ao_contratante").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ObraEtapa = typeof obraEtapas.$inferSelect;
+export type ObraDiarioEntry = typeof obraDiario.$inferSelect;
+export type ObraOcorrencia = typeof obraOcorrencias.$inferSelect;
+export type ObraFoto = typeof obraFotos.$inferSelect;

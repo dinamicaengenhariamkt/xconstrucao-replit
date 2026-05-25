@@ -32,6 +32,11 @@ import {
   RiSearchLine,
 } from 'react-icons/ri';
 import { useAdminObraDetalhe } from '@features/admin/obras/hooks/use-admin-obra-detalhe';
+import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card';
+import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
+import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
+import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
+import { useAuthStore } from '@features/auth/store/auth-store';
 import { VISIBILIDADE_LABEL_MAP } from '@features/admin/obras/api/admin-obra-detalhe-service';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
@@ -826,6 +831,30 @@ export default function AdminObraDetalhePage() {
             <RiInformationLine className="w-4 h-4" />
             Dados Gerais
           </TabsTrigger>
+          <TabsTrigger
+            value="etapas"
+            className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
+          >
+            Etapas
+          </TabsTrigger>
+          <TabsTrigger
+            value="diario"
+            className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
+          >
+            Diário
+          </TabsTrigger>
+          <TabsTrigger
+            value="ocorrencias"
+            className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
+          >
+            Ocorrências
+          </TabsTrigger>
+          <TabsTrigger
+            value="fotos"
+            className="flex items-center gap-1.5 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm"
+          >
+            Fotos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="saude" className="mt-4">
@@ -960,7 +989,25 @@ export default function AdminObraDetalhePage() {
             </Card>
           </div>
         </TabsContent>
+
+        <TabsContent value="etapas" className="mt-4">
+          <EtapasJ06Card obraId={obra.id} canWrite={false} canEditScope={false} />
+        </TabsContent>
+        <TabsContent value="diario" className="mt-4">
+          <DiarioJ06Card obraId={obra.id} canWrite={false} />
+        </TabsContent>
+        <TabsContent value="ocorrencias" className="mt-4">
+          <OcorrenciasJ06Card obraId={obra.id} canWrite={false} />
+        </TabsContent>
+        <TabsContent value="fotos" className="mt-4">
+          <FotosJ06AdminTab obraId={obra.id} />
+        </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function FotosJ06AdminTab({ obraId }: { obraId: string }) {
+  const user = useAuthStore((s) => s.user);
+  return <FotosJ06Card obraId={obraId} canWrite={false} currentUserId={user?.id ?? null} currentUserRole={user?.role} />;
 }

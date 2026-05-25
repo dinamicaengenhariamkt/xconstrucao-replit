@@ -1,6 +1,6 @@
 # Jornada — Medições & Diário de Obra
 
-> Status: revisão | Prioridade: alta | Wave: 2
+> Status: pronto | Prioridade: alta | Wave: 2
 > Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
@@ -48,13 +48,16 @@ Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e 
 ## 9. Checklist de implementação
 - [x] Criar tabela `medicoes` + bootstrap idempotente _(Task #47)_
 - [x] Endpoints de criação (empreiteiro) e aprovação/contestação (contratante) _(Task #47)_
-- [ ] Upload de anexos (UI/uploader dedicado para fotos — backend já aceita array de chaves R2)
+- [x] Upload de fotos via R2 — novo kind `obra_foto` + integração com `FileUploader` _(Task #72)_
 - [x] Atualizar `obras.progresso` no aprovar (SUM dos `percentual` aprovados) _(Task #47)_
 - [ ] Gerar lançamento financeiro (J08) no aprovar
 - [ ] Notificações em criação/aprovação/contestação (J13)
 - [x] Substituir mock no front (contratante real; empreiteiro/`minhas-obras` zeroado) _(Task #47)_
-- [ ] Tela timeline de medições por obra (acumulado visível)
-- [ ] Modal "Registrar medição" no empreiteiro (endpoint pronto; falta UI)
+- [x] Diário de obra ponta-a-ponta nas 3 personas (texto + fotos) _(Task #72)_
+- [x] Ocorrências (criar + resolver atomicamente) nas 3 personas _(Task #72)_
+- [x] Galeria de fotos da obra (upload + delete por autor/admin) nas 3 personas _(Task #72)_
+- [x] Etapas da obra (escopo contratante/admin + progresso por empreiteiro) nas 3 personas _(Task #72)_
+- [x] Admin enxerga read-only Etapas/Diário/Ocorrências/Fotos via tabs novas em `/admin/obras/[id]` _(Task #72)_
 
 ## 10. Critérios de aceite
 1. Empreiteiro registra medição "Fundação 100%" → contratante recebe notificação.
@@ -78,3 +81,9 @@ Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e 
 - 2026-05-25 (Task #47): `medicao_anexos` (tabela separada) não foi criada — fotos viram coluna `text[]` em `medicoes` guardando chaves R2; basta `kind='medicao_foto'` em `kind-builder.ts` quando a UI de upload sair (gap aberto).
 - 2026-05-25 (Task #47): aprovar valida que `SUM(percentual aprovado) ≤ 100`; cria medição também valida que `SUM(pendentes+aprovadas) ≤ 100` para não represar 200% pendentes.
 - 2026-05-25 (Task #47): aprovação não gera lançamento financeiro ainda (J08); flag explícita para que a próxima task de J08 ouça `medicoes.aprovar` no audit log e crie o `financeiro` correspondente.
+- 2026-05-25 (Task #72): novo kind R2 `obra_foto` (público, 8MB, JPEG/PNG/WEBP) em `key-builder.ts` + `validation.ts` + commit endpoint; ownership via `public/obra-fotos/{userId}/<file>` (anti-tamper na chave).
+- 2026-05-25 (Task #72): 4 tabelas novas — `obra_etapas`, `obra_diario`, `obra_ocorrencias`, `obra_fotos` — com bootstrap idempotente em `server/bootstrap-medicoes-extras.ts`. Resolver de ocorrência é UPDATE atômico (`WHERE status='aberta'`) com 409 se já resolvida.
+- 2026-05-25 (Task #72): empreiteiro não cria/deleta etapas (só contratante/admin); empreiteiro só atualiza `progresso`/`status` (anti-tamper no PATCH).
+- 2026-05-25 (Task #72): helper `features/obras/api/access.ts` (`findObraAccess`, `canWriteObraContent`) — base reusável pra endpoints de obra com gate role+ownership.
+- 2026-05-25 (Task #72): empreiteiro detail page mantém TaskManager/Checklists/Timeline/Cronograma/Documentos/Equipe/Financeiro/Lucro/Saúde **em mock** (BLOCO J06 novo coexiste com os blocos legados). Migração desses blocos pra dados reais fica como carry para tasks futuras (J11 Equipe, J08 Financeiro/Lucro, J09 Documentos, jornada própria de Checklists).
+- 2026-05-25 (Task #72): modal `AtualizarProgressoModal` (empreiteiro) ainda escreve em store local; carry pra próxima task — endpoint `POST /api/empreiteiro/medicoes` já existe (Task #47).

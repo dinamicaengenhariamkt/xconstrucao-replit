@@ -9,7 +9,7 @@
  *   private/empreiteiro/{userId}/documentos/{tipo}/{ts}-{slug}.{ext}
  */
 
-export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo";
+export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto";
 export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
@@ -175,6 +175,15 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: true };
   }
 
+  if (kind === "obra_foto") {
+    // public/obra-fotos/{userId}/<file>
+    if (segments.length !== 4) return { ok: false, reason: "shape obra-foto" };
+    if (segments[0] !== "public" || segments[1] !== "obra-fotos") return { ok: false, reason: "prefixo obra-foto" };
+    if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
+    if (role !== "contratante" && role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
+    return { ok: true };
+  }
+
   // empreiteiro_documento → private/empreiteiro/{userId}/documentos/{tipo}/<file>
   if (segments.length !== 6) return { ok: false, reason: "shape documento" };
   if (
@@ -215,6 +224,9 @@ export function buildKey(args: KeyBuilderArgs): string {
   }
   if (kind === "candidatura_anexo") {
     return `private/empreiteiro/${userId}/candidatura-anexos/${ts}-${slug}${safeExt}`;
+  }
+  if (kind === "obra_foto") {
+    return `public/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
   }
   // empreiteiro_documento
   const tipo = slugify(extras?.tipoDocumento || "outro");

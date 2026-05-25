@@ -16,6 +16,11 @@ import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/component
 import { FinanceiroSection } from '@features/empreiteiro/minhas-obras/components/FinanceiroSection';
 import { EquipeSection } from '@features/empreiteiro/minhas-obras/components/EquipeSection';
 import { ContatoContratanteCard } from '@features/empreiteiro/minhas-obras/components/ContatoContratanteCard';
+import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card';
+import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
+import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
+import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
+import { useAuthStore } from '@features/auth/store/auth-store';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { AdicionarAtualizacaoModal } from '@features/empreiteiro/minhas-obras/components/AdicionarAtualizacaoModal';
 import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
@@ -385,6 +390,9 @@ export default function MinhaObraDetalhePage() {
         </div>
       </motion.div>
 
+      {/* BLOCO J06: Medições, Diário, Ocorrências e Fotos (fonte de verdade) */}
+      <ObraJ06Section obraId={obra.id} />
+
       {/* BLOCO 11: Resumo Financeiro */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <FinanceiroSection financeiro={obra.financeiro} />
@@ -414,5 +422,26 @@ export default function MinhaObraDetalhePage() {
       />
 
     </div>
+  );
+}
+
+function ObraJ06Section({ obraId }: { obraId: string }) {
+  const user = useAuthStore((s) => s.user);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.22 }}
+      className="space-y-4"
+    >
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Medições e diário da obra</h2>
+        <span className="text-xs text-muted-foreground">(dados ao vivo)</span>
+      </div>
+      <EtapasJ06Card obraId={obraId} canWrite canEditScope={false} />
+      <DiarioJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} />
+      <OcorrenciasJ06Card obraId={obraId} canWrite />
+      <FotosJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} currentUserRole={user?.role} />
+    </motion.div>
   );
 }

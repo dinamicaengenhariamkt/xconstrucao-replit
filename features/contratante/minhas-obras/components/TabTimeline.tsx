@@ -1,20 +1,14 @@
 'use client';
 
-import { TimelineDisplay } from '@features/shared/components/TimelineDisplay';
+import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
+import { useAuthStore } from '@features/auth/store/auth-store';
 import type { ObraContratanteDetalhe } from '../types';
 
-interface TabTimelineProps {
+interface Props {
   obra: ObraContratanteDetalhe;
 }
 
-export function TabTimeline({ obra }: TabTimelineProps) {
-  return (
-    <div data-testid="tab-content-timeline">
-      <TimelineDisplay
-        events={obra.timeline ?? []}
-        title="Timeline da Obra"
-        subtitle="Atualizações registradas pelo empreiteiro"
-      />
-    </div>
-  );
+export function TabTimeline({ obra }: Props) {
+  const user = useAuthStore((s) => s.user);
+  return <DiarioJ06Card obraId={obra.id} canWrite currentUserId={user?.id ?? null} />;
 }
