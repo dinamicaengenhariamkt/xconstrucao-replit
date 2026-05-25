@@ -17,7 +17,7 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (isBlocked || toggle.isPending) return;
-    toggle.mutate({ obraId: obra.id, isSaved });
+    toggle.mutate({ obraId: obra.id, isSaved, obra });
   };
 
   return (

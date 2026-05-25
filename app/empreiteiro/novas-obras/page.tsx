@@ -38,6 +38,8 @@ const PAGE_SIZE = 20;
 export default function NovasObrasPage() {
   // Filtros server-side
   const [cidade, setCidade] = useState('');
+  const [uf, setUf] = useState('');
+  const [modalidade, setModalidade] = useState<string>('');
   const [tipoSelected, setTipoSelected] = useState<string[]>([]);
   const [materiaisPorSelected, setMateriaisPorSelected] = useState<string[]>([]);
   const [orcamentoMin, setOrcamentoMin] = useState('');
@@ -55,13 +57,15 @@ export default function NovasObrasPage() {
   const queryParams = useMemo(() => {
     const p: Record<string, string | number> = { page, pageSize: PAGE_SIZE };
     if (cidade.trim()) p.cidade = cidade.trim();
+    if (uf.trim()) p.uf = uf.trim().toUpperCase();
+    if (modalidade) p.modalidade = modalidade;
     // API aceita apenas 1 valor por filtro — quando há multi-seleção, deixamos sem param e filtramos client-side.
     if (tipoSelected.length === 1) p.tipo = tipoSelected[0];
     if (materiaisPorSelected.length === 1) p.materiaisPor = materiaisPorSelected[0];
     if (orcMinNum !== undefined) p.minValor = orcMinNum;
     if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
     return p;
-  }, [page, cidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+  }, [page, cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
 
   const { data: obrasPayload, isLoading: obrasLoading } = useNovasObras(queryParams);
   const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
@@ -73,7 +77,7 @@ export default function NovasObrasPage() {
   // Reset page quando filtro server muda
   useEffect(() => {
     setPage(1);
-  }, [cidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+  }, [cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
 
   // Clamp page se totalPages mudar pra menor
   useEffect(() => {
@@ -154,14 +158,24 @@ export default function NovasObrasPage() {
 
   const advancedActiveCount =
     (cidade.trim() ? 1 : 0) +
+    (uf.trim() ? 1 : 0) +
+    (modalidade ? 1 : 0) +
     (statusSelected.length > 0 ? 1 : 0) +
     (complexidadeSelected.length > 0 ? 1 : 0) +
     (tipoSelected.length > 0 ? 1 : 0) +
     (materiaisPorSelected.length > 0 ? 1 : 0) +
     (orcMinNum !== undefined || orcMaxNum !== undefined ? 1 : 0);
 
+  const MODALIDADE_LABELS: Record<string, string> = {
+    administracao: 'Administração',
+    empreitada_global: 'Empreitada global',
+    empreitada_etapa: 'Empreitada por etapa',
+  };
+
   const clearAllAdvanced = () => {
     setCidade('');
+    setUf('');
+    setModalidade('');
     setStatusSelected([]);
     setComplexidadeSelected([]);
     setTipoSelected([]);
@@ -201,6 +215,31 @@ export default function NovasObrasPage() {
                   className="h-9 text-sm"
                   data-testid="filter-cidade-input"
                 />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">UF</label>
+                <Input
+                  placeholder="Ex.: SP"
+                  value={uf}
+                  maxLength={2}
+                  onChange={(e) => setUf(e.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 2))}
+                  className="h-9 text-sm uppercase"
+                  data-testid="filter-uf-input"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Modalidade</label>
+                <select
+                  value={modalidade}
+                  onChange={(e) => setModalidade(e.target.value)}
+                  className="h-9 text-sm rounded-md border border-input bg-background px-3"
+                  data-testid="filter-modalidade-select"
+                >
+                  <option value="">Todas</option>
+                  <option value="administracao">Administração</option>
+                  <option value="empreitada_global">Empreitada global</option>
+                  <option value="empreitada_etapa">Empreitada por etapa</option>
+                </select>
               </div>
               <MultiSelectDropdown
                 label="Status"
@@ -266,6 +305,20 @@ export default function NovasObrasPage() {
                   label={`Cidade: ${cidade.trim()}`}
                   onRemove={() => setCidade('')}
                   testId="active-chip-cidade"
+                />
+              )}
+              {uf.trim() && (
+                <ActiveFilterChip
+                  label={`UF: ${uf.trim()}`}
+                  onRemove={() => setUf('')}
+                  testId="active-chip-uf"
+                />
+              )}
+              {modalidade && (
+                <ActiveFilterChip
+                  label={`Modalidade: ${MODALIDADE_LABELS[modalidade] ?? modalidade}`}
+                  onRemove={() => setModalidade('')}
+                  testId="active-chip-modalidade"
                 />
               )}
               {statusSelected.map((s) => (

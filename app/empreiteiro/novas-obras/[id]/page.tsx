@@ -20,7 +20,11 @@ export default function ObraDetalhePage() {
   const savedIds = useObrasSalvasIds();
   const toggleSaveMutation = useToggleObraSalva();
   const isSaved = (oid: string) => savedIds.has(oid);
-  const toggleSave = (oid: string) => toggleSaveMutation.mutate({ obraId: oid, isSaved: savedIds.has(oid) });
+  const toggleSave = (oid: string) => toggleSaveMutation.mutate({
+    obraId: oid,
+    isSaved: savedIds.has(oid),
+    obra: obra && obra.id === oid ? obra : undefined,
+  });
 
   if (isLoading) {
     return (

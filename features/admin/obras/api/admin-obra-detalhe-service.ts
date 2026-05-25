@@ -12,7 +12,7 @@ export interface AdminObraApiResponse {
   valorTotal: string | null;
   percentConcluido?: number | string | null;
   dataInicio: string | null;
-  dataPrevisaoFim: string | null;
+  dataPrevisao: string | null;
   createdAt: string;
   cliente: { id: string; nome: string } | null;
   empreiteira: { id: string; nome: string } | null;
@@ -105,7 +105,7 @@ export function adaptAdminObraDetalhe(payload: AdminObraApiResponse): AdminObraD
     valorContratado: valorTotal,
     percentConcluido,
     dataInicio: payload.dataInicio ?? '',
-    previsaoFim: payload.dataPrevisaoFim ?? '',
+    previsaoFim: payload.dataPrevisao ?? '',
     empreiteira: payload.empreiteira?.nome ?? '—',
     localizacao: [payload.cidade, payload.uf].filter(Boolean).join(', ') || '—',
     cliente: payload.cliente?.nome ?? '—',
