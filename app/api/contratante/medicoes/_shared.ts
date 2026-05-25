@@ -186,8 +186,12 @@ export async function assertMedicaoEditableByContratante(
 /**
  * Recalcula `obras.progresso` como SUM(percentual) das medições aprovadas.
  */
-export async function recomputeObraProgresso(obraId: string): Promise<number> {
-  const [agg] = await db
+export async function recomputeObraProgresso(
+  obraId: string,
+  tx?: typeof db,
+): Promise<number> {
+  const client = (tx ?? db) as typeof db;
+  const [agg] = await client
     .select({
       soma: sql<string>`COALESCE(SUM(percentual), 0)`,
     })
@@ -195,6 +199,6 @@ export async function recomputeObraProgresso(obraId: string): Promise<number> {
     .where(and(eq(medicoes.obraId, obraId), eq(medicoes.status, "aprovada")));
 
   const soma = Math.min(100, Math.round(Number(agg?.soma ?? 0)));
-  await db.update(obras).set({ progresso: soma, updatedAt: new Date() }).where(eq(obras.id, obraId));
+  await client.update(obras).set({ progresso: soma, updatedAt: new Date() }).where(eq(obras.id, obraId));
   return soma;
 }

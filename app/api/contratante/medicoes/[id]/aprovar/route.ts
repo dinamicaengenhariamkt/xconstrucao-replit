@@ -116,6 +116,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   let updatedRow: typeof medicoes.$inferSelect;
   let lancamentoId: string;
   let lancamentoValor = 0;
+  let progresso: number;
   try {
     const txResult = await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -136,11 +137,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         tx,
       });
 
-      return { updated, lanc: { id: created.id, valor: created.valor } };
+      // Recalculo do progresso DENTRO da transação — atomicidade total
+      // (medição aprovada ↔ fatura ↔ progresso atualizado).
+      const novoProgresso = await recomputeObraProgresso(check.medicao.obraId, tx as unknown as typeof db);
+
+      return { updated, lanc: { id: created.id, valor: created.valor }, progresso: novoProgresso };
     });
     updatedRow = txResult.updated;
     lancamentoId = txResult.lanc.id;
     lancamentoValor = txResult.lanc.valor;
+    progresso = txResult.progresso;
   } catch (err) {
     console.error("[medicoes.aprovar] falha na transação:", err);
     const r = NextResponse.json(
@@ -150,9 +156,6 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-
-  // Progresso fora da transação (cálculo derivado, idempotente — pode rerodar).
-  const progresso = await recomputeObraProgresso(check.medicao.obraId);
 
   await recordAudit({
     actorId: guard.user.id,
