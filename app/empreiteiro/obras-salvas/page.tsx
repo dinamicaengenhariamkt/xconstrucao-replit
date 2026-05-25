@@ -1,21 +1,54 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { RiSearchLine } from 'react-icons/ri';
+import { RiSearchLine, RiLoader4Line } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
+import { Button } from '@shared/components/ui/button';
 import {
-  useObrasSalvas,
+  useObrasSalvasInfinite,
 } from '@features/empreiteiro/obras-salvas/hooks/use-obras-salvas';
 import { NovaObraCard } from '@features/empreiteiro/novas-obras/components/NovaObraCard';
 import { IconBookmark, IconSearch } from '@shared/components/icons';
 
+const PAGE_SIZE = 20;
+
 export default function ObrasSalvasPage() {
-  const { data, isLoading } = useObrasSalvas();
-  const obras = data?.rows ?? [];
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useObrasSalvasInfinite({ pageSize: PAGE_SIZE });
+
+  const obras = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.rows),
+    [data],
+  );
+  const total = data?.pages?.[0]?.total ?? 0;
+
   const [searchQuery, setSearchQuery] = useState('');
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, obras.length]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return obras;
@@ -29,11 +62,11 @@ export default function ObrasSalvasPage() {
   }, [obras, searchQuery]);
 
   const subtitle =
-    obras.length > 0
-      ? `${obras.length} obra${obras.length !== 1 ? 's' : ''} salva${obras.length !== 1 ? 's' : ''} para acompanhamento.`
+    total > 0
+      ? `${total} obra${total !== 1 ? 's' : ''} salva${total !== 1 ? 's' : ''} para acompanhamento.`
       : 'Suas obras favoritas aparecem aqui para acompanhamento e candidatura posterior.';
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <div className="p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
@@ -46,7 +79,7 @@ export default function ObrasSalvasPage() {
     );
   }
 
-  if (obras.length === 0) {
+  if (total === 0 && obras.length === 0) {
     return (
       <div className="p-10 flex flex-col gap-10" data-testid="obras-salvas-empreiteiro-page">
         <PageHeader title="Obras Salvas" subtitle={subtitle} />
@@ -81,15 +114,28 @@ export default function ObrasSalvasPage() {
       <div className="flex flex-col gap-6 mb-12">
         <PageHeader title="Obras Salvas" subtitle={subtitle} />
 
-        <div className="relative w-full sm:max-w-md sm:ml-auto">
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Buscar por título, endereço ou tipo..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-            data-testid="input-search-obras-salvas"
-          />
+        <div className="flex flex-col gap-3">
+          <div className="relative w-full sm:max-w-md sm:ml-auto">
+            <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar nesta página por título, endereço ou tipo..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+              data-testid="input-search-obras-salvas"
+            />
+          </div>
+
+          {total > 0 && (
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="obras-salvas-total-info"
+            >
+              <span className="font-semibold text-primary">{total}</span> obra
+              {total === 1 ? '' : 's'} salva{total === 1 ? '' : 's'} · {obras.length}{' '}
+              carregada{obras.length === 1 ? '' : 's'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -114,6 +160,33 @@ export default function ObrasSalvasPage() {
               <NovaObraCard obra={obra} />
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {(hasNextPage || isFetchingNextPage) && (
+        <div
+          ref={sentinelRef}
+          className="flex flex-col items-center justify-center gap-3 py-6"
+          data-testid="obras-salvas-infinite-sentinel"
+        >
+          {isFetchingNextPage ? (
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="obras-salvas-infinite-loading"
+            >
+              <RiLoader4Line className="h-4 w-4 animate-spin" />
+              Carregando mais obras...
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchNextPage()}
+              data-testid="obras-salvas-load-more"
+            >
+              Carregar mais
+            </Button>
+          )}
         </div>
       )}
     </div>

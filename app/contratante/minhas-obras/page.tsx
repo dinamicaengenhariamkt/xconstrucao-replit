@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { RiSearchLine } from 'react-icons/ri';
+import { RiSearchLine, RiLoader4Line } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
+import { Button } from '@shared/components/ui/button';
 import { ObrasContratanteGrid } from '@features/contratante/minhas-obras/components/ObrasContratanteGrid';
 import { ObrasContratanteSkeleton } from '@features/contratante/minhas-obras/components/ObrasContratanteSkeleton';
-import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
-import { ITEMS_PER_PAGE } from '@features/contratante/minhas-obras/constants';
+import { useObrasContratanteInfinite } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
 import { STATUS_LABELS } from '@shared/constants/status';
 import {
   HealthFilterSelect,
@@ -22,21 +22,23 @@ import { AdvancedFiltersPopover } from '@features/shared/components/filters/Adva
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@shared/components/ui/pagination';
-import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
 
+const PAGE_SIZE = 20;
+
 export default function MinhasObrasContratantePage() {
-  const { data: obrasPayload, isLoading } = useObrasContratante({ pageSize: 100 });
-  const obras = obrasPayload?.rows;
+  const {
+    data: obrasPayload,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useObrasContratanteInfinite({ pageSize: PAGE_SIZE });
+  const obras = useMemo(
+    () => (obrasPayload?.pages ?? []).flatMap((p) => p.rows),
+    [obrasPayload],
+  );
+  const totalServer = obrasPayload?.pages?.[0]?.total ?? 0;
   const searchParams = useSearchParams();
   const saude = useSaudeFilter();
   const [statusSelected, setStatusSelected] = useState<string[]>(() => {
@@ -54,7 +56,6 @@ export default function MinhasObrasContratantePage() {
   const [orcamentoMax, setOrcamentoMax] = useState('');
   const [progressoMin, setProgressoMin] = useState('');
   const [progressoMax, setProgressoMax] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const orcMinNum = orcamentoMin === '' ? undefined : Number(orcamentoMin);
   const orcMaxNum = orcamentoMax === '' ? undefined : Number(orcamentoMax);
@@ -63,8 +64,25 @@ export default function MinhasObrasContratantePage() {
 
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
-    setCurrentPage(1);
   };
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, obras.length]);
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -138,12 +156,6 @@ export default function MinhasObrasContratantePage() {
     searchQuery,
   ]);
 
-  const totalPages = Math.ceil(filteredObras.length / ITEMS_PER_PAGE);
-  const paginatedObras = filteredObras.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
   const healthSummary = useMemo(
     () => getMockHealthSummary((obras ?? []).map((o) => o.id)),
     [obras],
@@ -166,10 +178,12 @@ export default function MinhasObrasContratantePage() {
     setOrcamentoMax('');
     setProgressoMin('');
     setProgressoMax('');
-    setCurrentPage(1);
   };
 
-  if (isLoading) return <ObrasContratanteSkeleton />;
+  if (isLoading && !obrasPayload) return <ObrasContratanteSkeleton />;
+
+  const loadedCount = obras.length;
+  const showServerInfo = totalServer > 0;
 
   return (
     <div className="p-10 flex flex-col gap-10" data-testid="minhas-obras-contratante-page">
@@ -313,61 +327,47 @@ export default function MinhasObrasContratantePage() {
               )}
             </div>
           )}
+
+          {showServerInfo && (
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="minhas-obras-contratante-total-info"
+            >
+              <span className="font-semibold text-primary">{totalServer}</span> obra
+              {totalServer === 1 ? '' : 's'} no total · {loadedCount} carregada
+              {loadedCount === 1 ? '' : 's'}
+            </p>
+          )}
         </div>
       </div>
 
-      <ObrasContratanteGrid obras={paginatedObras} />
+      <ObrasContratanteGrid obras={filteredObras} />
 
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCurrentPage((p) => Math.max(1, p - 1));
-                }}
-                aria-disabled={currentPage === 1}
-                className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                data-testid="contratante-obras-pagination-prev"
-              />
-            </PaginationItem>
-            {getPaginationRange(currentPage, totalPages).map((item, idx) =>
-              item === 'ellipsis' ? (
-                <PaginationItem key={`ellipsis-${idx}`}>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : (
-                <PaginationItem key={item}>
-                  <PaginationLink
-                    href="#"
-                    isActive={currentPage === item}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentPage(item);
-                    }}
-                    data-testid={`contratante-obras-pagination-page-${item}`}
-                  >
-                    {item}
-                  </PaginationLink>
-                </PaginationItem>
-              ),
-            )}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCurrentPage((p) => Math.min(totalPages, p + 1));
-                }}
-                aria-disabled={currentPage === totalPages}
-                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                data-testid="contratante-obras-pagination-next"
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+      {(hasNextPage || isFetchingNextPage) && (
+        <div
+          ref={sentinelRef}
+          className="flex flex-col items-center justify-center gap-3 py-6"
+          data-testid="minhas-obras-contratante-infinite-sentinel"
+        >
+          {isFetchingNextPage ? (
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="minhas-obras-contratante-infinite-loading"
+            >
+              <RiLoader4Line className="h-4 w-4 animate-spin" />
+              Carregando mais obras...
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchNextPage()}
+              data-testid="minhas-obras-contratante-load-more"
+            >
+              Carregar mais
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

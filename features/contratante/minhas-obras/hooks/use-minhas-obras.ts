@@ -1,4 +1,9 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  type UseInfiniteQueryResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import {
   getObrasContratante,
   getObraContratanteDetalhe,
@@ -15,6 +20,24 @@ export function useObrasContratante(
   return useQuery({
     queryKey: ['contratante', 'minhas-obras', params],
     queryFn: () => getObrasContratante(params),
+    staleTime: QUERY_CONFIG.staleTime,
+    refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
+  });
+}
+
+export function useObrasContratanteInfinite(
+  params: Omit<GetObrasContratanteParams, 'page'> = {},
+): UseInfiniteQueryResult<
+  { pages: PaginatedResponse<ObraContratanteRow>[]; pageParams: number[] },
+  Error
+> {
+  return useInfiniteQuery({
+    queryKey: ['contratante', 'minhas-obras', 'infinite', params],
+    queryFn: ({ pageParam }) =>
+      getObrasContratante({ ...params, page: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });

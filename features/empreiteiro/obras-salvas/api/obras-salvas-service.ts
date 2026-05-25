@@ -4,16 +4,50 @@ import type { NovaObra } from '@features/empreiteiro/novas-obras/types';
 export interface ObrasSalvasResponse {
   rows: NovaObra[];
   total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
-export async function getObrasSalvas(): Promise<ObrasSalvasResponse> {
-  const res = await fetch('/api/empreiteiro/obras-salvas', { credentials: 'include' });
+export interface GetObrasSalvasParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export async function getObrasSalvas(
+  params: GetObrasSalvasParams = {},
+): Promise<ObrasSalvasResponse> {
+  const qs = new URLSearchParams();
+  if (params.page !== undefined) qs.set('page', String(params.page));
+  if (params.pageSize !== undefined) qs.set('pageSize', String(params.pageSize));
+  const url = `/api/empreiteiro/obras-salvas${qs.size > 0 ? `?${qs.toString()}` : ''}`;
+  const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) throw new Error('Erro ao carregar obras salvas');
-  const payload = (await res.json()) as { rows: DbObra[]; total: number };
+  const payload = (await res.json()) as {
+    rows: DbObra[];
+    total: number;
+    page?: number;
+    pageSize?: number;
+    totalPages?: number;
+  };
+  const pageSize = payload.pageSize ?? params.pageSize ?? 20;
+  const total = payload.total ?? 0;
   return {
     rows: (payload.rows ?? []).map(dbToNovaObra),
-    total: payload.total ?? 0,
+    total,
+    page: payload.page ?? params.page ?? 1,
+    pageSize,
+    totalPages: payload.totalPages ?? Math.max(1, Math.ceil(total / pageSize)),
   };
+}
+
+export async function getObrasSalvasIds(): Promise<string[]> {
+  const res = await fetch('/api/empreiteiro/obras-salvas?idsOnly=true', {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Erro ao carregar obras salvas');
+  const payload = (await res.json()) as { ids?: string[] };
+  return payload.ids ?? [];
 }
 
 export async function addObraSalva(obraId: string): Promise<void> {

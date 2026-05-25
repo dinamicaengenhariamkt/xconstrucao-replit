@@ -23,30 +23,67 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
+  const url = new URL(request.url);
+  const idsOnly = url.searchParams.get("idsOnly") === "true";
+
+  const whereClause = and(
+    eq(obrasSalvas.userId, guard.user.id),
+    eq(obras.visibilidade, "publicada"),
+    isNull(obras.empreiteiraId),
+    sql`NOT EXISTS (
+      SELECT 1 FROM ${candidaturas}
+      WHERE ${candidaturas.obraId} = ${obras.id}
+        AND ${candidaturas.empreiteiroId} = ${guard.user.id}
+    )`,
+  );
+
+  if (idsOnly) {
+    const idRows = await db
+      .select({ id: obras.id })
+      .from(obrasSalvas)
+      .innerJoin(obras, eq(obras.id, obrasSalvas.obraId))
+      .where(whereClause);
+    const r = NextResponse.json({ ids: idRows.map((r) => r.id) });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  const pageRaw = Number(url.searchParams.get("page") ?? "1");
+  const pageSizeRaw = Number(url.searchParams.get("pageSize") ?? "20");
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
+  const pageSize = Number.isFinite(pageSizeRaw)
+    ? Math.min(100, Math.max(1, Math.floor(pageSizeRaw)))
+    : 20;
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(obrasSalvas)
+    .innerJoin(obras, eq(obras.id, obrasSalvas.obraId))
+    .where(whereClause);
+
   const rows = await db
     .select({ obra: obras, savedAt: obrasSalvas.createdAt })
     .from(obrasSalvas)
     .innerJoin(obras, eq(obras.id, obrasSalvas.obraId))
-    .where(
-      and(
-        eq(obrasSalvas.userId, guard.user.id),
-        eq(obras.visibilidade, "publicada"),
-        isNull(obras.empreiteiraId),
-        sql`NOT EXISTS (
-          SELECT 1 FROM ${candidaturas}
-          WHERE ${candidaturas.obraId} = ${obras.id}
-            AND ${candidaturas.empreiteiroId} = ${guard.user.id}
-        )`,
-      ),
-    )
-    .orderBy(desc(obrasSalvas.createdAt));
+    .where(whereClause)
+    .orderBy(desc(obrasSalvas.createdAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   const out = rows.map(({ obra, savedAt }) => {
     const { clienteId, ...rest } = obra;
     return { ...rest, savedAt };
   });
 
-  const r = NextResponse.json({ rows: out, total: out.length });
+  const totalPages = Math.max(1, Math.ceil((total ?? 0) / pageSize));
+
+  const r = NextResponse.json({
+    rows: out,
+    total: total ?? 0,
+    page,
+    pageSize,
+    totalPages,
+  });
   setNoCacheHeaders(r);
   return r;
 }
