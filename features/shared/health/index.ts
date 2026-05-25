@@ -10,6 +10,8 @@ export type {
 } from './types';
 export { calculateHealth } from './calculate';
 export { getMockHealth, getMockHealthSummary } from './mocks';
+export { computeHealthFromObra } from './compute-from-obra';
+export type { HealthObraInput } from './compute-from-obra';
 export {
   HEALTH_LABELS,
   HEALTH_DESCRIPTIONS,

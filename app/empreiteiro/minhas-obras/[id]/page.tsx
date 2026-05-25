@@ -27,8 +27,8 @@ import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
 import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconPhotoCamera, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
-import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
-import { ProfitCard, getMockProfit } from '@features/shared/profit';
+import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
+import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -322,7 +322,7 @@ export default function MinhaObraDetalhePage() {
       </motion.div>
 
       {/* BLOCO 3.5: Indicador de Saúde */}
-      <HealthCard health={getMockHealth(obra.id)} />
+      <HealthCard health={computeHealthFromObra(obra)} />
 
       {/* BLOCOs 4–10: Tabs */}
       <motion.div
@@ -369,7 +369,7 @@ export default function MinhaObraDetalhePage() {
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
               {activeTab === 'saude' && (
                 <HealthDetailPanel
-                  health={getMockHealth(obra.id)}
+                  health={computeHealthFromObra(obra)}
                   actionsByFactor={{
                     atraso: { label: 'Ver cronograma', onClick: () => setActiveTab('cronograma') },
                     financeiro: { label: 'Ver lucro', onClick: () => setActiveTab('lucro') },
@@ -377,7 +377,7 @@ export default function MinhaObraDetalhePage() {
                   }}
                 />
               )}
-              {activeTab === 'lucro' && <ProfitCard metrics={getMockProfit(obra.id)} />}
+              {activeTab === 'lucro' && <ProfitCard metrics={computeProfitFromObra(obra)} />}
             </motion.div>
           </AnimatePresence>
         </div>
