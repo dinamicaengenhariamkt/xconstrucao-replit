@@ -71,11 +71,11 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 
 ## 9. Checklist de implementação
 - [x] **Schema + doc (Task J04.A)** — tabela `obras_salvas`, índices em `candidaturas`, doc reescrita _(Task #41)_
-- [ ] Endpoint `GET /api/obras` paginado + filtros + exclusões (anti-self-apply, ocupadas, role-aware) (Task J04.B)
-- [ ] Endpoint `GET /api/obras/[id]` com gate de visibilidade + ocultação de PII (Task J04.B)
-- [ ] Endpoints `GET/POST/DELETE /api/empreiteiro/obras-salvas` (Task J04.B)
+- [x] Endpoint `GET /api/obras` paginado + filtros + exclusões (anti-self-apply, ocupadas, role-aware) _(Task #42)_
+- [x] Endpoint `GET /api/obras/[id]` com gate de visibilidade + ocultação de PII _(Task #36 / #42 já cobre via `findObraWithAccess`)_
+- [x] Endpoints `GET/POST/DELETE /api/empreiteiro/obras-salvas` _(Task #42)_
+- [x] Auditar e migrar consumers do shape antigo de `GET /api/obras` (empreiteiro novas-obras + contratante minhas-obras + apagar hook órfão `features/obras/hooks/use-obras.ts`) _(Task #42)_
 - [ ] Service de [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) consumindo API real (Task J04.C)
-- [ ] Auditar e migrar consumers do shape antigo de `GET /api/obras` (empreiteiro novas-obras + contratante minhas-obras + apagar hook órfão `features/obras/hooks/use-obras.ts`) (Task J04.C)
 - [ ] Tela `/empreiteiro/obras-salvas` listando do banco com paginação (Task J04.C)
 - [ ] Carries de J03 no card do marketplace: tipo, modalidade, materiaisPor, cidade/uf, faixa de valor, badge de anexos (Task J04.C)
 - [ ] Estado vazio + estado bloqueado (perfil empreiteiro incompleto — verifica `perfilCompleto`) (Task J04.C)
@@ -117,3 +117,6 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - 2026-05-25 (Task #41): Auditoria de `GET /api/obras` mapeou 3 consumers — empreiteiro `novas-obras` service, contratante `minhas-obras` service, e hook órfão `features/obras/hooks/use-obras.ts` (zero usos vivos, deletar na J04.C). Resposta vira objeto paginado em J04.B → os 2 consumers vivos serão migrados na J04.C **no mesmo PR**, sem janela de inconsistência.
 - 2026-05-25 (Task #41): Favoritos hoje vivem só em Zustand+localStorage do módulo `novas-obras` — migração pra `obras_salvas` perde estado local de usuários atuais (esperado: feature ainda não anunciada).
 - 2026-05-25 (Task #41): Filtros previstos `especialidade` e `zonaAtuacao` exigem colunas que ainda não existem em `empreiteiras`/`obras` no modelo final — registrado como gap em J02§13 (perfil do empreiteiro). Vai ficar fora da J04.B/C; será habilitado quando J02 entregar essas colunas.
+- 2026-05-25 (Task #42): Envelope final escolhido foi `{ rows, total, page, pageSize, totalPages }` (e não `{ items, ... }` como rascunhado em §10 c.5/§11) para casar com o shape que `useNovasObras`/`useObrasContratante` já adotam. Atualizar §10 c.5 / §11 em uma próxima passada de docs (apenas terminologia, sem impacto funcional).
+- 2026-05-25 (Task #42): Busca textual `q=` (§10 c.4) ficou fora — toda filtragem por texto (`nome`/`descricao`) é client-side hoje nos 6 callsites e nenhum consumer pediu server-side. Avaliar em J04.C se a paginação real exigir reposicionar a busca para o servidor.
+- 2026-05-25 (Task #42): Hooks `useNovasObras({pageSize})` e `useObrasContratante({pageSize})` foram ajustados em **todos os 6 callsites** com `pageSize: 100` (mantém compat com paginação client-side existente). Migração para paginação server-side propriamente dita fica para J04.C.

@@ -26,7 +26,8 @@ import type { DashboardPeriodo } from '@features/contratante/dashboard/types';
 export default function ContratanteDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<DashboardPeriodo>('30dias');
-  const { data: obras } = useObrasContratante();
+  const { data: obrasPayload } = useObrasContratante({ pageSize: 100 });
+  const obras = obrasPayload?.rows;
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);

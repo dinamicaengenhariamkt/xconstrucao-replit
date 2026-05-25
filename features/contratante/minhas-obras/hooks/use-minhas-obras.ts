@@ -1,12 +1,20 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { getObrasContratante, getObraContratanteDetalhe } from '../api/minhas-obras-service';
+import {
+  getObrasContratante,
+  getObraContratanteDetalhe,
+  type GetObrasContratanteParams,
+  type PaginatedResponse,
+  type ObraContratanteRow,
+} from '../api/minhas-obras-service';
 import { QUERY_CONFIG } from '../constants';
-import type { ObraContratante, ObraContratanteDetalhe } from '../types';
+import type { ObraContratanteDetalhe } from '../types';
 
-export function useObrasContratante(): UseQueryResult<ObraContratante[], Error> {
+export function useObrasContratante(
+  params: GetObrasContratanteParams = {},
+): UseQueryResult<PaginatedResponse<ObraContratanteRow>, Error> {
   return useQuery({
-    queryKey: ['contratante', 'minhas-obras'],
-    queryFn: getObrasContratante,
+    queryKey: ['contratante', 'minhas-obras', params],
+    queryFn: () => getObrasContratante(params),
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });

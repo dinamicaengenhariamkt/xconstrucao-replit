@@ -1,12 +1,20 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { getNovasObras, getPerfilStatus, getObraDetalhe } from '../api/novas-obras-service';
+import {
+  getNovasObras,
+  getPerfilStatus,
+  getObraDetalhe,
+  type GetNovasObrasParams,
+  type PaginatedResponse,
+} from '../api/novas-obras-service';
 import { QUERY_CONFIG } from '../constants';
 import type { NovaObra, PerfilStatus, ObraDetalhe } from '../types';
 
-export function useNovasObras(): UseQueryResult<NovaObra[], Error> {
+export function useNovasObras(
+  params: GetNovasObrasParams = {},
+): UseQueryResult<PaginatedResponse<NovaObra>, Error> {
   return useQuery({
-    queryKey: ['empreiteiro', 'novas-obras'],
-    queryFn: getNovasObras,
+    queryKey: ['empreiteiro', 'novas-obras', params],
+    queryFn: () => getNovasObras(params),
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });

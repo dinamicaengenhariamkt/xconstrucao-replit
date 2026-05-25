@@ -37,7 +37,8 @@ import {
 } from '@shared/components/icons';
 
 export default function ObrasSalvasPage() {
-  const { data: todasObras, isLoading } = useNovasObras();
+  const { data: novasObrasPayload, isLoading } = useNovasObras({ pageSize: 100 });
+  const todasObras = novasObrasPayload?.rows;
   const savedIds = useObrasSalvasStore((s) => s.savedIds);
   const toggleSave = useObrasSalvasStore((s) => s.toggleSave);
 

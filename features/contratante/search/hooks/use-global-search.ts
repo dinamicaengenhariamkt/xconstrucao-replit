@@ -45,7 +45,8 @@ function pagamentoToHit(p: PagamentoContratante): SearchHit<ContratanteSearchCat
 export function useContratanteGlobalSearch(
   query: string,
 ): UseSearchResult<ContratanteSearchCategory> {
-  const { data: obras, isLoading: loadingObras } = useObrasContratante();
+  const { data: obrasPayload, isLoading: loadingObras } = useObrasContratante({ pageSize: 100 });
+  const obras = obrasPayload?.rows;
   const { data: pagamentos, isLoading: loadingPagamentos } = usePagamentos();
 
   const isLoading = loadingObras || loadingPagamentos;

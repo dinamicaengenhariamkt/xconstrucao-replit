@@ -61,7 +61,8 @@ export function useEmpreiteiroGlobalSearch(
   query: string,
 ): UseSearchResult<EmpreiteiroSearchCategory> {
   const { data: minhasObras, isLoading: loadingMinhas } = useMinhasObras();
-  const { data: novasObras, isLoading: loadingNovas } = useNovasObras();
+  const { data: novasObrasPayload, isLoading: loadingNovas } = useNovasObras({ pageSize: 100 });
+  const novasObras = novasObrasPayload?.rows;
   const { data: medicoes, isLoading: loadingMedicoes } = usePagamentosEmpreiteiro();
 
   const isLoading = loadingMinhas || loadingNovas || loadingMedicoes;

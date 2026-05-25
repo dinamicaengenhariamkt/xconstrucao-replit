@@ -5,11 +5,41 @@ import {
 } from '@features/obras/adapters';
 import type { NovaObra, PerfilStatus, ObraDetalhe } from '../types';
 
-export async function getNovasObras(): Promise<NovaObra[]> {
-  const response = await fetch('/api/obras');
+export interface PaginatedResponse<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface GetNovasObrasParams {
+  page?: number;
+  pageSize?: number;
+  cidade?: string;
+  uf?: string;
+  minValor?: number;
+  maxValor?: number;
+  tipo?: string;
+  modalidade?: string;
+  materiaisPor?: string;
+}
+
+export async function getNovasObras(
+  params: GetNovasObrasParams = {},
+): Promise<PaginatedResponse<NovaObra>> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  const url = `/api/obras${qs.size > 0 ? `?${qs.toString()}` : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Erro ao buscar novas obras');
-  const rows: DbObra[] = await response.json();
-  return rows.map(dbToNovaObra);
+  const payload: PaginatedResponse<DbObra> = await response.json();
+  return {
+    ...payload,
+    rows: (payload.rows ?? []).map(dbToNovaObra),
+  };
 }
 
 export async function getPerfilStatus(): Promise<PerfilStatus> {

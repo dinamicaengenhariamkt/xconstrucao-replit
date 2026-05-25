@@ -30,7 +30,8 @@ export default function ContratanteChatPage() {
   const { data: serverMessages, isLoading: msgLoading } = useContratanteMessages(
     selectedConversationId,
   );
-  const { data: obrasData } = useObrasContratante();
+  const { data: obrasPayload } = useObrasContratante({ pageSize: 100 });
+  const obrasData = obrasPayload?.rows;
 
   const selectedConversation =
     conversations?.find((c) => c.id === selectedConversationId) ?? null;

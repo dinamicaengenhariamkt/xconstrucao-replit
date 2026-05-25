@@ -35,7 +35,8 @@ import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
 
 export default function NovasObrasPage() {
-  const { data: obras, isLoading: obrasLoading } = useNovasObras();
+  const { data: obrasPayload, isLoading: obrasLoading } = useNovasObras({ pageSize: 100 });
+  const obras = obrasPayload?.rows;
   const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
 
   const [searchQuery, setSearchQuery] = useState('');

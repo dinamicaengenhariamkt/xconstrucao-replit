@@ -35,7 +35,8 @@ import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
 
 export default function MinhasObrasContratantePage() {
-  const { data: obras, isLoading } = useObrasContratante();
+  const { data: obrasPayload, isLoading } = useObrasContratante({ pageSize: 100 });
+  const obras = obrasPayload?.rows;
   const searchParams = useSearchParams();
   const saude = useSaudeFilter();
   const [statusSelected, setStatusSelected] = useState<string[]>(() => {

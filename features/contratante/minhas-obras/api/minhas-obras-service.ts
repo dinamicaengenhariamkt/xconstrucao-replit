@@ -9,13 +9,44 @@ import type {
   ObraContratanteDetalhe,
 } from '../types';
 
-export async function getObrasContratante(): Promise<
-  Array<ObraContratante & { visibilidade: DbObra['visibilidade'] }>
-> {
-  const response = await fetch('/api/obras');
+export interface PaginatedResponse<T> {
+  rows: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface GetObrasContratanteParams {
+  page?: number;
+  pageSize?: number;
+  cidade?: string;
+  uf?: string;
+  minValor?: number;
+  maxValor?: number;
+  tipo?: string;
+  modalidade?: string;
+  materiaisPor?: string;
+  visibilidade?: string;
+}
+
+export type ObraContratanteRow = ObraContratante & { visibilidade: DbObra['visibilidade'] };
+
+export async function getObrasContratante(
+  params: GetObrasContratanteParams = {},
+): Promise<PaginatedResponse<ObraContratanteRow>> {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+  });
+  const url = `/api/obras${qs.size > 0 ? `?${qs.toString()}` : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Erro ao buscar obras');
-  const rows: DbObra[] = await response.json();
-  return rows.map(dbToObraContratante);
+  const payload: PaginatedResponse<DbObra> = await response.json();
+  return {
+    ...payload,
+    rows: (payload.rows ?? []).map(dbToObraContratante),
+  };
 }
 
 export async function getObraContratanteDetalhe(

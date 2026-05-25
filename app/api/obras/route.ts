@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, obras } from "@shared/db/schema";
+import { candidaturas, clientes, obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 /**
- * GET /api/obras  (role-scoped)
- *  - contratante  → vê apenas as próprias (filtra cliente_id pelo JWT).
- *  - empreiteiro  → vê apenas visibilidade='publicada' AND empreiteira_id IS NULL.
- *                   Não retorna PII do contratante (clienteId omitido).
- *  - admin/super  → ?scope=admin libera tudo; sem o param, comporta como contratante (defensivo).
+ * GET /api/obras  (role-scoped, paginado)
+ *  - contratante  → vê apenas as próprias (cliente_id pelo JWT).
+ *  - empreiteiro  → visibilidade='publicada' AND empreiteira_id IS NULL
+ *                   AND NOT EXISTS (candidatura sua nessa obra) — anti-self.
+ *                   Sanitiza clienteId.
+ *  - admin/super  → ?scope=admin libera tudo; sem param, vazio (defensivo).
  *
- * Filtros aceitos (query): cidade, uf, minValor, maxValor, visibilidade, tipo, modalidade.
+ * Query params: page (default 1), pageSize (default 20, max 100),
+ *               cidade (ILIKE %x%), uf, minValor, maxValor,
+ *               visibilidade, tipo, modalidade, materiaisPor.
+ *
+ * Resposta: { rows, total, page, pageSize, totalPages }.
  */
 export async function GET(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
@@ -22,14 +27,24 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(request.url);
   const q = url.searchParams;
-  const cidade = q.get("cidade");
+  const cidade = q.get("cidade")?.trim();
   const uf = q.get("uf")?.toUpperCase();
   const minValor = q.get("minValor");
   const maxValor = q.get("maxValor");
   const visibilidade = q.get("visibilidade");
-  const tipo = q.get("tipo");
+  const tipo = q.get("tipo")?.trim();
   const modalidade = q.get("modalidade");
+  const materiaisPor = q.get("materiaisPor");
   const scopeAdmin = q.get("scope") === "admin";
+
+  // Paginação — clamps server-side.
+  const pageRaw = Number(q.get("page") ?? "1");
+  const pageSizeRaw = Number(q.get("pageSize") ?? "20");
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+  const pageSize = Number.isFinite(pageSizeRaw)
+    ? Math.min(100, Math.max(1, Math.floor(pageSizeRaw)))
+    : 20;
+  const offset = (page - 1) * pageSize;
 
   const role = guard.user.role;
   const filters: any[] = [];
@@ -37,18 +52,24 @@ export async function GET(request: NextRequest) {
   if (role === "empreiteiro") {
     filters.push(eq(obras.visibilidade, "publicada"));
     filters.push(isNull(obras.empreiteiraId));
+    // Anti-self-candidatura: empreiteiro não vê obras onde ele já se candidatou.
+    // Usa o índice idx_candidaturas_obra_empreiteiro criado em bootstrap-marketplace.
+    filters.push(sql`NOT EXISTS (
+      SELECT 1 FROM ${candidaturas}
+      WHERE ${candidaturas.obraId} = ${obras.id}
+        AND ${candidaturas.empreiteiroId} = ${guard.user.id}
+    )`);
   } else if (role === "contratante") {
     const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
     if (!cli) {
-      const r = NextResponse.json([]);
+      const r = NextResponse.json({ rows: [], total: 0, page, pageSize, totalPages: 0 });
       setNoCacheHeaders(r);
       return r;
     }
     filters.push(eq(obras.clienteId, cli.id));
   } else if (isAdminLike(role)) {
     if (!scopeAdmin) {
-      // defensivo: sem scope=admin, admin enxerga vazio
-      const r = NextResponse.json([]);
+      const r = NextResponse.json({ rows: [], total: 0, page, pageSize, totalPages: 0 });
       setNoCacheHeaders(r);
       return r;
     }
@@ -59,7 +80,7 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
-  if (cidade) filters.push(eq(obras.cidade, cidade));
+  if (cidade) filters.push(ilike(obras.cidade, `%${cidade}%`));
   if (uf) filters.push(eq(obras.uf, uf));
   if (minValor && !Number.isNaN(Number(minValor))) filters.push(gte(obras.valorTotal, String(minValor)));
   if (maxValor && !Number.isNaN(Number(maxValor))) filters.push(lte(obras.valorTotal, String(maxValor)));
@@ -70,20 +91,35 @@ export async function GET(request: NextRequest) {
   if (modalidade && ["administracao", "empreitada_global", "empreitada_etapa"].includes(modalidade)) {
     filters.push(eq(obras.modalidade, modalidade as any));
   }
+  if (materiaisPor && ["contratante", "empreiteiro", "misto"].includes(materiaisPor)) {
+    filters.push(eq(obras.materiaisPor, materiaisPor as any));
+  }
+
+  const whereClause = filters.length > 0 ? and(...filters) : undefined;
+
+  // COUNT + page em queries separadas (Drizzle não suporta COUNT(*) OVER()
+  // limpo, e queries separadas mantêm o tipo da row idêntico ao .$inferSelect).
+  const [countRow] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(obras)
+    .where(whereClause);
+  const total = countRow?.total ?? 0;
 
   const rows = await db
     .select()
     .from(obras)
-    .where(filters.length > 0 ? and(...filters) : undefined)
-    .orderBy(desc(obras.createdAt));
+    .where(whereClause)
+    .orderBy(desc(obras.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 
-  // Empreiteiro: sanitizar PII (não devolve clienteId nem qualquer campo
-  // que cole identidade do contratante — até J05 aceite, o vínculo é cego).
-  const out = role === "empreiteiro"
+  // Empreiteiro: sanitizar PII (clienteId omitido até J05).
+  const sanitized = role === "empreiteiro"
     ? rows.map(({ clienteId, ...rest }) => rest)
     : rows;
 
-  const r = NextResponse.json(out);
+  const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+  const r = NextResponse.json({ rows: sanitized, total, page, pageSize, totalPages });
   setNoCacheHeaders(r);
   return r;
 }
@@ -118,7 +154,6 @@ export async function POST(request: NextRequest) {
     setNoCacheHeaders(r);
     return r;
   }
-  // Defesa adicional por IP (caso o mesmo IP tente abusar com contas distintas).
   if (isRateLimited(`obras.create.ip:${ip}`, 30, 60 * 1000)) {
     const r = NextResponse.json(
       { message: "Muitas requisições. Aguarde um minuto e tente novamente." },
@@ -139,7 +174,6 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}));
-  // Strip campos sensíveis antes de validar
   const { clienteId: _ignored, empreiteiraId: _ignored2, id: _ignored3, ...safeBody } = body ?? {};
   const parsed = insertObraSchemaStrict.safeParse(safeBody);
   if (!parsed.success) {
