@@ -1,6 +1,8 @@
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, financeiro, obras, userFiles } from "@shared/db/schema";
+
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 import { createSignedReadUrl } from "@shared/lib/storage";
 
 export interface LancamentoRow {
@@ -60,8 +62,10 @@ export async function criarLancamentoFromMedicao(args: {
   recebedorUserId: string;
   dataVencimento?: string | null;
   categoria?: string | null;
+  tx?: DbOrTx;
 }): Promise<LancamentoRow> {
-  const existing = await db
+  const client = (args.tx ?? db) as typeof db;
+  const existing = await client
     .select()
     .from(financeiro)
     .where(eq(financeiro.medicaoId, args.medicaoId))
@@ -70,23 +74,37 @@ export async function criarLancamentoFromMedicao(args: {
     return rowFromJoin({ ...existing[0], obraNome: null });
   }
   const today = new Date().toISOString().slice(0, 10);
-  const [row] = await db
-    .insert(financeiro)
-    .values({
-      tipo: "saida",
-      descricao: args.descricao,
-      valor: String(args.valor),
-      data: today,
-      obraId: args.obraId,
-      categoria: args.categoria ?? "Medição",
-      status: "pendente",
-      dataVencimento: args.dataVencimento ?? null,
-      medicaoId: args.medicaoId,
-      pagadorUserId: args.pagadorUserId,
-      recebedorUserId: args.recebedorUserId,
-    })
-    .returning();
-  return rowFromJoin({ ...row, obraNome: null });
+  try {
+    const [row] = await client
+      .insert(financeiro)
+      .values({
+        tipo: "saida",
+        descricao: args.descricao,
+        valor: String(args.valor),
+        data: today,
+        obraId: args.obraId,
+        categoria: args.categoria ?? "Medição",
+        status: "pendente",
+        dataVencimento: args.dataVencimento ?? null,
+        medicaoId: args.medicaoId,
+        pagadorUserId: args.pagadorUserId,
+        recebedorUserId: args.recebedorUserId,
+      })
+      .returning();
+    return rowFromJoin({ ...row, obraNome: null });
+  } catch (err: any) {
+    // 23505 = unique_violation. Race condition: outra request criou o mesmo
+    // lançamento entre o SELECT e o INSERT. Devolve o existente.
+    if (err?.code === "23505") {
+      const [row] = await client
+        .select()
+        .from(financeiro)
+        .where(eq(financeiro.medicaoId, args.medicaoId))
+        .limit(1);
+      if (row) return rowFromJoin({ ...row, obraNome: null });
+    }
+    throw err;
+  }
 }
 
 const baseSelect = {

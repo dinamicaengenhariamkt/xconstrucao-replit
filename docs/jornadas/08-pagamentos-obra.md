@@ -1,6 +1,6 @@
 # Jornada — Pagamentos da Obra
 
-> Status: revisão | Prioridade: alta | Wave: 2
+> Status: pronto | Prioridade: alta | Wave: 2
 > Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
@@ -54,17 +54,17 @@ Tabela `financeiro` estendida em Task #48 (bootstrap idempotente em `server/boot
 
 ## 9. Checklist de implementação
 - [x] Estender schema `financeiro` (status, datas, método, comprovante, relações) _(Task #48)_
-- [ ] Hook em J06: ao aprovar medição, criar lançamento `pendente` — **bloqueado**: J06 ainda não existe. Helper `criarLancamentoFromMedicao()` em `features/financeiro/lancamentos-service.ts` pronto para ser chamado pelo endpoint de aprovação quando J06 for implementada _(Task #48)_
+- [x] Hook em J06: ao aprovar medição, criar lançamento `pendente` _(Task #82 — endpoint `/api/contratante/medicoes/[id]/aprovar` chama `criarLancamentoFromMedicao()` em transação atômica; idempotência via UNIQUE em `financeiro.medicao_id`)_
 - [x] Endpoint `quitar` (manual no MVP — anexa comprovante, marca pago) _(Task #48)_
 - [x] Substituir mocks contratante/empreiteiro _(Task #48)_
 - [x] Lista filtrável por status (pendente/pago/atrasado) _(Task #48 — filtros existentes na UI seguem funcionando sobre os dados reais)_
 - [x] Cálculo de "a pagar total" / "a receber total" no header _(Task #48)_
 - [ ] Avaliar integração com gateway (Pix/cartão) — fora do MVP, mas projetar com ele em mente
-- [ ] Cron que marca lançamentos vencidos como `atrasado` no banco (hoje a marcação é só em tempo de leitura)
-- [ ] Notificações ao empreiteiro quando lançamento é quitado
+- [x] Cron que marca lançamentos vencidos como `atrasado` no banco _(Task #53)_
+- [ ] Notificações ao empreiteiro quando lançamento é quitado _(dono: J13)_
 
 ## 10. Critérios de aceite
-1. Aprovar medição (J06) → lançamento `pendente` aparece em `/contratante/pagamentos`. **Bloqueado por J06** — verificável manualmente via INSERT em `financeiro` com `pagador_user_id` do contratante.
+1. Aprovar medição (J06) → lançamento `pendente` aparece em `/contratante/pagamentos` (e em `/empreiteiro/pagamentos` como "a liberar") — ✅ _(Task #82)_.
 2. Quitar → `financeiro.status='pago'`, comprovante salvo em R2 (privado, signed URL), empreiteiro vê em "recebidos" — ✅.
 3. Soma de "a pagar" do contratante coincide com soma "a receber" (a liberar) do empreiteiro vinculado às mesmas obras — ✅ (mesma fonte `financeiro` filtrada por `pagador_user_id` vs `recebedor_user_id`).
 4. Lançamento aparece no caixa admin (J09 quando pronto).
@@ -85,4 +85,9 @@ Tabela `financeiro` estendida em Task #48 (bootstrap idempotente em `server/boot
 - 2026-05-25 (Task #48): cron de marcação automática de `atrasado` no banco ficou para depois — hoje só marca em tempo de leitura no GET contratante.
 - 2026-05-25 (Task #48): não há endpoint POST público para criar lançamento avulso do lado contratante; pendentes nascerão sempre via J06. Se surgir necessidade de adiantamentos/avulsos, abrir nova task.
 - 2026-05-25 (Task #48): novo `UploadKind` `comprovante_pagamento` (private, 8MB, image+pdf, role contratante/superadmin) — path `private/contratante/{userId}/comprovantes/{ts}-{slug}.{ext}`. Side-effect aplicado no endpoint `quitar` (não em `commit`).
+- 2026-05-25 (Task #82): hook J06→J08 implementado — endpoint `POST /api/contratante/medicoes/[id]/aprovar` envolve `UPDATE medicoes SET status='aprovada'` + `criarLancamentoFromMedicao()` numa `db.transaction()`; falha em qualquer ponto reverte tudo (sem medição aprovada sem fatura). Audit gera 2 eventos: `medicoes.aprovar` (já existia, agora com `lancamentoId` no payload) + `financeiro.criar.from-medicao` (novo, ouvido por J13).
+- 2026-05-25 (Task #82): regra de valor do lançamento — usa `medicao.valor` se >0, senão calcula `obra.valorTotal × percentual / 100`. Vencimento default = aprovaçãoUTC + 15 dias (constante `VENCIMENTO_DIAS_PADRAO` no endpoint). Categoria fixa `Medição`. Descrição `Medição #{numero} — {etapa}`.
+- 2026-05-25 (Task #82): idempotência da fatura — `CREATE UNIQUE INDEX uq_financeiro_medicao_unique ON financeiro(medicao_id) WHERE medicao_id IS NOT NULL` (parcial pra não conflitar com legados). `criarLancamentoFromMedicao()` faz pré-SELECT + try/catch 23505 (race) e devolve o existente. Retry/duplo-clique no aprovar nunca cria 2 faturas.
+- 2026-05-25 (Task #82): se a obra não tem `cliente_id` resolvível pra um `userId` (caso raro de obras administrativas sem contratante real), aprovação ainda passa mas **sem** lançamento (`pagadorUserId` null = pulado). Mesmo gate pra `valorLancamento <= 0` (medição grátis). Em ambos os casos, audit `medicoes.aprovar` registra `lancamentoId: null`.
+- 2026-05-25 (Task #82): gap aberto — não há endpoint POST avulso pra contratante criar lançamento manual (sem medição). Hoje todos os pendentes nascem do hook. Se a UI precisar de adiantamento/aditivo manual, abrir task dedicada.
 - 2026-05-25 (Task #77): `computeProfitFromObra` deixou de estimar custo como 65% da receita — agora recebe `{ receitaTotal, custoTotal }` reais. `build-detalhe-server.ts` agrega de `financeiro` (status=`pago`): receita = lançamentos com `recebedorUserId = empreiteiro` (+ fallback legados tipo=`saida` sem recebedor/pagador), custo = lançamentos com `pagadorUserId = empreiteiro`. `ObraFinanceiro` ganhou `receitaTotal`/`custoTotal`. **Carry**: não há ainda UI para o empreiteiro registrar saídas próprias (materiais/mão de obra/equipamentos) — enquanto não existir, o custo realizado fica 0 e a margem aparece como 100%. Abrir jornada/task dedicada de "Custos do empreiteiro" quando entrar no roadmap.
