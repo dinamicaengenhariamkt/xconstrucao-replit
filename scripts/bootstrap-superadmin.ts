@@ -5,7 +5,7 @@
  *   npx tsx scripts/bootstrap-superadmin.ts \
  *     --email admin@xconstrucao.com \
  *     --name "Rafael Santos" \
- *     [--password "Admin@2026!Constru"] \
+ *     [--password "P@ssX26Super"] \
  *     [--force-reset-password]
  *
  * Variáveis de ambiente (alternativa equivalente):
