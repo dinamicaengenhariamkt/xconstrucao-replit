@@ -62,6 +62,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
 
   // Resolver userId do contratante (pagadorUserId) via clientes.userId.
+  // Invariante: toda aprovação gera fatura. Sem pagador resolvível, a obra
+  // está em estado inconsistente — bloqueia a aprovação com 422 (não persiste).
   let pagadorUserId: string | null = null;
   if (check.obra.clienteId) {
     const [cli] = await db
@@ -70,14 +72,40 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       .where(eq(clientes.id, check.obra.clienteId));
     pagadorUserId = cli?.userId ?? null;
   }
+  if (!pagadorUserId) {
+    const r = NextResponse.json(
+      {
+        message:
+          "Esta obra não tem um contratante vinculado a um usuário do sistema. Vincule um contratante antes de aprovar medições.",
+        code: "OBRA_SEM_CONTRATANTE_USER",
+      },
+      { status: 422 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
 
   // Valor do lançamento: se a medição já tem valor declarado (>0) usa esse;
   // se não, calcula proporcional sobre `obras.valorTotal × percentual / 100`.
+  // Invariante: aprovação gera fatura > 0. Se ambos zeram, exige que o usuário
+  // preencha valor antes de aprovar (422, sem persistir).
   const valorMedicao = Number(check.medicao.valor ?? 0);
   const valorObra = Number(check.obra.valorTotal ?? 0);
   const percentual = Number(check.medicao.percentual ?? 0);
   const valorLancamento =
     valorMedicao > 0 ? valorMedicao : Math.round(((valorObra * percentual) / 100) * 100) / 100;
+  if (valorLancamento <= 0) {
+    const r = NextResponse.json(
+      {
+        message:
+          "Não é possível aprovar uma medição sem valor. Informe um valor na medição ou preencha o valor total da obra antes de aprovar.",
+        code: "VALOR_INVALIDO",
+      },
+      { status: 422 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
   const dataVencimento = addDaysIso(new Date(), VENCIMENTO_DIAS_PADRAO);
   const descricaoLanc = `Medição #${check.medicao.numero} — ${check.medicao.etapa}`;
 
@@ -86,9 +114,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   // Idempotência da fatura: UNIQUE em financeiro.medicao_id + try/catch 23505
   // dentro de `criarLancamentoFromMedicao`.
   let updatedRow: typeof medicoes.$inferSelect;
-  let lancamentoId: string | null = null;
+  let lancamentoId: string;
   let lancamentoValor = 0;
-  let lancamentoSkipReason: string | null = null;
   try {
     const txResult = await db.transaction(async (tx) => {
       const [updated] = await tx
@@ -97,43 +124,23 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         .where(eq(medicoes.id, id))
         .returning();
 
-      let lanc: { id: string; valor: number } | null = null;
-      // Skip explícito (não silencioso): se faltar pagador ou valor, registra
-      // o motivo. Aprovação ainda passa, mas o audit deixa rastro pra ops.
-      const skipReason =
-        !pagadorUserId
-          ? "obra_sem_contratante_user"
-          : !check.medicao.empreiteiroId
-            ? "medicao_sem_empreiteiro"
-            : valorLancamento <= 0
-              ? "valor_zero"
-              : null;
-      if (skipReason) {
-        console.warn(
-          `[medicoes.aprovar] lançamento NÃO criado para medicao=${id} obra=${check.medicao.obraId} motivo=${skipReason} valor=${valorLancamento}`,
-        );
-      }
-      if (!skipReason) {
-        const created = await criarLancamentoFromMedicao({
-          medicaoId: id,
-          obraId: check.medicao.obraId,
-          valor: valorLancamento,
-          descricao: descricaoLanc,
-          pagadorUserId: pagadorUserId!,
-          recebedorUserId: check.medicao.empreiteiroId,
-          dataVencimento,
-          categoria: "Medição",
-          tx,
-        });
-        lanc = { id: created.id, valor: created.valor };
-      }
+      const created = await criarLancamentoFromMedicao({
+        medicaoId: id,
+        obraId: check.medicao.obraId,
+        valor: valorLancamento,
+        descricao: descricaoLanc,
+        pagadorUserId,
+        recebedorUserId: check.medicao.empreiteiroId,
+        dataVencimento,
+        categoria: "Medição",
+        tx,
+      });
 
-      return { updated, lanc, skipReason };
+      return { updated, lanc: { id: created.id, valor: created.valor } };
     });
     updatedRow = txResult.updated;
-    lancamentoId = txResult.lanc?.id ?? null;
-    lancamentoValor = txResult.lanc?.valor ?? 0;
-    lancamentoSkipReason = txResult.skipReason ?? null;
+    lancamentoId = txResult.lanc.id;
+    lancamentoValor = txResult.lanc.valor;
   } catch (err) {
     console.error("[medicoes.aprovar] falha na transação:", err);
     const r = NextResponse.json(
@@ -157,26 +164,23 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       percentual: Number(check.medicao.percentual),
       novoProgresso: progresso,
       lancamentoId,
-      lancamentoSkipReason,
     },
     request,
   });
 
-  if (lancamentoId) {
-    await recordAudit({
-      actorId: guard.user.id,
-      action: "financeiro.criar.from-medicao",
-      targetUserId: check.medicao.empreiteiroId,
-      payload: {
-        medicaoId: id,
-        obraId: check.medicao.obraId,
-        lancamentoId,
-        valor: lancamentoValor,
-        dataVencimento,
-      },
-      request,
-    });
-  }
+  await recordAudit({
+    actorId: guard.user.id,
+    action: "financeiro.criar.from-medicao",
+    targetUserId: check.medicao.empreiteiroId,
+    payload: {
+      medicaoId: id,
+      obraId: check.medicao.obraId,
+      lancamentoId,
+      valor: lancamentoValor,
+      dataVencimento,
+    },
+    request,
+  });
 
   const r = NextResponse.json({ ...updatedRow, progresso, lancamentoId });
   setNoCacheHeaders(r);
