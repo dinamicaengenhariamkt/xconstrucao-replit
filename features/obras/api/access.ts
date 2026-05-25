@@ -23,9 +23,20 @@ export type ObraAccess = {
   isDiscoveryOnly: boolean;
 };
 
+/**
+ * Opções de `findObraAccess`.
+ * - `allowDiscovery` (default **false**): quando true, empreiteiro **não** atribuído
+ *   à obra recebe acesso de leitura desde que a obra esteja publicada
+ *   (modo descoberta — usado por telas de marketplace).
+ *   Endpoints de conteúdo interno da obra (J06: etapas/diário/ocorrências/fotos)
+ *   devem manter o default `false` para impedir vazamento de dados.
+ */
+export type FindObraAccessOptions = { allowDiscovery?: boolean };
+
 export async function findObraAccess(
   obraId: string,
   user: { id: string; role: string },
+  opts: FindObraAccessOptions = {},
 ): Promise<ObraAccess | null> {
   const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
   if (!obra) return null;
@@ -51,6 +62,8 @@ export async function findObraAccess(
     const isAssigned = !!(emp && obra.empreiteiraId === emp.id);
     const isPublica = obra.visibilidade === "publicada" && obra.empreiteiraId === null;
     if (!isAssigned && !isPublica) return null;
+    // Fail-closed: só libera discovery se o caller pedir explicitamente.
+    if (!isAssigned && !opts.allowDiscovery) return null;
     return {
       obra,
       role: "empreiteiro",
