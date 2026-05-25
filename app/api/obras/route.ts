@@ -5,6 +5,7 @@ import { clientes, empreiteiras, obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
+import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 /**
  * GET /api/obras  (role-scoped)
@@ -102,6 +103,26 @@ export async function POST(request: NextRequest) {
     const r = NextResponse.json(
       { message: "Apenas contratantes podem cadastrar obras." },
       { status: 403 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // Rate limit: máx 10 criações por usuário por minuto.
+  const ip = getClientIp(request);
+  if (isRateLimited(`obras.create:${guard.user.id}`, 10, 60 * 1000)) {
+    const r = NextResponse.json(
+      { message: "Muitas obras criadas em pouco tempo. Aguarde um minuto e tente novamente." },
+      { status: 429 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+  // Defesa adicional por IP (caso o mesmo IP tente abusar com contas distintas).
+  if (isRateLimited(`obras.create.ip:${ip}`, 30, 60 * 1000)) {
+    const r = NextResponse.json(
+      { message: "Muitas requisições. Aguarde um minuto e tente novamente." },
+      { status: 429 },
     );
     setNoCacheHeaders(r);
     return r;

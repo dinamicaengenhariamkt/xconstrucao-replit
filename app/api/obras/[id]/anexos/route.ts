@@ -6,6 +6,7 @@ import { clientes, obras, obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
+import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 
 const TIPOS = [
   "projeto_arquitetonico",
@@ -123,6 +124,33 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const check = await assertObraWritable(obraId, { id: guard.user.id, role: guard.user.role });
   if (!check.ok) {
     const r = NextResponse.json({ message: check.message }, { status: check.status });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // Rate limit: máx 20 anexos por obra por minuto + 60 por usuário por minuto.
+  const ip = getClientIp(request);
+  if (isRateLimited(`obras.anexo.create:obra:${obraId}`, 20, 60 * 1000)) {
+    const r = NextResponse.json(
+      { message: "Muitos anexos enviados nesta obra em pouco tempo. Aguarde um minuto e tente novamente." },
+      { status: 429 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (isRateLimited(`obras.anexo.create:user:${guard.user.id}`, 60, 60 * 1000)) {
+    const r = NextResponse.json(
+      { message: "Muitos anexos enviados em pouco tempo. Aguarde um minuto e tente novamente." },
+      { status: 429 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (isRateLimited(`obras.anexo.create:ip:${ip}`, 120, 60 * 1000)) {
+    const r = NextResponse.json(
+      { message: "Muitas requisições. Aguarde um minuto e tente novamente." },
+      { status: 429 },
+    );
     setNoCacheHeaders(r);
     return r;
   }
