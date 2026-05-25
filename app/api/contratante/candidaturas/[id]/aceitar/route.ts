@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
+import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 
 const bodySchema = z.object({
   mensagem: z.string().max(1000).optional(),
@@ -166,6 +167,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         },
         request,
       });
+
+      // Notifica empreiteiro vencedor + rejeitados em cascata (best-effort,
+      // idempotente via flag `notificacao_disparada`).
+      void dispararNotificacaoCandidaturaDecidida({ candidaturaId, request });
+      const rejeitadasIds: string[] = (result.body as any).rejeitadasIds ?? [];
+      for (const rid of rejeitadasIds) {
+        void dispararNotificacaoCandidaturaDecidida({ candidaturaId: rid, request });
+      }
     }
 
     const r = NextResponse.json(result.body, { status: result.code });

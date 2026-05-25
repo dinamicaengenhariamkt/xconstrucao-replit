@@ -4,6 +4,9 @@ import WelcomeEmail from '@features/auth/emails/welcome';
 import VerificationEmail from '@features/auth/emails/verification';
 import PasswordSetupEmail from '@features/auth/emails/password-setup';
 import PagamentoRecebidoEmail from '@features/notificacoes/emails/pagamento-recebido';
+import CandidaturaDecididaEmail, {
+  type CandidaturaDecididaEmailProps,
+} from '@features/notificacoes/emails/candidatura-decidida';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -148,6 +151,29 @@ export async function sendPagamentoRecebidoEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'pagamento-recebido' });
   } catch (error) {
     console.error('Erro ao enviar email de pagamento recebido:', error);
+    throw error;
+  }
+}
+
+export async function sendCandidaturaDecididaEmail(
+  to: string,
+  props: CandidaturaDecididaEmailProps,
+) {
+  const html = await render(CandidaturaDecididaEmail(props));
+  const subject =
+    props.resultado === 'aceita'
+      ? `XConstrução - Sua proposta foi aceita (${props.obraNome})`
+      : `XConstrução - Sua proposta não foi selecionada (${props.obraNome})`;
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'candidatura-decidida', ...props } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'candidatura-decidida' });
+  } catch (error) {
+    console.error('Erro ao enviar email de candidatura decidida:', error);
     throw error;
   }
 }

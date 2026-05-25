@@ -4,6 +4,7 @@ import { db } from "@shared/db/db";
 import { candidaturas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
+import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 
 /**
  * POST /api/empreiteiro/candidaturas/[id]/cancelar
@@ -65,6 +66,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     targetUserId: null,
     payload: { candidaturaId: id, obraId: existing.obraId },
     request,
+  });
+
+  // Empreiteiro foi o próprio actor — flip silencioso da flag para evitar
+  // que o job de fallback re-notifique. Não envia in-app/email.
+  void dispararNotificacaoCandidaturaDecidida({
+    candidaturaId: id,
+    request,
+    silencioso: true,
   });
 
   const r = NextResponse.json(updated);

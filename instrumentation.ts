@@ -48,6 +48,13 @@ export async function register() {
       console.error("[instrumentation] markOverduePagamentos failed:", err);
     });
 
+    const { dispatchPendingCandidaturaNotifications } = await import(
+      "./features/notificacoes/candidatura-dispatcher"
+    );
+    await dispatchPendingCandidaturaNotifications().catch((err) => {
+      console.error("[instrumentation] dispatchPendingCandidaturaNotifications failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {

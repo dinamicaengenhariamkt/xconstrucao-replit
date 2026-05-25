@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { candidaturas, clientes, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
+import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 
 const bodySchema = z.object({
   motivo: z.string().max(500).optional(),
@@ -97,6 +98,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     payload: { candidaturaId, obraId: cand.obraId, motivo: motivo ?? null },
     request,
   });
+
+  // Notifica empreiteiro (in-app + email, idempotente via flag).
+  void dispararNotificacaoCandidaturaDecidida({ candidaturaId, request });
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);
