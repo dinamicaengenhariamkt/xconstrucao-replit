@@ -1,20 +1,22 @@
 import type { ProfitMetrics } from './types';
 
 /**
- * Calcula métricas de lucro a partir do bloco financeiro real da obra.
- * Custo estimado conservador: 65% da receita executada (placeholder até
- * J08 entregar custo real por obra).
+ * Calcula métricas de lucro a partir de receita e custo reais.
+ *
+ * `receitaTotal` é a soma de entradas (lançamentos pagos onde o
+ * empreiteiro é recebedor). `custoTotal` é a soma de saídas (lançamentos
+ * pagos onde o empreiteiro é pagador — materiais, mão de obra,
+ * equipamentos). Não há mais estimativa de 65% — quando não há custos
+ * lançados, `custoTotal` é 0 e a margem aparece como 100% (o que reflete
+ * a realidade: nada foi gasto ainda).
  */
 export interface ProfitObraInput {
-  financeiro: { valorTotal: number; valorContratado: number; percentualExecutado: number };
-  valorPago?: number;
+  financeiro: { receitaTotal: number; custoTotal: number };
 }
 
-const COST_RATIO = 0.65;
-
 export function computeProfitFromObra(obra: ProfitObraInput): ProfitMetrics {
-  const receitaTotal = Math.round(obra.financeiro.valorTotal || obra.financeiro.valorContratado || 0);
-  const custoTotal = Math.round(receitaTotal * COST_RATIO);
+  const receitaTotal = Math.round(obra.financeiro.receitaTotal || 0);
+  const custoTotal = Math.round(obra.financeiro.custoTotal || 0);
   const lucroEstimado = receitaTotal - custoTotal;
   const margem = receitaTotal > 0 ? Number(((lucroEstimado / receitaTotal) * 100).toFixed(1)) : 0;
   return { receitaTotal, custoTotal, lucroEstimado, margem };

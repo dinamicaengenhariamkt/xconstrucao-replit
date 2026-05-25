@@ -215,6 +215,7 @@ export async function buildMinhaObraDetalheReal(
         telefone: string | null;
         tamanhoEquipe: string | null;
         registroProfissional: string | null;
+        userId: string | null;
       }
     | undefined;
   if (obra.empreiteiraId) {
@@ -227,6 +228,7 @@ export async function buildMinhaObraDetalheReal(
         telefone: empreiteiras.telefone,
         tamanhoEquipe: empreiteiras.tamanhoEquipe,
         registroProfissional: empreiteiras.registroProfissional,
+        userId: empreiteiras.userId,
       })
       .from(empreiteiras)
       .where(eq(empreiteiras.id, obra.empreiteiraId));
@@ -422,6 +424,36 @@ export async function buildMinhaObraDetalheReal(
   const percentualRecebido = valorTotal > 0 ? Math.round((valorPagoNum / valorTotal) * 100) : 0;
   const progresso = obra.progresso ?? 0;
 
+  // Receita real (entradas pagas onde o empreiteiro é recebedor) e custo real
+  // (saídas pagas onde o empreiteiro é pagador — materiais, mão de obra,
+  // equipamentos). Cobre legados: quando `recebedorUserId` é null mas a obra
+  // está atribuída à empreiteira do usuário, conta como entrada.
+  const empreiteiroUserId = empreiteiraRow?.userId ?? null;
+  let receitaTotal = 0;
+  let custoTotal = 0;
+  for (const f of finRows) {
+    if (f.status !== "pago") continue;
+    const valor = Number(f.valor ?? 0);
+    if (empreiteiroUserId && f.recebedorUserId === empreiteiroUserId) {
+      receitaTotal += valor;
+      continue;
+    }
+    if (empreiteiroUserId && f.pagadorUserId === empreiteiroUserId) {
+      custoTotal += valor;
+      continue;
+    }
+    // Legados sem recebedor/pagador definidos: tipo=saida (do contratante)
+    // significa entrada pro empreiteiro vinculado.
+    if (
+      empreiteiroUserId &&
+      f.recebedorUserId == null &&
+      f.pagadorUserId == null &&
+      f.tipo === "saida"
+    ) {
+      receitaTotal += valor;
+    }
+  }
+
   const financeiroOut: ObraFinanceiro = {
     valorContratado,
     aditivos,
@@ -429,6 +461,8 @@ export async function buildMinhaObraDetalheReal(
     saldoReceber,
     percentualRecebido,
     percentualExecutado: progresso,
+    receitaTotal,
+    custoTotal,
     medicoes: finRows.map((f, i) => ({
       id: f.id,
       numero: i + 1,

@@ -160,6 +160,10 @@ export interface ObraFinanceiro {
   percentualRecebido: number;
   percentualExecutado: number;
   medicoes: ObraMedicao[];
+  /** Soma de entradas pagas (recebedor = empreiteiro). */
+  receitaTotal: number;
+  /** Soma de saídas pagas (pagador = empreiteiro: materiais, mão de obra, equipamentos). */
+  custoTotal: number;
 }
 
 export interface MembroEquipe {

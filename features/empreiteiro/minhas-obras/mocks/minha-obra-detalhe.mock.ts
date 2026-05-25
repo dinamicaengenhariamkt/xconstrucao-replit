@@ -191,6 +191,8 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
       saldoReceber: 481250,
       percentualRecebido: 65,
       percentualExecutado: 65,
+      receitaTotal: 0,
+      custoTotal: 0,
       // Medições removidas do mock — agora vêm da API real (Task #47 / J06).
       medicoes: [],
     },
@@ -321,6 +323,8 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
       saldoReceber: 232000,
       percentualRecebido: 60,
       percentualExecutado: 65,
+      receitaTotal: 0,
+      custoTotal: 0,
       // Medições removidas do mock — agora vêm da API real (Task #47 / J06).
       medicoes: [],
     },
