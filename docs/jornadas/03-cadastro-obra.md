@@ -129,17 +129,19 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - [x] `insertObraSchemaStrict` com `superRefine` condicional por visibilidade + `insertObraAnexoSchema` _(Task #32)_
 - [x] Bootstrap idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obras.ts) registrado em `instrumentation.ts` _(Task #32)_
 
-### Endpoints + UI (Task #33 — em andamento)
-- [ ] `POST /api/obras` força `clienteId` do user logado e `visibilidade='rascunho'`
-- [ ] `PATCH/DELETE /api/obras/[id]` valida ownership server-side (contratante dono ou admin)
-- [ ] `GET /api/obras` aplica scoping por role + filtros (visibilidade, uf, cidade, modalidade, materiaisPor)
-- [ ] `GET /api/admin/obras` (lista admin com filtros)
-- [ ] `POST /api/obras/[id]/anexos` + `DELETE /api/obras/[id]/anexos/[anexoId]` (reusa R2/Task #26)
-- [ ] UI contratante: botões Publicar / Pausar / Arquivar no detalhe + uploader de anexos
-- [ ] UI admin: `/admin/obras` com filtros (visibilidade, status, contratante)
-- [ ] UI empreiteiro: detalhe da obra mostra anexos públicos (fotos, etc)
-- [ ] Substituir `obra-detalhe.mock.ts` por fetch real
-- [ ] Listar paginado em `/contratante/minhas-obras`
+### Endpoints + UI (Task #33 — backend pronto, UI listas/detalhes mock)
+- [x] `POST /api/obras` força `clienteId` do user logado + audit log; rejeita 403 se role≠contratante; 400 se contratante sem perfil _(Task #33)_
+- [x] `PATCH/DELETE /api/obras/[id]` valida ownership; PATCH bloqueia 409 valor/descricao quando empreiteiraId≠null; DELETE 409 se candidatura pendente _(Task #33)_
+- [x] `GET /api/obras` scoping por role: empreiteiro → publicada+empreiteiraId NULL sem clienteId (PII); contratante → próprias; admin sem `?scope=admin` → vazio defensivo _(Task #33)_
+- [x] `GET /api/admin/obras` paginado (page/pageSize 1..100) com filtros cliente_id/empreiteira_id/status/visibilidade/periodo/q + join clienteNome/empreiteiraNome _(Task #33)_
+- [x] `GET /api/admin/obras/[id]` retorna detalhe + cliente + empreiteira + anexos + últimos 20 audit logs _(Task #33)_
+- [x] `POST /api/obras/[id]/anexos` + `DELETE /api/obras/[id]/anexos/[anexoId]` + `GET` listagem; novo kind `obra_anexo` em KIND_RULES (15MB PDF/img, role contratante|superadmin), key `public/obras/{userId}/anexos/...` _(Task #33)_
+- [x] UI `/contratante/nova-obra` reescrita: 6 cards (Identificação, Endereço c/ ViaCEP debounce 400ms, Escopo, Datas+Orçamento, Anexos, Ações), upload+bind sequencial, botões "Salvar rascunho" e "Publicar obra", coerção `valorTotal`/`areaM2` p/ string _(Task #33)_
+- [ ] UI contratante: botões Publicar / Pausar / Arquivar no **detalhe** + uploader de anexos pós-criação **(detalhe ainda mock — registrado em §13)**
+- [ ] UI admin: `/admin/obras` (rota nova) com filtros (visibilidade, status, contratante) — endpoint pronto, UI a construir **(registrado em §13)**
+- [ ] UI empreiteiro: detalhe da obra real (mostrar anexos públicos) — endpoint pronto, UI ainda mock **(registrado em §13)**
+- [ ] Substituir `obra-detalhe.mock.ts` por fetch real **(registrado em §13)**
+- [ ] Listar paginado em `/contratante/minhas-obras` **(registrado em §13)**
 
 ## 10. Critérios de aceite
 1. Logado como contratante, criar obra apenas com `nome` + `endereco` → salva como `rascunho` → aparece em "minhas-obras" → NÃO aparece em J04.
@@ -170,3 +172,8 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - 2026-05-25 (Task #32): `POST/PATCH/DELETE /api/obras*` historicamente confiava em `clienteId`/permissão derivada do body (sem ownership server-side). Vai ser corrigido em #33.
 - 2026-05-25 (Task #32): Decidido separar `status` (execução: planejamento/em_andamento/pausada/concluida) de `visibilidade` (marketplace: rascunho/publicada/pausada/arquivada). Ambos têm valor `pausada` (intencional — pausar execução ≠ pausar marketplace).
 - 2026-05-25 (Task #32): Wave 1 mantém anexos só públicos (`public/obras/{id}/...`). ART/RRT como `private/` + signed URL fica pra Wave 2 (J06 ou J10).
+- 2026-05-25 (Task #33): UI das listas e detalhes (contratante `/minhas-obras` + `[id]`, empreiteiro `/novas-obras` + `[id]`, admin `/obras`) seguem 100% mock — endpoints estão prontos e smoke-tested via curl, falta apenas trocar fetch nos hooks `use-minhas-obras`/`use-obra-detalhe`/etc. Carry pra próxima task (J03.C).
+- 2026-05-25 (Task #33): Aprovação admin pré-publicação (fluxo "publicar" → review) NÃO existe — qualquer contratante publica direto. Avaliar regra de negócio antes de J04 ganhar volume real.
+- 2026-05-25 (Task #33): Aditivo de escopo/valor pós-vínculo com empreiteira (referenciado no 409 `OBRA_LOCKED_AFTER_BIND`) é stub na resposta — fluxo real fica em J10 (disputas/aditivos). Sem aditivo, alterações precisam de cancelamento+nova obra.
+- 2026-05-25 (Task #33): Rate-limit em `POST /api/obras` e `POST /api/obras/[id]/anexos` não foi adicionado — contratante autenticado pode spammar criações/anexos. Reusar o helper existente de `rate-limit.ts` numa próxima rodada.
+- 2026-05-25 (Task #33): `lat/lng` ficou `null` em todas as obras criadas pela UI nova — geocode via Nominatim foi planejado mas não implementado (fora de escopo desta task; J04 não depende disso ainda).

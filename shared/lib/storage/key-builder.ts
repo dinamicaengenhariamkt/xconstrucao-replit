@@ -9,7 +9,7 @@
  *   private/empreiteiro/{userId}/documentos/{tipo}/{ts}-{slug}.{ext}
  */
 
-export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento";
+export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo";
 export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
@@ -46,6 +46,8 @@ export function timestampStamp(d: Date = new Date()): string {
 export function visibilityForKind(kind: UploadKind): UploadVisibility {
   return kind === "empreiteiro_documento" ? "private" : "public";
 }
+
+/** Para obra_anexo, o role do contratante que está subindo. */
 
 function splitNameExt(originalName: string): { name: string; ext: string } {
   const idx = originalName.lastIndexOf(".");
@@ -125,6 +127,21 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: true };
   }
 
+  if (kind === "obra_anexo") {
+    // public/obras/{userId}/anexos/<file>
+    if (segments.length !== 5) return { ok: false, reason: "shape obra-anexo" };
+    if (
+      segments[0] !== "public" ||
+      segments[1] !== "obras" ||
+      segments[3] !== "anexos"
+    ) {
+      return { ok: false, reason: "prefixo obra-anexo" };
+    }
+    if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
+    if (role !== "contratante" && role !== "superadmin") return { ok: false, reason: "role" };
+    return { ok: true };
+  }
+
   // empreiteiro_documento → private/empreiteiro/{userId}/documentos/{tipo}/<file>
   if (segments.length !== 6) return { ok: false, reason: "shape documento" };
   if (
@@ -156,6 +173,9 @@ export function buildKey(args: KeyBuilderArgs): string {
   }
   if (kind === "portfolio_doc") {
     return `public/empreiteiro/${userId}/portfolio-docs/${ts}-${slug}${safeExt}`;
+  }
+  if (kind === "obra_anexo") {
+    return `public/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
   }
   // empreiteiro_documento
   const tipo = slugify(extras?.tipoDocumento || "outro");

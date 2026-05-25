@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useAuthStore } from '@features/auth/store/auth-store';
 
-export type UploadKind = 'avatar' | 'portfolio_imagem' | 'portfolio_doc' | 'empreiteiro_documento';
+export type UploadKind = 'avatar' | 'portfolio_imagem' | 'portfolio_doc' | 'empreiteiro_documento' | 'obra_anexo';
 
 export interface CommitResponse {
   id: string;
