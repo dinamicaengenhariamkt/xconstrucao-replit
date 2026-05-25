@@ -213,23 +213,49 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     return r;
   }
 
-  const pendentes = await db
-    .select({ id: candidaturas.id })
-    .from(candidaturas)
-    .where(and(eq(candidaturas.obraId, id), eq(candidaturas.status, "pendente")));
-  if (pendentes.length > 0) {
+  // Transação + SELECT ... FOR UPDATE na row da obra para fechar a janela de
+  // corrida entre "tem candidatura pendente?" e o DELETE. Se uma candidatura
+  // for criada concorrentemente, ou ela vê a row travada e espera (e o count
+  // posterior a enxerga → 409) ou o DELETE roda primeiro e o INSERT da
+  // candidatura falha por FK.
+  const txResult = await db.transaction(async (tx) => {
+    const locked = await tx
+      .select({ id: obras.id })
+      .from(obras)
+      .where(eq(obras.id, id))
+      .for("update");
+    if (locked.length === 0) {
+      return { kind: "not_found" as const };
+    }
+
+    const pendentes = await tx
+      .select({ id: candidaturas.id })
+      .from(candidaturas)
+      .where(and(eq(candidaturas.obraId, id), eq(candidaturas.status, "pendente")));
+    if (pendentes.length > 0) {
+      return { kind: "conflict" as const, count: pendentes.length };
+    }
+
+    await tx.delete(obras).where(eq(obras.id, id));
+    return { kind: "deleted" as const };
+  });
+
+  if (txResult.kind === "not_found") {
+    const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (txResult.kind === "conflict") {
     const r = NextResponse.json(
       {
         error: "OBRA_HAS_PENDING_CANDIDATURAS",
-        message: `Há ${pendentes.length} candidatura(s) pendente(s). Arquive a obra em vez de excluir (PATCH visibilidade='arquivada').`,
+        message: `Há ${txResult.count} candidatura(s) pendente(s). Arquive a obra em vez de excluir (PATCH visibilidade='arquivada').`,
       },
       { status: 409 },
     );
     setNoCacheHeaders(r);
     return r;
   }
-
-  await db.delete(obras).where(eq(obras.id, id));
 
   await recordAudit({
     actorId: guard.user.id,

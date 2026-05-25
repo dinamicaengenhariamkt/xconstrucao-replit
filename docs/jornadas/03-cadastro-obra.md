@@ -132,6 +132,7 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 ### Endpoints + UI (Task #33 — backend pronto, UI listas/detalhes mock)
 - [x] `POST /api/obras` força `clienteId` do user logado + audit log; rejeita 403 se role≠contratante; 400 se contratante sem perfil _(Task #33)_
 - [x] `PATCH/DELETE /api/obras/[id]` valida ownership; PATCH bloqueia 409 valor/descricao quando empreiteiraId≠null; DELETE 409 se candidatura pendente _(Task #33)_
+- [x] `DELETE /api/obras/[id]` envelopado em `db.transaction` + `SELECT ... FOR UPDATE` na row da obra (fecha race candidatura↔delete); smoke em `scripts/smoke-task36-delete-obra-race.ts` _(Task #36)_
 - [x] `GET /api/obras` scoping por role: empreiteiro → publicada+empreiteiraId NULL sem clienteId (PII); contratante → próprias; admin sem `?scope=admin` → vazio defensivo _(Task #33)_
 - [x] `GET /api/admin/obras` paginado (page/pageSize 1..100) com filtros cliente_id/empreiteira_id/status/visibilidade/periodo/q + join clienteNome/empreiteiraNome _(Task #33)_
 - [x] `GET /api/admin/obras/[id]` retorna detalhe + cliente + empreiteira + anexos + últimos 20 audit logs _(Task #33)_
