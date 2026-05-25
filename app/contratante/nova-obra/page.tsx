@@ -318,7 +318,7 @@ export default function NovaObraPage() {
     <div className="space-y-6 pb-12">
       <PageHeader
         title="Nova obra"
-        description="Cadastre uma obra. Salve como rascunho a qualquer momento ou publique para receber candidaturas."
+        subtitle="Cadastre uma obra. Salve como rascunho a qualquer momento ou publique para receber candidaturas."
       />
 
       <Form {...form}>

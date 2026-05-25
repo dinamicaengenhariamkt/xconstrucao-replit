@@ -38,10 +38,12 @@ const CATEGORIA_CONFIG: Record<
   relatorio: { label: 'Relatórios',        Icon: IconTaskAlt,      iconeBg: 'bg-success/20 text-success dark:bg-success/10' },
   alvara:    { label: 'Alvarás',           Icon: IconDomain,       iconeBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
   laudo:     { label: 'Laudos Técnicos',   Icon: IconFactCheck,    iconeBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+  foto:      { label: 'Fotos',             Icon: IconFolderOpen,   iconeBg: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' },
+  outros:    { label: 'Outros',            Icon: IconDescription,  iconeBg: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
 };
 
 const CATEGORIAS_ORDEM: ObraDocumento['categoria'][] = [
-  'contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo',
+  'contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo', 'foto', 'outros',
 ];
 
 const STATUS_BADGE: Record<NonNullable<ObraDocumento['status']>, { label: string; classes: string }> = {

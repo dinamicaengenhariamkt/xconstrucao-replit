@@ -49,7 +49,7 @@ const CATEGORIAS: { value: ObraDocumento['categoria']; label: string }[] = [
 
 const schema = z.object({
   nome: z.string().min(1, 'Nome obrigatório').max(100, 'Máximo 100 caracteres'),
-  categoria: z.enum(['contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo'], {
+  categoria: z.enum(['contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo', 'foto', 'outros'], {
     required_error: 'Selecione uma categoria',
   }),
   observacoes: z.string().max(200, 'Máximo 200 caracteres').optional(),

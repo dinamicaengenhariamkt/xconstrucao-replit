@@ -51,7 +51,7 @@ export default function AdminFinanceiroPage() {
     return <DashboardSkeleton />;
   }
 
-  const obraIds = (obras ?? []).map((o) => o.id);
+  const obraIds = (obras?.rows ?? []).map((o) => o.id);
   const healthSummary = getMockHealthSummary(obraIds);
   const profitSummary = getMockProfitSummary(obraIds);
 

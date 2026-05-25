@@ -67,7 +67,7 @@ function obraToHit(o: AdminObra): SearchHit<AdminSearchCategory> {
     category: 'obras',
     title: o.nome,
     subtitle: `${o.clienteNome} · ${o.empreiteiraNome}`,
-    meta: o.codigo,
+    meta: o.cidade ?? undefined,
     href: `/admin/obras/${o.id}`,
   };
 }
@@ -113,8 +113,8 @@ export function useAdminGlobalSearch(query: string): UseSearchResult<AdminSearch
     const empreiteirasMatches = (empreiteiras ?? []).filter((e) =>
       matches(term, e.nomeFantasia, e.razaoSocial, e.cnpj, e.email, e.cidade, e.estado),
     );
-    const obrasMatches = (obras ?? []).filter((o) =>
-      matches(term, o.nome, o.codigo, o.clienteNome, o.empreiteiraNome, o.endereco, o.tipo),
+    const obrasMatches = (obras?.rows ?? []).filter((o: AdminObra) =>
+      matches(term, o.nome, o.clienteNome, o.empreiteiraNome, o.endereco, o.tipo),
     );
     const entradasMatches = (entradas ?? []).filter((en) =>
       matches(term, en.descricao, en.clienteEmpreiteira, en.id),
