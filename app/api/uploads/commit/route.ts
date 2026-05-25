@@ -17,7 +17,7 @@ import {
 } from "@shared/lib/storage";
 
 const bodySchema = z.object({
-  kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo"]),
+  kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "comprovante_pagamento"]),
   key: z.string().min(8).max(500),
   mime: z.string().min(3).max(120),
   size: z.number().int().min(1).max(20_000_000),

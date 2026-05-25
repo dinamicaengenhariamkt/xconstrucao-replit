@@ -23,6 +23,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapMarketplaceSchema failed:", err);
     });
 
+    const { bootstrapPagamentosSchema } = await import("./server/bootstrap-pagamentos");
+    await bootstrapPagamentosSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapPagamentosSchema failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {

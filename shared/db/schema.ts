@@ -156,6 +156,8 @@ export const obraAnexos = pgTable("obra_anexos", {
 
 export type ObraAnexo = typeof obraAnexos.$inferSelect;
 
+export const financeiroStatusEnum = pgEnum("financeiro_status", ["pendente", "pago", "atrasado", "cancelado"]);
+
 export const financeiro = pgTable("financeiro", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   tipo: text("tipo").notNull(),
@@ -164,6 +166,16 @@ export const financeiro = pgTable("financeiro", {
   data: text("data").notNull(),
   obraId: varchar("obra_id").references(() => obras.id),
   categoria: text("categoria"),
+  status: financeiroStatusEnum("status").notNull().default("pendente"),
+  dataVencimento: text("data_vencimento"),
+  dataPagamento: text("data_pagamento"),
+  metodoPagamento: text("metodo_pagamento"),
+  comprovanteUrl: text("comprovante_url"),
+  comprovanteFileId: varchar("comprovante_file_id").references(() => userFiles.id, { onDelete: "set null" }),
+  medicaoId: varchar("medicao_id"),
+  pagadorUserId: varchar("pagador_user_id").references(() => users.id, { onDelete: "set null" }),
+  recebedorUserId: varchar("recebedor_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const candidaturaStatusEnum = pgEnum("candidatura_status", ["pendente", "aceita", "rejeitada"]);

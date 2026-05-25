@@ -1,5 +1,10 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { getPagamentos, getPagamentosKPI } from '../api/pagamentos-service';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  getPagamentos,
+  getPagamentosKPI,
+  quitarPagamento,
+  type QuitarPagamentoInput,
+} from '../api/pagamentos-service';
 import { QUERY_CONFIG } from '../constants';
 import type { PagamentoContratante, PagamentosKPI } from '../types';
 
@@ -18,5 +23,17 @@ export function usePagamentosKPI(): UseQueryResult<PagamentosKPI, Error> {
     queryFn: getPagamentosKPI,
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
+  });
+}
+
+export function useQuitarPagamento() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: QuitarPagamentoInput }) =>
+      quitarPagamento(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contratante', 'pagamentos'] });
+      queryClient.invalidateQueries({ queryKey: ['contratante', 'pagamentos', 'kpi'] });
+    },
   });
 }

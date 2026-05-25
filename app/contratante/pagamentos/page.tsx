@@ -27,7 +27,17 @@ import {
 import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/contratante/dashboard/components/StatsCard';
 import { PagamentosEvolutionChart } from '@features/contratante/pagamentos/components/PagamentosEvolutionChart';
-import { usePagamentos, usePagamentosKPI } from '@features/contratante/pagamentos/hooks/use-pagamentos';
+import { usePagamentos, usePagamentosKPI, useQuitarPagamento } from '@features/contratante/pagamentos/hooks/use-pagamentos';
+import { FileUploader } from '@features/shared/components/FileUploader';
+import { Label } from '@shared/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@shared/components/ui/select';
+import { useToast } from '@shared/hooks/use-toast';
 import {
   PAGAMENTO_STATUS_LABELS,
   PAGAMENTO_STATUS_COLORS,
@@ -109,10 +119,24 @@ export default function PagamentosPage() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // ─── Estado local: pago manualmente + modal ──────────────────────────────
-  const [localPaidIds, setLocalPaidIds] = useState<Set<string>>(new Set());
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  // ─── Estado local: modal de detalhes/quitação ────────────────────────────
   const [selectedPagamento, setSelectedPagamento] = useState<PagamentoContratante | null>(null);
+  const [payMetodo, setPayMetodo] = useState<string>('PIX');
+  const [payDate, setPayDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [payComprovanteId, setPayComprovanteId] = useState<string | null>(null);
+  const [payComprovanteName, setPayComprovanteName] = useState<string | null>(null);
+  const { toast } = useToast();
+  const quitarMutation = useQuitarPagamento();
+  const localPaidIds = useMemo(() => new Set<string>(), []);
+  const loadingId = quitarMutation.isPending ? quitarMutation.variables?.id ?? null : null;
+
+  function openPagamentoDialog(p: PagamentoContratante) {
+    setSelectedPagamento(p);
+    setPayMetodo(p.metodoPagamento || 'PIX');
+    setPayDate(new Date().toISOString().slice(0, 10));
+    setPayComprovanteId(null);
+    setPayComprovanteName(null);
+  }
 
   const valorMinNum = valorMin === '' ? undefined : Number(valorMin);
   const valorMaxNum = valorMax === '' ? undefined : Number(valorMax);
@@ -235,11 +259,26 @@ export default function PagamentosPage() {
     setCurrentPage(1);
   };
 
-  async function handleMarcarComoPago(id: string) {
-    setLoadingId(id);
-    await new Promise((r) => setTimeout(r, 600));
-    setLocalPaidIds((prev) => new Set([...prev, id]));
-    setLoadingId(null);
+  async function handleConfirmarPagamento() {
+    if (!selectedPagamento) return;
+    try {
+      await quitarMutation.mutateAsync({
+        id: selectedPagamento.id,
+        input: {
+          metodoPagamento: payMetodo,
+          dataPagamento: payDate,
+          comprovanteFileId: payComprovanteId,
+        },
+      });
+      toast({ title: 'Pagamento registrado', description: 'O lançamento foi marcado como pago.' });
+      setSelectedPagamento(null);
+    } catch (err) {
+      toast({
+        title: 'Falha ao registrar pagamento',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   }
 
   return (
@@ -514,7 +553,7 @@ export default function PagamentosPage() {
                     return (
                       <tr
                         key={pag.id}
-                        onClick={() => setSelectedPagamento(pag)}
+                        onClick={() => openPagamentoDialog(pag)}
                         className={cn(
                           'border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer',
                           idx % 2 === 1 && 'bg-gray-50/50 dark:bg-gray-800/20',
@@ -567,7 +606,7 @@ export default function PagamentosPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedPagamento(pag);
+                              openPagamentoDialog(pag);
                             }}
                             className="text-gray-400 hover:text-primary transition-colors cursor-pointer"
                             title="Ver detalhes"
@@ -713,7 +752,7 @@ export default function PagamentosPage() {
                     </p>
                     <Button
                       size="sm"
-                      onClick={() => handleMarcarComoPago(pag.id)}
+                      onClick={() => openPagamentoDialog(pag)}
                       disabled={loadingId === pag.id}
                       className={cn(
                         'text-xs font-bold whitespace-nowrap',
@@ -810,6 +849,56 @@ export default function PagamentosPage() {
             </div>
           )}
 
+          {selectedPagamento &&
+            selectedPagamento.tipo === 'saida' &&
+            effectiveStatus(selectedPagamento) !== 'pago' && (
+              <div className="border-t pt-4 mt-2 space-y-3" data-testid="quitar-pagamento-form">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  Registrar pagamento
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Método</Label>
+                    <Select value={payMetodo} onValueChange={setPayMetodo}>
+                      <SelectTrigger data-testid="select-metodo-pagamento">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PIX">PIX</SelectItem>
+                        <SelectItem value="Transferência">Transferência</SelectItem>
+                        <SelectItem value="Boleto">Boleto</SelectItem>
+                        <SelectItem value="Cartão">Cartão</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Data do pagamento</Label>
+                    <Input
+                      type="date"
+                      value={payDate}
+                      onChange={(e) => setPayDate(e.target.value)}
+                      data-testid="input-data-pagamento"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">Comprovante (opcional)</Label>
+                  <FileUploader
+                    kind="comprovante_pagamento"
+                    accept="image/*,application/pdf"
+                    label={payComprovanteName ? `Trocar: ${payComprovanteName}` : 'Anexar comprovante'}
+                    helper="PDF ou imagem até 8MB. Será privado e acessível por URL assinada."
+                    testId="upload-comprovante"
+                    onUploaded={(file) => {
+                      setPayComprovanteId(file.id);
+                      setPayComprovanteName(file.originalName);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
           <DialogFooter className="gap-2 sm:gap-2">
             {selectedPagamento && (
               <Button asChild variant="outline">
@@ -821,7 +910,20 @@ export default function PagamentosPage() {
                 </Link>
               </Button>
             )}
-            <Button onClick={() => setSelectedPagamento(null)}>Fechar</Button>
+            {selectedPagamento &&
+              selectedPagamento.tipo === 'saida' &&
+              effectiveStatus(selectedPagamento) !== 'pago' && (
+                <Button
+                  onClick={handleConfirmarPagamento}
+                  disabled={quitarMutation.isPending}
+                  data-testid="btn-confirmar-pagamento"
+                >
+                  {quitarMutation.isPending ? 'Salvando...' : 'Confirmar pagamento'}
+                </Button>
+              )}
+            <Button variant="ghost" onClick={() => setSelectedPagamento(null)}>
+              Fechar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

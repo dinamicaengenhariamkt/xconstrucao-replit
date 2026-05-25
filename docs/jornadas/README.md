@@ -17,7 +17,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 05 | [Candidatura & Aceite](05-candidatura-aceite.md) | empreiteiro, contratante, admin | 1 | parcial | alta |
 | 06 | [Medições & Diário de Obra](06-medicoes-diario-obra.md) | empreiteiro, contratante, admin | 2 | mock | alta |
 | 07 | [Atividades & Timeline](07-atividades-timeline.md) | todas | 3 | mock | média |
-| 08 | [Pagamentos da Obra](08-pagamentos-obra.md) | contratante, empreiteiro, admin | 2 | parcial | alta |
+| 08 | [Pagamentos da Obra](08-pagamentos-obra.md) | contratante, empreiteiro, admin | 2 | revisão | alta |
 | 09 | [Financeiro Admin](09-financeiro-admin.md) | admin | 3 | mock | média |
 | 10 | [Disputas](10-disputas.md) | todas | 3 | mock | baixa |
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | mock | média |

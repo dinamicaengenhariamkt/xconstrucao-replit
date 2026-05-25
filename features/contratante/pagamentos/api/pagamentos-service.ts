@@ -1,23 +1,28 @@
-import { ENABLE_MOCK } from '../constants';
-import { mockPagamentos, mockPagamentosKPI } from '../mocks/pagamentos.mock';
+import { apiRequest } from '@shared/lib/queryClient';
 import type { PagamentoContratante, PagamentosKPI } from '../types';
 
 export async function getPagamentos(): Promise<PagamentoContratante[]> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockPagamentos;
-  }
-  const response = await fetch('/api/contratante/pagamentos');
+  const response = await fetch('/api/contratante/pagamentos', { credentials: 'include' });
   if (!response.ok) throw new Error('Erro ao buscar pagamentos');
   return response.json();
 }
 
 export async function getPagamentosKPI(): Promise<PagamentosKPI> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return mockPagamentosKPI;
-  }
-  const response = await fetch('/api/contratante/pagamentos/kpi');
+  const response = await fetch('/api/contratante/pagamentos/kpi', { credentials: 'include' });
   if (!response.ok) throw new Error('Erro ao buscar KPIs de pagamentos');
   return response.json();
+}
+
+export interface QuitarPagamentoInput {
+  metodoPagamento: string;
+  dataPagamento?: string;
+  comprovanteFileId?: string | null;
+}
+
+export async function quitarPagamento(id: string, input: QuitarPagamentoInput): Promise<void> {
+  const res = await apiRequest('POST', `/api/contratante/pagamentos/${id}/quitar`, input);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error || 'Erro ao registrar pagamento');
+  }
 }
