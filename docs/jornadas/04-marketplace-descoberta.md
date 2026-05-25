@@ -79,7 +79,7 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - [x] Tela `/empreiteiro/obras-salvas` listando do banco via `useObrasSalvas` _(Task #43)_
 - [x] Migrar favoritos do Zustand+localStorage pra `obras_salvas` com optimistic update + rollback (`useToggleObraSalva`); store Zustand deletado _(Task #43)_
 - [x] Bookmark inline em `NovaObraCard` + detalhe empreiteiro via novo hook (shim `toggleSave/isSaved`) _(Task #43)_
-- [x] Paginação shadcn `Pagination` server-side no `/empreiteiro/novas-obras` _(Task #43)_
+- [x] Paginação shadcn `Pagination` server-side no `/empreiteiro/novas-obras` _(Task #43, substituído por infinite scroll na Task #45)_
 - [x] Promover status da jornada para `revisão` no índice de `docs/jornadas/README.md` _(Task #43)_
 - [ ] Carries de J03 no card do marketplace: badge de anexos, faixa de valor enriquecida _(carry — visível no detalhe; card mantém minimal por ora)_
 - [ ] Estado bloqueado quando `perfilCompleto=false` _(carry — depende de J02 expor flag estável)_
@@ -125,3 +125,4 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - 2026-05-25 (Task #43): Filtros server-side adotados em `/empreiteiro/novas-obras` (cidade, tipo, materiaisPor, faixa de orçamento) → demais filtros (status, complexidade, busca textual) permanecem client-side sobre o slice da página atual. Estratégia híbrida intencional enquanto não há volume.
 - 2026-05-25 (Task #43): Favoritos migrados pra `obras_salvas` — store Zustand `obras-salvas-store.ts` deletado. Detalhe empreiteiro recebeu shim `toggleSave/isSaved` em cima do novo hook pra evitar reescrever a página inteira. Refatorar pro hook direto numa próxima passada.
 - 2026-05-25 (Task #43): Card `NovaObraCard` ganhou bookmark inline (top-3 right-3) via `useToggleObraSalva`; carries de J03 (badge de anexos, faixa enriquecida) e estado bloqueado por `perfilCompleto` ficam carry — primeiro só visíveis no detalhe; segundo depende de J02 expor flag estável.
+- 2026-05-25 (Task #45): `/empreiteiro/novas-obras` migrou de `Pagination` shadcn para infinite scroll via `useInfiniteQuery` + `IntersectionObserver` (rootMargin 300px, fallback "Carregar mais" se o observer não disparar). Filtros server-side resetam a lista via `queryKey` (TanStack faz cache por params). Spinner inline durante `fetchNextPage`. `useNovasObras` (one-shot) preservada para outros callsites.

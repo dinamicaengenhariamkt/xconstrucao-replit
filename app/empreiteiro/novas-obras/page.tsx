@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { RiSearchLine } from 'react-icons/ri';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { RiSearchLine, RiLoader4Line } from 'react-icons/ri';
 import { cn } from '@shared/lib/utils';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
+import { Button } from '@shared/components/ui/button';
 import { NovasObrasGrid } from '@features/empreiteiro/novas-obras/components/NovasObrasGrid';
 import { NovasObrasSkeleton } from '@features/empreiteiro/novas-obras/components/NovasObrasSkeleton';
 import { BlockedBanner } from '@features/empreiteiro/novas-obras/components/BlockedBanner';
 import {
-  useNovasObras,
+  useNovasObrasInfinite,
   usePerfilStatus,
 } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import {
@@ -21,16 +22,6 @@ import { AdvancedFiltersPopover } from '@features/shared/components/filters/Adva
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@shared/components/ui/pagination';
-import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
 
 const PAGE_SIZE = 20;
@@ -44,9 +35,8 @@ export default function NovasObrasPage() {
   const [materiaisPorSelected, setMateriaisPorSelected] = useState<string[]>([]);
   const [orcamentoMin, setOrcamentoMin] = useState('');
   const [orcamentoMax, setOrcamentoMax] = useState('');
-  const [page, setPage] = useState(1);
 
-  // Filtros client-side (rodam sobre rows da página atual)
+  // Filtros client-side (rodam sobre rows carregadas)
   const [searchQuery, setSearchQuery] = useState('');
   const [statusSelected, setStatusSelected] = useState<string[]>([]);
   const [complexidadeSelected, setComplexidadeSelected] = useState<string[]>([]);
@@ -55,7 +45,7 @@ export default function NovasObrasPage() {
   const orcMaxNum = orcamentoMax === '' ? undefined : Number(orcamentoMax);
 
   const queryParams = useMemo(() => {
-    const p: Record<string, string | number | string[]> = { page, pageSize: PAGE_SIZE };
+    const p: Record<string, string | number | string[]> = { pageSize: PAGE_SIZE };
     if (cidade.trim()) p.cidade = cidade.trim();
     if (uf.trim()) p.uf = uf.trim().toUpperCase();
     if (modalidade) p.modalidade = modalidade;
@@ -65,28 +55,44 @@ export default function NovasObrasPage() {
     if (orcMinNum !== undefined) p.minValor = orcMinNum;
     if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
     return p;
-  }, [page, cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
-
-  const { data: obrasPayload, isLoading: obrasLoading } = useNovasObras(queryParams);
-  const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
-
-  const rows = obrasPayload?.rows ?? [];
-  const total = obrasPayload?.total ?? 0;
-  const totalPages = obrasPayload?.totalPages ?? 0;
-
-  // Reset page quando filtro server muda
-  useEffect(() => {
-    setPage(1);
   }, [cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
 
-  // Clamp page se totalPages mudar pra menor
-  useEffect(() => {
-    if (totalPages > 0 && page > totalPages) setPage(totalPages);
-  }, [totalPages, page]);
+  const {
+    data: obrasPayload,
+    isLoading: obrasLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useNovasObrasInfinite(queryParams);
+  const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
+
+  const rows = useMemo(
+    () => (obrasPayload?.pages ?? []).flatMap((p) => p.rows),
+    [obrasPayload],
+  );
+  const total = obrasPayload?.pages?.[0]?.total ?? 0;
 
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
   };
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    if (!hasNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, rows.length]);
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -147,6 +153,18 @@ export default function NovasObrasPage() {
     return result;
   }, [rows, statusSelected, complexidadeSelected, searchQuery]);
 
+  const clearAllAdvanced = () => {
+    setCidade('');
+    setUf('');
+    setModalidade('');
+    setStatusSelected([]);
+    setComplexidadeSelected([]);
+    setTipoSelected([]);
+    setMateriaisPorSelected([]);
+    setOrcamentoMin('');
+    setOrcamentoMax('');
+  };
+
   const advancedActiveCount =
     (cidade.trim() ? 1 : 0) +
     (uf.trim() ? 1 : 0) +
@@ -163,22 +181,10 @@ export default function NovasObrasPage() {
     empreitada_etapa: 'Empreitada por etapa',
   };
 
-  const clearAllAdvanced = () => {
-    setCidade('');
-    setUf('');
-    setModalidade('');
-    setStatusSelected([]);
-    setComplexidadeSelected([]);
-    setTipoSelected([]);
-    setMateriaisPorSelected([]);
-    setOrcamentoMin('');
-    setOrcamentoMax('');
-    setPage(1);
-  };
-
   if ((obrasLoading && !obrasPayload) || perfilLoading) return <NovasObrasSkeleton />;
 
   const isBlocked = perfilStatus?.isBlocked ?? false;
+  const loadedCount = rows.length;
   const showServerInfo = total > 0;
 
   return (
@@ -364,7 +370,7 @@ export default function NovasObrasPage() {
 
           {showServerInfo && (
             <p className="text-xs text-muted-foreground" data-testid="novas-obras-total-info">
-              <span className="font-semibold text-primary">{total}</span> obra{total === 1 ? '' : 's'} encontrada{total === 1 ? '' : 's'} · página {page} de {totalPages}
+              <span className="font-semibold text-primary">{total}</span> obra{total === 1 ? '' : 's'} encontrada{total === 1 ? '' : 's'} · {loadedCount} carregada{loadedCount === 1 ? '' : 's'}
             </p>
           )}
         </div>
@@ -374,56 +380,31 @@ export default function NovasObrasPage() {
         <NovasObrasGrid obras={filteredRows} isBlocked={isBlocked} />
       </div>
 
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPage((p) => Math.max(1, p - 1));
-                }}
-                aria-disabled={page === 1}
-                className={page === 1 ? 'pointer-events-none opacity-50' : ''}
-                data-testid="novas-obras-pagination-prev"
-              />
-            </PaginationItem>
-            {getPaginationRange(page, totalPages).map((item, idx) =>
-              item === 'ellipsis' ? (
-                <PaginationItem key={`ellipsis-${idx}`}>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : (
-                <PaginationItem key={item}>
-                  <PaginationLink
-                    href="#"
-                    isActive={page === item}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setPage(item);
-                    }}
-                    data-testid={`novas-obras-pagination-page-${item}`}
-                  >
-                    {item}
-                  </PaginationLink>
-                </PaginationItem>
-              ),
-            )}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setPage((p) => Math.min(totalPages, p + 1));
-                }}
-                aria-disabled={page === totalPages}
-                className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
-                data-testid="novas-obras-pagination-next"
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+      {!isBlocked && (hasNextPage || isFetchingNextPage) && (
+        <div
+          ref={sentinelRef}
+          className="flex flex-col items-center justify-center gap-3 py-6"
+          data-testid="novas-obras-infinite-sentinel"
+        >
+          {isFetchingNextPage ? (
+            <div
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+              data-testid="novas-obras-infinite-loading"
+            >
+              <RiLoader4Line className="h-4 w-4 animate-spin" />
+              Carregando mais obras...
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchNextPage()}
+              data-testid="novas-obras-load-more"
+            >
+              Carregar mais
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
