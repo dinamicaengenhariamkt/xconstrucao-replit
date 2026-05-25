@@ -10,7 +10,7 @@ import { publicUrlForKey } from "@shared/lib/storage";
 
 const createSchema = z.object({
   texto: z.string().trim().min(2).max(2000),
-  fotoFileIds: z.array(z.string().uuid()).max(8).optional(),
+  fotoFileIds: z.array(z.string().uuid()).max(10).optional(),
 });
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
