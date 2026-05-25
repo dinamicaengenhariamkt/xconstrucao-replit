@@ -28,6 +28,8 @@ export interface NovaObra {
   dataPublicacao: string;
   candidaturas: number;
   materiaisPor?: 'contratante' | 'empreiteiro' | 'misto';
+  modalidade?: 'administracao' | 'empreitada_global' | 'empreitada_etapa';
+  anexosCount?: number;
 }
 
 export interface Pendencia {

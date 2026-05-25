@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, gte, ilike, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gte, ilike, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, obras } from "@shared/db/schema";
+import { candidaturas, clientes, obras, obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
@@ -121,8 +121,17 @@ export async function GET(request: NextRequest) {
     .where(whereClause);
   const total = countRow?.total ?? 0;
 
+  // Subquery escalar correlacionada: conta anexos publicados (file não soft-deleted)
+  // por obra. Usa o índice em obra_anexos(obra_id) sem multiplicar rows.
+  const anexosCountExpr = sql<number>`(
+    SELECT COUNT(*)::int FROM ${obraAnexos}
+    INNER JOIN ${userFiles} ON ${userFiles.id} = ${obraAnexos.fileId}
+    WHERE ${obraAnexos.obraId} = ${obras.id}
+      AND ${userFiles.deletedAt} IS NULL
+  )`;
+
   const rows = await db
-    .select()
+    .select({ ...getTableColumns(obras), anexosCount: anexosCountExpr })
     .from(obras)
     .where(whereClause)
     .orderBy(desc(obras.createdAt))

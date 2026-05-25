@@ -1,6 +1,6 @@
 # Jornada — Marketplace & Descoberta de Obras
 
-> Status: parcial | Prioridade: alta | Wave: 1
+> Status: pronto | Prioridade: alta | Wave: 1
 > Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
@@ -81,9 +81,9 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - [x] Bookmark inline em `NovaObraCard` + detalhe empreiteiro via novo hook (shim `toggleSave/isSaved`) _(Task #43)_
 - [x] Paginação shadcn `Pagination` server-side no `/empreiteiro/novas-obras` _(Task #43, substituído por infinite scroll na Task #45)_
 - [x] Promover status da jornada para `revisão` no índice de `docs/jornadas/README.md` _(Task #43)_
-- [ ] Carries de J03 no card do marketplace: badge de anexos, faixa de valor enriquecida _(carry — visível no detalhe; card mantém minimal por ora)_
-- [ ] Estado bloqueado quando `perfilCompleto=false` _(carry — depende de J02 expor flag estável)_
-- [ ] Remover mocks + flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo _(carry — flag ainda usada por outros módulos empreiteiro)_
+- [x] Carries de J03 no card do marketplace: badge de anexos + chips de modalidade/materiais + rótulo "Orçamento estimado" _(Task #62)_
+- [x] Estado bloqueado quando `perfilCompleto=false` _(Task #62 — já implementado em #43 via `usePerfilStatus` + `BlockedBanner` + gate `isBlocked` na page; checklist marcado retroativamente)_
+- [ ] Remover mocks + flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo _(carry — flag ainda usada por outros módulos empreiteiro; não é blocker pra `pronto`)_
 
 ## 10. Critérios de aceite
 1. Contratante publica obra (J03 com visibilidade='publicada') → empreiteiro abre `/empreiteiro/novas-obras` → obra aparece na primeira página.
@@ -126,3 +126,6 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - 2026-05-25 (Task #43): Favoritos migrados pra `obras_salvas` — store Zustand `obras-salvas-store.ts` deletado. Detalhe empreiteiro recebeu shim `toggleSave/isSaved` em cima do novo hook pra evitar reescrever a página inteira. Refatorar pro hook direto numa próxima passada.
 - 2026-05-25 (Task #43): Card `NovaObraCard` ganhou bookmark inline (top-3 right-3) via `useToggleObraSalva`; carries de J03 (badge de anexos, faixa enriquecida) e estado bloqueado por `perfilCompleto` ficam carry — primeiro só visíveis no detalhe; segundo depende de J02 expor flag estável.
 - 2026-05-25 (Task #45): `/empreiteiro/novas-obras` migrou de `Pagination` shadcn para infinite scroll via `useInfiniteQuery` + `IntersectionObserver` (rootMargin 300px, fallback "Carregar mais" se o observer não disparar). Filtros server-side resetam a lista via `queryKey` (TanStack faz cache por params). Spinner inline durante `fetchNextPage`. `useNovasObras` (one-shot) preservada para outros callsites.
+- 2026-05-25 (Task #62): Item "estado bloqueado por `perfilCompleto`" da §9 já estava implementado desde a #43 — `usePerfilStatus` em `features/empreiteiro/novas-obras/hooks/use-novas-obras.ts:45` consumido por `BlockedBanner` + gate `perfilStatus?.isBlocked` na page. Checklist marcado retroativamente sem código novo.
+- 2026-05-25 (Task #62): `anexosCount` adicionado ao envelope `GET /api/obras` via subquery escalar correlacionada (`SELECT COUNT(*)::int FROM obra_anexos JOIN user_files ... WHERE obra_id = obras.id AND user_files.deleted_at IS NULL`) em vez de embed completo do array de anexos — mantém payload leve e usa índice `obra_anexos(obra_id)`. Card mostra badge "📎 N anexos" só quando >0; chips de modalidade/materiais + rótulo "Orçamento estimado" também adicionados.
+- 2026-05-25 (Task #62): Flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` permanece como gap aberto — ainda é usada por outros módulos empreiteiro (dashboard, minhas-obras). Remoção parcial só do módulo `novas-obras` foi adiada para não criar inconsistência cross-módulo; não é blocker pra promover J04 a `pronto`.

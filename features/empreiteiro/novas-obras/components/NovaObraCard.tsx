@@ -5,8 +5,20 @@ import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
-import { IconStar, IconLocationOn, IconGroup, IconLock, IconBookmark, IconBookmarkFill } from '@shared/components/icons';
+import { IconStar, IconLocationOn, IconGroup, IconLock, IconBookmark, IconBookmarkFill, IconAttachFile } from '@shared/components/icons';
 import { useObrasSalvasIds, useToggleObraSalva } from '@features/empreiteiro/obras-salvas/hooks/use-obras-salvas';
+
+const MODALIDADE_LABEL: Record<string, string> = {
+  administracao: 'Administração',
+  empreitada_global: 'Empreitada global',
+  empreitada_etapa: 'Empreitada por etapa',
+};
+
+const MATERIAIS_LABEL: Record<string, string> = {
+  contratante: 'Materiais: Contratante',
+  empreiteiro: 'Materiais: Empreiteiro',
+  misto: 'Materiais: Misto',
+};
 
 export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
   const savedIds = useObrasSalvasIds();
@@ -77,11 +89,41 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
                 <IconLocationOn className="text-sm dark:text-gray-400" />
                 {obra.endereco}
               </p>
+              {(obra.modalidade || obra.materiaisPor || (obra.anexosCount ?? 0) > 0) && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2" data-testid={`chips-obra-${obra.id}`}>
+                  {obra.modalidade && (
+                    <span
+                      className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                      data-testid={`chip-modalidade-${obra.id}`}
+                    >
+                      {MODALIDADE_LABEL[obra.modalidade] ?? obra.modalidade}
+                    </span>
+                  )}
+                  {obra.materiaisPor && (
+                    <span
+                      className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                      data-testid={`chip-materiais-${obra.id}`}
+                    >
+                      {MATERIAIS_LABEL[obra.materiaisPor] ?? obra.materiaisPor}
+                    </span>
+                  )}
+                  {(obra.anexosCount ?? 0) > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                      title={`${obra.anexosCount} anexo(s) enviado(s) pelo contratante`}
+                      data-testid={`badge-anexos-${obra.id}`}
+                    >
+                      <IconAttachFile className="text-xs" />
+                      {obra.anexosCount} {obra.anexosCount === 1 ? 'anexo' : 'anexos'}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-2 text-sm">
               <div>
-                <p className="text-gray-400 text-xs">Orcamento</p>
+                <p className="text-gray-400 text-xs">Orçamento estimado</p>
                 <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(obra.orcamento)}</p>
               </div>
               <div className="text-right">

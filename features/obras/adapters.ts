@@ -48,6 +48,7 @@ export type DbObra = {
   dataPrevisao?: string | null;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
+  anexosCount?: number | null;
 };
 
 export type DbObraAnexo = {
@@ -233,6 +234,8 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     dataPublicacao: formatRelative(o.createdAt ?? null),
     candidaturas: 0,
     materiaisPor: o.materiaisPor ?? undefined,
+    modalidade: o.modalidade ?? undefined,
+    anexosCount: typeof o.anexosCount === 'number' ? o.anexosCount : 0,
   };
 }
 
