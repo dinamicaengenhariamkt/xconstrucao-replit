@@ -12,8 +12,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 |:-:|---|---|:-:|---|:-:|
 | 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | revisão | alta |
 | 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | revisão | média |
-| 03 | [Cadastro de Obra](03-cadastro-obra.md) | contratante | 1 | revisão | alta |
-| 04 | [Marketplace & Descoberta](04-marketplace-descoberta.md) | empreiteiro, contratante | 1 | parcial | alta |
+| 03 | [Cadastro de Obra](03-cadastro-obra.md) | contratante | 1 | pronto | alta |
+| 04 | [Marketplace & Descoberta](04-marketplace-descoberta.md) | empreiteiro, contratante | 1 | revisão | alta |
 | 05 | [Candidatura & Aceite](05-candidatura-aceite.md) | empreiteiro, contratante, admin | 1 | parcial | alta |
 | 06 | [Medições & Diário de Obra](06-medicoes-diario-obra.md) | empreiteiro, contratante, admin | 2 | mock | alta |
 | 07 | [Atividades & Timeline](07-atividades-timeline.md) | todas | 3 | mock | média |

@@ -19,6 +19,7 @@ import { TabChecklists } from '@features/contratante/minhas-obras/components/Tab
 import { ContatoEmpreiteiroCard } from '@features/contratante/minhas-obras/components/ContatoEmpreiteiroCard';
 import { CandidaturasCard } from '@features/contratante/minhas-obras/components/CandidaturasCard';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
+import { ObraVisibilidadeActions } from '@features/contratante/minhas-obras/components/ObraVisibilidadeActions';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
   RiArrowLeftLine,
@@ -133,6 +134,14 @@ export default function ObraDetalhePage() {
           <span className="text-primary font-semibold" data-testid="text-breadcrumb-title">{obra.titulo}</span>
         </nav>
       </motion.div>
+
+      {/* Visibilidade + anexos (J03 actions) */}
+      {(obra as { visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada' }).visibilidade && (
+        <ObraVisibilidadeActions
+          obraId={id}
+          visibilidade={(obra as { visibilidade: 'rascunho' | 'publicada' | 'pausada' | 'arquivada' }).visibilidade}
+        />
+      )}
 
       {/* Hero card */}
       <motion.div

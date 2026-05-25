@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { RiSearchLine } from 'react-icons/ri';
 import { cn } from '@shared/lib/utils';
 import { PageHeader } from '@features/shared/components/PageHeader';
@@ -14,7 +14,6 @@ import {
 } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import {
   COMPLEXIDADE_LABELS,
-  ITEMS_PER_PAGE,
   NOVAS_OBRAS_STATUS_LABELS,
   NOVAS_OBRAS_STATUS_DOT_CLASSES,
 } from '@features/empreiteiro/novas-obras/constants';
@@ -34,73 +33,112 @@ import {
 import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
 
-export default function NovasObrasPage() {
-  const { data: obrasPayload, isLoading: obrasLoading } = useNovasObras({ pageSize: 100 });
-  const obras = obrasPayload?.rows;
-  const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
+const PAGE_SIZE = 20;
 
+export default function NovasObrasPage() {
+  // Filtros server-side
+  const [cidade, setCidade] = useState('');
+  const [tipoSelected, setTipoSelected] = useState<string[]>([]);
+  const [materiaisPorSelected, setMateriaisPorSelected] = useState<string[]>([]);
+  const [orcamentoMin, setOrcamentoMin] = useState('');
+  const [orcamentoMax, setOrcamentoMax] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Filtros client-side (rodam sobre rows da página atual)
   const [searchQuery, setSearchQuery] = useState('');
   const [statusSelected, setStatusSelected] = useState<string[]>([]);
   const [complexidadeSelected, setComplexidadeSelected] = useState<string[]>([]);
-  const [tipoSelected, setTipoSelected] = useState<string[]>([]);
-  const [orcamentoMin, setOrcamentoMin] = useState('');
-  const [orcamentoMax, setOrcamentoMax] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
 
   const orcMinNum = orcamentoMin === '' ? undefined : Number(orcamentoMin);
   const orcMaxNum = orcamentoMax === '' ? undefined : Number(orcamentoMax);
 
+  const queryParams = useMemo(() => {
+    const p: Record<string, string | number> = { page, pageSize: PAGE_SIZE };
+    if (cidade.trim()) p.cidade = cidade.trim();
+    // API aceita apenas 1 valor por filtro — quando há multi-seleção, deixamos sem param e filtramos client-side.
+    if (tipoSelected.length === 1) p.tipo = tipoSelected[0];
+    if (materiaisPorSelected.length === 1) p.materiaisPor = materiaisPorSelected[0];
+    if (orcMinNum !== undefined) p.minValor = orcMinNum;
+    if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
+    return p;
+  }, [page, cidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+
+  const { data: obrasPayload, isLoading: obrasLoading } = useNovasObras(queryParams);
+  const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
+
+  const rows = obrasPayload?.rows ?? [];
+  const total = obrasPayload?.total ?? 0;
+  const totalPages = obrasPayload?.totalPages ?? 0;
+
+  // Reset page quando filtro server muda
+  useEffect(() => {
+    setPage(1);
+  }, [cidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+
+  // Clamp page se totalPages mudar pra menor
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
-    setCurrentPage(1);
   };
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    (obras ?? []).forEach((o) => {
+    rows.forEach((o) => {
       counts[o.status] = (counts[o.status] || 0) + 1;
     });
     return Object.entries(NOVAS_OBRAS_STATUS_LABELS).map(([value, label]) => ({
       value,
       label: `${label} (${counts[value] || 0})`,
     }));
-  }, [obras]);
+  }, [rows]);
 
   const complexidadeOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    (obras ?? []).forEach((o) => {
+    rows.forEach((o) => {
       counts[o.complexidade] = (counts[o.complexidade] || 0) + 1;
     });
     return Object.entries(COMPLEXIDADE_LABELS).map(([value, label]) => ({
       value,
       label: `${label} (${counts[value] || 0})`,
     }));
-  }, [obras]);
+  }, [rows]);
 
   const tipoOptions = useMemo(() => {
-    const set = new Set((obras ?? []).map((o) => o.tipo));
+    const set = new Set(rows.map((o) => o.tipo));
     return Array.from(set)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .map((t) => ({ value: t, label: t }));
-  }, [obras]);
+  }, [rows]);
 
-  const filteredObras = useMemo(() => {
-    if (!obras) return [];
-    let result = obras;
+  const materiaisPorOptions = useMemo(
+    () => [
+      { value: 'contratante', label: 'Contratante' },
+      { value: 'empreiteiro', label: 'Empreiteiro' },
+      { value: 'misto', label: 'Misto' },
+    ],
+    [],
+  );
+
+  // Filtros client-side sobre rows da página atual
+  const filteredRows = useMemo(() => {
+    let result = rows;
     if (statusSelected.length > 0) {
       result = result.filter((o) => statusSelected.includes(o.status));
     }
     if (complexidadeSelected.length > 0) {
       result = result.filter((o) => complexidadeSelected.includes(o.complexidade));
     }
-    if (tipoSelected.length > 0) {
+    // Multi-seleção de tipo/materiaisPor: API só aceita 1, então filtramos aqui quando há 2+.
+    if (tipoSelected.length > 1) {
       result = result.filter((o) => tipoSelected.includes(o.tipo));
     }
-    if (orcMinNum !== undefined) {
-      result = result.filter((o) => o.orcamento >= orcMinNum);
-    }
-    if (orcMaxNum !== undefined) {
-      result = result.filter((o) => o.orcamento <= orcMaxNum);
+    if (materiaisPorSelected.length > 1) {
+      result = result.filter((o) =>
+        o.materiaisPor ? materiaisPorSelected.includes(o.materiaisPor) : false,
+      );
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -112,40 +150,31 @@ export default function NovasObrasPage() {
       );
     }
     return result;
-  }, [
-    obras,
-    statusSelected,
-    complexidadeSelected,
-    tipoSelected,
-    orcMinNum,
-    orcMaxNum,
-    searchQuery,
-  ]);
-
-  const totalPages = Math.ceil(filteredObras.length / ITEMS_PER_PAGE);
-  const paginatedObras = filteredObras.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+  }, [rows, statusSelected, complexidadeSelected, tipoSelected, materiaisPorSelected, searchQuery]);
 
   const advancedActiveCount =
+    (cidade.trim() ? 1 : 0) +
     (statusSelected.length > 0 ? 1 : 0) +
     (complexidadeSelected.length > 0 ? 1 : 0) +
     (tipoSelected.length > 0 ? 1 : 0) +
+    (materiaisPorSelected.length > 0 ? 1 : 0) +
     (orcMinNum !== undefined || orcMaxNum !== undefined ? 1 : 0);
 
   const clearAllAdvanced = () => {
+    setCidade('');
     setStatusSelected([]);
     setComplexidadeSelected([]);
     setTipoSelected([]);
+    setMateriaisPorSelected([]);
     setOrcamentoMin('');
     setOrcamentoMax('');
-    setCurrentPage(1);
+    setPage(1);
   };
 
-  if (obrasLoading || perfilLoading) return <NovasObrasSkeleton />;
+  if ((obrasLoading && !obrasPayload) || perfilLoading) return <NovasObrasSkeleton />;
 
   const isBlocked = perfilStatus?.isBlocked ?? false;
+  const showServerInfo = total > 0;
 
   return (
     <div className="p-10 flex flex-col gap-10" data-testid="novas-obras-empreiteiro-page">
@@ -163,6 +192,16 @@ export default function NovasObrasPage() {
               activeCount={advancedActiveCount}
               onClearAll={clearAllAdvanced}
             >
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Cidade</label>
+                <Input
+                  placeholder="Ex.: São Paulo"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  className="h-9 text-sm"
+                  data-testid="filter-cidade-input"
+                />
+              </div>
               <MultiSelectDropdown
                 label="Status"
                 options={statusOptions}
@@ -187,6 +226,14 @@ export default function NovasObrasPage() {
                 placeholder="Todos os tipos"
                 testIdPrefix="filter-tipo"
               />
+              <MultiSelectDropdown
+                label="Materiais por"
+                options={materiaisPorOptions}
+                values={materiaisPorSelected}
+                onChange={onFilterChange(setMateriaisPorSelected)}
+                placeholder="Qualquer"
+                testIdPrefix="filter-materiais-por"
+              />
               <RangeNumberInput
                 label="Orçamento"
                 min={orcamentoMin}
@@ -203,9 +250,9 @@ export default function NovasObrasPage() {
             <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
               <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Buscar por título, endereço ou tipo..."
+                placeholder="Buscar nesta página por título, endereço ou tipo..."
                 value={searchQuery}
-                onChange={(e) => onFilterChange(setSearchQuery)(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 data-testid="input-search-novas-obras"
               />
@@ -214,12 +261,19 @@ export default function NovasObrasPage() {
 
           {advancedActiveCount > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
+              {cidade.trim() && (
+                <ActiveFilterChip
+                  label={`Cidade: ${cidade.trim()}`}
+                  onRemove={() => setCidade('')}
+                  testId="active-chip-cidade"
+                />
+              )}
               {statusSelected.map((s) => (
                 <ActiveFilterChip
                   key={s}
                   label={`Status: ${NOVAS_OBRAS_STATUS_LABELS[s] ?? s}`}
                   onRemove={() =>
-                    onFilterChange(setStatusSelected)(statusSelected.filter((x) => x !== s))
+                    setStatusSelected(statusSelected.filter((x) => x !== s))
                   }
                   dotClassName={NOVAS_OBRAS_STATUS_DOT_CLASSES[s]}
                   testId={`active-chip-status-${s}`}
@@ -230,9 +284,7 @@ export default function NovasObrasPage() {
                   key={c}
                   label={`Complexidade: ${COMPLEXIDADE_LABELS[c] ?? c}`}
                   onRemove={() =>
-                    onFilterChange(setComplexidadeSelected)(
-                      complexidadeSelected.filter((x) => x !== c),
-                    )
+                    setComplexidadeSelected(complexidadeSelected.filter((x) => x !== c))
                   }
                   testId={`active-chip-complexidade-${c}`}
                 />
@@ -241,17 +293,23 @@ export default function NovasObrasPage() {
                 <ActiveFilterChip
                   key={t}
                   label={`Tipo: ${t}`}
-                  onRemove={() =>
-                    onFilterChange(setTipoSelected)(tipoSelected.filter((x) => x !== t))
-                  }
+                  onRemove={() => setTipoSelected(tipoSelected.filter((x) => x !== t))}
                   testId={`active-chip-tipo-${t}`}
+                />
+              ))}
+              {materiaisPorSelected.map((m) => (
+                <ActiveFilterChip
+                  key={m}
+                  label={`Materiais: ${m}`}
+                  onRemove={() => setMateriaisPorSelected(materiaisPorSelected.filter((x) => x !== m))}
+                  testId={`active-chip-materiais-${m}`}
                 />
               ))}
               {(orcMinNum !== undefined || orcMaxNum !== undefined) && (
                 <ActiveFilterChip
                   label={`Orçamento: ${formatRange(orcamentoMin, orcamentoMax, { prefix: 'R$ ' })}`}
                   onRemove={() => {
-                    onFilterChange(setOrcamentoMin)('');
+                    setOrcamentoMin('');
                     setOrcamentoMax('');
                   }}
                   testId="active-chip-orcamento"
@@ -259,11 +317,17 @@ export default function NovasObrasPage() {
               )}
             </div>
           )}
+
+          {showServerInfo && (
+            <p className="text-xs text-muted-foreground" data-testid="novas-obras-total-info">
+              <span className="font-semibold text-primary">{total}</span> obra{total === 1 ? '' : 's'} encontrada{total === 1 ? '' : 's'} · página {page} de {totalPages}
+            </p>
+          )}
         </div>
       </div>
 
       <div className={cn(isBlocked && 'opacity-40 pointer-events-none')}>
-        <NovasObrasGrid obras={paginatedObras} isBlocked={isBlocked} />
+        <NovasObrasGrid obras={filteredRows} isBlocked={isBlocked} />
       </div>
 
       {totalPages > 1 && (
@@ -274,14 +338,14 @@ export default function NovasObrasPage() {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setCurrentPage((p) => Math.max(1, p - 1));
+                  setPage((p) => Math.max(1, p - 1));
                 }}
-                aria-disabled={currentPage === 1}
-                className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                aria-disabled={page === 1}
+                className={page === 1 ? 'pointer-events-none opacity-50' : ''}
                 data-testid="novas-obras-pagination-prev"
               />
             </PaginationItem>
-            {getPaginationRange(currentPage, totalPages).map((item, idx) =>
+            {getPaginationRange(page, totalPages).map((item, idx) =>
               item === 'ellipsis' ? (
                 <PaginationItem key={`ellipsis-${idx}`}>
                   <PaginationEllipsis />
@@ -290,10 +354,10 @@ export default function NovasObrasPage() {
                 <PaginationItem key={item}>
                   <PaginationLink
                     href="#"
-                    isActive={currentPage === item}
+                    isActive={page === item}
                     onClick={(e) => {
                       e.preventDefault();
-                      setCurrentPage(item);
+                      setPage(item);
                     }}
                     data-testid={`novas-obras-pagination-page-${item}`}
                   >
@@ -307,10 +371,10 @@ export default function NovasObrasPage() {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  setCurrentPage((p) => Math.min(totalPages, p + 1));
+                  setPage((p) => Math.min(totalPages, p + 1));
                 }}
-                aria-disabled={currentPage === totalPages}
-                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                aria-disabled={page === totalPages}
+                className={page === totalPages ? 'pointer-events-none opacity-50' : ''}
                 data-testid="novas-obras-pagination-next"
               />
             </PaginationItem>

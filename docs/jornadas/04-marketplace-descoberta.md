@@ -75,13 +75,15 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - [x] Endpoint `GET /api/obras/[id]` com gate de visibilidade + ocultação de PII _(Task #36 / #42 já cobre via `findObraWithAccess`)_
 - [x] Endpoints `GET/POST/DELETE /api/empreiteiro/obras-salvas` _(Task #42)_
 - [x] Auditar e migrar consumers do shape antigo de `GET /api/obras` (empreiteiro novas-obras + contratante minhas-obras + apagar hook órfão `features/obras/hooks/use-obras.ts`) _(Task #42)_
-- [ ] Service de [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) consumindo API real (Task J04.C)
-- [ ] Tela `/empreiteiro/obras-salvas` listando do banco com paginação (Task J04.C)
-- [ ] Carries de J03 no card do marketplace: tipo, modalidade, materiaisPor, cidade/uf, faixa de valor, badge de anexos (Task J04.C)
-- [ ] Estado vazio + estado bloqueado (perfil empreiteiro incompleto — verifica `perfilCompleto`) (Task J04.C)
-- [ ] Remover mocks + flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo (Task J04.C)
-- [ ] Migrar favoritos do Zustand+localStorage pra `obras_salvas` com toast + optimistic update (Task J04.C)
-- [ ] Promover status da jornada para `revisão` no índice de `docs/jornadas/README.md` (Task J04.C)
+- [x] Service de [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) consumindo API real + filtros server-side (cidade/tipo/materiaisPor/orcamento) _(Task #43)_
+- [x] Tela `/empreiteiro/obras-salvas` listando do banco via `useObrasSalvas` _(Task #43)_
+- [x] Migrar favoritos do Zustand+localStorage pra `obras_salvas` com optimistic update + rollback (`useToggleObraSalva`); store Zustand deletado _(Task #43)_
+- [x] Bookmark inline em `NovaObraCard` + detalhe empreiteiro via novo hook (shim `toggleSave/isSaved`) _(Task #43)_
+- [x] Paginação shadcn `Pagination` server-side no `/empreiteiro/novas-obras` _(Task #43)_
+- [x] Promover status da jornada para `revisão` no índice de `docs/jornadas/README.md` _(Task #43)_
+- [ ] Carries de J03 no card do marketplace: badge de anexos, faixa de valor enriquecida _(carry — visível no detalhe; card mantém minimal por ora)_
+- [ ] Estado bloqueado quando `perfilCompleto=false` _(carry — depende de J02 expor flag estável)_
+- [ ] Remover mocks + flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo _(carry — flag ainda usada por outros módulos empreiteiro)_
 
 ## 10. Critérios de aceite
 1. Contratante publica obra (J03 com visibilidade='publicada') → empreiteiro abre `/empreiteiro/novas-obras` → obra aparece na primeira página.
@@ -120,3 +122,6 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - 2026-05-25 (Task #42): Envelope final escolhido foi `{ rows, total, page, pageSize, totalPages }` (e não `{ items, ... }` como rascunhado em §10 c.5/§11) para casar com o shape que `useNovasObras`/`useObrasContratante` já adotam. Atualizar §10 c.5 / §11 em uma próxima passada de docs (apenas terminologia, sem impacto funcional).
 - 2026-05-25 (Task #42): Busca textual `q=` (§10 c.4) ficou fora — toda filtragem por texto (`nome`/`descricao`) é client-side hoje nos 6 callsites e nenhum consumer pediu server-side. Avaliar em J04.C se a paginação real exigir reposicionar a busca para o servidor.
 - 2026-05-25 (Task #42): Hooks `useNovasObras({pageSize})` e `useObrasContratante({pageSize})` foram ajustados em **todos os 6 callsites** com `pageSize: 100` (mantém compat com paginação client-side existente). Migração para paginação server-side propriamente dita fica para J04.C.
+- 2026-05-25 (Task #43): Filtros server-side adotados em `/empreiteiro/novas-obras` (cidade, tipo, materiaisPor, faixa de orçamento) → demais filtros (status, complexidade, busca textual) permanecem client-side sobre o slice da página atual. Estratégia híbrida intencional enquanto não há volume.
+- 2026-05-25 (Task #43): Favoritos migrados pra `obras_salvas` — store Zustand `obras-salvas-store.ts` deletado. Detalhe empreiteiro recebeu shim `toggleSave/isSaved` em cima do novo hook pra evitar reescrever a página inteira. Refatorar pro hook direto numa próxima passada.
+- 2026-05-25 (Task #43): Card `NovaObraCard` ganhou bookmark inline (top-3 right-3) via `useToggleObraSalva`; carries de J03 (badge de anexos, faixa enriquecida) e estado bloqueado por `perfilCompleto` ficam carry — primeiro só visíveis no detalhe; segundo depende de J02 expor flag estável.

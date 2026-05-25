@@ -9,7 +9,7 @@ import { ObraDetalheContent } from '@features/empreiteiro/novas-obras/components
 import { ObraDetalheSidebar } from '@features/empreiteiro/novas-obras/components/ObraDetalheSidebar';
 import { CompartilharModal } from '@features/empreiteiro/novas-obras/components/CompartilharModal';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
-import { useObrasSalvasStore } from '@features/empreiteiro/novas-obras/store/obras-salvas-store';
+import { useObrasSalvasIds, useToggleObraSalva } from '@features/empreiteiro/obras-salvas/hooks/use-obras-salvas';
 import { IconArrowBack, IconChevronRight, IconCheckCircle, IconSend, IconArrowForward, IconBookmark, IconShare, IconConstruction } from '@shared/components/icons';
 
 export default function ObraDetalhePage() {
@@ -17,7 +17,10 @@ export default function ObraDetalhePage() {
   const id = params.id as string;
   const { data: obra, isLoading } = useObraDetalhe(id);
   const [showShare, setShowShare] = useState(false);
-  const { toggleSave, isSaved } = useObrasSalvasStore();
+  const savedIds = useObrasSalvasIds();
+  const toggleSaveMutation = useToggleObraSalva();
+  const isSaved = (oid: string) => savedIds.has(oid);
+  const toggleSave = (oid: string) => toggleSaveMutation.mutate({ obraId: oid, isSaved: savedIds.has(oid) });
 
   if (isLoading) {
     return (

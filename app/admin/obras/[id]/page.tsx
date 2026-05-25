@@ -31,7 +31,8 @@ import {
   RiStickyNoteLine,
   RiSearchLine,
 } from 'react-icons/ri';
-import { getMockObraDetalhe } from '@features/admin/obras/mocks';
+import { useAdminObraDetalhe } from '@features/admin/obras/hooks/use-admin-obra-detalhe';
+import { VISIBILIDADE_LABEL_MAP } from '@features/admin/obras/api/admin-obra-detalhe-service';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
@@ -575,14 +576,10 @@ function HistoricoTab({ historico }: { historico: AdminObraHistoricoItem[] }) {
 
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const obra = getMockObraDetalhe(id);
+  const { data, isLoading } = useAdminObraDetalhe(id);
+  const obra = data?.detalhe;
+  const visibilidade = data?.visibilidade;
+  const anexos = data?.anexos ?? [];
 
   if (isLoading) {
     return (
@@ -618,7 +615,12 @@ export default function AdminObraDetalhePage() {
     );
   }
 
-  const statusCfg = STATUS_CONFIG[obra.status];
+  const statusCfg = STATUS_CONFIG[obra.status] ?? STATUS_CONFIG.pausada;
+  const safeDate = (iso: string) => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-BR');
+  };
   const progressColor =
     obra.status === 'em_andamento'
       ? 'bg-blue-500'
@@ -628,8 +630,11 @@ export default function AdminObraDetalhePage() {
       ? 'bg-amber-500'
       : 'bg-red-500';
 
-  const saldoPagar = obra.valorTotal - obra.valorPago;
-  const percentPago = Math.round((obra.valorPago / obra.valorTotal) * 100);
+  const saldoPagar = Math.max(0, obra.valorTotal - obra.valorPago);
+  const percentPago =
+    obra.valorTotal > 0
+      ? Math.min(100, Math.max(0, Math.round((obra.valorPago / obra.valorTotal) * 100)))
+      : 0;
   const health = getMockHealth(obra.id);
 
   const kpis = [
@@ -703,6 +708,14 @@ export default function AdminObraDetalhePage() {
                 >
                   {statusCfg.label}
                 </span>
+                {visibilidade && (
+                  <span
+                    className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"
+                    data-testid="badge-visibilidade"
+                  >
+                    {VISIBILIDADE_LABEL_MAP[visibilidade] ?? visibilidade}
+                  </span>
+                )}
                 <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                   {obra.tipo}
                 </span>
@@ -731,8 +744,7 @@ export default function AdminObraDetalhePage() {
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">Período</p>
                 <p className="font-semibold text-gray-900 dark:text-gray-100">
-                  {new Date(obra.dataInicio).toLocaleDateString('pt-BR')} –{' '}
-                  {new Date(obra.previsaoFim).toLocaleDateString('pt-BR')}
+                  {safeDate(obra.dataInicio)} – {safeDate(obra.previsaoFim)}
                 </p>
               </div>
             </div>
@@ -842,8 +854,8 @@ export default function AdminObraDetalhePage() {
                 {[
                   { label: 'Código', value: obra.codigo },
                   { label: 'Tipo', value: obra.tipo },
-                  { label: 'Início', value: new Date(obra.dataInicio).toLocaleDateString('pt-BR') },
-                  { label: 'Previsão de término', value: new Date(obra.previsaoFim).toLocaleDateString('pt-BR') },
+                  { label: 'Início', value: safeDate(obra.dataInicio) },
+                  { label: 'Previsão de término', value: safeDate(obra.previsaoFim) },
                   { label: 'Localização', value: obra.localizacao ?? '—' },
                   { label: 'Endereço', value: obra.endereco },
                 ].map((row) => (

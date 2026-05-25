@@ -5,12 +5,42 @@ import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
-import { IconStar, IconLocationOn, IconGroup, IconLock } from '@shared/components/icons';
+import { IconStar, IconLocationOn, IconGroup, IconLock, IconBookmark, IconBookmarkFill } from '@shared/components/icons';
+import { useObrasSalvasIds, useToggleObraSalva } from '@features/empreiteiro/obras-salvas/hooks/use-obras-salvas';
 
 export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
+  const savedIds = useObrasSalvasIds();
+  const isSaved = savedIds.has(obra.id);
+  const toggle = useToggleObraSalva();
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isBlocked || toggle.isPending) return;
+    toggle.mutate({ obraId: obra.id, isSaved });
+  };
 
   return (
     <div className="relative" data-testid={`nova-obra-card-${obra.id}`}>
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={isBlocked || toggle.isPending}
+        className={cn(
+          'absolute top-3 right-3 z-20 p-2 rounded-lg shadow transition-all',
+          'bg-white/90 dark:bg-gray-900/90 hover:bg-white dark:hover:bg-gray-900',
+          'cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+        )}
+        title={isSaved ? 'Remover dos salvos' : 'Salvar obra'}
+        aria-label={isSaved ? 'Remover dos salvos' : 'Salvar obra'}
+        data-testid={`obra-toggle-save-${obra.id}`}
+      >
+        {isSaved ? (
+          <IconBookmarkFill className="text-primary text-sm" />
+        ) : (
+          <IconBookmark className="text-gray-500 dark:text-gray-400 text-sm" />
+        )}
+      </button>
       <Link href={isBlocked ? '#' : `/empreiteiro/novas-obras/${obra.id}`} className={cn(isBlocked && 'pointer-events-none')}>
         <div className={cn(
           'group bg-white dark:bg-gray-900 rounded-3xl overflow-hidden',
