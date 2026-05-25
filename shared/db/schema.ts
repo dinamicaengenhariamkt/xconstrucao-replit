@@ -6,6 +6,18 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
+export const obraVisibilidadeEnum = pgEnum("obra_visibilidade", ["rascunho", "publicada", "pausada", "arquivada"]);
+export const obraModalidadeEnum = pgEnum("obra_modalidade", ["administracao", "empreitada_global", "empreitada_etapa"]);
+export const obraMateriaisPorEnum = pgEnum("obra_materiais_por", ["contratante", "empreiteiro", "misto"]);
+export const obraAnexoTipoEnum = pgEnum("obra_anexo_tipo", [
+  "projeto_arquitetonico",
+  "projeto_estrutural",
+  "art_rrt",
+  "alvara",
+  "foto_local",
+  "contrato",
+  "outros",
+]);
 export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise"]);
 
 export const users = pgTable("users", {
@@ -110,12 +122,39 @@ export const obras = pgTable("obras", {
   clienteId: varchar("cliente_id").references(() => clientes.id),
   empreiteiraId: varchar("empreiteira_id").references(() => empreiteiras.id),
   status: obraStatusEnum("status").notNull().default("planejamento"),
+  visibilidade: obraVisibilidadeEnum("visibilidade").notNull().default("rascunho"),
+  tipo: text("tipo"),
+  descricao: text("descricao"),
+  cep: text("cep"),
+  cidade: text("cidade"),
+  uf: varchar("uf", { length: 2 }),
+  lat: numeric("lat", { precision: 10, scale: 7 }),
+  lng: numeric("lng", { precision: 10, scale: 7 }),
+  modalidade: obraModalidadeEnum("modalidade"),
+  materiaisPor: obraMateriaisPorEnum("materiais_por"),
+  areaM2: numeric("area_m2", { precision: 10, scale: 2 }),
+  padraoAcabamento: text("padrao_acabamento"),
+  acessibilidadeObs: text("acessibilidade_obs"),
   valorTotal: numeric("valor_total", { precision: 15, scale: 2 }).default("0"),
   valorPago: numeric("valor_pago", { precision: 15, scale: 2 }).default("0"),
   progresso: integer("progresso").default(0),
   dataInicio: text("data_inicio"),
   dataPrevisao: text("data_previsao"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const obraAnexos = pgTable("obra_anexos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  tipo: obraAnexoTipoEnum("tipo").notNull(),
+  observacao: text("observacao"),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ObraAnexo = typeof obraAnexos.$inferSelect;
 
 export const financeiro = pgTable("financeiro", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

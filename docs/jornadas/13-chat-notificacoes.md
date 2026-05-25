@@ -85,4 +85,4 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-25 (Task #32): Evento `obra.publicada` precisa notificar **admin** (moderação opcional) e disparar emails segmentados pra empreiteiros com `especialidade` compatível + raio de cobertura — adicionar ao enum `notificacao_tipo` quando esta jornada sair do mock; integrar com J04 (descoberta) e J03 (publicação) no consumo.

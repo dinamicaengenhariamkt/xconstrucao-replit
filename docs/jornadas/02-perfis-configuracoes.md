@@ -1,7 +1,7 @@
 # Jornada — Perfis & Configurações
 
-> Status: parcial | Prioridade: média | Wave: 3
-> Última atualização: 2026-05-05
+> Status: revisão | Prioridade: média | Wave: 3
+> Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
 Permitir que cada persona mantenha seus dados (PF/PJ, contato, especialidade no caso do empreiteiro, foto, preferências de notificação) e gerencie senha/sessão. É o "centro do usuário" — alimenta apresentação no marketplace (J04) e contato em obras (J05/J08/J13).
@@ -75,3 +75,4 @@ Existentes: `users` (name, email, phone, image, avatarUrl), `clientes` (cnpj_cpf
 - 2026-05-25 (Task #31): `app/api/auth/oauth-convert/route.ts:59` mantém o gate antigo de propósito — comportamento desejado para superadmin em conversão OAuth não é óbvio; **gap aberto** (avaliar em uma próxima task da J01).
 - 2026-05-25 (Task #31): Aba **Plano & Uso** das visões contratante/empreiteiro segue só-leitura (sem billing real) — **gap aberto**, escopo natural da J11 (Planos & Assinatura).
 - 2026-05-25 (Task #31): Em produção, `audit_logs` com `action='cli.bootstrap-superadmin'` está com 0 linhas (o bootstrap rodado via SQL Console pulou o INSERT final). Puramente histórico — não bloqueia, mas o helper `scripts/bootstrap-superadmin.ts` deveria reentregar idempotente.
+- 2026-05-25 (Task #32): Self-service de **desativar/excluir conta** ainda não existe — hoje só admin via aba Usuários (Task #20). Gap registrado pra próxima task da J02 (rota `POST /api/auth/desativar-conta` + confirmação por senha + soft-delete já que `users.ativo` existe).

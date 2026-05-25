@@ -40,8 +40,8 @@ Existente: `obras`.
 Considerar: campos de filtragem podem precisar de índices (`status`, `cidade`, `valorTotal`).
 
 ## 7. Endpoints
-- `GET /api/obras` (existente) — adicionar query params `?cidade=&estado=&minValor=&maxValor=&especialidade=`
-- `GET /api/obras/[id]` (existente)
+- `GET /api/obras` (existente) — **filtrar por `visibilidade='publicada'` como default** (Task #32 introduziu coluna). Demais query params: `?uf=&cidade=&minValor=&maxValor=&modalidade=&materiaisPor=&especialidade=`. Usar índice `idx_obras_visibilidade_uf_cidade`.
+- `GET /api/obras/[id]` (existente) — só devolver pra empreiteiro quando `visibilidade='publicada'`; contratante dono e admin/superadmin podem ler em qualquer visibilidade.
 - `POST/DELETE /api/empreiteiro/obras-salvas`
 - `GET /api/empreiteiro/obras-salvas`
 
@@ -79,4 +79,4 @@ Considerar: campos de filtragem podem precisar de índices (`status`, `cidade`, 
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-25 (Task #32): J04 passa a depender de `obras.visibilidade='publicada'` (não mais de `status`). Filtros novos disponíveis pós-#33: `uf`, `cidade`, `modalidade`, `materiaisPor`. Backfill já marcou como `publicada` toda obra pré-existente com vínculo de empreiteira OU status diferente de `planejamento` — resto ficou em `rascunho` (não aparece no marketplace).

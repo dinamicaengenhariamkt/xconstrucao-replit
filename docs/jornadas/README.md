@@ -11,7 +11,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | # | Jornada | Personas | Wave | Status | Prioridade |
 |:-:|---|---|:-:|---|:-:|
 | 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | revisão | alta |
-| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | parcial | média |
+| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | revisão | média |
 | 03 | [Cadastro de Obra](03-cadastro-obra.md) | contratante | 1 | revisão | alta |
 | 04 | [Marketplace & Descoberta](04-marketplace-descoberta.md) | empreiteiro, contratante | 1 | parcial | alta |
 | 05 | [Candidatura & Aceite](05-candidatura-aceite.md) | empreiteiro, contratante, admin | 1 | parcial | alta |
