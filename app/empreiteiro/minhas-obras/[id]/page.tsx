@@ -22,8 +22,7 @@ import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/Ocorrenc
 import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
 import { useAuthStore } from '@features/auth/store/auth-store';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
-import { AdicionarAtualizacaoModal } from '@features/empreiteiro/minhas-obras/components/AdicionarAtualizacaoModal';
-import type { TimelineEvent } from '@features/empreiteiro/minhas-obras/types';
+import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/components/RegistrarMedicaoModal';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
@@ -68,17 +67,11 @@ export default function MinhaObraDetalhePage() {
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [localTimeline, setLocalTimeline] = useState<TimelineEvent[]>([]);
   const [showAtualizacao, setShowAtualizacao] = useState(false);
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setCoverUrl(URL.createObjectURL(file));
-  };
-
-  const handleAddAtualizacao = (event: TimelineEvent) => {
-    setLocalTimeline(prev => [event, ...prev]);
-    setActiveTab('timeline');
   };
 
   if (isLoading) {
@@ -369,7 +362,7 @@ export default function MinhaObraDetalhePage() {
             >
               {activeTab === 'tarefas' && <TaskManagerSection obra={obra} />}
               {activeTab === 'checklists' && <ChecklistsSection obra={obra} />}
-              {activeTab === 'timeline' && <TimelineSection events={[...localTimeline, ...obra.timeline]} />}
+              {activeTab === 'timeline' && <TimelineSection events={obra.timeline} />}
               {activeTab === 'fotos' && <FotoGallerySection obra={obra} />}
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
               {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}
@@ -415,10 +408,11 @@ export default function MinhaObraDetalhePage() {
         </motion.div>
       )}
 
-      <AdicionarAtualizacaoModal
+      <RegistrarMedicaoModal
         open={showAtualizacao}
         onOpenChange={setShowAtualizacao}
-        onAdd={handleAddAtualizacao}
+        obraId={obra.id}
+        obraTitulo={obra.titulo}
       />
 
     </div>
