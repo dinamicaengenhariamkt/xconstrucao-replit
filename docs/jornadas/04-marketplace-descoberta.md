@@ -89,8 +89,8 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 1. Contratante publica obra (J03 com visibilidade='publicada') → empreiteiro abre `/empreiteiro/novas-obras` → obra aparece na primeira página.
 2. Filtrar por UF=SP, cidade=Campinas → resposta consistente com `SELECT ... WHERE visibilidade='publicada' AND uf='SP' AND cidade='Campinas'`.
 3. Filtrar por modalidade=`empreitada_global` + faixa R$ 50k–200k → só obras casando ambos os critérios.
-4. Busca textual em `q=reforma` → ILIKE em `nome` e `descricao` (case-insensitive).
-5. Paginação: pageSize=20 default, response inclui `{ items, total, page, pageSize }`. pageSize=100 é o máximo aceito.
+4. Busca textual em `q=reforma` → ILIKE em `nome` e `descricao` (case-insensitive). _(Task #63 — server-side, % e _ escapados, max 80 chars, debounce 300ms no front)_
+5. Paginação: pageSize=20 default, response inclui `{ rows, total, page, pageSize, totalPages }`. pageSize=100 é o máximo aceito.
 6. Empreiteiro candidato a obra X → obra X some da listagem dele (mas continua visível pra outros empreiteiros).
 7. Obra com `empreiteiraId` definido (ocupada após aceite J05) → some do marketplace.
 8. Favoritar obra → aparece em `/empreiteiro/obras-salvas`. Refresh mantém. Desfavoritar → some.
@@ -100,7 +100,7 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 12. Card no marketplace mostra cidade/UF, modalidade, materiais por e faixa de valor — nunca email/telefone do contratante.
 
 ## 11. Riscos / Pontos de atenção
-- **Breaking change no `GET /api/obras`**: shape vira `{ items, total, page, pageSize }` em vez de array. Os 2 consumers vivos (empreiteiro novas-obras service, contratante minhas-obras service) precisam ser migrados na MESMA task (J04.C) — auditoria feita em #41.
+- **Breaking change no `GET /api/obras`**: shape vira `{ rows, total, page, pageSize, totalPages }` em vez de array. Os 2 consumers vivos (empreiteiro novas-obras service, contratante minhas-obras service) precisam ser migrados na MESMA task (J04.C) — auditoria feita em #41.
 - **PII do contratante**: nunca expor `users.email`/`users.phone` em listagens públicas. Só liberar via chat pós-aceite (J05/J13).
 - **Anti-self-apply**: query precisa do índice composto `(obra_id, empreiteiro_id)` criado na #41 — sem ele vira seq scan a cada filtro.
 - **Race condition em favoritar**: UNIQUE constraint resolve em DB; front mostra optimistic update + rollback em erro.
@@ -129,3 +129,6 @@ Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descric
 - 2026-05-25 (Task #62): Item "estado bloqueado por `perfilCompleto`" da §9 já estava implementado desde a #43 — `usePerfilStatus` em `features/empreiteiro/novas-obras/hooks/use-novas-obras.ts:45` consumido por `BlockedBanner` + gate `perfilStatus?.isBlocked` na page. Checklist marcado retroativamente sem código novo.
 - 2026-05-25 (Task #62): `anexosCount` adicionado ao envelope `GET /api/obras` via subquery escalar correlacionada (`SELECT COUNT(*)::int FROM obra_anexos JOIN user_files ... WHERE obra_id = obras.id AND user_files.deleted_at IS NULL`) em vez de embed completo do array de anexos — mantém payload leve e usa índice `obra_anexos(obra_id)`. Card mostra badge "📎 N anexos" só quando >0; chips de modalidade/materiais + rótulo "Orçamento estimado" também adicionados.
 - 2026-05-25 (Task #62): Flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` permanece como gap aberto — ainda é usada por outros módulos empreiteiro (dashboard, minhas-obras). Remoção parcial só do módulo `novas-obras` foi adiada para não criar inconsistência cross-módulo; não é blocker pra promover J04 a `pronto`.
+- 2026-05-25 (Task #63): Critério §10 c.4 fechado de verdade — `GET /api/obras` agora aceita `?q=` (trim, slice 80 chars, escape de `%`/`_`/`\`) e aplica `(nome ILIKE %q% OR descricao ILIKE %q%)`. Front `/empreiteiro/novas-obras` migrou de filtro client-side (que só achava nas obras já carregadas pelo infinite scroll) pra debounce 300ms → `queryParams.q` server-side. Filtros client-side de status/complexidade preservados (rodam sobre o slice carregado, decisão intentional enquanto não há volume). Terminologia §10 c.5 e §11 alinhada com o envelope real `{ rows, ... }`.
+- 2026-05-25 (Task #63): `getPerfilStatus` deixou de mascarar erro com fallback `isBlocked:false`. Agora propaga erro pro `useQuery`; `/empreiteiro/novas-obras` consome `isError` + `console.warn` e libera acesso por padrão (não bloqueia UX se o endpoint de perfil cair).
+- 2026-05-25 (Task #63): `ENABLE_MOCK` em `features/empreiteiro/novas-obras/constants.ts` **não foi removido** — auditoria de fechamento mostrou que `app/empreiteiro/novas-obras/[id]/aplicar/page.tsx:8` ainda importa o símbolo (gate de submit em modo mock). Remoção fica acoplada à limpeza global da flag (gap carry, sem blocker).

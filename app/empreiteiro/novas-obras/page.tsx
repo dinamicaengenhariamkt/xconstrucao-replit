@@ -36,8 +36,15 @@ export default function NovasObrasPage() {
   const [orcamentoMin, setOrcamentoMin] = useState('');
   const [orcamentoMax, setOrcamentoMax] = useState('');
 
-  // Filtros client-side (rodam sobre rows carregadas)
+  // Busca textual: input controlado + valor com debounce que vai pro servidor.
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Filtros client-side (rodam sobre rows carregadas)
   const [statusSelected, setStatusSelected] = useState<string[]>([]);
   const [complexidadeSelected, setComplexidadeSelected] = useState<string[]>([]);
 
@@ -46,6 +53,7 @@ export default function NovasObrasPage() {
 
   const queryParams = useMemo(() => {
     const p: Record<string, string | number | string[]> = { pageSize: PAGE_SIZE };
+    if (debouncedSearch) p.q = debouncedSearch;
     if (cidade.trim()) p.cidade = cidade.trim();
     if (uf.trim()) p.uf = uf.trim().toUpperCase();
     if (modalidade) p.modalidade = modalidade;
@@ -55,7 +63,7 @@ export default function NovasObrasPage() {
     if (orcMinNum !== undefined) p.minValor = orcMinNum;
     if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
     return p;
-  }, [cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+  }, [debouncedSearch, cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
 
   const {
     data: obrasPayload,
@@ -64,7 +72,18 @@ export default function NovasObrasPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useNovasObrasInfinite(queryParams);
-  const { data: perfilStatus, isLoading: perfilLoading } = usePerfilStatus();
+  const {
+    data: perfilStatus,
+    isLoading: perfilLoading,
+    isError: perfilError,
+  } = usePerfilStatus();
+  useEffect(() => {
+    if (perfilError) {
+      console.warn(
+        '[novas-obras] /api/empreiteiro/perfil-status falhou — liberando acesso por padrão.',
+      );
+    }
+  }, [perfilError]);
 
   const rows = useMemo(
     () => (obrasPayload?.pages ?? []).flatMap((p) => p.rows),
@@ -132,7 +151,9 @@ export default function NovasObrasPage() {
     [],
   );
 
-  // Filtros client-side sobre rows da página atual
+  // Filtros client-side sobre rows da página atual. Busca textual (q) é server-side
+  // via queryParams.q — filtra no SQL por nome/descrição em TODAS as obras publicadas,
+  // não só nas já carregadas pelo infinite scroll.
   const filteredRows = useMemo(() => {
     let result = rows;
     if (statusSelected.length > 0) {
@@ -141,17 +162,8 @@ export default function NovasObrasPage() {
     if (complexidadeSelected.length > 0) {
       result = result.filter((o) => complexidadeSelected.includes(o.complexidade));
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (o) =>
-          o.titulo.toLowerCase().includes(q) ||
-          o.endereco.toLowerCase().includes(q) ||
-          o.tipo.toLowerCase().includes(q),
-      );
-    }
     return result;
-  }, [rows, statusSelected, complexidadeSelected, searchQuery]);
+  }, [rows, statusSelected, complexidadeSelected]);
 
   const clearAllAdvanced = () => {
     setCidade('');
@@ -286,7 +298,7 @@ export default function NovasObrasPage() {
             <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
               <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Buscar nesta página por título, endereço ou tipo..."
+                placeholder="Buscar por título ou descrição..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"

@@ -16,6 +16,7 @@ export interface PaginatedResponse<T> {
 export interface GetNovasObrasParams {
   page?: number;
   pageSize?: number;
+  q?: string;
   cidade?: string;
   uf?: string;
   minValor?: number;
@@ -54,13 +55,9 @@ export async function getNovasObras(
 export async function getPerfilStatus(): Promise<PerfilStatus> {
   const response = await fetch('/api/empreiteiro/perfil-status');
   if (!response.ok) {
-    return {
-      isBlocked: false,
-      completionPercentage: 100,
-      pendencias: [],
-      motivoBloqueio: '',
-      motivosBloqueio: [],
-    };
+    // Propaga erro pro useQuery em vez de mascarar com fallback silencioso.
+    // O consumidor trata isError liberando acesso por padrão + console.warn.
+    throw new Error(`perfil-status ${response.status}`);
   }
   return response.json();
 }

@@ -16,6 +16,7 @@ import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
  *  - admin/super  → ?scope=admin libera tudo; sem param, vazio (defensivo).
  *
  * Query params: page (default 1), pageSize (default 20, max 100),
+ *               q (ILIKE em nome OU descricao, trim, max 80 chars),
  *               cidade (ILIKE %x%), uf, minValor, maxValor,
  *               visibilidade, tipo, modalidade, materiaisPor.
  *
@@ -34,6 +35,8 @@ export async function GET(request: NextRequest) {
   const visibilidade = q.get("visibilidade");
   const modalidade = q.get("modalidade");
   const scopeAdmin = q.get("scope") === "admin";
+  // Busca textual server-side: ILIKE em nome OU descricao. Trim, length>=1, max 80 defensivo.
+  const qText = q.get("q")?.trim().slice(0, 80);
 
   // Multi-valor: aceita `?tipo=a&tipo=b` (repetido) OU `?tipo=a,b` (CSV).
   // Dedupe + trim + drop vazios. Limite defensivo de 50 valores por filtro.
@@ -90,6 +93,12 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
+  if (qText && qText.length > 0) {
+    // Escape SQL LIKE wildcards (% e _) digitados pelo usuário para evitar matches inesperados.
+    const escaped = qText.replace(/[\\%_]/g, (m) => `\\${m}`);
+    const pattern = `%${escaped}%`;
+    filters.push(sql`(${obras.nome} ILIKE ${pattern} OR ${obras.descricao} ILIKE ${pattern})`);
+  }
   if (cidade) filters.push(ilike(obras.cidade, `%${cidade}%`));
   if (uf) filters.push(eq(obras.uf, uf));
   if (minValor && !Number.isNaN(Number(minValor))) filters.push(gte(obras.valorTotal, String(minValor)));
