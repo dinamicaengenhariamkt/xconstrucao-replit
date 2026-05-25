@@ -3,6 +3,13 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@shared/lib/utils';
 import {
+  useCreateMembro,
+  useUpdateMembro,
+  useDeleteMembro,
+  isVirtualMembroId,
+} from '../hooks/use-obra-operacao';
+import { useToast } from '@shared/hooks/use-toast';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -31,13 +38,6 @@ type ModalType = 'novo' | 'editar' | 'permissoes' | 'remover' | null;
 interface ModalState {
   type: ModalType;
   membro: MembroEquipe | null;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-let _idCounter = 10;
-function gerarId(): string {
-  return `eq${++_idCounter}`;
 }
 
 // ─── Theme map ────────────────────────────────────────────────────────────────
@@ -199,8 +199,13 @@ interface EquipeSectionProps {
 }
 
 export function EquipeSection({ obra }: EquipeSectionProps) {
-  const [membros, setMembros] = useState<MembroEquipe[]>(obra.equipe);
+  const membros = obra.equipe;
   const [modal, setModal] = useState<ModalState>({ type: null, membro: null });
+
+  const createMut = useCreateMembro(obra.id);
+  const updateMut = useUpdateMembro(obra.id);
+  const deleteMut = useDeleteMembro(obra.id);
+  const { toast } = useToast();
 
   const obraFinalizada = obra.status === 'finalizada';
 
@@ -214,36 +219,41 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
-  const openModal = (type: ModalType, membro: MembroEquipe | null = null) =>
+  const openModal = (type: ModalType, membro: MembroEquipe | null = null) => {
+    // Membros virtuais (contratante derivado / empreiteira responsável) não
+    // existem no DB — bloqueia ações de edição/remoção com aviso amigável.
+    if (membro && isVirtualMembroId(membro.id) && type !== null) {
+      toast({
+        title: 'Membro não editável',
+        description: 'Esse contato vem do cadastro da obra e não pode ser alterado aqui.',
+      });
+      return;
+    }
     setModal({ type, membro });
+  };
   const closeModal = () => setModal({ type: null, membro: null });
 
   const handleSalvar = (data: Omit<MembroEquipe, 'id' | 'ativo' | 'permissao'>) => {
     if (modal.type === 'novo') {
-      setMembros((prev) => [...prev, { id: gerarId(), ativo: true, ...data }]);
+      createMut.mutate({ ...data, ativo: true });
     } else if (modal.type === 'editar' && modal.membro) {
-      setMembros((prev) =>
-        prev.map((m) => (m.id === modal.membro!.id ? { ...m, ...data } : m)),
-      );
+      updateMut.mutate({ id: modal.membro.id, patch: data });
     }
   };
 
   const handlePermissoes = (permissao: NonNullable<MembroEquipe['permissao']>) => {
     if (!modal.membro) return;
-    setMembros((prev) =>
-      prev.map((m) => (m.id === modal.membro!.id ? { ...m, permissao } : m)),
-    );
+    updateMut.mutate({ id: modal.membro.id, patch: { permissao } });
   };
 
   const handleToggleAtivo = (membro: MembroEquipe) => {
-    setMembros((prev) =>
-      prev.map((m) => (m.id === membro.id ? { ...m, ativo: !m.ativo } : m)),
-    );
+    if (isVirtualMembroId(membro.id)) return;
+    updateMut.mutate({ id: membro.id, patch: { ativo: !membro.ativo } });
   };
 
   const handleRemover = () => {
     if (!modal.membro) return;
-    setMembros((prev) => prev.filter((m) => m.id !== modal.membro!.id));
+    deleteMut.mutate(modal.membro.id);
     closeModal();
   };
 

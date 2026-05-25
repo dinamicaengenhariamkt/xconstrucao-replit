@@ -3,6 +3,11 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@shared/lib/utils';
 import {
+  useCreateTarefa,
+  useUpdateTarefa,
+  useDeleteTarefa,
+} from '../hooks/use-obra-operacao';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -292,9 +297,12 @@ interface TaskManagerSectionProps {
 }
 
 export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
-  // Estado local das tarefas (mutable durante a sessão)
-  const [tarefas, setTarefas] = useState<MinhaObraTarefa[]>(obra.tarefas);
+  const tarefas = obra.tarefas;
   const [activeFilter, setActiveFilter] = useState<TaskFilter>('todos');
+
+  const createMut = useCreateTarefa(obra.id);
+  const updateMut = useUpdateTarefa(obra.id);
+  const deleteMut = useDeleteTarefa(obra.id);
 
   // Controle unificado de modais
   const [modalState, setModalState] = useState<ModalState>({ type: null, tarefa: null });
@@ -332,38 +340,33 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
   // ── Handlers de CRUD e transições ─────────────────────────────────────────
 
   const handleSalvarTarefa = (tarefa: MinhaObraTarefa) => {
-    setTarefas((prev) => {
-      const idx = prev.findIndex((t) => t.id === tarefa.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = tarefa;
-        return next;
-      }
-      return [...prev, tarefa];
-    });
+    const existing = tarefas.find((t) => t.id === tarefa.id);
+    if (existing) {
+      updateMut.mutate({ id: tarefa.id, patch: tarefa });
+    } else {
+      createMut.mutate(tarefa);
+    }
   };
 
   const updateStatus = (tarefa: MinhaObraTarefa, patch: Partial<MinhaObraTarefa>) => {
-    setTarefas((prev) =>
-      prev.map((t) => (t.id === tarefa.id ? { ...t, ...patch } : t))
-    );
+    updateMut.mutate({ id: tarefa.id, patch });
   };
 
   const handleIniciar = (tarefa: MinhaObraTarefa) =>
-    updateStatus(tarefa, { status: 'em_andamento', progresso: tarefa.progresso ?? 0, bloqueioMotivo: undefined, bloqueioInfo: undefined });
+    updateStatus(tarefa, { status: 'em_andamento', progresso: tarefa.progresso ?? 0, bloqueioMotivo: null as unknown as undefined, bloqueioInfo: null as unknown as undefined });
 
   const handleConcluir = (tarefa: MinhaObraTarefa) =>
-    updateStatus(tarefa, { status: 'concluido', progresso: undefined, bloqueioMotivo: undefined, bloqueioInfo: undefined });
+    updateStatus(tarefa, { status: 'concluido', progresso: null as unknown as undefined, bloqueioMotivo: null as unknown as undefined, bloqueioInfo: null as unknown as undefined });
 
   const handleReabrir = (tarefa: MinhaObraTarefa) =>
-    updateStatus(tarefa, { status: 'pendente', progresso: undefined, bloqueioMotivo: undefined, bloqueioInfo: undefined });
+    updateStatus(tarefa, { status: 'pendente', progresso: null as unknown as undefined, bloqueioMotivo: null as unknown as undefined, bloqueioInfo: null as unknown as undefined });
 
   const handleDesbloquear = (tarefa: MinhaObraTarefa) =>
-    updateStatus(tarefa, { status: 'pendente', bloqueioMotivo: undefined, bloqueioInfo: undefined });
+    updateStatus(tarefa, { status: 'pendente', bloqueioMotivo: null as unknown as undefined, bloqueioInfo: null as unknown as undefined });
 
   const handleConfirmarBloqueio = (motivo: string, info?: string) => {
     if (!modalState.tarefa) return;
-    updateStatus(modalState.tarefa, { status: 'bloqueado', bloqueioMotivo: motivo, bloqueioInfo: info, progresso: undefined });
+    updateStatus(modalState.tarefa, { status: 'bloqueado', bloqueioMotivo: motivo, bloqueioInfo: info, progresso: null as unknown as undefined });
   };
 
   const handleConfirmarProgresso = (progresso: number) => {
@@ -372,21 +375,19 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
   };
 
   const handleDuplicar = (tarefa: MinhaObraTarefa) => {
-    const copia: MinhaObraTarefa = {
+    createMut.mutate({
       ...tarefa,
-      id: `tk${Date.now()}_copia`,
       titulo: `${tarefa.titulo} (cópia)`,
       status: 'pendente',
       progresso: undefined,
       bloqueioMotivo: undefined,
       bloqueioInfo: undefined,
-    };
-    setTarefas((prev) => [...prev, copia]);
+    });
   };
 
   const handleExcluir = () => {
     if (!modalState.tarefa) return;
-    setTarefas((prev) => prev.filter((t) => t.id !== modalState.tarefa!.id));
+    deleteMut.mutate(modalState.tarefa.id);
     closeModal();
   };
 

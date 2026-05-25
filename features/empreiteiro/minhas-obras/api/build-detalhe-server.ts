@@ -5,10 +5,14 @@ import {
   empreiteiras,
   financeiro,
   obraAnexos,
+  obraChecklistItens,
+  obraChecklists,
   obraDiario,
+  obraEquipe,
   obraEtapas,
   obraFotos,
   obraOcorrencias,
+  obraTarefas,
   obras,
   userFiles,
   users,
@@ -180,9 +184,9 @@ async function resolveSignedFotoUrl(file: {
 
 /**
  * Compõe `MinhaObraDetalhe` a partir das tabelas reais.
- * Campos sem backend real ainda (tarefas/checklists/equipe) vêm como
- * arrays vazios — os componentes mostram empty states e não dependem
- * mais da flag mock.
+ * Tarefas, checklists e equipe vêm das tabelas reais (Task #76).
+ * Etapas continuam expostas como blocos de escopo (J06) e ganham a lista
+ * de tarefas associadas via `obra_tarefas.etapa_id`.
  */
 export async function buildMinhaObraDetalheReal(
   obraId: string,
@@ -242,32 +246,40 @@ export async function buildMinhaObraDetalheReal(
     .where(eq(obraEtapas.obraId, obraId))
     .orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt));
 
+  // Tarefas reais (Task #76).
+  const tarefasRows = await db
+    .select()
+    .from(obraTarefas)
+    .where(eq(obraTarefas.obraId, obraId))
+    .orderBy(asc(obraTarefas.createdAt));
+
+  const tarefas: MinhaObraTarefa[] = tarefasRows.map((t) => ({
+    id: t.id,
+    titulo: t.titulo,
+    etapa: t.etapa || "Sem etapa",
+    responsavel: t.responsavel || (empreiteiraRow?.responsavel ?? "—"),
+    prazo: t.prazo || "—",
+    status: t.status,
+    prioridade: t.prioridade,
+    progresso: t.progresso ?? undefined,
+    bloqueioMotivo: t.bloqueioMotivo ?? undefined,
+    bloqueioInfo: t.bloqueioInfo ?? undefined,
+    descricao: t.descricao ?? undefined,
+  }));
+
+  const tarefasPorEtapaId = new Map<string, { id: string; titulo: string; concluida: boolean }[]>();
+  for (const t of tarefasRows) {
+    if (!t.etapaId) continue;
+    const arr = tarefasPorEtapaId.get(t.etapaId) ?? [];
+    arr.push({ id: t.id, titulo: t.titulo, concluida: t.status === "concluido" });
+    tarefasPorEtapaId.set(t.etapaId, arr);
+  }
+
   const etapas: MinhaObraEtapa[] = etapasRows.map((e) => ({
     id: e.id,
     nome: e.nome,
     progresso: e.progresso ?? 0,
-    tarefas: [],
-  }));
-
-  const tarefaStatusMap: Record<string, MinhaObraTarefa["status"]> = {
-    pendente: "pendente",
-    em_andamento: "em_andamento",
-    bloqueado: "bloqueado",
-    concluido: "concluido",
-  };
-
-  // Cada etapa é exposta também como uma "tarefa" no TaskManager — é a
-  // unidade de trabalho real que o empreiteiro/contratante controlam hoje.
-  const tarefas: MinhaObraTarefa[] = etapasRows.map((e) => ({
-    id: e.id,
-    titulo: e.nome,
-    etapa: e.nome,
-    responsavel: e.responsavel ?? (empreiteiraRow?.responsavel ?? "—"),
-    prazo: e.prazo ? fmtBrDate(e.prazo) : "—",
-    status: tarefaStatusMap[e.status] ?? "pendente",
-    prioridade: e.status === "bloqueado" ? "alta" : "media",
-    progresso: e.progresso ?? 0,
-    descricao: e.descricao ?? undefined,
+    tarefas: tarefasPorEtapaId.get(e.id) ?? [],
   }));
 
   const tarefasTotal = tarefas.length;
@@ -477,9 +489,15 @@ export async function buildMinhaObraDetalheReal(
     })),
   };
 
-  // Equipe derivada do que temos: contratante (sempre) + responsável da
-  // empreiteira atribuída (quando há vínculo). Não há tabela `obra_equipe`
-  // ainda — segue como follow-up #76; aqui devolvemos o que é real.
+  // Equipe = membros reais da tabela `obra_equipe` (Task #76) +
+  // membros derivados (contratante + responsável da empreiteira) como
+  // entradas virtuais sempre presentes pra dar contexto.
+  const equipeRows = await db
+    .select()
+    .from(obraEquipe)
+    .where(eq(obraEquipe.obraId, obraId))
+    .orderBy(asc(obraEquipe.createdAt));
+
   const equipe: MembroEquipe[] = [];
   equipe.push({
     id: `contratante-${obra.clienteId ?? "anon"}`,
@@ -510,6 +528,63 @@ export async function buildMinhaObraDetalheReal(
       permissao: "editar",
     });
   }
+  for (const m of equipeRows) {
+    equipe.push({
+      id: m.id,
+      nome: m.nome,
+      iniciais: initialsOf(m.nome),
+      cor: m.cor || colorFor(m.nome),
+      papel: m.papel || "—",
+      tipo: m.tipo,
+      telefone: m.telefone ?? undefined,
+      email: m.email ?? undefined,
+      registro: m.registro ?? undefined,
+      membros: m.membros ?? undefined,
+      ativo: m.ativo,
+      permissao: m.permissao ?? undefined,
+    });
+  }
+
+  // Checklists reais.
+  const checklistsRows = await db
+    .select()
+    .from(obraChecklists)
+    .where(eq(obraChecklists.obraId, obraId))
+    .orderBy(asc(obraChecklists.createdAt));
+  const checklistIds = checklistsRows.map((c) => c.id);
+  const checklistItensRows =
+    checklistIds.length > 0
+      ? await db
+          .select()
+          .from(obraChecklistItens)
+          .where(inArray(obraChecklistItens.checklistId, checklistIds))
+          .orderBy(asc(obraChecklistItens.ordem), asc(obraChecklistItens.createdAt))
+      : [];
+  const itensByChecklist = new Map<string, { id: string; titulo: string; concluida: boolean }[]>();
+  for (const it of checklistItensRows) {
+    const arr = itensByChecklist.get(it.checklistId) ?? [];
+    arr.push({ id: it.id, titulo: it.titulo, concluida: it.concluida });
+    itensByChecklist.set(it.checklistId, arr);
+  }
+  const checklists = checklistsRows.map((c) => {
+    const itens = itensByChecklist.get(c.id) ?? [];
+    const concluidos = itens.filter((i) => i.concluida).length;
+    const total = itens.length;
+    const progresso = total > 0 ? Math.round((concluidos / total) * 100) : 0;
+    return {
+      id: c.id,
+      nome: c.nome,
+      descricao: c.descricao,
+      tipo: c.tipo,
+      status: c.status,
+      itens,
+      completadoEm: c.completadoEm ?? undefined,
+      progresso,
+      assinadoPor: c.assinadoPor ?? undefined,
+      assinadoEm: c.assinadoEm ?? undefined,
+      registroProfissional: c.registroProfissional ?? undefined,
+    };
+  });
 
   const dias = diasAtrasoFor(obra.dataPrevisao, obra.status);
   const status = mapStatus(obra.status, dias, problemasAbertos);
@@ -545,7 +620,7 @@ export async function buildMinhaObraDetalheReal(
     tarefas,
     timeline,
     fotos,
-    checklists: [],
+    checklists,
     documentos,
     atividades,
     ocorrencias,

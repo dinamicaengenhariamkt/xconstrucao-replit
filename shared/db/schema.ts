@@ -503,3 +503,95 @@ export type ObraEtapa = typeof obraEtapas.$inferSelect;
 export type ObraDiarioEntry = typeof obraDiario.$inferSelect;
 export type ObraOcorrencia = typeof obraOcorrencias.$inferSelect;
 export type ObraFoto = typeof obraFotos.$inferSelect;
+
+// =============================================================
+// J11 — Operação da obra: Tarefas, Checklists, Equipe (Task #76)
+// =============================================================
+
+export const obraTarefaStatusEnum = pgEnum("obra_tarefa_status", [
+  "pendente",
+  "em_andamento",
+  "bloqueado",
+  "concluido",
+]);
+export const obraTarefaPrioridadeEnum = pgEnum("obra_tarefa_prioridade", ["alta", "media", "baixa"]);
+export const obraChecklistTipoEnum = pgEnum("obra_checklist_tipo", ["seguranca", "diario", "etapa"]);
+export const obraChecklistStatusEnum = pgEnum("obra_checklist_status", [
+  "pendente",
+  "em_andamento",
+  "completo",
+]);
+export const obraEquipeTipoEnum = pgEnum("obra_equipe_tipo", [
+  "contratante",
+  "engenheiro",
+  "mestre",
+  "equipe",
+]);
+export const obraEquipePermissaoEnum = pgEnum("obra_equipe_permissao", ["visualizar", "editar", "admin"]);
+
+export const obraTarefas = pgTable("obra_tarefas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  etapaId: varchar("etapa_id").references(() => obraEtapas.id, { onDelete: "set null" }),
+  etapa: text("etapa").notNull().default(""),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao"),
+  responsavel: text("responsavel").notNull().default(""),
+  prazo: text("prazo").notNull().default(""),
+  status: obraTarefaStatusEnum("status").notNull().default("pendente"),
+  prioridade: obraTarefaPrioridadeEnum("prioridade").notNull().default("media"),
+  progresso: integer("progresso"),
+  bloqueioMotivo: text("bloqueio_motivo"),
+  bloqueioInfo: text("bloqueio_info"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const obraChecklists = pgTable("obra_checklists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(),
+  descricao: text("descricao").notNull().default(""),
+  tipo: obraChecklistTipoEnum("tipo").notNull().default("seguranca"),
+  status: obraChecklistStatusEnum("status").notNull().default("pendente"),
+  completadoEm: text("completado_em"),
+  assinadoPor: text("assinado_por"),
+  assinadoEm: text("assinado_em"),
+  registroProfissional: text("registro_profissional"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const obraChecklistItens = pgTable("obra_checklist_itens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checklistId: varchar("checklist_id")
+    .notNull()
+    .references(() => obraChecklists.id, { onDelete: "cascade" }),
+  titulo: text("titulo").notNull(),
+  concluida: boolean("concluida").notNull().default(false),
+  ordem: integer("ordem").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const obraEquipe = pgTable("obra_equipe", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  nome: text("nome").notNull(),
+  papel: text("papel").notNull().default(""),
+  tipo: obraEquipeTipoEnum("tipo").notNull().default("equipe"),
+  cor: text("cor").notNull().default("bg-primary"),
+  telefone: text("telefone"),
+  email: text("email"),
+  registro: text("registro"),
+  membros: text("membros"),
+  ativo: boolean("ativo").notNull().default(true),
+  permissao: obraEquipePermissaoEnum("permissao"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ObraTarefa = typeof obraTarefas.$inferSelect;
+export type ObraChecklist = typeof obraChecklists.$inferSelect;
+export type ObraChecklistItem = typeof obraChecklistItens.$inferSelect;
+export type ObraEquipeMembro = typeof obraEquipe.$inferSelect;

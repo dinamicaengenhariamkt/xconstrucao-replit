@@ -48,6 +48,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapMedicoesExtrasSchema failed:", err);
     });
 
+    const { bootstrapObraOperacaoSchema } = await import("./server/bootstrap-obra-operacao");
+    await bootstrapObraOperacaoSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapObraOperacaoSchema failed:", err);
+    });
+
     const { bootstrapNotificacoesSchema } = await import("./server/bootstrap-notificacoes");
     await bootstrapNotificacoesSchema().catch((err) => {
       console.error("[instrumentation] bootstrapNotificacoesSchema failed:", err);

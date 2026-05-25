@@ -3,6 +3,11 @@
 import { useState, useCallback } from 'react';
 import { cn } from '@shared/lib/utils';
 import {
+  useCreateChecklist,
+  useUpdateChecklist,
+  useDeleteChecklist,
+} from '../hooks/use-obra-operacao';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -279,8 +284,12 @@ interface ChecklistsSectionProps {
 }
 
 export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
-  const [checklists, setChecklists] = useState<MinhaObraChecklist[]>(obra.checklists);
+  const checklists = obra.checklists;
   const [modalState, setModalState] = useState<ModalState>({ type: null, checklist: null });
+
+  const createMut = useCreateChecklist(obra.id);
+  const updateMut = useUpdateChecklist(obra.id);
+  const deleteMut = useDeleteChecklist(obra.id);
 
   const obraFinalizada = obra.status === 'finalizada';
 
@@ -289,20 +298,10 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
   const closeModal = () => setModalState({ type: null, checklist: null });
 
   // ── Toggle de item ─────────────────────────────────────────────────────────
-
+  // server-side: PATCH { toggleItemId } recalcula status/progresso atomicamente
   const handleToggleItem = useCallback((checklistId: string, itemId: string) => {
-    setChecklists((prev) =>
-      prev.map((cl) => {
-        if (cl.id !== checklistId) return cl;
-        const novosItens = cl.itens.map((item) =>
-          item.id === itemId ? { ...item, concluida: !item.concluida } : item
-        );
-        const novoStatus = calcularStatus(novosItens);
-        const novoProgresso = cl.tipo === 'etapa' ? calcularProgresso(novosItens) : cl.progresso;
-        return { ...cl, itens: novosItens, status: novoStatus, progresso: novoProgresso };
-      })
-    );
-  }, []);
+    updateMut.mutate({ id: checklistId, patch: { toggleItemId: itemId } });
+  }, [updateMut]);
 
   // ── Finalizar ──────────────────────────────────────────────────────────────
 
@@ -316,18 +315,14 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
   };
 
   const confirmarFinalizar = (checklist: MinhaObraChecklist) => {
-    setChecklists((prev) =>
-      prev.map((cl) =>
-        cl.id === checklist.id
-          ? {
-              ...cl,
-              status: 'completo' as const,
-              completadoEm: horaAtual(),
-              itens: cl.itens.map((i) => ({ ...i, concluida: true })),
-            }
-          : cl
-      )
-    );
+    updateMut.mutate({
+      id: checklist.id,
+      patch: {
+        status: 'completo',
+        completadoEm: horaAtual(),
+        markAllItens: true,
+      },
+    });
     closeModal();
   };
 
@@ -335,61 +330,59 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
 
   const handleConfirmarAssinatura = (assinadoPor: string, registroProfissional?: string) => {
     if (!modalState.checklist) return;
-    const id = modalState.checklist.id;
-    setChecklists((prev) =>
-      prev.map((cl) =>
-        cl.id === id
-          ? {
-              ...cl,
-              status: 'completo' as const,
-              assinadoPor,
-              assinadoEm: dataHoraAtual(),
-              registroProfissional,
-              completadoEm: horaAtual(),
-              itens: cl.itens.map((i) => ({ ...i, concluida: true })),
-            }
-          : cl
-      )
-    );
+    updateMut.mutate({
+      id: modalState.checklist.id,
+      patch: {
+        status: 'completo',
+        assinadoPor,
+        assinadoEm: dataHoraAtual(),
+        registroProfissional,
+        completadoEm: horaAtual(),
+        markAllItens: true,
+      },
+    });
   };
 
   // ── Salvar (criar / editar) ────────────────────────────────────────────────
 
   const handleSalvarChecklist = (checklist: MinhaObraChecklist) => {
-    setChecklists((prev) => {
-      const idx = prev.findIndex((c) => c.id === checklist.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = checklist;
-        return next;
-      }
-      return [...prev, checklist];
-    });
+    const existing = checklists.find((c) => c.id === checklist.id);
+    if (existing) {
+      updateMut.mutate({
+        id: checklist.id,
+        patch: {
+          nome: checklist.nome,
+          descricao: checklist.descricao,
+          tipo: checklist.tipo,
+          itens: checklist.itens.map((i) => ({ titulo: i.titulo, concluida: i.concluida })),
+        },
+      });
+    } else {
+      createMut.mutate({
+        nome: checklist.nome,
+        descricao: checklist.descricao,
+        tipo: checklist.tipo,
+        itens: checklist.itens.map((i) => ({ titulo: i.titulo })),
+      });
+    }
   };
 
   // ── Duplicar ───────────────────────────────────────────────────────────────
 
   const handleDuplicar = (checklist: MinhaObraChecklist) => {
-    const copia: MinhaObraChecklist = {
-      ...checklist,
-      id: `cl${Date.now()}_copia`,
+    createMut.mutate({
       nome: `${checklist.nome} (cópia)`,
-      status: 'pendente',
-      completadoEm: undefined,
-      assinadoPor: undefined,
-      assinadoEm: undefined,
-      registroProfissional: undefined,
-      progresso: 0,
-      itens: checklist.itens.map((item) => ({ ...item, concluida: false })),
-    };
-    setChecklists((prev) => [...prev, copia]);
+      descricao: checklist.descricao,
+      tipo: checklist.tipo,
+      itens: checklist.itens.map((i) => ({ titulo: i.titulo })),
+    });
   };
 
   // ── Excluir ────────────────────────────────────────────────────────────────
 
   const handleExcluir = () => {
     if (!modalState.checklist) return;
-    setChecklists((prev) => prev.filter((c) => c.id !== modalState.checklist!.id));
+    deleteMut.mutate(modalState.checklist.id);
     closeModal();
   };
 
