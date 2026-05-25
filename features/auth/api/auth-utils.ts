@@ -179,3 +179,13 @@ export function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
   return process.env.NEXTAUTH_URL || `${url.protocol}//${url.host}`;
 }
+
+/**
+ * Helper de role: "admin OU superadmin".
+ * Use em endpoints administrativos que precisam liberar o superadmin
+ * pelo mesmo gate que o admin (perfil/admin, /admin/configuracoes,
+ * moderação de cadastro etc.). Não inclui contratante/empreiteiro.
+ */
+export function isAdminLike(role: string | null | undefined): boolean {
+  return role === "admin" || role === "superadmin";
+}

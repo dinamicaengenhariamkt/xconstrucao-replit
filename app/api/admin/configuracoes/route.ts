@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { platformSettings } from "@shared/db/schema";
-import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { requireVerifiedUser, setNoCacheHeaders, isAdminLike } from "@features/auth/api/auth-utils";
 
 const KEYS = ["geral", "plataforma", "seguranca", "integracoes", "notificacoes"] as const;
 type SettingKey = typeof KEYS[number];
@@ -53,7 +53,7 @@ const DEFAULTS: Record<SettingKey, Record<string, unknown>> = {
 export async function GET(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "admin") {
+  if (!isAdminLike(guard.user.role)) {
     const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "admin") {
+  if (!isAdminLike(guard.user.role)) {
     const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

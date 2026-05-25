@@ -3,12 +3,12 @@ import { eq, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import { db } from "@shared/db/db";
 import { platformSettings } from "@shared/db/schema";
-import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { requireVerifiedUser, setNoCacheHeaders, isAdminLike } from "@features/auth/api/auth-utils";
 
 async function adminGuard(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return { error: guard.error as NextResponse };
-  if (guard.user.role !== "admin") {
+  if (!isAdminLike(guard.user.role)) {
     const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     setNoCacheHeaders(r);
     return { error: r };

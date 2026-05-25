@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@shared/db/db";
 import { empreiteiras } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
+import { isAdminLike } from "@features/auth/api/auth-utils";
 
 const bodySchema = z.object({ decisao: z.enum(["aprovar", "reprovar"]) });
 
@@ -14,7 +15,7 @@ export async function PATCH(
   const token = getAccessTokenFromCookieHeader(request.headers.get("cookie"));
   const payload = token ? verifyAccessToken(token) : null;
   if (!payload?.sub) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
-  if (payload.role !== "admin") return NextResponse.json({ message: "Acesso negado" }, { status: 403 });
+  if (!isAdminLike(payload.role)) return NextResponse.json({ message: "Acesso negado" }, { status: 403 });
 
   const { id } = await context.params;
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
