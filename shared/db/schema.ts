@@ -183,6 +183,23 @@ export const candidaturas = pgTable("candidaturas", {
   atividades: text("atividades"),
 });
 
+export const obrasSalvas = pgTable(
+  "obras_salvas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqUserObra: uniqueIndex("uq_obras_salvas_user_obra").on(t.userId, t.obraId),
+  }),
+);
+
+export const insertObraSalvaSchema = createInsertSchema(obrasSalvas).omit({ id: true, createdAt: true });
+export type InsertObraSalva = z.infer<typeof insertObraSalvaSchema>;
+export type ObraSalva = typeof obrasSalvas.$inferSelect;
+
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
 export const marketplaceLeads = pgTable("marketplace_leads", {

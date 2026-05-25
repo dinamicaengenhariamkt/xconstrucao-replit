@@ -81,4 +81,4 @@ Existente: `candidaturas` (`obraId, empreiteiroId, valorProposta, prazoEstimado,
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-25 (Task #41): Índices `idx_candidaturas_obra_empreiteiro` (`obra_id, empreiteiro_id`) e `idx_candidaturas_status` foram criados nesta task pra destravar a query anti-self-apply do marketplace (J04). O mesmo composto resolve o ranking de candidaturas por obra (J05), e o índice em `status` acelera o filtro "propostas pendentes" no detalhe do contratante — então J05 herda o ganho sem custo adicional.

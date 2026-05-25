@@ -1,82 +1,119 @@
 # Jornada — Marketplace & Descoberta de Obras
 
 > Status: parcial | Prioridade: alta | Wave: 1
-> Última atualização: 2026-05-05
+> Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
-Empreiteiro descobre obras disponíveis para se candidatar — com filtros (zona, especialidade, orçamento, prazo) e a habilidade de salvar favoritas. Sem esta jornada, J05 não tem porta de entrada.
+Empreiteiro descobre obras disponíveis para se candidatar — com filtros (UF, cidade, modalidade, materiais por, faixa de orçamento, busca textual) e a habilidade de salvar favoritas para revisitar. Sem esta jornada, J05 (Candidatura & Aceite) não tem porta de entrada e o trabalho da J03 (Cadastro de Obra) fica invisível.
+
+Princípio de produto: o marketplace é a vitrine pública das obras `visibilidade='publicada'` (Task #32). `status` é dimensão de execução; `visibilidade` é dimensão de exposição — uma obra `em_andamento` com `visibilidade='arquivada'` não aparece aqui (ortogonal por design).
 
 ## 2. Personas
-- **Empreiteiro**: lista, filtra, salva, abre detalhe.
-- **Contratante**: indireto — sua obra precisa estar visível e bem apresentada.
+- **Empreiteiro**: persona principal. Lista, filtra, busca, salva, abre detalhe, candidata-se.
+- **Contratante**: indireto — sua obra precisa estar `publicada` e bem apresentada (carries da J03 alimentam isto: descrição, anexos, modalidade, materiais por).
+- **Admin/Superadmin**: observador — pode ver qualquer obra em qualquer visibilidade (gates do tipo `isAdminLike`).
 
 ## 3. Fluxo ponta-a-ponta
 ```mermaid
 flowchart LR
-  E[Empreiteiro /novas-obras] --> F[Filtros]
-  F --> A[GET /api/obras?disponivel=true]
-  A --> O[(obras)]
-  E --> S[/empreiteiro/obras-salvas]
-  S --> SAVE[(obras_salvas)]
-  E --> DET[/novas-obras/[id]]
+  C[Contratante J03 cria/publica obra] --> O[(obras visibilidade=publicada)]
+  E[Empreiteiro /novas-obras] --> F[Filtros UF/Cidade/Modalidade/Valor]
+  F --> API[GET /api/obras?visibilidade=publicada&...]
+  API --> O
+  API --> EXCL{exclui obras<br/>que já candidatei<br/>+ minhas próprias}
+  EXCL --> LIST[Listagem paginada 20/pg]
+  LIST --> SAVE[♥ Favoritar]
+  SAVE --> OS[(obras_salvas)]
+  LIST --> DET[/novas-obras/[id]]
   DET --> J05[Aplicar → J05]
+  E --> FAV[/empreiteiro/obras-salvas]
+  FAV --> OS
 ```
 
 ## 4. Telas envolvidas
-- [app/empreiteiro/novas-obras/](../../app/empreiteiro/novas-obras/) — listagem com filtros
-- [app/empreiteiro/novas-obras/[id]/](../../app/empreiteiro/novas-obras/) — detalhe
-- [app/empreiteiro/obras-salvas/](../../app/empreiteiro/obras-salvas/) — favoritas
+- [app/empreiteiro/novas-obras/](../../app/empreiteiro/novas-obras/) — listagem com filtros + chips
+- [app/empreiteiro/novas-obras/[id]/](../../app/empreiteiro/novas-obras/) — detalhe (hero + accordion + estados de candidatura)
+- [app/empreiteiro/obras-salvas/](../../app/empreiteiro/obras-salvas/) — favoritas (a criar na J04.C)
 
 ## 5. Componentes-chave
 - [features/empreiteiro/novas-obras/](../../features/empreiteiro/novas-obras/) — api/, components/, hooks/, store/, mocks/
-- Service em [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/)
+- Service em [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) — substituir mocks por chamada real à `GET /api/obras` paginada.
+- Hooks novos (J04.B/C): `useObrasSalvas`, `useToggleObraSalva`.
+- Schema: `obrasSalvas` em [shared/db/schema.ts](../../shared/db/schema.ts) (Task #41).
 
 ## 6. Schema (Drizzle)
-Existente: `obras`.
+Existente: `obras` (extendida pela Task #32 com `visibilidade`, `tipo`, `descricao`, `cep`, `cidade`, `uf`, `lat`, `lng`, `modalidade`, `materiaisPor`, `areaM2`, `padraoAcabamento`, `acessibilidadeObs`).
 
-**A criar**:
-- Tabela `obras_salvas` (id, userId, obraId, createdAt) — relação m:n.
+**Criado (Task #41)**:
+- Tabela `obras_salvas` (id PK, `user_id` FK→users CASCADE, `obra_id` FK→obras CASCADE, `created_at`, UNIQUE(user_id, obra_id), idx em `user_id`).
+- Índices em `candidaturas`: `(obra_id, empreiteiro_id)` para query anti-self-apply e `(status)` para ranking/filtros (também alimenta J05).
 
-Considerar: campos de filtragem podem precisar de índices (`status`, `cidade`, `valorTotal`).
+**Já existente (Task #32)**:
+- Índice `idx_obras_visibilidade_uf_cidade` — query default do marketplace bate direto nele.
 
 ## 7. Endpoints
-- `GET /api/obras` (existente) — **filtrar por `visibilidade='publicada'` como default** (Task #32 introduziu coluna). Demais query params: `?uf=&cidade=&minValor=&maxValor=&modalidade=&materiaisPor=&especialidade=`. Usar índice `idx_obras_visibilidade_uf_cidade`.
-- `GET /api/obras/[id]` (existente) — só devolver pra empreiteiro quando `visibilidade='publicada'`; contratante dono e admin/superadmin podem ler em qualquer visibilidade.
-- `POST/DELETE /api/empreiteiro/obras-salvas`
-- `GET /api/empreiteiro/obras-salvas`
+- `GET /api/obras` (existente — **breaking change na J04.B**):
+  - Default: `visibilidade='publicada'` quando chamado por empreiteiro; contratante recebe só as suas; admin/superadmin enxerga tudo (gate por role).
+  - Query params: `?uf=&cidade=&modalidade=&materiaisPor=&minValor=&maxValor=&q=&page=&pageSize=` (page default 1, pageSize default 20, máx 100).
+  - Resposta vira `{ items: Obra[], total: number, page: number, pageSize: number }` (era array puro — auditar consumers: empreiteiro `novas-obras`, contratante `minhas-obras`, hook órfão `features/obras/hooks/use-obras.ts` a deletar).
+  - Para empreiteiro: excluir obras em que o próprio user já tem candidatura ativa (subquery em `candidaturas` usando o novo índice composto) e obras com `empreiteiraId IS NOT NULL` (ocupadas).
+- `GET /api/obras/[id]` (existente — endurecer na J04.B): empreiteiro só lê se `visibilidade='publicada'` OU se já candidatou; contratante dono lê sempre; admin/superadmin sempre. Nunca expor email/telefone do contratante (só fica visível no chat após aceite — J05/J13).
+- `POST /api/empreiteiro/obras-salvas` (J04.B — a criar): `{ obraId }` → idempotente via UNIQUE.
+- `DELETE /api/empreiteiro/obras-salvas/[obraId]` (J04.B — a criar).
+- `GET /api/empreiteiro/obras-salvas` (J04.B — a criar): paginado, JOIN com `obras` para devolver o card pronto.
 
 ## 8. Mocks a remover
 - [features/empreiteiro/novas-obras/mocks/novas-obras.mock.ts](../../features/empreiteiro/novas-obras/mocks/novas-obras.mock.ts)
 - [features/empreiteiro/novas-obras/mocks/obra-detalhe.mock.ts](../../features/empreiteiro/novas-obras/mocks/obra-detalhe.mock.ts)
-- Flag: `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` — esta é a flag *original* dela.
+- Flag a apagar: `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` — esta é a flag *original* deste módulo.
+- Hook órfão `features/obras/hooks/use-obras.ts` (auditoria em #41 confirmou zero consumers vivos).
+- Favoritos hoje persistidos só em Zustand+localStorage (`features/empreiteiro/novas-obras/store/`) — migrar pra `obras_salvas`.
 
 ## 9. Checklist de implementação
-- [ ] Substituir mocks no service de [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) por chamadas reais
-- [ ] Adicionar filtros server-side em `GET /api/obras`
-- [ ] Criar tabela `obras_salvas` + migration
-- [ ] Endpoints de obras salvas (POST/DELETE/GET)
-- [ ] Tela `/empreiteiro/obras-salvas` listando do banco
-- [ ] Esconder obras já candidatadas pelo próprio empreiteiro (ou marcar visualmente)
-- [ ] Esconder obras já com `empreiteiraId` definido (ocupadas)
-- [ ] Remover flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo
+- [x] **Schema + doc (Task J04.A)** — tabela `obras_salvas`, índices em `candidaturas`, doc reescrita _(Task #41)_
+- [ ] Endpoint `GET /api/obras` paginado + filtros + exclusões (anti-self-apply, ocupadas, role-aware) (Task J04.B)
+- [ ] Endpoint `GET /api/obras/[id]` com gate de visibilidade + ocultação de PII (Task J04.B)
+- [ ] Endpoints `GET/POST/DELETE /api/empreiteiro/obras-salvas` (Task J04.B)
+- [ ] Service de [features/empreiteiro/novas-obras/api/](../../features/empreiteiro/novas-obras/api/) consumindo API real (Task J04.C)
+- [ ] Auditar e migrar consumers do shape antigo de `GET /api/obras` (empreiteiro novas-obras + contratante minhas-obras + apagar hook órfão `features/obras/hooks/use-obras.ts`) (Task J04.C)
+- [ ] Tela `/empreiteiro/obras-salvas` listando do banco com paginação (Task J04.C)
+- [ ] Carries de J03 no card do marketplace: tipo, modalidade, materiaisPor, cidade/uf, faixa de valor, badge de anexos (Task J04.C)
+- [ ] Estado vazio + estado bloqueado (perfil empreiteiro incompleto — verifica `perfilCompleto`) (Task J04.C)
+- [ ] Remover mocks + flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` deste módulo (Task J04.C)
+- [ ] Migrar favoritos do Zustand+localStorage pra `obras_salvas` com toast + optimistic update (Task J04.C)
+- [ ] Promover status da jornada para `revisão` no índice de `docs/jornadas/README.md` (Task J04.C)
 
 ## 10. Critérios de aceite
-1. Contratante cria obra (J03) → empreiteiro abre `/empreiteiro/novas-obras` → obra aparece.
-2. Filtrar por cidade/estado → resultados consistentes com banco.
-3. Salvar obra → aparece em `/empreiteiro/obras-salvas`. Recarregar mantém.
-4. Remover dos salvos → some.
-5. Quando obra muda para `em_andamento` (J05 aceita uma candidatura) → some do marketplace.
+1. Contratante publica obra (J03 com visibilidade='publicada') → empreiteiro abre `/empreiteiro/novas-obras` → obra aparece na primeira página.
+2. Filtrar por UF=SP, cidade=Campinas → resposta consistente com `SELECT ... WHERE visibilidade='publicada' AND uf='SP' AND cidade='Campinas'`.
+3. Filtrar por modalidade=`empreitada_global` + faixa R$ 50k–200k → só obras casando ambos os critérios.
+4. Busca textual em `q=reforma` → ILIKE em `nome` e `descricao` (case-insensitive).
+5. Paginação: pageSize=20 default, response inclui `{ items, total, page, pageSize }`. pageSize=100 é o máximo aceito.
+6. Empreiteiro candidato a obra X → obra X some da listagem dele (mas continua visível pra outros empreiteiros).
+7. Obra com `empreiteiraId` definido (ocupada após aceite J05) → some do marketplace.
+8. Favoritar obra → aparece em `/empreiteiro/obras-salvas`. Refresh mantém. Desfavoritar → some.
+9. Tentar POST `/api/empreiteiro/obras-salvas` 2x com mesma `obraId` → UNIQUE garante idempotência (não cria duplicata, 200 ok).
+10. Contratante chamando `GET /api/obras` recebe só as suas (não vê obras de outros contratantes); admin recebe todas em todas visibilidades.
+11. Empreiteiro tentando `GET /api/obras/[id]` de uma obra `visibilidade='rascunho'` recebe 404 (mesmo erro de obra inexistente — não vaza existência).
+12. Card no marketplace mostra cidade/UF, modalidade, materiais por e faixa de valor — nunca email/telefone do contratante.
 
 ## 11. Riscos / Pontos de atenção
-- Performance de filtros: indexar colunas usadas em WHERE.
-- Privacidade: não expor email do contratante na listagem pública (somente no chat após aceite).
-- Paginação obrigatória — listas grandes podem matar performance no front.
+- **Breaking change no `GET /api/obras`**: shape vira `{ items, total, page, pageSize }` em vez de array. Os 2 consumers vivos (empreiteiro novas-obras service, contratante minhas-obras service) precisam ser migrados na MESMA task (J04.C) — auditoria feita em #41.
+- **PII do contratante**: nunca expor `users.email`/`users.phone` em listagens públicas. Só liberar via chat pós-aceite (J05/J13).
+- **Anti-self-apply**: query precisa do índice composto `(obra_id, empreiteiro_id)` criado na #41 — sem ele vira seq scan a cada filtro.
+- **Race condition em favoritar**: UNIQUE constraint resolve em DB; front mostra optimistic update + rollback em erro.
+- **Performance**: filtros combinados usam `idx_obras_visibilidade_uf_cidade` (#32); demais filtros (modalidade, materiaisPor, faixa de valor) ficam em filtro residual no result set já reduzido.
+- **Mocks**: a mesma flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` controla outros módulos (dashboard, minhas-obras, etc.) — só remover do **módulo `novas-obras`**, não global.
+- **Hook órfão `features/obras/hooks/use-obras.ts`**: deletar na J04.C (auditoria #41 confirmou zero usos).
 
 ## 12. Links cruzados
-- Depende de: J01, J03.
-- Alimenta: J05.
+- Depende de: J01 (auth/role empreiteiro), J03 (obras com `visibilidade='publicada'` e carries de filtragem).
+- Alimenta: J05 (porta de entrada da candidatura), J13 (chat pós-aceite que cita a obra vinda daqui).
 
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
 - 2026-05-25 (Task #32): J04 passa a depender de `obras.visibilidade='publicada'` (não mais de `status`). Filtros novos disponíveis pós-#33: `uf`, `cidade`, `modalidade`, `materiaisPor`. Backfill já marcou como `publicada` toda obra pré-existente com vínculo de empreiteira OU status diferente de `planejamento` — resto ficou em `rascunho` (não aparece no marketplace).
+- 2026-05-25 (Task #41): Auditoria de `GET /api/obras` mapeou 3 consumers — empreiteiro `novas-obras` service, contratante `minhas-obras` service, e hook órfão `features/obras/hooks/use-obras.ts` (zero usos vivos, deletar na J04.C). Resposta vira objeto paginado em J04.B → os 2 consumers vivos serão migrados na J04.C **no mesmo PR**, sem janela de inconsistência.
+- 2026-05-25 (Task #41): Favoritos hoje vivem só em Zustand+localStorage do módulo `novas-obras` — migração pra `obras_salvas` perde estado local de usuários atuais (esperado: feature ainda não anunciada).
+- 2026-05-25 (Task #41): Filtros previstos `especialidade` e `zonaAtuacao` exigem colunas que ainda não existem em `empreiteiras`/`obras` no modelo final — registrado como gap em J02§13 (perfil do empreiteiro). Vai ficar fora da J04.B/C; será habilitado quando J02 entregar essas colunas.
