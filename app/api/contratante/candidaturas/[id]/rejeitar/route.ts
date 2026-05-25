@@ -59,7 +59,10 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   if (!isAdminLike(guard.user.role)) {
     const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
     if (!cli || obra.clienteId !== cli.id) {
-      const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+      const r = NextResponse.json(
+        { error: "FORBIDDEN", message: "Você não é dono desta obra." },
+        { status: 403 },
+      );
       setNoCacheHeaders(r);
       return r;
     }

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       if (!isAdminLike(guard.user.role)) {
         const [cli] = await tx.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
         if (!cli || obraRow.cliente_id !== cli.id) {
-          return { code: 404 as const, body: { error: "NOT_FOUND" } };
+          return { code: 403 as const, body: { error: "FORBIDDEN", message: "Você não é dono desta obra." } };
         }
       }
 
