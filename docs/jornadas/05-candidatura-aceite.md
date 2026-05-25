@@ -1,7 +1,7 @@
 # Jornada — Candidatura & Aceite
 
-> Status: parcial | Prioridade: alta | Wave: 1
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: alta | Wave: 1
+> Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
 Empreiteiro envia proposta para uma obra; contratante avalia múltiplas e aceita uma. O aceite vincula `obra.empreiteiraId`, muda status para `em_andamento`, rejeita as concorrentes e abre o canal de comunicação (J13). É a junção do marketplace.
@@ -54,13 +54,13 @@ Existente: `candidaturas` (`obraId, empreiteiroId, valorProposta, prazoEstimado,
 - Verificar se [features/contratante/minhas-obras/mocks/](../../features/contratante/minhas-obras/mocks/) injeta candidaturas mock.
 
 ## 9. Checklist de implementação
-- [ ] Endpoint `aceitar` em transação: update da `obras` (empreiteiraId, status='em_andamento') + update das demais candidaturas para `rejeitada`
-- [ ] Validação: empreiteiro não pode candidatar duas vezes na mesma obra
-- [ ] Validação: contratante não pode candidatar na própria obra
-- [ ] Tela de "propostas recebidas" no detalhe de obra do contratante
-- [ ] Tela de "minhas candidaturas" para empreiteiro (nova ou aproveitar `obras-salvas`?)
-- [ ] Disparo de notificação ao empreiteiro em aceite/rejeição (link J13)
-- [ ] Cancelamento de candidatura própria pelo empreiteiro (antes do aceite)
+- [x] Endpoint `aceitar` em transação: update da `obras` (empreiteiraId, status='em_andamento') + update das demais candidaturas para `rejeitada` _(Task #64 — `POST /api/contratante/candidaturas/[id]/aceitar` com `SELECT ... FOR UPDATE` na obra dentro de `db.transaction`)_
+- [x] Validação: empreiteiro não pode candidatar duas vezes na mesma obra _(Task #64 — UNIQUE index `uq_candidaturas_obra_empreiteiro_unique` + captura `code=23505` → 409)_
+- [x] Validação: contratante não pode candidatar na própria obra _(Task #64 — `role !== 'empreiteiro'` ⇒ 403 no POST)_
+- [x] Tela de "propostas recebidas" no detalhe de obra do contratante _(Task #64 — `CandidaturasCard` refatorado consome `GET /api/contratante/obras/[id]/candidaturas`)_
+- [x] Tela de "minhas candidaturas" para empreiteiro _(Task #64 — `/empreiteiro/minhas-candidaturas` + item na sidebar)_
+- [ ] Disparo de notificação ao empreiteiro em aceite/rejeição (link J13) _(carry — flag `notificacao_disparada=false` plantada; hidrata em J13)_
+- [x] Cancelamento de candidatura própria pelo empreiteiro (antes do aceite) _(Task #64 — `POST /api/empreiteiro/candidaturas/[id]/cancelar`; reusa enum `rejeitada` + flag `cancelada_pelo_empreiteiro=true`)_
 
 ## 10. Critérios de aceite
 1. Empreiteiro candidata em obra → aparece em "propostas recebidas" do contratante.
@@ -82,3 +82,8 @@ Existente: `candidaturas` (`obraId, empreiteiroId, valorProposta, prazoEstimado,
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
 - 2026-05-25 (Task #41): Índices `idx_candidaturas_obra_empreiteiro` (`obra_id, empreiteiro_id`) e `idx_candidaturas_status` foram criados nesta task pra destravar a query anti-self-apply do marketplace (J04). O mesmo composto resolve o ranking de candidaturas por obra (J05), e o índice em `status` acelera o filtro "propostas pendentes" no detalhe do contratante — então J05 herda o ganho sem custo adicional.
+- 2026-05-25 (Task #64): Decidido reusar enum `candidatura_status` em vez de adicionar `cancelada`. Cancelamento pelo empreiteiro vira `status='rejeitada' + cancelada_pelo_empreiteiro=true + motivo_rejeicao='Cancelada pelo empreiteiro'`. UI distingue pela flag. Evita migração de enum + simplifica filtros do contratante (cancelada não aparece como "à decidir").
+- 2026-05-25 (Task #64): Anexos da candidatura ficaram fora de escopo (form de aplicar coleta nome/size mas não faz upload). Quando J05.B/J13 entrarem, criar tabela `candidatura_anexos` análoga a `obra_anexos`, com `kind='candidatura_anexo'` no R2 e endpoints `POST/DELETE /api/empreiteiro/candidaturas/[id]/anexos`.
+- 2026-05-25 (Task #64): Notificação real ao empreiteiro em aceite/rejeição ficou para J13 (flag `notificacao_disparada` plantada como gancho idempotente).
+- 2026-05-25 (Task #64): Coluna `observacoes_financeiras` finalmente tem persistência. Form `aplicar` já enviava o campo no body, mas o schema antigo não tinha coluna — silently descartado até esta task.
+- 2026-05-25 (Task #64): O check antes do INSERT (anti-self-apply do empreiteiro) é mantido como guarda explícita de UX, mas a corrida agora é resolvida pelo UNIQUE no DB (não-racy). Mensagens 409 trazem texto amigável.

@@ -7,6 +7,7 @@ import {
   RiSettings3Line,
   RiBookmarkLine,
   RiWalletLine,
+  RiFileList3Line,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -15,6 +16,7 @@ export const EMPREITEIRO_NAV_ITEMS: NavItem[] = [
   { title: 'Dashboard', url: '/empreiteiro/dashboard', icon: RiLayout2Line },
   { title: 'Novas Obras Disponíveis', url: '/empreiteiro/novas-obras', icon: RiSearchLine },
   { title: 'Obras Salvas', url: '/empreiteiro/obras-salvas', icon: RiBookmarkLine },
+  { title: 'Minhas Candidaturas', url: '/empreiteiro/minhas-candidaturas', icon: RiFileList3Line },
   { title: 'Meus Recebimentos', url: '/empreiteiro/pagamentos', icon: RiWalletLine },
   { title: 'xchat', url: '/empreiteiro/chat', icon: RiChat3Line },
 ];

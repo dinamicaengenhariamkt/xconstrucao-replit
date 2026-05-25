@@ -437,11 +437,11 @@ export default function ObraDetalhePage() {
 
       {/* Contato do Empreiteiro / Candidaturas */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-        {semEmpreiteiro && obra.candidaturasLista && obra.candidaturasLista.length > 0 ? (
-          <CandidaturasCard candidaturas={obra.candidaturasLista} obraOrcamento={obra.orcamento} />
-        ) : !semEmpreiteiro ? (
+        {semEmpreiteiro ? (
+          <CandidaturasCard obraId={obra.id} obraOrcamento={obra.orcamento} />
+        ) : (
           <ContatoEmpreiteiroCard empreiteiro={obra.empreiteiro} obraId={obra.id} obraTitulo={obra.titulo} />
-        ) : null}
+        )}
       </motion.div>
 
       {/* Localização da Obra */}

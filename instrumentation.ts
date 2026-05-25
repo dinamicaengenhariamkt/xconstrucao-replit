@@ -23,6 +23,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapMarketplaceSchema failed:", err);
     });
 
+    const { bootstrapCandidaturasSchema } = await import("./server/bootstrap-candidaturas");
+    await bootstrapCandidaturasSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapCandidaturasSchema failed:", err);
+    });
+
     const { bootstrapPagamentosSchema } = await import("./server/bootstrap-pagamentos");
     await bootstrapPagamentosSchema().catch((err) => {
       console.error("[instrumentation] bootstrapPagamentosSchema failed:", err);

@@ -193,6 +193,12 @@ export const candidaturas = pgTable("candidaturas", {
   status: candidaturaStatusEnum("status").notNull().default("pendente"),
   createdAt: timestamp("created_at").defaultNow(),
   atividades: text("atividades"),
+  observacoesFinanceiras: text("observacoes_financeiras"),
+  motivoRejeicao: text("motivo_rejeicao"),
+  mensagemContratante: text("mensagem_contratante"),
+  notificacaoDisparada: boolean("notificacao_disparada").notNull().default(false),
+  canceladaPeloEmpreiteiro: boolean("cancelada_pelo_empreiteiro").notNull().default(false),
+  decididaEm: timestamp("decidida_em"),
 });
 
 export const obrasSalvas = pgTable(
