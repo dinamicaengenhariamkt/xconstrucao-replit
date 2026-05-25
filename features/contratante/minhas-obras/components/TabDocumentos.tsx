@@ -11,6 +11,7 @@ import {
   IconFactCheck,
   IconDomain,
   IconTaskAlt,
+  IconPhotoLibrary,
 } from '@shared/components/icons';
 import type { ComponentType } from 'react';
 import type { ObraDocumento } from '../types';
@@ -25,10 +26,12 @@ const CATEGORIA_CONFIG: Record<
   relatorio: { label: 'Relatórios',        Icon: IconTaskAlt,      iconeBg: 'bg-success/20 text-success dark:bg-success/10' },
   alvara:    { label: 'Alvarás',           Icon: IconDomain,       iconeBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
   laudo:     { label: 'Laudos Técnicos',   Icon: IconFactCheck,    iconeBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+  foto:      { label: 'Fotos do Local',    Icon: IconPhotoLibrary, iconeBg: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' },
+  outros:    { label: 'Outros',            Icon: IconFolderOpen,   iconeBg: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
 };
 
 const CATEGORIAS_ORDEM: ObraDocumento['categoria'][] = [
-  'contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo',
+  'contrato', 'art_rrt', 'planta', 'relatorio', 'alvara', 'laudo', 'foto', 'outros',
 ];
 
 const STATUS_BADGE: Record<NonNullable<ObraDocumento['status']>, { label: string; classes: string }> = {
@@ -78,15 +81,29 @@ function DocumentoRow({ doc }: { doc: ObraDocumento }) {
             {STATUS_BADGE[doc.status].label}
           </span>
         )}
-        <button
-          type="button"
-          onClick={() => window.open('#', '_blank')}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
-          aria-label={`Baixar ${doc.nome}`}
-          data-testid={`contratante-doc-download-${doc.id}`}
-        >
-          <IconDownload className="text-[18px]" />
-        </button>
+        {doc.url ? (
+          <a
+            href={doc.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
+            aria-label={`Baixar ${doc.nome}`}
+            data-testid={`contratante-doc-download-${doc.id}`}
+          >
+            <IconDownload className="text-[18px]" />
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled
+            title="Arquivo indisponível"
+            className="p-1.5 rounded-lg text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-0 group-hover:opacity-100 focus:opacity-100"
+            aria-label={`Arquivo indisponível: ${doc.nome}`}
+            data-testid={`contratante-doc-download-${doc.id}`}
+          >
+            <IconDownload className="text-[18px]" />
+          </button>
+        )}
       </div>
     </div>
   );

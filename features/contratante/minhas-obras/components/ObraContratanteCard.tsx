@@ -4,6 +4,9 @@ import { ObraCard } from '@features/shared/components/ObraCard';
 import type { ObraContratanteCardProps } from '../types';
 
 export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
+  const visibilidade = (obra as typeof obra & {
+    visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+  }).visibilidade;
   return (
     <ObraCard
       obraId={obra.id}
@@ -21,6 +24,7 @@ export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
       basePath="/contratante/minhas-obras"
       dateMode="end-only"
       candidaturas={obra.candidaturas}
+      visibilidade={visibilidade}
     />
   );
 }

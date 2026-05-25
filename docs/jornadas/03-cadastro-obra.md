@@ -137,11 +137,11 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - [x] `GET /api/admin/obras/[id]` retorna detalhe + cliente + empreiteira + anexos + últimos 20 audit logs _(Task #33)_
 - [x] `POST /api/obras/[id]/anexos` + `DELETE /api/obras/[id]/anexos/[anexoId]` + `GET` listagem; novo kind `obra_anexo` em KIND_RULES (15MB PDF/img, role contratante|superadmin), key `public/obras/{userId}/anexos/...` _(Task #33)_
 - [x] UI `/contratante/nova-obra` reescrita: 6 cards (Identificação, Endereço c/ ViaCEP debounce 400ms, Escopo, Datas+Orçamento, Anexos, Ações), upload+bind sequencial, botões "Salvar rascunho" e "Publicar obra", coerção `valorTotal`/`areaM2` p/ string _(Task #33)_
-- [ ] UI contratante: botões Publicar / Pausar / Arquivar no **detalhe** + uploader de anexos pós-criação **(detalhe ainda mock — registrado em §13)**
-- [ ] UI admin: `/admin/obras` (rota nova) com filtros (visibilidade, status, contratante) — endpoint pronto, UI a construir **(registrado em §13)**
-- [ ] UI empreiteiro: detalhe da obra real (mostrar anexos públicos) — endpoint pronto, UI ainda mock **(registrado em §13)**
-- [ ] Substituir `obra-detalhe.mock.ts` por fetch real **(registrado em §13)**
-- [ ] Listar paginado em `/contratante/minhas-obras` **(registrado em §13)**
+- [ ] UI contratante: botões Publicar / Pausar / Arquivar no **detalhe** + uploader de anexos pós-criação **(carry para próxima task — listas/detalhes já consomem API real, ações ainda faltam)**
+- [x] UI admin: `/admin/obras` (rota nova) com filtros (visibilidade, status, cliente, empreiteira, período) consumindo `/api/admin/obras` paginado _(Task #34)_
+- [x] UI empreiteiro: lista e detalhe de `/empreiteiro/novas-obras` consumindo `/api/obras` real (PII-sanitized) _(Task #34)_
+- [x] Substituir `obra-detalhe.mock.ts`, `minhas-obras.mock.ts`, `novas-obras.mock.ts` e `features/admin/obras/mocks/list.mock.ts` por fetch real via adapters `features/obras/adapters.ts` _(Task #34)_
+- [x] Listar `/contratante/minhas-obras` (lista + `[id]`) consumindo `/api/obras` + `/api/obras/[id]` _(Task #34)_
 
 ## 10. Critérios de aceite
 1. Logado como contratante, criar obra apenas com `nome` + `endereco` → salva como `rascunho` → aparece em "minhas-obras" → NÃO aparece em J04.
@@ -177,3 +177,7 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - 2026-05-25 (Task #33): Aditivo de escopo/valor pós-vínculo com empreiteira (referenciado no 409 `OBRA_LOCKED_AFTER_BIND`) é stub na resposta — fluxo real fica em J10 (disputas/aditivos). Sem aditivo, alterações precisam de cancelamento+nova obra.
 - 2026-05-25 (Task #33): Rate-limit em `POST /api/obras` e `POST /api/obras/[id]/anexos` não foi adicionado — contratante autenticado pode spammar criações/anexos. Reusar o helper existente de `rate-limit.ts` numa próxima rodada. _Resolvido em Task #35 (2026-05-25): obras=10/user/min + 30/ip/min; anexos=20/obra/min + 60/user/min + 120/ip/min; mensagens pt-BR; reusa `isRateLimited`/`getClientIp`._
 - 2026-05-25 (Task #33): `lat/lng` ficou `null` em todas as obras criadas pela UI nova — geocode via Nominatim foi planejado mas não implementado (fora de escopo desta task; J04 não depende disso ainda).
+- 2026-05-25 (Task #34): Botões de ação no detalhe contratante (Publicar / Pausar / Arquivar) + uploader de anexos pós-criação ainda não existem — listas/detalhes já leem da API real, falta a UI das mutações (carry para próxima task de J03).
+- 2026-05-25 (Task #34): Adapter `dbToObraContratanteDetalhe` retorna `etapas/timeline/equipe/fotos/sinapi` como arrays vazios — schema atual não tem essas entidades (vêm de J06/J07/J08). Detalhe contratante renderiza tabs com estados vazios em vez de mock.
+- 2026-05-25 (Task #34): Status DB `pausada` é mapeado pra `com_pendencias` no contratante (não existe `com_atrasos` real no schema) — pode confundir KPIs de "obras com atraso" até J07 trazer a noção de cronograma realizado.
+- 2026-05-25 (Task #34): `features/admin/obras/mocks/index.ts` (`mockObrasDetalheMap`) ainda existe e é consumido pelo detalhe `/admin/obras/[id]` — Task #34 cobriu apenas a lista admin nova; trocar o detalhe admin por `/api/admin/obras/[id]` fica como carry.

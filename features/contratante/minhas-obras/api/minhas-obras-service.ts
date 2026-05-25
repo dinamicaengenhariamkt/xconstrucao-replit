@@ -1,26 +1,30 @@
-import { ENABLE_MOCK } from '../constants';
-import { mockObrasContratante } from '../mocks/minhas-obras.mock';
-import { getObraContratanteDetalheMock } from '../mocks/obra-detalhe.mock';
-import type { ObraContratante, ObraContratanteDetalhe } from '../types';
+import {
+  dbToObraContratante,
+  dbToObraContratanteDetalhe,
+  type DbObra,
+  type DbObraAnexo,
+} from '@features/obras/adapters';
+import type {
+  ObraContratante,
+  ObraContratanteDetalhe,
+} from '../types';
 
-export async function getObrasContratante(): Promise<ObraContratante[]> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockObrasContratante;
-  }
-  const response = await fetch('/api/contratante/minhas-obras');
+export async function getObrasContratante(): Promise<
+  Array<ObraContratante & { visibilidade: DbObra['visibilidade'] }>
+> {
+  const response = await fetch('/api/obras');
   if (!response.ok) throw new Error('Erro ao buscar obras');
-  return response.json();
+  const rows: DbObra[] = await response.json();
+  return rows.map(dbToObraContratante);
 }
 
-export async function getObraContratanteDetalhe(id: string): Promise<ObraContratanteDetalhe> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const obra = getObraContratanteDetalheMock(id);
-    if (!obra) throw new Error('Obra não encontrada');
-    return obra;
-  }
-  const response = await fetch(`/api/contratante/minhas-obras/${id}`);
+export async function getObraContratanteDetalhe(
+  id: string,
+): Promise<ObraContratanteDetalhe & { visibilidade: DbObra['visibilidade'] }> {
+  const response = await fetch(`/api/obras/${id}`);
   if (!response.ok) throw new Error('Erro ao buscar detalhes da obra');
-  return response.json();
+  const payload = await response.json();
+  const obra: DbObra = payload?.obra ?? payload;
+  const anexos: DbObraAnexo[] = payload?.anexos ?? [];
+  return dbToObraContratanteDetalhe(obra, anexos);
 }

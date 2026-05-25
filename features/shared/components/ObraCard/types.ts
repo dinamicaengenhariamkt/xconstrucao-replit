@@ -28,4 +28,6 @@ export interface ObraCardProps {
   dateMode: 'range' | 'end-only';
   /** Quando informado e > 0, exibe um badge "N candidaturas" no canto superior direito. */
   candidaturas?: number;
+  /** Visibilidade no marketplace (rascunho/publicada/pausada/arquivada). Quando informado, renderiza badge. */
+  visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
 }

@@ -109,12 +109,13 @@ export interface ObraFoto {
 export interface ObraDocumento {
   id: string;
   nome: string;
-  categoria: 'contrato' | 'art_rrt' | 'planta' | 'relatorio' | 'alvara' | 'laudo';
+  categoria: 'contrato' | 'art_rrt' | 'planta' | 'relatorio' | 'alvara' | 'laudo' | 'foto' | 'outros';
   tamanho?: string;
   data: string;
   status?: 'assinado' | 'valido' | 'vencendo' | 'novo';
   venceEmDias?: number;
   observacoes?: string;
+  url?: string;
 }
 
 export interface ObraAtividade {

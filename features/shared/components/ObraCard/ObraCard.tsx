@@ -13,6 +13,10 @@ import {
   PROGRESS_COLORS,
 } from '@shared/constants/status';
 import { HealthBadge, getMockHealth } from '@features/shared/health';
+import {
+  VISIBILIDADE_LABELS,
+  VISIBILIDADE_BADGE_CLASSES,
+} from '@features/obras/adapters';
 import type { ObraCardProps } from './types';
 
 export function ObraCard({
@@ -31,6 +35,7 @@ export function ObraCard({
   basePath,
   dateMode,
   candidaturas,
+  visibilidade,
 }: ObraCardProps) {
   const borderColor = STATUS_BORDER_COLORS[status] || 'border-l-gray-300';
   const progressColor = (PROGRESS_COLORS[status] || 'primary') as
@@ -75,6 +80,17 @@ export function ObraCard({
               variant="solid"
               className="backdrop-blur-sm"
             />
+            {visibilidade && (
+              <span
+                className={cn(
+                  'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
+                  VISIBILIDADE_BADGE_CLASSES[visibilidade] || 'bg-gray-200 text-gray-700',
+                )}
+                data-testid={`badge-visibilidade-${obraId}`}
+              >
+                {VISIBILIDADE_LABELS[visibilidade] || visibilidade}
+              </span>
+            )}
           </div>
           {showCandidaturas && (
             <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-full px-3 py-1">

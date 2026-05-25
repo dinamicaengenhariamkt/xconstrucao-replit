@@ -1,36 +1,36 @@
-import { ENABLE_MOCK } from '../constants';
-import { mockNovasObras, mockPerfilStatus } from '../mocks/novas-obras.mock';
-import { getObraDetalheMock } from '../mocks/obra-detalhe.mock';
+import {
+  dbToNovaObra,
+  dbToObraDetalheEmpreiteiro,
+  type DbObra,
+} from '@features/obras/adapters';
 import type { NovaObra, PerfilStatus, ObraDetalhe } from '../types';
 
 export async function getNovasObras(): Promise<NovaObra[]> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockNovasObras;
-  }
-  const response = await fetch('/api/empreiteiro/novas-obras');
+  const response = await fetch('/api/obras');
   if (!response.ok) throw new Error('Erro ao buscar novas obras');
-  return response.json();
+  const rows: DbObra[] = await response.json();
+  return rows.map(dbToNovaObra);
 }
 
 export async function getPerfilStatus(): Promise<PerfilStatus> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return mockPerfilStatus;
-  }
   const response = await fetch('/api/empreiteiro/perfil-status');
-  if (!response.ok) throw new Error('Erro ao buscar status do perfil');
+  if (!response.ok) {
+    return {
+      isBlocked: false,
+      completionPercentage: 100,
+      pendencias: [],
+      motivoBloqueio: '',
+      motivosBloqueio: [],
+    };
+  }
   return response.json();
 }
 
 export async function getObraDetalhe(id: string): Promise<ObraDetalhe> {
-  if (ENABLE_MOCK) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const obra = getObraDetalheMock(id);
-    if (!obra) throw new Error('Obra não encontrada');
-    return obra;
-  }
-  const response = await fetch(`/api/empreiteiro/novas-obras/${id}`);
+  const response = await fetch(`/api/obras/${id}`);
   if (!response.ok) throw new Error('Erro ao buscar detalhes da obra');
-  return response.json();
+  const payload = await response.json();
+  const obra: DbObra = payload?.obra ?? payload;
+  const anexos = Array.isArray(payload?.anexos) ? payload.anexos : [];
+  return dbToObraDetalheEmpreiteiro(obra, anexos);
 }
