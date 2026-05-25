@@ -33,6 +33,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapMedicoesSchema failed:", err);
     });
 
+    const { bootstrapNotificacoesSchema } = await import("./server/bootstrap-notificacoes");
+    await bootstrapNotificacoesSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapNotificacoesSchema failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {

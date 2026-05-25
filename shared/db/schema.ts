@@ -243,6 +243,21 @@ export const insertMedicaoSchema = createInsertSchema(medicoes).omit({
 export type InsertMedicao = z.infer<typeof insertMedicaoSchema>;
 export type Medicao = typeof medicoes.$inferSelect;
 
+export const notificacaoTipoEnum = pgEnum("notificacao_tipo", ["lembrete", "alerta", "info", "sucesso"]);
+
+export const notificacoes = pgTable("notificacoes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tipo: notificacaoTipoEnum("tipo").notNull().default("info"),
+  titulo: text("titulo").notNull(),
+  descricao: text("descricao").notNull(),
+  href: text("href"),
+  lida: boolean("lida").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Notificacao = typeof notificacoes.$inferSelect;
+
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
 export const marketplaceLeads = pgTable("marketplace_leads", {

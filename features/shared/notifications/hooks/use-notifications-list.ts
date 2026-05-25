@@ -1,7 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BaseNotification, NotifFilter, NotificacaoTipo } from '../types';
+
+export interface UseNotificationsListOptions {
+  /** Callback chamado quando o usuário marca uma notificação como lida. */
+  onMarkRead?: (id: string) => void;
+  /** Callback chamado quando o usuário marca todas como lidas. */
+  onMarkAllRead?: () => void;
+}
 
 const TOPBAR_LIMIT = 6;
 const PAGE_SIZE = 10;
@@ -42,8 +49,16 @@ export interface UseNotificationsListReturn<T extends BaseNotification> {
 
 export function useNotificationsList<T extends BaseNotification>(
   initial: T[],
+  options: UseNotificationsListOptions = {},
 ): UseNotificationsListReturn<T> {
   const [notifications, setNotifications] = useState<T[]>(initial);
+  const lastInitialRef = useRef<T[]>(initial);
+  useEffect(() => {
+    if (initial !== lastInitialRef.current) {
+      lastInitialRef.current = initial;
+      setNotifications(initial);
+    }
+  }, [initial]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [filterLida, setFilterLidaState] = useState<NotifFilter>('todas');
   const [tipoSelected, setTipoSelectedState] = useState<NotificacaoTipo[]>([]);
@@ -113,10 +128,12 @@ export function useNotificationsList<T extends BaseNotification>(
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? ({ ...n, lida: true } as T) : n)),
     );
+    options.onMarkRead?.(id);
   };
 
   const marcarTodasComoLidas = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, lida: true } as T)));
+    options.onMarkAllRead?.();
   };
 
   const advancedActiveCount =

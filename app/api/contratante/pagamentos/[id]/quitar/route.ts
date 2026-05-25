@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { userFiles } from "@shared/db/schema";
+import { userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import {
@@ -11,6 +11,8 @@ import {
   quitarLancamento,
 } from "@features/financeiro/lancamentos-service";
 import { createSignedReadUrl } from "@shared/lib/storage";
+import { criarNotificacao } from "@features/notificacoes/service";
+import { sendPagamentoRecebidoEmail } from "@shared/lib/email";
 
 const bodySchema = z.object({
   metodoPagamento: z.string().trim().min(2).max(80),
@@ -77,6 +79,55 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     comprovanteFileId: parsed.data.comprovanteFileId ?? null,
     comprovanteUrl,
   });
+
+  // Notifica o empreiteiro recebedor (in-app + email best-effort)
+  try {
+    const recebedorId = updated?.recebedorUserId ?? lanc.recebedorUserId;
+    if (recebedorId) {
+      const valorNum = Number(updated?.valor ?? lanc.valor);
+      const valorFormatado = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(Number.isFinite(valorNum) ? valorNum : 0);
+      const obraNome = updated?.obraNome ?? lanc.obraNome ?? "sua obra";
+      const obraId = updated?.obraId ?? lanc.obraId;
+      const href = obraId
+        ? `/empreiteiro/minhas-obras/${obraId}`
+        : `/empreiteiro/pagamentos`;
+      const dataPagamento = updated?.dataPagamento ?? new Date().toISOString().slice(0, 10);
+
+      await criarNotificacao({
+        userId: recebedorId,
+        tipo: "sucesso",
+        titulo: "Pagamento recebido",
+        descricao: `O contratante quitou ${valorFormatado} referente à obra ${obraNome}.`,
+        href,
+      });
+
+      const [recebedor] = await db
+        .select({ name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, recebedorId))
+        .limit(1);
+
+      if (recebedor?.email) {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "";
+        const link = baseUrl ? `${baseUrl}${href}` : href;
+        await sendPagamentoRecebidoEmail(recebedor.email, {
+          empreiteiroNome: recebedor.name ?? "Empreiteiro",
+          obraNome,
+          valorFormatado,
+          metodoPagamento: parsed.data.metodoPagamento,
+          dataPagamento,
+          link,
+        }).catch((err) => {
+          console.error("[pagamentos.quitar] falha ao enviar email ao empreiteiro:", err);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[pagamentos.quitar] falha ao notificar empreiteiro:", err);
+  }
 
   await recordAudit({
     actorId: guard.user.id,

@@ -3,6 +3,7 @@ import PasswordResetEmail from '@features/auth/emails/password-reset';
 import WelcomeEmail from '@features/auth/emails/welcome';
 import VerificationEmail from '@features/auth/emails/verification';
 import PasswordSetupEmail from '@features/auth/emails/password-setup';
+import PagamentoRecebidoEmail from '@features/notificacoes/emails/pagamento-recebido';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -120,6 +121,33 @@ export async function sendPasswordSetupEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'password-setup' });
   } catch (error) {
     console.error('Erro ao enviar email de definição de senha:', error);
+    throw error;
+  }
+}
+
+export async function sendPagamentoRecebidoEmail(
+  to: string,
+  props: {
+    empreiteiroNome: string;
+    obraNome: string;
+    valorFormatado: string;
+    metodoPagamento: string;
+    dataPagamento: string;
+    link: string;
+  },
+) {
+  const html = await render(PagamentoRecebidoEmail(props));
+  const subject = `XConstrução - Pagamento recebido (${props.valorFormatado})`;
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'pagamento-recebido', ...props } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'pagamento-recebido' });
+  } catch (error) {
+    console.error('Erro ao enviar email de pagamento recebido:', error);
     throw error;
   }
 }
