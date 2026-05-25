@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
@@ -184,13 +184,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         payload: { candidaturaId, empreiteiraId: empAceitaId },
       });
       const rejeitadasIdsAtv: string[] = (result.body as any).rejeitadasIds ?? [];
-      // Lookup batch dos donos das candidaturas rejeitadas em cascade.
+      // Lookup batch dos donos (user ids) das candidaturas rejeitadas em cascade.
+      // candidaturas.empreiteiroId já é users.id (não empreiteiras.id).
       let rejeitadasTargets: Map<string, string | null> = new Map();
       if (rejeitadasIdsAtv.length > 0) {
         const rows = await db
-          .select({ candId: candidaturas.id, userId: empreiteiras.userId })
+          .select({ candId: candidaturas.id, userId: candidaturas.empreiteiroId })
           .from(candidaturas)
-          .leftJoin(empreiteiras, eq(empreiteiras.id, candidaturas.empreiteiroId))
           .where(inArray(candidaturas.id, rejeitadasIdsAtv));
         rejeitadasTargets = new Map(rows.map((r) => [r.candId, r.userId ?? null]));
       }
