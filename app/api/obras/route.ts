@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, gte, ilike, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { candidaturas, clientes, obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -32,10 +32,20 @@ export async function GET(request: NextRequest) {
   const minValor = q.get("minValor");
   const maxValor = q.get("maxValor");
   const visibilidade = q.get("visibilidade");
-  const tipo = q.get("tipo")?.trim();
   const modalidade = q.get("modalidade");
-  const materiaisPor = q.get("materiaisPor");
   const scopeAdmin = q.get("scope") === "admin";
+
+  // Multi-valor: aceita `?tipo=a&tipo=b` (repetido) OU `?tipo=a,b` (CSV).
+  // Dedupe + trim + drop vazios. Limite defensivo de 50 valores por filtro.
+  const parseMulti = (key: string): string[] => {
+    const raw = q.getAll(key).flatMap((v) => v.split(","));
+    const cleaned = raw.map((v) => v.trim()).filter((v) => v.length > 0);
+    return Array.from(new Set(cleaned)).slice(0, 50);
+  };
+  const tipos = parseMulti("tipo");
+  const materiaisPorList = parseMulti("materiaisPor").filter((v) =>
+    ["contratante", "empreiteiro", "misto"].includes(v),
+  );
 
   // Paginação — clamps server-side.
   const pageRaw = Number(q.get("page") ?? "1");
@@ -87,12 +97,18 @@ export async function GET(request: NextRequest) {
   if (visibilidade && ["rascunho", "publicada", "pausada", "arquivada"].includes(visibilidade)) {
     filters.push(eq(obras.visibilidade, visibilidade as any));
   }
-  if (tipo) filters.push(eq(obras.tipo, tipo));
+  if (tipos.length === 1) {
+    filters.push(eq(obras.tipo, tipos[0]));
+  } else if (tipos.length > 1) {
+    filters.push(inArray(obras.tipo, tipos));
+  }
   if (modalidade && ["administracao", "empreitada_global", "empreitada_etapa"].includes(modalidade)) {
     filters.push(eq(obras.modalidade, modalidade as any));
   }
-  if (materiaisPor && ["contratante", "empreiteiro", "misto"].includes(materiaisPor)) {
-    filters.push(eq(obras.materiaisPor, materiaisPor as any));
+  if (materiaisPorList.length === 1) {
+    filters.push(eq(obras.materiaisPor, materiaisPorList[0] as any));
+  } else if (materiaisPorList.length > 1) {
+    filters.push(inArray(obras.materiaisPor, materiaisPorList as any));
   }
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;

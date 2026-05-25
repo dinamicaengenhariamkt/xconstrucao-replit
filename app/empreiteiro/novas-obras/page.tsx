@@ -55,13 +55,13 @@ export default function NovasObrasPage() {
   const orcMaxNum = orcamentoMax === '' ? undefined : Number(orcamentoMax);
 
   const queryParams = useMemo(() => {
-    const p: Record<string, string | number> = { page, pageSize: PAGE_SIZE };
+    const p: Record<string, string | number | string[]> = { page, pageSize: PAGE_SIZE };
     if (cidade.trim()) p.cidade = cidade.trim();
     if (uf.trim()) p.uf = uf.trim().toUpperCase();
     if (modalidade) p.modalidade = modalidade;
-    // API aceita apenas 1 valor por filtro — quando há multi-seleção, deixamos sem param e filtramos client-side.
-    if (tipoSelected.length === 1) p.tipo = tipoSelected[0];
-    if (materiaisPorSelected.length === 1) p.materiaisPor = materiaisPorSelected[0];
+    // API aceita lista (repetido ou CSV) — enviamos todos os valores selecionados.
+    if (tipoSelected.length > 0) p.tipo = tipoSelected;
+    if (materiaisPorSelected.length > 0) p.materiaisPor = materiaisPorSelected;
     if (orcMinNum !== undefined) p.minValor = orcMinNum;
     if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
     return p;
@@ -135,15 +135,6 @@ export default function NovasObrasPage() {
     if (complexidadeSelected.length > 0) {
       result = result.filter((o) => complexidadeSelected.includes(o.complexidade));
     }
-    // Multi-seleção de tipo/materiaisPor: API só aceita 1, então filtramos aqui quando há 2+.
-    if (tipoSelected.length > 1) {
-      result = result.filter((o) => tipoSelected.includes(o.tipo));
-    }
-    if (materiaisPorSelected.length > 1) {
-      result = result.filter((o) =>
-        o.materiaisPor ? materiaisPorSelected.includes(o.materiaisPor) : false,
-      );
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -154,7 +145,7 @@ export default function NovasObrasPage() {
       );
     }
     return result;
-  }, [rows, statusSelected, complexidadeSelected, tipoSelected, materiaisPorSelected, searchQuery]);
+  }, [rows, statusSelected, complexidadeSelected, searchQuery]);
 
   const advancedActiveCount =
     (cidade.trim() ? 1 : 0) +

@@ -20,9 +20,9 @@ export interface GetNovasObrasParams {
   uf?: string;
   minValor?: number;
   maxValor?: number;
-  tipo?: string;
+  tipo?: string | string[];
   modalidade?: string;
-  materiaisPor?: string;
+  materiaisPor?: string | string[];
 }
 
 export async function getNovasObras(
@@ -30,7 +30,16 @@ export async function getNovasObras(
 ): Promise<PaginatedResponse<NovaObra>> {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    if (v === undefined || v === null || v === '') return;
+    if (Array.isArray(v)) {
+      v.forEach((item) => {
+        if (item !== undefined && item !== null && item !== '') {
+          qs.append(k, String(item));
+        }
+      });
+    } else {
+      qs.set(k, String(v));
+    }
   });
   const url = `/api/obras${qs.size > 0 ? `?${qs.toString()}` : ''}`;
   const response = await fetch(url);
