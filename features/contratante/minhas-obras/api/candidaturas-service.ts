@@ -1,5 +1,15 @@
 import { apiRequest } from '@/lib/queryClient';
 
+export interface CandidaturaAnexoApi {
+  id: string;
+  fileId: string;
+  originalName: string;
+  mime: string;
+  sizeBytes: number;
+  createdAt: string | null;
+  url: string | null;
+}
+
 /** Row crua do GET /api/contratante/obras/[id]/candidaturas. */
 export interface CandidaturaApiRow {
   id: string;
@@ -25,6 +35,7 @@ export interface CandidaturaApiRow {
   empreiteiraTelefone: string | null;
   empreiteiraAvatarUrl: string | null;
   empreiteiraAvaliacao: string | null;
+  anexos?: CandidaturaAnexoApi[];
 }
 
 export async function fetchCandidaturasObra(obraId: string): Promise<CandidaturaApiRow[]> {

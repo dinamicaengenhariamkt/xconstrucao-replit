@@ -41,6 +41,11 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
     mimes: [...IMAGE_MIMES, ...DOC_MIMES],
     roles: ["contratante", "superadmin"],
   },
+  candidatura_anexo: {
+    maxBytes: 10_000_000,
+    mimes: [...IMAGE_MIMES, ...DOC_MIMES],
+    roles: ["empreiteiro", "superadmin"],
+  },
 };
 
 export interface ValidateUploadInput {

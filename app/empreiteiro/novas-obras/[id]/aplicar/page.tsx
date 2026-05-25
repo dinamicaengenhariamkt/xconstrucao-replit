@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
 import { useTermosStore } from '@features/auth/store/termos-store';
+import { useUpload } from '@features/shared/hooks/use-uploads';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconArrowBack, IconChevronRight, IconCheckCircle, IconCheck, IconSend, IconDelete, IconAddCircle, IconUploadFile, IconDescription, IconConstruction, IconLocationOn, IconHomeRepairService, IconStraighten, IconAttachMoney, IconSchedule, IconSignalCellularAlt } from '@shared/components/icons';
 
@@ -20,6 +21,9 @@ interface Anexo {
   id: string;
   name: string;
   size: string;
+  fileId?: string;
+  uploading?: boolean;
+  error?: string;
 }
 
 function generateId() {
@@ -56,6 +60,7 @@ export default function AplicarPage() {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { acceptAll } = useTermosStore();
+  const { upload } = useUpload();
 
   const addAtividade = useCallback(() => {
     setAtividades(prev => [...prev, { id: generateId(), descricao: '', valor: '', observacoes: '' }]);
@@ -69,17 +74,37 @@ export default function AplicarPage() {
     setAtividades(prev => prev.map(a => a.id === atividadeId ? { ...a, [field]: value } : a));
   }, []);
 
-  const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const valid = files.filter(f => f.size <= 10 * 1024 * 1024);
     const formatSize = (bytes: number) => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    setAnexos(prev => [...prev, ...valid.map(f => ({ id: `${f.name}-${Date.now()}`, name: f.name, size: formatSize(f.size) }))]);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
 
-  const removeAnexo = useCallback((anexoId: string) => {
+    for (const f of valid) {
+      const localId = `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      setAnexos(prev => [...prev, { id: localId, name: f.name, size: formatSize(f.size), uploading: true }]);
+      try {
+        const result = await upload({ file: f, kind: 'candidatura_anexo' });
+        setAnexos(prev => prev.map(a => a.id === localId ? { ...a, uploading: false, fileId: result.id } : a));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Falha no upload';
+        setAnexos(prev => prev.map(a => a.id === localId ? { ...a, uploading: false, error: msg } : a));
+      }
+    }
+  }, [upload]);
+
+  const removeAnexo = useCallback(async (anexoId: string) => {
+    const target = anexos.find(a => a.id === anexoId);
     setAnexos(prev => prev.filter(a => a.id !== anexoId));
-  }, []);
+    // Se já foi uploaded (mas ainda não vinculado a candidatura), apaga o user_files.
+    if (target?.fileId) {
+      try {
+        await fetch(`/api/uploads/${target.fileId}`, { method: 'DELETE', credentials: 'include' });
+      } catch {
+        /* best-effort */
+      }
+    }
+  }, [anexos]);
 
   const totalProposta = atividades.reduce((sum, a) => sum + parseCurrencyToNumber(a.valor), 0);
 
@@ -91,6 +116,14 @@ export default function AplicarPage() {
         await acceptAll();
       } catch (consentErr) {
         console.error('Falha ao registrar aceite (prosseguindo):', consentErr);
+      }
+      const pendingUploads = anexos.filter(a => a.uploading);
+      if (pendingUploads.length > 0) {
+        throw new Error('Aguarde os anexos terminarem de subir.');
+      }
+      const failed = anexos.filter(a => a.error);
+      if (failed.length > 0) {
+        throw new Error('Remova os anexos com erro antes de enviar.');
       }
       const res = await fetch('/api/empreiteiro/candidaturas', {
         method: 'POST',
@@ -110,6 +143,19 @@ export default function AplicarPage() {
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Erro ao enviar candidatura');
+      }
+      const candidatura = await res.json();
+      const fileIds = anexos.map(a => a.fileId).filter((x): x is string => !!x);
+      for (const fileId of fileIds) {
+        try {
+          await fetch(`/api/empreiteiro/candidaturas/${candidatura.id}/anexos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId }),
+          });
+        } catch (anexoErr) {
+          console.error('Falha ao vincular anexo:', anexoErr);
+        }
       }
       setIsSubmitted(true);
     } catch (error) {
@@ -424,7 +470,12 @@ export default function AplicarPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">{anexo.name}</p>
-                    <p className="text-xs text-gray-500">{anexo.size}</p>
+                    <p className="text-xs text-gray-500">
+                      {anexo.size}
+                      {anexo.uploading && <span className="ml-2 text-amber-600">enviando…</span>}
+                      {anexo.error && <span className="ml-2 text-red-600">{anexo.error}</span>}
+                      {anexo.fileId && !anexo.uploading && !anexo.error && <span className="ml-2 text-green-600">pronto</span>}
+                    </p>
                   </div>
                 </div>
                 <button

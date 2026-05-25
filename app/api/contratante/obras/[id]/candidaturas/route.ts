@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, empreiteiras, obras, users } from "@shared/db/schema";
+import { candidaturas, candidaturaAnexos, clientes, empreiteiras, obras, userFiles, users } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { createSignedReadUrl } from "@shared/lib/storage";
 
 /**
  * GET /api/contratante/obras/[id]/candidaturas
@@ -79,7 +80,50 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       asc(candidaturas.createdAt),
     );
 
-  const r = NextResponse.json(rows);
+  // Anexa lista de anexos (com signed URLs) por candidatura, em 1 query agregada.
+  const candIds = rows.map((r) => r.id);
+  const anexosByCand = new Map<string, Array<{ id: string; fileId: string; originalName: string; mime: string; sizeBytes: number; createdAt: Date | null; url: string | null }>>();
+  if (candIds.length > 0) {
+    const anexosRows = await db
+      .select({
+        id: candidaturaAnexos.id,
+        candidaturaId: candidaturaAnexos.candidaturaId,
+        fileId: candidaturaAnexos.fileId,
+        createdAt: candidaturaAnexos.createdAt,
+        bucketKey: userFiles.bucketKey,
+        originalName: userFiles.originalName,
+        mime: userFiles.mime,
+        sizeBytes: userFiles.sizeBytes,
+      })
+      .from(candidaturaAnexos)
+      .innerJoin(userFiles, eq(userFiles.id, candidaturaAnexos.fileId))
+      .where(and(inArray(candidaturaAnexos.candidaturaId, candIds), isNull(userFiles.deletedAt)))
+      .orderBy(desc(candidaturaAnexos.createdAt));
+
+    const signed = await Promise.all(
+      anexosRows.map(async (a) => ({
+        candidaturaId: a.candidaturaId,
+        anexo: {
+          id: a.id,
+          fileId: a.fileId,
+          originalName: a.originalName,
+          mime: a.mime,
+          sizeBytes: a.sizeBytes,
+          createdAt: a.createdAt,
+          url: await createSignedReadUrl({ key: a.bucketKey, filename: a.originalName }).catch(() => null),
+        },
+      })),
+    );
+    for (const s of signed) {
+      const arr = anexosByCand.get(s.candidaturaId) ?? [];
+      arr.push(s.anexo);
+      anexosByCand.set(s.candidaturaId, arr);
+    }
+  }
+
+  const enriched = rows.map((r) => ({ ...r, anexos: anexosByCand.get(r.id) ?? [] }));
+
+  const r = NextResponse.json(enriched);
   setNoCacheHeaders(r);
   return r;
 }

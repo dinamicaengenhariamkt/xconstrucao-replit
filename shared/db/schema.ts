@@ -201,6 +201,16 @@ export const candidaturas = pgTable("candidaturas", {
   decididaEm: timestamp("decidida_em"),
 });
 
+export const candidaturaAnexos = pgTable("candidatura_anexos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidaturaId: varchar("candidatura_id").notNull().references(() => candidaturas.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CandidaturaAnexo = typeof candidaturaAnexos.$inferSelect;
+
 export const obrasSalvas = pgTable(
   "obras_salvas",
   {

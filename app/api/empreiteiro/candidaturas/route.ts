@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { candidaturas, obras } from "@shared/db/schema";
+import { candidaturas, candidaturaAnexos, obras, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
+import { createSignedReadUrl } from "@shared/lib/storage";
 
 /**
  * Allowlist explícita: somente campos que o empreiteiro pode submeter no form
@@ -66,7 +67,50 @@ export async function GET(request: NextRequest) {
     .where(eq(candidaturas.empreiteiroId, guard.user.id))
     .orderBy(desc(candidaturas.createdAt));
 
-  const r = NextResponse.json(rows);
+  // Anexa lista de anexos por candidatura, com signed URLs (1 query agregada).
+  const candIds = rows.map((r) => r.id);
+  const anexosByCand = new Map<string, Array<{ id: string; fileId: string; originalName: string; mime: string; sizeBytes: number; createdAt: Date | null; url: string | null }>>();
+  if (candIds.length > 0) {
+    const anexosRows = await db
+      .select({
+        id: candidaturaAnexos.id,
+        candidaturaId: candidaturaAnexos.candidaturaId,
+        fileId: candidaturaAnexos.fileId,
+        createdAt: candidaturaAnexos.createdAt,
+        bucketKey: userFiles.bucketKey,
+        originalName: userFiles.originalName,
+        mime: userFiles.mime,
+        sizeBytes: userFiles.sizeBytes,
+      })
+      .from(candidaturaAnexos)
+      .innerJoin(userFiles, eq(userFiles.id, candidaturaAnexos.fileId))
+      .where(and(inArray(candidaturaAnexos.candidaturaId, candIds), isNull(userFiles.deletedAt)))
+      .orderBy(desc(candidaturaAnexos.createdAt));
+
+    const signed = await Promise.all(
+      anexosRows.map(async (a) => ({
+        candidaturaId: a.candidaturaId,
+        anexo: {
+          id: a.id,
+          fileId: a.fileId,
+          originalName: a.originalName,
+          mime: a.mime,
+          sizeBytes: a.sizeBytes,
+          createdAt: a.createdAt,
+          url: await createSignedReadUrl({ key: a.bucketKey, filename: a.originalName }).catch(() => null),
+        },
+      })),
+    );
+    for (const s of signed) {
+      const arr = anexosByCand.get(s.candidaturaId) ?? [];
+      arr.push(s.anexo);
+      anexosByCand.set(s.candidaturaId, arr);
+    }
+  }
+
+  const enriched = rows.map((r) => ({ ...r, anexos: anexosByCand.get(r.id) ?? [] }));
+
+  const r = NextResponse.json(enriched);
   setNoCacheHeaders(r);
   return r;
 }

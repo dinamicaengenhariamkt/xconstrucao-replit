@@ -9,7 +9,7 @@
  *   private/empreiteiro/{userId}/documentos/{tipo}/{ts}-{slug}.{ext}
  */
 
-export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento";
+export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo";
 export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
@@ -46,6 +46,7 @@ export function timestampStamp(d: Date = new Date()): string {
 export function visibilityForKind(kind: UploadKind): UploadVisibility {
   if (kind === "empreiteiro_documento") return "private";
   if (kind === "comprovante_pagamento") return "private";
+  if (kind === "candidatura_anexo") return "private";
   return "public";
 }
 
@@ -159,6 +160,21 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: true };
   }
 
+  if (kind === "candidatura_anexo") {
+    // private/empreiteiro/{userId}/candidatura-anexos/<file>
+    if (segments.length !== 5) return { ok: false, reason: "shape candidatura-anexo" };
+    if (
+      segments[0] !== "private" ||
+      segments[1] !== "empreiteiro" ||
+      segments[3] !== "candidatura-anexos"
+    ) {
+      return { ok: false, reason: "prefixo candidatura-anexo" };
+    }
+    if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
+    if (role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
+    return { ok: true };
+  }
+
   // empreiteiro_documento → private/empreiteiro/{userId}/documentos/{tipo}/<file>
   if (segments.length !== 6) return { ok: false, reason: "shape documento" };
   if (
@@ -196,6 +212,9 @@ export function buildKey(args: KeyBuilderArgs): string {
   }
   if (kind === "comprovante_pagamento") {
     return `private/contratante/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
+  }
+  if (kind === "candidatura_anexo") {
+    return `private/empreiteiro/${userId}/candidatura-anexos/${ts}-${slug}${safeExt}`;
   }
   // empreiteiro_documento
   const tipo = slugify(extras?.tipoDocumento || "outro");

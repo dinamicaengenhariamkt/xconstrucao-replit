@@ -178,6 +178,23 @@ export default function MinhasCandidaturasPage() {
                       Mensagem do contratante: "{cand.mensagemContratante}"
                     </p>
                   )}
+                  {cand.anexos && cand.anexos.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {cand.anexos.map((anexo) => (
+                        <a
+                          key={anexo.id}
+                          href={anexo.url ?? '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-700 ${anexo.url ? 'text-gray-700 dark:text-gray-300 hover:border-primary hover:bg-primary/5' : 'opacity-50 pointer-events-none text-gray-500'}`}
+                          data-testid={`anexo-${cand.id}-${anexo.id}`}
+                          title={anexo.originalName}
+                        >
+                          📎 <span className="max-w-[200px] truncate">{anexo.originalName}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">

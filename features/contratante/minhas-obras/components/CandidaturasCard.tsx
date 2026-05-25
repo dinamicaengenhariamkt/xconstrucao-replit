@@ -54,6 +54,7 @@ interface CandidaturaUI {
   dataTermino?: string;
   motivoRejeicao?: string;
   canceladaPeloEmpreiteiro?: boolean;
+  anexos?: Array<{ id: string; originalName: string; mime: string; sizeBytes: number; url: string | null }>;
 }
 
 const STATUS_LABELS: Record<UiStatus, string> = {
@@ -143,6 +144,7 @@ function mapApiRowToUi(row: CandidaturaApiRow): CandidaturaUI {
     dataTermino: row.dataTermino || undefined,
     motivoRejeicao: row.motivoRejeicao || undefined,
     canceladaPeloEmpreiteiro: row.canceladaPeloEmpreiteiro,
+    anexos: row.anexos?.map((a) => ({ id: a.id, originalName: a.originalName, mime: a.mime, sizeBytes: a.sizeBytes, url: a.url })) ?? [],
   };
 }
 
@@ -274,6 +276,39 @@ function PropostaModal({
           <div className="bg-blue-50 dark:bg-blue-950/20 rounded-xl p-4 border border-blue-100 dark:border-blue-900/30">
             <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-1">Observações sobre o prazo</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{candidatura.observacoesPrazo}</p>
+          </div>
+        )}
+
+        {candidatura.anexos && candidatura.anexos.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Anexos ({candidatura.anexos.length})</p>
+            <div className="flex flex-col gap-2">
+              {candidatura.anexos.map((anexo) => {
+                const sizeKb = anexo.sizeBytes / 1024;
+                const sizeLabel = sizeKb < 1024 ? `${sizeKb.toFixed(1)} KB` : `${(sizeKb / 1024).toFixed(1)} MB`;
+                return (
+                  <a
+                    key={anexo.id}
+                    href={anexo.url ?? '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'flex items-center justify-between gap-3 p-3 rounded-lg border transition-colors',
+                      anexo.url
+                        ? 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-primary/5'
+                        : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 opacity-50 pointer-events-none',
+                    )}
+                    data-testid={`link-anexo-${anexo.id}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{anexo.originalName}</p>
+                      <p className="text-xs text-gray-500">{sizeLabel}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-primary flex-shrink-0">Baixar</span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
         )}
 
