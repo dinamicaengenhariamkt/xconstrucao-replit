@@ -1,4 +1,9 @@
-import { ContratanteActivity, Pendencia } from '../types';
+// NOTA (Task #83 / J07 §13): mockActivities permanece SÓ para a página
+// `/contratante/atividades` ("Ver todas"), que segue mockada como gap. O
+// dashboard real do contratante já consome `/api/atividades`. Quando a
+// página dedicada for migrada, este arquivo pode ser excluído.
+// mockPendencias foi movido para `./pendencias.mock.ts`.
+import { ContratanteActivity } from '../types';
 
 // obraId/obraNome alinhados com as obras de minhas-obras.mock.ts:
 // 1 Residência Parque das Flores · 2 Edifício Comercial Horizonte · 3 Reforma Loja Center Norte
@@ -24,29 +29,3 @@ export const mockActivities: ContratanteActivity[] = [
   { id: '18', icon: 'upload', color: 'info', title: 'Planta arquitetônica atualizada', obraId: '5', obraNome: 'Edifício Residencial Solar', timestamp: 'Há 3 semanas' },
 ];
 
-export const mockPendencias: Pendencia[] = [
-  {
-    id: '1',
-    title: 'Licença ambiental',
-    prazo: 'Vence em 3 dias',
-    priority: 'alta',
-    obraId: '4',
-    obraNome: 'Casa de Praia Ubatuba',
-  },
-  {
-    id: '2',
-    title: 'Documentação técnica',
-    prazo: 'Vence em 7 dias',
-    priority: 'media',
-    obraId: '2',
-    obraNome: 'Edifício Comercial Horizonte',
-  },
-  {
-    id: '3',
-    title: 'Revisão de projetos',
-    prazo: 'Vence em 15 dias',
-    priority: 'baixa',
-    obraId: '5',
-    obraNome: 'Edifício Residencial Solar',
-  },
-];

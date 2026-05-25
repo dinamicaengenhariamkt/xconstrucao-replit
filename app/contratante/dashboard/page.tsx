@@ -18,7 +18,7 @@ import {
   mockPhaseData,
   mockValoresContratados,
 } from '@features/contratante/dashboard/mocks/evolution-data.mock';
-import { mockPendencias } from '@features/contratante/dashboard/mocks/activities.mock';
+import { mockPendencias } from '@features/contratante/dashboard/mocks/pendencias.mock';
 import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
 import { useAtividadesRecentes, toAtividadeDisplay, formatRelativeBr } from '@features/atividades/hooks/use-atividades';
 import type { ContratanteActivity, ActivityColor } from '@features/contratante/dashboard/types';

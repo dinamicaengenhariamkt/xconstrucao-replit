@@ -8,18 +8,27 @@ import {
   RiArchiveLine,
   RiFileTextLine,
   RiAlertLine,
+  RiUploadCloudLine,
+  RiEdit2Line,
 } from 'react-icons/ri';
 import type { IconType } from 'react-icons';
 import { getRelativeTime } from '../utils';
 import { cn } from '@shared/lib/utils';
 import type { ActivityItemProps } from '../types';
 
+// Suporta tanto os tokens legados (CheckCircle2/...) quanto os novos vindos
+// do feed J07 via toAtividadeDisplay (check/upload/edit/payment/alert).
 const ACTIVITY_ICON_MAP: Record<string, IconType> = {
   CheckCircle2: RiCheckboxCircleLine,
   DollarSign: RiMoneyDollarCircleLine,
   Package: RiArchiveLine,
   FileText: RiFileTextLine,
   Alert: RiAlertLine,
+  check: RiCheckboxCircleLine,
+  payment: RiMoneyDollarCircleLine,
+  upload: RiUploadCloudLine,
+  edit: RiEdit2Line,
+  alert: RiAlertLine,
 };
 
 const colorClasses = {
