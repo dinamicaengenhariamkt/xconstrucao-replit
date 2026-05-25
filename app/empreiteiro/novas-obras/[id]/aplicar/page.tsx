@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useObraDetalhe } from '@features/empreiteiro/novas-obras/hooks/use-novas-obras';
-import { ENABLE_MOCK } from '@features/empreiteiro/novas-obras/constants';
 import { useTermosStore } from '@features/auth/store/termos-store';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconArrowBack, IconChevronRight, IconCheckCircle, IconCheck, IconSend, IconDelete, IconAddCircle, IconUploadFile, IconDescription, IconConstruction, IconLocationOn, IconHomeRepairService, IconStraighten, IconAttachMoney, IconSchedule, IconSignalCellularAlt } from '@shared/components/icons';
@@ -93,28 +92,24 @@ export default function AplicarPage() {
       } catch (consentErr) {
         console.error('Falha ao registrar aceite (prosseguindo):', consentErr);
       }
-      if (ENABLE_MOCK) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      } else {
-        const res = await fetch('/api/empreiteiro/candidaturas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            obraId: id,
-            valorProposta: totalProposta.toString(),
-            prazoEstimado: prazoMeses ? parseInt(prazoMeses) : null,
-            dataInicio: dataInicio || null,
-            dataTermino: dataTermino || null,
-            descricao: atividades.filter(a => a.descricao).map(a => a.descricao).join('; '),
-            observacoesPrazo: observacoesPrazo || null,
-            observacoesFinanceiras: observacoesFinanceiras || null,
-            atividades: JSON.stringify(atividades.filter(a => a.descricao)),
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || 'Erro ao enviar candidatura');
-        }
+      const res = await fetch('/api/empreiteiro/candidaturas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          obraId: id,
+          valorProposta: totalProposta.toString(),
+          prazoEstimado: prazoMeses ? parseInt(prazoMeses) : null,
+          dataInicio: dataInicio || null,
+          dataTermino: dataTermino || null,
+          descricao: atividades.filter(a => a.descricao).map(a => a.descricao).join('; '),
+          observacoesPrazo: observacoesPrazo || null,
+          observacoesFinanceiras: observacoesFinanceiras || null,
+          atividades: JSON.stringify(atividades.filter(a => a.descricao)),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao enviar candidatura');
       }
       setIsSubmitted(true);
     } catch (error) {
