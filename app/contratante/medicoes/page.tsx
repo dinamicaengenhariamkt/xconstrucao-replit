@@ -35,9 +35,12 @@ import { getPaginationRange } from '@shared/lib/pagination';
 import { formatCurrencyRounded, formatRange } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
 import {
+  useAprovarMedicao,
+  useContestarMedicao,
   useMedicoesContratante,
   useMedicoesContratanteKPI,
 } from '@features/contratante/medicoes/hooks/use-medicoes';
+import { useToast } from '@shared/hooks/use-toast';
 import { RejeitarMedicaoDialog } from '@features/contratante/medicoes/components/RejeitarMedicaoDialog';
 import {
   ITEMS_PER_PAGE,
@@ -254,24 +257,60 @@ export default function MedicoesContratantePage() {
     setCurrentPage(1);
   };
 
+  const { toast } = useToast();
+  const aprovarMut = useAprovarMedicao();
+  const contestarMut = useContestarMedicao();
+
   const aprovar = (m: MedicaoContratante) => {
     setOverrides((prev) => ({
       ...prev,
       [m.id]: { status: 'aprovada', dataAvaliacao: todayIso() },
     }));
+    aprovarMut.mutate(m.id, {
+      onError: (err) => {
+        setOverrides((prev) => {
+          const next = { ...prev };
+          delete next[m.id];
+          return next;
+        });
+        toast({
+          title: 'Não foi possível aprovar a medição',
+          description: err instanceof Error ? err.message : String(err),
+          variant: 'destructive',
+        });
+      },
+    });
   };
 
   const confirmarRejeicao = (motivo: string) => {
     if (!rejeitando) return;
+    const target = rejeitando;
     setOverrides((prev) => ({
       ...prev,
-      [rejeitando.id]: {
+      [target.id]: {
         status: 'rejeitada',
         dataAvaliacao: todayIso(),
         motivoRejeicao: motivo,
       },
     }));
     setRejeitando(null);
+    contestarMut.mutate(
+      { id: target.id, motivo },
+      {
+        onError: (err) => {
+          setOverrides((prev) => {
+            const next = { ...prev };
+            delete next[target.id];
+            return next;
+          });
+          toast({
+            title: 'Não foi possível rejeitar a medição',
+            description: err instanceof Error ? err.message : String(err),
+            variant: 'destructive',
+          });
+        },
+      },
+    );
   };
 
   return (

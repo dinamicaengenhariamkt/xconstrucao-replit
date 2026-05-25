@@ -28,6 +28,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapPagamentosSchema failed:", err);
     });
 
+    const { bootstrapMedicoesSchema } = await import("./server/bootstrap-medicoes");
+    await bootstrapMedicoesSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapMedicoesSchema failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {

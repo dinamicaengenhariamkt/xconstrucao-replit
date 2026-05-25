@@ -191,10 +191,8 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
       saldoReceber: 481250,
       percentualRecebido: 65,
       percentualExecutado: 65,
-      medicoes: [
-        { id: 'm1', numero: 6, data: '10/06/2025', valor: 85000, status: 'aprovada' },
-        { id: 'm2', numero: 7, data: '15/06/2025', valor: 92000, status: 'aguardando' },
-      ],
+      // Medições removidas do mock — agora vêm da API real (Task #47 / J06).
+      medicoes: [],
     },
     equipe: [
       { id: 'eq1', nome: 'Roberto Gomes', iniciais: 'RG', cor: 'bg-blue-500', papel: 'Contratante', tipo: 'contratante' as const, telefone: '(11) 98765-1234', email: 'roberto@email.com', ativo: false },
@@ -323,11 +321,8 @@ export const mockMinhaObraDetalhes: Record<string, MinhaObraDetalhe> = {
       saldoReceber: 232000,
       percentualRecebido: 60,
       percentualExecutado: 65,
-      medicoes: [
-        { id: 'm1', numero: 1, data: '15/02/2025', valor: 120000, status: 'aprovada' },
-        { id: 'm2', numero: 2, data: '20/04/2025', valor: 143000, status: 'aprovada' },
-        { id: 'm3', numero: 3, data: '10/06/2025', valor: 85000, status: 'aguardando' },
-      ],
+      // Medições removidas do mock — agora vêm da API real (Task #47 / J06).
+      medicoes: [],
     },
     equipe: [
       { id: 'eq1', nome: 'Fernando Alves', iniciais: 'FA', cor: 'bg-blue-500', papel: 'Contratante', tipo: 'contratante' as const, telefone: '(11) 98765-1234', email: 'fernando@email.com', ativo: false },

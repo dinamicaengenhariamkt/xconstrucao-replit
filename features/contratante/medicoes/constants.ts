@@ -1,8 +1,5 @@
 import type { MedicaoContratanteStatus } from './types';
 
-export const ENABLE_MOCK =
-  process.env.NEXT_PUBLIC_ENABLE_CONTRATANTE_MOCK !== 'false';
-
 export const QUERY_CONFIG = {
   staleTime: 5 * 60 * 1000,
   refetchOnWindowFocus: true,

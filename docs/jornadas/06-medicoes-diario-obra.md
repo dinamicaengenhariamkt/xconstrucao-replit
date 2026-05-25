@@ -1,7 +1,7 @@
 # Jornada — Medições & Diário de Obra
 
-> Status: mock | Prioridade: alta | Wave: 2
-> Última atualização: 2026-05-05
+> Status: revisão | Prioridade: alta | Wave: 2
+> Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo
 Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e o contratante aprove/conteste. Cada medição aprovada vira gatilho de pagamento (J08) e atualiza `obras.progresso`.
@@ -46,14 +46,15 @@ Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e 
 - Service em [features/contratante/medicoes/api/](../../features/contratante/medicoes/api/) (substituir fetch mock por real)
 
 ## 9. Checklist de implementação
-- [ ] Criar tabelas `medicoes`, `medicao_anexos` + migration
-- [ ] Endpoints de criação (empreiteiro) e aprovação/contestação (contratante)
-- [ ] Upload de anexos
-- [ ] Atualizar `obras.progresso` no aprovar (somar `percentualExecutado`)
+- [x] Criar tabela `medicoes` + bootstrap idempotente _(Task #47)_
+- [x] Endpoints de criação (empreiteiro) e aprovação/contestação (contratante) _(Task #47)_
+- [ ] Upload de anexos (UI/uploader dedicado para fotos — backend já aceita array de chaves R2)
+- [x] Atualizar `obras.progresso` no aprovar (SUM dos `percentual` aprovados) _(Task #47)_
 - [ ] Gerar lançamento financeiro (J08) no aprovar
 - [ ] Notificações em criação/aprovação/contestação (J13)
-- [ ] Substituir mock no front
+- [x] Substituir mock no front (contratante real; empreiteiro/`minhas-obras` zeroado) _(Task #47)_
 - [ ] Tela timeline de medições por obra (acumulado visível)
+- [ ] Modal "Registrar medição" no empreiteiro (endpoint pronto; falta UI)
 
 ## 10. Critérios de aceite
 1. Empreiteiro registra medição "Fundação 100%" → contratante recebe notificação.
@@ -73,4 +74,7 @@ Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e 
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-25 (Task #47): enum DB usa `pendente|aprovada|contestada` (3 valores), mas a UI do contratante já tinha `aguardando_aprovacao|aprovada|rejeitada|paga` — backend mapeia DB → contrato UI no endpoint (paga fica para J08).
+- 2026-05-25 (Task #47): `medicao_anexos` (tabela separada) não foi criada — fotos viram coluna `text[]` em `medicoes` guardando chaves R2; basta `kind='medicao_foto'` em `kind-builder.ts` quando a UI de upload sair (gap aberto).
+- 2026-05-25 (Task #47): aprovar valida que `SUM(percentual aprovado) ≤ 100`; cria medição também valida que `SUM(pendentes+aprovadas) ≤ 100` para não represar 200% pendentes.
+- 2026-05-25 (Task #47): aprovação não gera lançamento financeiro ainda (J08); flag explícita para que a próxima task de J08 ouça `medicoes.aprovar` no audit log e crie o `financeiro` correspondente.

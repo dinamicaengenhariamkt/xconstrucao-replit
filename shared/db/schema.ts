@@ -212,6 +212,37 @@ export const insertObraSalvaSchema = createInsertSchema(obrasSalvas).omit({ id: 
 export type InsertObraSalva = z.infer<typeof insertObraSalvaSchema>;
 export type ObraSalva = typeof obrasSalvas.$inferSelect;
 
+export const medicaoStatusEnum = pgEnum("medicao_status", ["pendente", "aprovada", "contestada"]);
+
+export const medicoes = pgTable("medicoes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  empreiteiroId: varchar("empreiteiro_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  numero: integer("numero").notNull(),
+  etapa: text("etapa").notNull(),
+  descricao: text("descricao"),
+  percentual: numeric("percentual", { precision: 5, scale: 2 }).notNull(),
+  valor: numeric("valor", { precision: 15, scale: 2 }).notNull().default("0"),
+  fotos: text("fotos").array().notNull().default(sql`ARRAY[]::text[]`),
+  status: medicaoStatusEnum("status").notNull().default("pendente"),
+  motivoContestacao: text("motivo_contestacao"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  decidedAt: timestamp("decided_at"),
+  decidedBy: varchar("decided_by").references(() => users.id, { onDelete: "set null" }),
+});
+
+export const insertMedicaoSchema = createInsertSchema(medicoes).omit({
+  id: true,
+  numero: true,
+  status: true,
+  motivoContestacao: true,
+  createdAt: true,
+  decidedAt: true,
+  decidedBy: true,
+});
+export type InsertMedicao = z.infer<typeof insertMedicaoSchema>;
+export type Medicao = typeof medicoes.$inferSelect;
+
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
 export const marketplaceLeads = pgTable("marketplace_leads", {

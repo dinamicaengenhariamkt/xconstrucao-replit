@@ -1,9 +1,11 @@
 /**
- * Hooks React Query para a tela "Medições" do contratante.
+ * Hooks React Query para a tela "Medições" do contratante (Task #47).
  */
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import {
+  aprovarMedicao,
+  contestarMedicao,
   getMedicoesContratante,
   getMedicoesContratanteKPI,
 } from '../api/medicoes-service';
@@ -25,5 +27,25 @@ export function useMedicoesContratanteKPI(): UseQueryResult<MedicoesContratanteK
     queryFn: getMedicoesContratanteKPI,
     staleTime: QUERY_CONFIG.staleTime,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
+  });
+}
+
+export function useAprovarMedicao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => aprovarMedicao(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
+    },
+  });
+}
+
+export function useContestarMedicao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) => contestarMedicao(id, motivo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
+    },
   });
 }
