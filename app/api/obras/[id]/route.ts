@@ -13,6 +13,7 @@ import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/a
 import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 /**
  * Helper de scoping: devolve a obra se o usuário tiver acesso de leitura,
@@ -184,6 +185,16 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     },
     request,
   });
+
+  // J07: registra "obra_publicada" só na transição rascunho → publicada.
+  if (access.obra.visibilidade === "rascunho" && updated.visibilidade === "publicada") {
+    void registrarAtividade({
+      tipo: "obra_publicada",
+      actorUserId: guard.user.id,
+      obraId: id,
+      payload: { nome: updated.nome, valorTotal: updated.valorTotal },
+    });
+  }
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

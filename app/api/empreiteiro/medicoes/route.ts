@@ -6,6 +6,7 @@ import { medicoes, obras, empreiteiras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const bodySchema = z.object({
   obraId: z.string().min(1),
@@ -137,6 +138,12 @@ export async function POST(request: NextRequest) {
     targetUserId: null,
     payload: { medicaoId: created.id, obraId, numero, etapa, percentual, valor: valor ?? 0 },
     request,
+  });
+  void registrarAtividade({
+    tipo: "medicao_criada",
+    actorUserId: guard.user.id,
+    obraId,
+    payload: { medicaoId: created.id, numero, etapa, percentual, valor: valor ?? 0 },
   });
 
   const r = NextResponse.json(created, { status: 201 });

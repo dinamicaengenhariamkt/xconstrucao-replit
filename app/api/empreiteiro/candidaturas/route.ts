@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, desc, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { candidaturas, candidaturaAnexos, obras, userFiles } from "@shared/db/schema";
+import { candidaturas, candidaturaAnexos, clientes, obras, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl } from "@shared/lib/storage";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 /**
  * Allowlist explícita: somente campos que o empreiteiro pode submeter no form
@@ -201,12 +202,32 @@ export async function POST(request: NextRequest) {
       );
     }
     const [inserted] = await db.insert(candidaturas).values(insertValues).returning();
+    // J07: target = contratante user (dono da obra) — habilita feed do contratante.
+    let contratanteUserId: string | null = null;
+    if (obra.clienteId) {
+      const [cli] = await db
+        .select({ userId: clientes.userId })
+        .from(clientes)
+        .where(eq(clientes.id, obra.clienteId));
+      contratanteUserId = cli?.userId ?? null;
+    }
     void recordAudit({
       actorId: userId,
       action: "candidaturas.criar",
       targetUserId: null,
       payload: { obraId, candidaturaId: inserted.id },
       request,
+    });
+    void registrarAtividade({
+      tipo: "candidatura_criada",
+      actorUserId: userId,
+      obraId,
+      targetUserId: contratanteUserId,
+      payload: {
+        candidaturaId: inserted.id,
+        valorProposta: parsed.data.valorProposta,
+        prazoEstimado: parsed.data.prazoEstimado ?? null,
+      },
     });
     const r = NextResponse.json(inserted, { status: 201 });
     setNoCacheHeaders(r);

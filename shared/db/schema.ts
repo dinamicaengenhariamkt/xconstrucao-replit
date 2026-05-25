@@ -20,6 +20,36 @@ export const obraAnexoTipoEnum = pgEnum("obra_anexo_tipo", [
 ]);
 export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise"]);
 
+export const atividadeTipoEnum = pgEnum("atividade_tipo", [
+  "obra_publicada",
+  "candidatura_criada",
+  "candidatura_aceita",
+  "candidatura_rejeitada",
+  "candidatura_cancelada",
+  "medicao_criada",
+  "medicao_aprovada",
+  "medicao_contestada",
+  "diario_postado",
+  "ocorrencia_aberta",
+  "ocorrencia_resolvida",
+  "lancamento_criado",
+  "lancamento_quitado",
+]);
+export type AtividadeTipo =
+  | "obra_publicada"
+  | "candidatura_criada"
+  | "candidatura_aceita"
+  | "candidatura_rejeitada"
+  | "candidatura_cancelada"
+  | "medicao_criada"
+  | "medicao_aprovada"
+  | "medicao_contestada"
+  | "diario_postado"
+  | "ocorrencia_aberta"
+  | "ocorrencia_resolvida"
+  | "lancamento_criado"
+  | "lancamento_quitado";
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").unique(),
@@ -595,3 +625,19 @@ export type ObraTarefa = typeof obraTarefas.$inferSelect;
 export type ObraChecklist = typeof obraChecklists.$inferSelect;
 export type ObraChecklistItem = typeof obraChecklistItens.$inferSelect;
 export type ObraEquipeMembro = typeof obraEquipe.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// J07 — Atividades & Timeline (feed de domínio, separado de audit_logs).
+// Schema real é criado idempotente em server/bootstrap-atividades.ts.
+// ---------------------------------------------------------------------------
+export const atividades = pgTable("atividades", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tipo: atividadeTipoEnum("tipo").notNull(),
+  actorUserId: varchar("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  obraId: varchar("obra_id").references(() => obras.id, { onDelete: "set null" }),
+  targetUserId: varchar("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type Atividade = typeof atividades.$inferSelect;
+export type InsertAtividade = typeof atividades.$inferInsert;

@@ -18,8 +18,10 @@ import {
   mockPhaseData,
   mockValoresContratados,
 } from '@features/contratante/dashboard/mocks/evolution-data.mock';
-import { mockActivities, mockPendencias } from '@features/contratante/dashboard/mocks/activities.mock';
+import { mockPendencias } from '@features/contratante/dashboard/mocks/activities.mock';
 import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
+import { useAtividadesRecentes, toAtividadeDisplay, formatRelativeBr } from '@features/atividades/hooks/use-atividades';
+import type { ContratanteActivity, ActivityColor } from '@features/contratante/dashboard/types';
 import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
 import type { DashboardPeriodo } from '@features/contratante/dashboard/types';
 
@@ -28,6 +30,26 @@ export default function ContratanteDashboardPage() {
   const [periodo, setPeriodo] = useState<DashboardPeriodo>('30dias');
   const { data: obrasPayload } = useObrasContratante({ pageSize: 100 });
   const obras = obrasPayload?.rows;
+  const { data: atividadesPage } = useAtividadesRecentes(10);
+
+  const COLOR_FALLBACK: Record<string, ActivityColor> = {
+    success: 'success', info: 'info', warning: 'warning', purple: 'purple', amber: 'warning', primary: 'info',
+  };
+  const ICON_ALLOWED: Record<string, ContratanteActivity['icon']> = {
+    check: 'check', upload: 'upload', edit: 'edit', payment: 'payment', alert: 'edit',
+  };
+  const activities: ContratanteActivity[] = (atividadesPage?.items ?? []).slice(0, 5).map((item) => {
+    const d = toAtividadeDisplay(item, 'contratante');
+    return {
+      id: d.id,
+      icon: ICON_ALLOWED[d.icon] ?? 'edit',
+      color: COLOR_FALLBACK[d.color] ?? 'info',
+      title: d.titulo,
+      obraId: d.obraId ?? '',
+      obraNome: d.obraNome ?? '—',
+      timestamp: formatRelativeBr(d.createdAt),
+    };
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -65,7 +87,7 @@ export default function ContratanteDashboardPage() {
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <RecentActivitiesCard activities={mockActivities.slice(0, 5)} luminous />
+        <RecentActivitiesCard activities={activities} luminous />
         <PendenciasCard pendencias={mockPendencias} luminous />
         <ValoresContratados data={mockValoresContratados} luminous />
       </div>

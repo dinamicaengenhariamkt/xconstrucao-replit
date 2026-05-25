@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { assertMedicaoEditableByContratante, recomputeObraProgresso } from "../../_shared";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const bodySchema = z.object({
   motivo: z.string().trim().min(10).max(2000),
@@ -71,6 +72,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     targetUserId: check.medicao.empreiteiroId,
     payload: { medicaoId: id, obraId: check.medicao.obraId, motivo: parsed.data.motivo },
     request,
+  });
+  void registrarAtividade({
+    tipo: "medicao_contestada",
+    actorUserId: guard.user.id,
+    obraId: check.medicao.obraId,
+    targetUserId: check.medicao.empreiteiroId,
+    payload: { medicaoId: id, numero: check.medicao.numero, etapa: check.medicao.etapa, motivo: parsed.data.motivo },
   });
 
   const r = NextResponse.json(updated);

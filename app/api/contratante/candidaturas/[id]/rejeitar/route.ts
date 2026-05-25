@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, obras } from "@shared/db/schema";
+import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const bodySchema = z.object({
   motivo: z.string().max(500).optional(),
@@ -97,6 +98,22 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     targetUserId: null,
     payload: { candidaturaId, obraId: cand.obraId, motivo: motivo ?? null },
     request,
+  });
+  // J07: target = empreiteiro user da candidatura rejeitada.
+  let empUserId: string | null = null;
+  if (cand.empreiteiroId) {
+    const [emp] = await db
+      .select({ userId: empreiteiras.userId })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.id, cand.empreiteiroId));
+    empUserId = emp?.userId ?? null;
+  }
+  void registrarAtividade({
+    tipo: "candidatura_rejeitada",
+    actorUserId: guard.user.id,
+    obraId: cand.obraId,
+    targetUserId: empUserId,
+    payload: { candidaturaId, motivo: motivo ?? null },
   });
 
   // Notifica empreiteiro (in-app + email, idempotente via flag).

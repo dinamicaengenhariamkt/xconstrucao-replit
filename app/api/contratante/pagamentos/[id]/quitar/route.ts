@@ -13,6 +13,7 @@ import {
 import { createSignedReadUrl } from "@shared/lib/storage";
 import { criarNotificacao } from "@features/notificacoes/service";
 import { sendPagamentoRecebidoEmail } from "@shared/lib/email";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const bodySchema = z.object({
   metodoPagamento: z.string().trim().min(2).max(80),
@@ -140,6 +141,18 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       hasComprovante: !!parsed.data.comprovanteFileId,
     },
     request,
+  });
+  void registrarAtividade({
+    tipo: "lancamento_quitado",
+    actorUserId: guard.user.id,
+    obraId: lanc.obraId,
+    targetUserId: updated?.recebedorUserId ?? lanc.recebedorUserId ?? null,
+    payload: {
+      lancamentoId: id,
+      valor: Number(updated?.valor ?? lanc.valor),
+      metodoPagamento: parsed.data.metodoPagamento,
+      medicaoId: lanc.medicaoId,
+    },
   });
 
   const r = NextResponse.json({ ok: true, lancamento: updated });

@@ -7,6 +7,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { assertMedicaoEditableByContratante, recomputeObraProgresso } from "../../_shared";
 import { criarLancamentoFromMedicao } from "@features/financeiro/lancamentos-service";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const VENCIMENTO_DIAS_PADRAO = 15;
 
@@ -140,6 +141,37 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       // Recalculo do progresso DENTRO da transação — atomicidade total
       // (medição aprovada ↔ fatura ↔ progresso atualizado).
       const novoProgresso = await recomputeObraProgresso(check.medicao.obraId, tx as unknown as typeof db);
+
+      // J07: ambas atividades dentro da tx → garante invariante
+      // "se medição aprovada existe, atividade existe; idem para fatura".
+      await registrarAtividade({
+        tipo: "medicao_aprovada",
+        actorUserId: guard.user.id,
+        obraId: check.medicao.obraId,
+        targetUserId: check.medicao.empreiteiroId,
+        payload: {
+          medicaoId: id,
+          numero: check.medicao.numero,
+          etapa: check.medicao.etapa,
+          percentual: Number(check.medicao.percentual),
+          lancamentoId: created.id,
+        },
+        tx,
+      });
+      await registrarAtividade({
+        tipo: "lancamento_criado",
+        actorUserId: guard.user.id,
+        obraId: check.medicao.obraId,
+        targetUserId: check.medicao.empreiteiroId,
+        payload: {
+          lancamentoId: created.id,
+          medicaoId: id,
+          valor: Number(created.valor),
+          dataVencimento,
+          origem: "medicao",
+        },
+        tx,
+      });
 
       return { updated, lanc: { id: created.id, valor: created.valor }, progresso: novoProgresso };
     });

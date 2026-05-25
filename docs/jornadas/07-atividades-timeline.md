@@ -1,7 +1,7 @@
 # Jornada — Atividades & Timeline
 
-> Status: mock | Prioridade: média | Wave: 3
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: média | Wave: 3
+> Última atualização: 2026-05-25 (Task #83)
 
 ## 1. Contexto & Objetivo
 Feed cronológico unificado de eventos (candidatura criada, aceite, medição, pagamento, mensagem) por obra e por usuário. Ajuda contratante e empreiteiro a verem "o que aconteceu" sem entrar em cada subtela; alimenta a sensação de progresso.
@@ -41,13 +41,13 @@ Feed cronológico unificado de eventos (candidatura criada, aceite, medição, p
 - [features/admin/auditoria/mocks/](../../features/admin/auditoria/mocks/)
 
 ## 9. Checklist de implementação
-- [ ] Definir lista canônica de tipos de evento
-- [ ] Criar tabela + enum + migration
-- [ ] Helper `registrarAtividade(tipo, ator, objeto, metadata)` em [server/storage.ts](../../server/storage.ts)
-- [ ] Plugar o helper nas jornadas geradoras (J03, J05, J06, J08, J13)
-- [ ] Endpoint paginado por cursor
-- [ ] Substituir mocks dos widgets de dashboard
-- [ ] Página dedicada `/contratante/atividades`
+- [x] Definir lista canônica de tipos de evento _(Task #83 — 13 tipos no enum `atividade_tipo`)_
+- [x] Criar tabela + enum + migration _(Task #83 — bootstrap idempotente em `server/bootstrap-atividades.ts`)_
+- [x] Helper `registrarAtividade(tipo, ator, objeto, metadata)` _(Task #83 — `features/atividades/api/registrar.ts`, suporta `tx?` para uso dentro de `db.transaction()`)_
+- [x] Plugar o helper nas jornadas geradoras (J03, J05, J06, J08, J13) _(Task #83 — 12 endpoints J03/J05/J06/J08; J13/chat fora de escopo)_
+- [x] Endpoint paginado por cursor _(Task #83 — `GET /api/atividades` cursor-based `base64url(iso|id)`, gate por persona)_
+- [x] Substituir mocks dos widgets de dashboard _(Task #83 — empreiteiro/contratante via `useAtividadesRecentes`; admin auditoria fica em `audit_logs` separado)_
+- [ ] Página dedicada `/contratante/atividades` _(pendente — gap §13)_
 
 ## 10. Critérios de aceite
 1. Após contratante criar obra → aparece "Obra X criada" no feed.
@@ -67,4 +67,11 @@ Feed cronológico unificado de eventos (candidatura criada, aceite, medição, p
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- 2026-05-25 (Task #83): admin/auditoria continua lendo `audit_logs` (já existente, mais granular técnico). Não unificado com `atividades` — manter os dois feeds (atividade = visível ao negócio, audit = forense). Gap potencial: cross-link visual no admin.
+- 2026-05-25 (Task #83): `registrarAtividade` aceita `tx?` opcional — quando passado roda dentro da transação e propaga erro (medição aprovada exige atividade + lançamento dentro da mesma tx). Quando omitido, erros viram `console.error` silencioso (best-effort no audit-style).
+- 2026-05-25 (Task #83): cascade de candidaturas rejeitadas (no aceite) gera N rows `candidatura_rejeitada` com `payload.cascata=true` — front pode agrupar visualmente se virar ruído.
+- 2026-05-25 (Task #83): `app/api/financeiro POST` (admin/legacy) instrumenta `lancamento_criado` apenas quando `medicaoId` é nulo, pra não duplicar com o hook da aprovação. Endpoint não usa `requireVerifiedUser` — futuramente migrar pro padrão atual.
+- 2026-05-25 (Task #83): página dedicada `/contratante/atividades` (link "Ver todas" do widget) continua mockada — abrir task separada quando rolar.
+- 2026-05-25 (Task #83): chat/mensagens (J13) não emite atividade — propositalmente fora do feed (J13 tem canal próprio de notificação). Reavaliar se UX pedir.
+- 2026-05-25 (Task #83): `TabTimeline` contratante combina `TimelineDisplay` (atividades J07) + `DiarioJ06Card` (entradas de diário com fotos). Diário continua na sua tabela (`obra_diario`) — atividades só registra o evento "diario_postado", sem duplicar o conteúdo.
+- 2026-05-25 (Task #83 fix code-review): emissores de candidatura agora populam `target_user_id` (criada→contratante via `clientes.userId`, aceita/rejeitada→empreiteiro via `empreiteiras.userId`, cancelada→contratante, cascade de rejeitadas resolve em batch por `inArray`). Gates contratante/empreiteiro do `GET /api/atividades` agora incluem `target_user_id=$me` (cobre candidaturas decididas em obras ainda não vinculadas à empreiteira). Bootstrap ganhou índice `idx_atividades_target_created(target_user_id, created_at DESC)`.

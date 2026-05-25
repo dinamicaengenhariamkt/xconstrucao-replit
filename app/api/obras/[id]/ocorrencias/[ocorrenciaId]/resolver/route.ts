@@ -5,6 +5,7 @@ import { obraOcorrencias } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string; ocorrenciaId: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
   await recordAudit({ actorId: guard.user.id, action: "obras.ocorrencia.resolver", payload: { obraId: id, ocorrenciaId }, request });
+  void registrarAtividade({
+    tipo: "ocorrencia_resolvida",
+    actorUserId: guard.user.id,
+    obraId: id,
+    payload: { ocorrenciaId, titulo: result[0]?.titulo ?? null },
+  });
   const r = NextResponse.json(result[0]);
   setNoCacheHeaders(r);
   return r;

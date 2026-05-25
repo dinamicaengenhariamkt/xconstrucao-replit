@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas } from "@shared/db/schema";
+import { candidaturas, clientes, obras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 /**
  * POST /api/empreiteiro/candidaturas/[id]/cancelar
@@ -66,6 +67,28 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     targetUserId: null,
     payload: { candidaturaId: id, obraId: existing.obraId },
     request,
+  });
+  // J07: target = contratante user da obra (vê o cancelamento no feed).
+  let contratanteUserId: string | null = null;
+  if (existing.obraId) {
+    const [obra] = await db
+      .select({ clienteId: obras.clienteId })
+      .from(obras)
+      .where(eq(obras.id, existing.obraId));
+    if (obra?.clienteId) {
+      const [cli] = await db
+        .select({ userId: clientes.userId })
+        .from(clientes)
+        .where(eq(clientes.id, obra.clienteId));
+      contratanteUserId = cli?.userId ?? null;
+    }
+  }
+  void registrarAtividade({
+    tipo: "candidatura_cancelada",
+    actorUserId: guard.user.id,
+    obraId: existing.obraId,
+    targetUserId: contratanteUserId,
+    payload: { candidaturaId: id },
   });
 
   // Empreiteiro foi o próprio actor — flip silencioso da flag para evitar

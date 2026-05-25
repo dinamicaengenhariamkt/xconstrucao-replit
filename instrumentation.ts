@@ -58,6 +58,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapNotificacoesSchema failed:", err);
     });
 
+    const { bootstrapAtividadesSchema } = await import("./server/bootstrap-atividades");
+    await bootstrapAtividadesSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapAtividadesSchema failed:", err);
+    });
+
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
     await markOverduePagamentos().catch((err) => {
       console.error("[instrumentation] markOverduePagamentos failed:", err);

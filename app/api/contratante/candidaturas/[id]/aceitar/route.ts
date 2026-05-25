@@ -6,6 +6,7 @@ import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 
 const bodySchema = z.object({
   mensagem: z.string().max(1000).optional(),
@@ -155,18 +156,57 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     });
 
     if (result.code === 200) {
+      const obraIdAceita = (result.body as any).obraId as string;
       void recordAudit({
         actorId: guard.user.id,
         action: "candidaturas.aceitar",
         targetUserId: null,
         payload: {
-          obraId: (result.body as any).obraId,
+          obraId: obraIdAceita,
           candidaturaId,
           empreiteiraId: (result.body as any).empreiteiraId,
           rejeitadasCount: (result.body as any).rejeitadasCount,
         },
         request,
       });
+
+      // J07: target = empreiteiro user da candidatura aceita (vai pro feed dele).
+      const empAceitaId = (result.body as any).empreiteiraId as string;
+      const [empAceita] = await db
+        .select({ userId: empreiteiras.userId })
+        .from(empreiteiras)
+        .where(eq(empreiteiras.id, empAceitaId));
+      void registrarAtividade({
+        tipo: "candidatura_aceita",
+        actorUserId: guard.user.id,
+        obraId: obraIdAceita,
+        targetUserId: empAceita?.userId ?? null,
+        payload: { candidaturaId, empreiteiraId: empAceitaId },
+      });
+      const rejeitadasIdsAtv: string[] = (result.body as any).rejeitadasIds ?? [];
+      // Lookup batch dos donos das candidaturas rejeitadas em cascade.
+      let rejeitadasTargets: Map<string, string | null> = new Map();
+      if (rejeitadasIdsAtv.length > 0) {
+        const rows = await db
+          .select({ candId: candidaturas.id, userId: empreiteiras.userId })
+          .from(candidaturas)
+          .leftJoin(empreiteiras, eq(empreiteiras.id, candidaturas.empreiteiroId))
+          .where(inArray(candidaturas.id, rejeitadasIdsAtv));
+        rejeitadasTargets = new Map(rows.map((r) => [r.candId, r.userId ?? null]));
+      }
+      for (const rid of rejeitadasIdsAtv) {
+        void registrarAtividade({
+          tipo: "candidatura_rejeitada",
+          actorUserId: guard.user.id,
+          obraId: obraIdAceita,
+          targetUserId: rejeitadasTargets.get(rid) ?? null,
+          payload: {
+            candidaturaId: rid,
+            motivo: "Outra proposta foi selecionada",
+            cascata: true,
+          },
+        });
+      }
 
       // Notifica empreiteiro vencedor + rejeitados em cascata (best-effort,
       // idempotente via flag `notificacao_disparada`).

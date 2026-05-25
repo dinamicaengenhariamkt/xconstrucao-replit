@@ -362,7 +362,7 @@ export default function MinhaObraDetalhePage() {
             >
               {activeTab === 'tarefas' && <TaskManagerSection obra={obra} />}
               {activeTab === 'checklists' && <ChecklistsSection obra={obra} />}
-              {activeTab === 'timeline' && <TimelineSection events={obra.timeline} />}
+              {activeTab === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
               {activeTab === 'fotos' && <FotoGallerySection obra={obra} />}
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
               {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}

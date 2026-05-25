@@ -6,6 +6,7 @@ import { obraDiario, userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { registrarAtividade } from "@features/atividades/api/registrar";
 import { publicUrlForKey } from "@shared/lib/storage";
 
 const createSchema = z.object({
@@ -116,6 +117,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     fotoFileIds: fileIds,
   }).returning();
   await recordAudit({ actorId: guard.user.id, action: "obras.diario.create", payload: { obraId: id, diarioId: created.id, fotoCount: fileIds.length }, request });
+  void registrarAtividade({
+    tipo: "diario_postado",
+    actorUserId: guard.user.id,
+    obraId: id,
+    payload: { diarioId: created.id, fotoCount: fileIds.length, preview: parsed.data.texto.slice(0, 140) },
+  });
   const r = NextResponse.json(created, { status: 201 });
   setNoCacheHeaders(r);
   return r;
