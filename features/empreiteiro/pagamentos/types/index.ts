@@ -1,4 +1,4 @@
-export type MedicaoStatus = 'recebido' | 'aguardando_aprovacao' | 'pendente' | 'rejeitado';
+export type MedicaoStatus = 'recebido' | 'aguardando_aprovacao' | 'pendente' | 'atrasado' | 'rejeitado';
 
 export interface MedicaoEmpreiteiro {
   id: string;

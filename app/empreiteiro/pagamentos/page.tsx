@@ -50,6 +50,7 @@ const VALID_STATUSES: MedicaoStatus[] = [
   'recebido',
   'aguardando_aprovacao',
   'pendente',
+  'atrasado',
   'rejeitado',
 ];
 

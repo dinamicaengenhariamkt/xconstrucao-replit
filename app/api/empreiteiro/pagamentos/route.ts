@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listLancamentosEmpreiteiro, type LancamentoRow } from "@features/financeiro/lancamentos-service";
 
-type MedicaoStatus = "recebido" | "aguardando_aprovacao" | "pendente" | "rejeitado";
+type MedicaoStatus = "recebido" | "aguardando_aprovacao" | "pendente" | "atrasado" | "rejeitado";
 
 function statusToMedicao(s: LancamentoRow["status"]): MedicaoStatus | null {
   if (s === "pago") return "recebido";
   if (s === "pendente") return "pendente";
-  if (s === "atrasado") return "pendente";
+  if (s === "atrasado") return "atrasado";
   if (s === "cancelado") return "rejeitado";
   return null;
 }

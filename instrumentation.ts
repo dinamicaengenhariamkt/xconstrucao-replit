@@ -38,6 +38,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapNotificacoesSchema failed:", err);
     });
 
+    const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
+    await markOverduePagamentos().catch((err) => {
+      console.error("[instrumentation] markOverduePagamentos failed:", err);
+    });
+
     const { backfillConsents } = await import("./server/backfill-consents");
     const result = await backfillConsents().catch((err) => ({ ok: false, inserted: 0, error: String(err) }));
     if (!result.ok) {
