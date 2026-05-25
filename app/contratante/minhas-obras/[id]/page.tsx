@@ -136,11 +136,8 @@ export default function ObraDetalhePage() {
       </motion.div>
 
       {/* Visibilidade + anexos (J03 actions) */}
-      {(obra as { visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada' }).visibilidade && (
-        <ObraVisibilidadeActions
-          obraId={id}
-          visibilidade={(obra as { visibilidade: 'rascunho' | 'publicada' | 'pausada' | 'arquivada' }).visibilidade}
-        />
+      {obra.visibilidade && (
+        <ObraVisibilidadeActions obraId={id} visibilidade={obra.visibilidade} />
       )}
 
       {/* Hero card */}

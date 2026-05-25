@@ -891,6 +891,48 @@ export default function AdminObraDetalhePage() {
               </CardContent>
             </Card>
 
+            <Card className="rounded-xl border border-border-light dark:border-gray-800 shadow-sm" data-testid="card-anexos">
+              <CardContent className="p-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-gray-900 dark:text-gray-100 uppercase tracking-wide">
+                    Anexos
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{anexos.length}</span>
+                </div>
+                {anexos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhum anexo nesta obra.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {anexos.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 py-2"
+                        data-testid={`anexo-admin-${a.id}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{a.originalName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {a.tipo}{a.observacao ? ` · ${a.observacao}` : ''} · {safeDate(a.createdAt)}
+                          </p>
+                        </div>
+                        {a.url && (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-bold text-primary hover:underline"
+                            data-testid={`anexo-admin-download-${a.id}`}
+                          >
+                            Baixar
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="rounded-xl border border-border-light dark:border-gray-800 shadow-sm">
               <CardContent className="p-6 space-y-4">
                 <h3 className="text-sm font-extrabold text-gray-900 dark:text-gray-100 uppercase tracking-wide">

@@ -30,18 +30,26 @@ export function useToggleObraSalva() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ obraId, isSaved }: { obraId: string; isSaved: boolean }) => {
+    mutationFn: async ({ obraId, isSaved }: { obraId: string; isSaved: boolean; obra?: import('@features/empreiteiro/novas-obras/types').NovaObra }) => {
       if (isSaved) await removeObraSalva(obraId);
       else await addObraSalva(obraId);
       return { obraId, wasSaved: isSaved };
     },
-    onMutate: async ({ obraId, isSaved }) => {
+    onMutate: async ({ obraId, isSaved, obra }) => {
       await qc.cancelQueries({ queryKey: QUERY_KEY });
       const prev = qc.getQueryData<ObrasSalvasResponse>(QUERY_KEY);
       if (prev) {
-        const next: ObrasSalvasResponse = isSaved
-          ? { rows: prev.rows.filter((o) => o.id !== obraId), total: Math.max(0, prev.total - 1) }
-          : prev; // adicionar precisa da row completa — refetch resolve depois
+        let next: ObrasSalvasResponse;
+        if (isSaved) {
+          next = { rows: prev.rows.filter((o) => o.id !== obraId), total: Math.max(0, prev.total - 1) };
+        } else if (obra && !prev.rows.some((o) => o.id === obraId)) {
+          next = { rows: [obra, ...prev.rows], total: prev.total + 1 };
+        } else if (!prev.rows.some((o) => o.id === obraId)) {
+          // Sem snapshot — refetch resolve, mas atualiza total p/ feedback imediato.
+          next = { rows: prev.rows, total: prev.total + 1 };
+        } else {
+          next = prev;
+        }
         qc.setQueryData(QUERY_KEY, next);
       }
       return { prev };

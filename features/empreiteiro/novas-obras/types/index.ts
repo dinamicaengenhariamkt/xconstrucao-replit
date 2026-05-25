@@ -27,6 +27,7 @@ export interface NovaObra {
   applicationStatus: ApplicationStatus;
   dataPublicacao: string;
   candidaturas: number;
+  materiaisPor?: 'contratante' | 'empreiteiro' | 'misto';
 }
 
 export interface Pendencia {

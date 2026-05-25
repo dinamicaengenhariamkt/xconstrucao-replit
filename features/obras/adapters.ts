@@ -232,6 +232,7 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     applicationStatus: 'nao_aplicado',
     dataPublicacao: formatRelative(o.createdAt ?? null),
     candidaturas: 0,
+    materiaisPor: o.materiaisPor ?? undefined,
   };
 }
 

@@ -27,7 +27,10 @@ export interface ObraContratante {
   candidaturas?: number;
 }
 
+export type ObraVisibilidade = 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+
 export interface ObraContratanteDetalhe extends ObraContratante {
+  visibilidade?: ObraVisibilidade;
   descricao: string;
   valorPago: number;
   valorRestante: number;
