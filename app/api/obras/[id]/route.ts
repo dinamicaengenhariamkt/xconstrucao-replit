@@ -38,7 +38,10 @@ async function findObraWithAccess(
 
   if (user.role === "empreiteiro") {
     const [emp] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, user.id));
-    const isPublicaAvailable = obra.visibilidade === "publicada" && obra.empreiteiraId === null;
+    const isPublicaAvailable =
+      obra.visibilidade === "publicada" &&
+      obra.empreiteiraId === null &&
+      obra.statusModeracao === "aprovada";
     const isAssigned = emp && obra.empreiteiraId === emp.id;
     if (!isPublicaAvailable && !isAssigned) return null;
     return { obra, clienteId: null, empreiteiraId: emp?.id ?? null };
@@ -133,7 +136,17 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   const body = await request.json().catch(() => ({}));
-  const { clienteId: _c, empreiteiraId: _e, id: _i, ...safeBody } = body ?? {};
+  const {
+    clienteId: _c,
+    empreiteiraId: _e,
+    id: _i,
+    // Moderação é exclusiva do admin via endpoints /api/admin/obras/[id]/(aprovar|rejeitar) (Task #86).
+    statusModeracao: _modS,
+    motivoModeracao: _modM,
+    moderadoEm: _modE,
+    moderadoPor: _modP,
+    ...safeBody
+  } = body ?? {};
 
   // Merge com a obra atual e revalida (suporta transição rascunho → publicada).
   const merged = { ...access.obra, ...safeBody };
@@ -171,6 +184,20 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
   updateData.updatedAt = new Date();
 
+  // J03 — Task #86: transição para 'publicada' reseta moderação para 'pendente'
+  // (cobre primeira publicação e re-submissão após rejeição). Não vale para admin
+  // empurrando alteração administrativa sem mudar visibilidade.
+  const indoPublicar =
+    "visibilidade" in safeBody &&
+    safeBody.visibilidade === "publicada" &&
+    access.obra.visibilidade !== "publicada";
+  if (indoPublicar) {
+    updateData.statusModeracao = "pendente";
+    updateData.motivoModeracao = null;
+    updateData.moderadoEm = null;
+    updateData.moderadoPor = null;
+  }
+
   const [updated] = await db.update(obras).set(updateData).where(eq(obras.id, id)).returning();
 
   await recordAudit({
@@ -186,15 +213,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     request,
   });
 
-  // J07: registra "obra_publicada" só na transição rascunho → publicada.
-  if (access.obra.visibilidade === "rascunho" && updated.visibilidade === "publicada") {
-    void registrarAtividade({
-      tipo: "obra_publicada",
-      actorUserId: guard.user.id,
-      obraId: id,
-      payload: { nome: updated.nome, valorTotal: updated.valorTotal },
-    });
-  }
+  // J07: a atividade "obra_publicada" agora é emitida pelo endpoint de
+  // aprovação admin (Task #86), não mais aqui. Publicar só envia para moderação.
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

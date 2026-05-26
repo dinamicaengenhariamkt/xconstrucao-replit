@@ -137,7 +137,12 @@ export default function ObraDetalhePage() {
 
       {/* Visibilidade + anexos (J03 actions) */}
       {obra.visibilidade && (
-        <ObraVisibilidadeActions obraId={id} visibilidade={obra.visibilidade} />
+        <ObraVisibilidadeActions
+          obraId={id}
+          visibilidade={obra.visibilidade}
+          statusModeracao={(obra as any).statusModeracao ?? null}
+          motivoModeracao={(obra as any).motivoModeracao ?? null}
+        />
       )}
 
       {/* Hero card */}

@@ -12,6 +12,7 @@ function buildQS(filters: AdminObrasFilters): string {
   if (filters.pageSize) params.set('pageSize', String(filters.pageSize));
   if (filters.status) params.set('status', filters.status);
   if (filters.visibilidade) params.set('visibilidade', filters.visibilidade);
+  if (filters.statusModeracao) params.set('status_moderacao', filters.statusModeracao);
   if (filters.clienteId) params.set('cliente_id', filters.clienteId);
   if (filters.empreiteiraId) params.set('empreiteira_id', filters.empreiteiraId);
   if (filters.periodoInicio) params.set('periodo_inicio', filters.periodoInicio);

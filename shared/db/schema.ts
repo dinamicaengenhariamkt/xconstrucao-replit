@@ -7,6 +7,7 @@ export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contrat
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
 export const obraVisibilidadeEnum = pgEnum("obra_visibilidade", ["rascunho", "publicada", "pausada", "arquivada"]);
+export const obraStatusModeracaoEnum = pgEnum("obra_status_moderacao", ["pendente", "aprovada", "rejeitada"]);
 export const obraModalidadeEnum = pgEnum("obra_modalidade", ["administracao", "empreitada_global", "empreitada_etapa"]);
 export const obraMateriaisPorEnum = pgEnum("obra_materiais_por", ["contratante", "empreiteiro", "misto"]);
 export const obraAnexoTipoEnum = pgEnum("obra_anexo_tipo", [
@@ -153,6 +154,10 @@ export const obras = pgTable("obras", {
   empreiteiraId: varchar("empreiteira_id").references(() => empreiteiras.id),
   status: obraStatusEnum("status").notNull().default("planejamento"),
   visibilidade: obraVisibilidadeEnum("visibilidade").notNull().default("rascunho"),
+  statusModeracao: obraStatusModeracaoEnum("status_moderacao").notNull().default("pendente"),
+  motivoModeracao: text("motivo_moderacao"),
+  moderadoEm: timestamp("moderado_em"),
+  moderadoPor: varchar("moderado_por").references(() => users.id, { onDelete: "set null" }),
   tipo: text("tipo"),
   descricao: text("descricao"),
   cep: text("cep"),

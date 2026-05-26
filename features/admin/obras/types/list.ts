@@ -1,5 +1,18 @@
 export type AdminObraStatus = 'em_andamento' | 'concluida' | 'pausada' | 'planejamento';
 export type AdminObraVisibilidade = 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+export type AdminObraStatusModeracao = 'pendente' | 'aprovada' | 'rejeitada';
+
+export const OBRA_MODERACAO_LABEL: Record<AdminObraStatusModeracao, string> = {
+  pendente: 'Em revisão',
+  aprovada: 'Aprovada',
+  rejeitada: 'Rejeitada',
+};
+
+export const OBRA_MODERACAO_COLOR: Record<AdminObraStatusModeracao, string> = {
+  pendente: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  aprovada: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejeitada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
 
 export const OBRA_STATUS_LABEL: Record<AdminObraStatus, string> = {
   em_andamento: 'Em andamento',
@@ -46,6 +59,9 @@ export interface AdminObra {
   empreiteiraNome?: string | null;
   status: AdminObraStatus;
   visibilidade: AdminObraVisibilidade;
+  statusModeracao?: AdminObraStatusModeracao | null;
+  motivoModeracao?: string | null;
+  moderadoEm?: string | null;
   tipo?: string | null;
   cidade?: string | null;
   uf?: string | null;
@@ -70,6 +86,7 @@ export interface AdminObrasFilters {
   pageSize?: number;
   status?: AdminObraStatus;
   visibilidade?: AdminObraVisibilidade;
+  statusModeracao?: AdminObraStatusModeracao;
   clienteId?: string;
   empreiteiraId?: string;
   periodoInicio?: string;

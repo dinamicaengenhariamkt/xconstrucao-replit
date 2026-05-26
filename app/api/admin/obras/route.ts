@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
   const empreiteiraId = q.get("empreiteira_id");
   const status = q.get("status");
   const visibilidade = q.get("visibilidade");
+  const statusModeracao = q.get("status_moderacao");
   const periodoInicio = q.get("periodo_inicio");
   const periodoFim = q.get("periodo_fim");
   const search = q.get("q")?.trim();
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
   }
   if (visibilidade && ["rascunho", "publicada", "pausada", "arquivada"].includes(visibilidade)) {
     filters.push(eq(obras.visibilidade, visibilidade as any));
+  }
+  if (statusModeracao && ["pendente", "aprovada", "rejeitada"].includes(statusModeracao)) {
+    filters.push(eq(obras.statusModeracao, statusModeracao as any));
   }
   if (periodoInicio) filters.push(gte(obras.createdAt, new Date(periodoInicio)));
   if (periodoFim) filters.push(lte(obras.createdAt, new Date(periodoFim)));

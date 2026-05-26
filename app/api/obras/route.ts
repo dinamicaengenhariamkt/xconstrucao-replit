@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
 
   if (role === "empreiteiro") {
     filters.push(eq(obras.visibilidade, "publicada"));
+    filters.push(eq(obras.statusModeracao, "aprovada"));
     filters.push(isNull(obras.empreiteiraId));
     // Anti-self-candidatura: empreiteiro não vê obras onde ele já se candidatou.
     // Usa o índice idx_candidaturas_obra_empreiteiro criado em bootstrap-marketplace.
@@ -208,7 +209,17 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { clienteId: _ignored, empreiteiraId: _ignored2, id: _ignored3, ...safeBody } = body ?? {};
+  const {
+    clienteId: _ignored,
+    empreiteiraId: _ignored2,
+    id: _ignored3,
+    // Moderação é responsabilidade exclusiva do admin — strip server-side (Task #86).
+    statusModeracao: _ignoredMod,
+    motivoModeracao: _ignoredMotivo,
+    moderadoEm: _ignoredEm,
+    moderadoPor: _ignoredPor,
+    ...safeBody
+  } = body ?? {};
   const parsed = insertObraSchemaStrict.safeParse(safeBody);
   if (!parsed.success) {
     const r = NextResponse.json(

@@ -13,6 +13,7 @@ import { db } from "@shared/db/db";
 export async function bootstrapObrasSchema(): Promise<void> {
   const enums: Array<{ name: string; values: string[] }> = [
     { name: "obra_visibilidade", values: ["rascunho", "publicada", "pausada", "arquivada"] },
+    { name: "obra_status_moderacao", values: ["pendente", "aprovada", "rejeitada"] },
     { name: "obra_modalidade", values: ["administracao", "empreitada_global", "empreitada_etapa"] },
     { name: "obra_materiais_por", values: ["contratante", "empreiteiro", "misto"] },
     {
@@ -47,6 +48,10 @@ END$$;`),
 
   const obrasColumns: Array<{ name: string; ddl: string }> = [
     { name: "visibilidade", ddl: "visibilidade obra_visibilidade NOT NULL DEFAULT 'rascunho'" },
+    { name: "status_moderacao", ddl: "status_moderacao obra_status_moderacao NOT NULL DEFAULT 'pendente'" },
+    { name: "motivo_moderacao", ddl: "motivo_moderacao TEXT" },
+    { name: "moderado_em", ddl: "moderado_em TIMESTAMP" },
+    { name: "moderado_por", ddl: "moderado_por VARCHAR REFERENCES users(id) ON DELETE SET NULL" },
     { name: "tipo", ddl: "tipo TEXT" },
     { name: "descricao", ddl: "descricao TEXT" },
     { name: "cep", ddl: "cep TEXT" },
@@ -104,6 +109,27 @@ END$$;`),
     console.error("[bootstrap-obras] backfill visibilidade:", err);
   }
 
+  // Backfill moderação (J03 — Task #86): obras já publicadas antes do gate
+  // devem ser tratadas como aprovadas, senão somem do marketplace.
+  try {
+    const marker = "obras_backfill_moderacao_v1";
+    const res: any = await db.execute(sql`SELECT 1 AS ok FROM schema_migrations WHERE name = ${marker}`);
+    const already = Array.isArray(res?.rows) ? res.rows.length > 0 : Array.isArray(res) ? res.length > 0 : false;
+    if (!already) {
+      await db.execute(sql`
+        UPDATE obras
+           SET status_moderacao = 'aprovada',
+               moderado_em = COALESCE(moderado_em, NOW())
+         WHERE visibilidade = 'publicada'
+           AND status_moderacao = 'pendente'
+      `);
+      await db.execute(sql`INSERT INTO schema_migrations(name) VALUES(${marker}) ON CONFLICT (name) DO NOTHING`);
+      console.info("[bootstrap-obras] backfill moderacao aplicado (one-shot)");
+    }
+  } catch (err) {
+    console.error("[bootstrap-obras] backfill moderacao:", err);
+  }
+
   try {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS obra_anexos (
@@ -157,6 +183,10 @@ END$$;`),
     {
       name: "idx_obra_anexos_obra_id_tipo",
       ddl: "CREATE INDEX IF NOT EXISTS idx_obra_anexos_obra_id_tipo ON obra_anexos(obra_id, tipo)",
+    },
+    {
+      name: "idx_obras_status_moderacao",
+      ddl: "CREATE INDEX IF NOT EXISTS idx_obras_status_moderacao ON obras(status_moderacao, visibilidade)",
     },
   ];
 

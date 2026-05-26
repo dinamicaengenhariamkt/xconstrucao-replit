@@ -32,6 +32,9 @@ export type DbObra = {
   empreiteiraId?: string | null;
   status: 'em_andamento' | 'concluida' | 'pausada' | 'planejamento';
   visibilidade: 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+  statusModeracao?: 'pendente' | 'aprovada' | 'rejeitada' | null;
+  motivoModeracao?: string | null;
+  moderadoEm?: string | Date | null;
   tipo?: string | null;
   descricao?: string | null;
   cep?: string | null;
@@ -134,6 +137,8 @@ function fullEndereco(o: DbObra): string {
 /** DB row → ObraContratante (para grid de minhas-obras do contratante). */
 export function dbToObraContratante(o: DbObra): ObraContratante & {
   visibilidade: DbObra['visibilidade'];
+  statusModeracao?: DbObra['statusModeracao'];
+  motivoModeracao?: string | null;
 } {
   const semEmpreiteira = !o.empreiteiraId;
   return {
@@ -152,6 +157,8 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
     tipo: o.tipo ?? '—',
     candidaturas: 0,
     visibilidade: o.visibilidade,
+    statusModeracao: o.statusModeracao ?? null,
+    motivoModeracao: o.motivoModeracao ?? null,
   };
 }
 
@@ -159,7 +166,11 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
 export function dbToObraContratanteDetalhe(
   o: DbObra,
   anexos: DbObraAnexo[] = [],
-): ObraContratanteDetalhe & { visibilidade: DbObra['visibilidade'] } {
+): ObraContratanteDetalhe & {
+  visibilidade: DbObra['visibilidade'];
+  statusModeracao?: DbObra['statusModeracao'];
+  motivoModeracao?: string | null;
+} {
   const base = dbToObraContratante(o);
   const orcamento = base.orcamento;
   const valorPago = toNumber(o.valorPago);

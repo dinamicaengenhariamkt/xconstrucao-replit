@@ -145,6 +145,17 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - [x] Substituir `obra-detalhe.mock.ts`, `minhas-obras.mock.ts`, `novas-obras.mock.ts` e `features/admin/obras/mocks/list.mock.ts` por fetch real via adapters `features/obras/adapters.ts` _(Task #34)_
 - [x] Listar `/contratante/minhas-obras` (lista + `[id]`) consumindo `/api/obras` + `/api/obras/[id]` _(Task #34)_
 
+### Moderação admin (Task #86 — pronto)
+- [x] Enum `obra_status_moderacao` (pendente/aprovada/rejeitada) + 4 colunas em `obras` (`statusModeracao`, `motivoModeracao`, `moderadoEm`, `moderadoPor` FK users) + índice `idx_obras_status_moderacao` _(Task #86)_
+- [x] Bootstrap idempotente + backfill one-shot `obras_backfill_moderacao_v1` (publicada+pendente→aprovada) em `server/bootstrap-obras.ts` _(Task #86)_
+- [x] PATCH `/api/obras/[id]` reseta moderação para `pendente` em transição → `publicada` (cobre publicação inicial e re-submissão pós-rejeição) _(Task #86)_
+- [x] `GET /api/obras` (empreiteiro) e `findObraWithAccess` (detalhe) exigem `statusModeracao='aprovada'` — obra em revisão ou rejeitada não vaza pro marketplace _(Task #86)_
+- [x] `GET /api/admin/obras` aceita filtro `?status_moderacao=` + hook `useAdminObras` propaga `statusModeracao` _(Task #86)_
+- [x] `POST /api/admin/obras/[id]/aprovar` (emite atividade J07 `obra_publicada` na primeira aprovação + audit `obras.moderar.aprovar`) e `/rejeitar` (motivo 5–500 chars + audit `obras.moderar.rejeitar`) _(Task #86)_
+- [x] Tela admin `/admin/obras/moderacao` com 3 tabs (Em revisão / Rejeitadas / Aprovadas), cards com aprovar/rejeitar (modal motivo), link de detalhe e "aprovar mesmo assim" para rejeitadas _(Task #86)_
+- [x] Item de nav `Moderação` em `ADMIN_NAV_ITEMS` (logo após "Obras") _(Task #86)_
+- [x] Banner de status no detalhe contratante (`ObraVisibilidadeActions`): amarelo "Aguardando aprovação", vermelho "Rejeitada + motivo", verde "Aprovada"; botão "Reenviar para moderação" pausa+republica em sequência _(Task #86)_
+
 ## 10. Critérios de aceite
 1. Logado como contratante, criar obra apenas com `nome` + `endereco` → salva como `rascunho` → aparece em "minhas-obras" → NÃO aparece em J04.
 2. Tentar publicar sem `descricao` → 422 com `{ issues: [{ path: 'descricao', message: '...' }] }` e mensagem inline na UI.
@@ -175,7 +186,10 @@ Migration idempotente em [server/bootstrap-obras.ts](../../server/bootstrap-obra
 - 2026-05-25 (Task #32): Decidido separar `status` (execução: planejamento/em_andamento/pausada/concluida) de `visibilidade` (marketplace: rascunho/publicada/pausada/arquivada). Ambos têm valor `pausada` (intencional — pausar execução ≠ pausar marketplace).
 - 2026-05-25 (Task #32): Wave 1 mantém anexos só públicos (`public/obras/{id}/...`). ART/RRT como `private/` + signed URL fica pra Wave 2 (J06 ou J10).
 - 2026-05-25 (Task #33): UI das listas e detalhes (contratante `/minhas-obras` + `[id]`, empreiteiro `/novas-obras` + `[id]`, admin `/obras`) seguem 100% mock — endpoints estão prontos e smoke-tested via curl, falta apenas trocar fetch nos hooks `use-minhas-obras`/`use-obra-detalhe`/etc. Carry pra próxima task (J03.C).
-- 2026-05-25 (Task #33): Aprovação admin pré-publicação (fluxo "publicar" → review) NÃO existe — qualquer contratante publica direto. Avaliar regra de negócio antes de J04 ganhar volume real.
+- 2026-05-25 (Task #33): Aprovação admin pré-publicação (fluxo "publicar" → review) NÃO existe — qualquer contratante publica direto. Avaliar regra de negócio antes de J04 ganhar volume real. _Resolvido em Task #86 (2026-05-26): gate de moderação com enum `obra_status_moderacao`, endpoints aprovar/rejeitar, tela admin `/admin/obras/moderacao`, marketplace filtra `aprovada`, contratante vê banner de status + CTA "Reenviar para moderação"._
+- 2026-05-26 (Task #86): Notificação ao contratante quando moderação aprova/rejeita ficou fora de escopo (gap pra J13 — `obras.moderar.aprovar`/`obras.moderar.rejeitar` já estão no audit_log, basta J13 ouvir).
+- 2026-05-26 (Task #86): Auto re-moderação após edição de obra já publicada não foi implementada — só transição rascunho/pausada → publicada reseta `statusModeracao` pra pendente. Edição "in-place" de obra aprovada não força nova revisão.
+- 2026-05-26 (Task #86): Moderação assistida por IA (sinalizar obras suspeitas automaticamente) declarada fora de escopo.
 - 2026-05-25 (Task #33): Aditivo de escopo/valor pós-vínculo com empreiteira (referenciado no 409 `OBRA_LOCKED_AFTER_BIND`) é stub na resposta — fluxo real fica em J10 (disputas/aditivos). Sem aditivo, alterações precisam de cancelamento+nova obra.
 - 2026-05-25 (Task #33): Rate-limit em `POST /api/obras` e `POST /api/obras/[id]/anexos` não foi adicionado — contratante autenticado pode spammar criações/anexos. Reusar o helper existente de `rate-limit.ts` numa próxima rodada. _Resolvido em Task #35 (2026-05-25): obras=10/user/min + 30/ip/min; anexos=20/obra/min + 60/user/min + 120/ip/min; mensagens pt-BR; reusa `isRateLimited`/`getClientIp`._
 - 2026-05-25 (Task #33): `lat/lng` ficou `null` em todas as obras criadas pela UI nova — geocode via Nominatim foi planejado mas não implementado (fora de escopo desta task; J04 não depende disso ainda).

@@ -11,6 +11,9 @@ import {
   RiAttachment2,
   RiDownloadLine,
   RiDeleteBinLine,
+  RiTimeLine,
+  RiAlertLine,
+  RiShieldCheckLine,
 } from 'react-icons/ri';
 import { Button } from '@shared/components/ui/button';
 import { useToast } from '@shared/hooks/use-toast';
@@ -18,6 +21,7 @@ import { FileUploader } from '@features/shared/components/FileUploader';
 import type { CommitResponse } from '@features/shared/hooks/use-uploads';
 
 type Visibilidade = 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+type StatusModeracao = 'pendente' | 'aprovada' | 'rejeitada';
 
 interface Anexo {
   id: string;
@@ -33,6 +37,8 @@ interface Anexo {
 interface Props {
   obraId: string;
   visibilidade: Visibilidade;
+  statusModeracao?: StatusModeracao | null;
+  motivoModeracao?: string | null;
 }
 
 async function fetchAnexos(obraId: string): Promise<Anexo[]> {
@@ -66,7 +72,7 @@ const TIPOS = [
   { value: 'outros', label: 'Outros' },
 ] as const;
 
-export function ObraVisibilidadeActions({ obraId, visibilidade }: Props) {
+export function ObraVisibilidadeActions({ obraId, visibilidade, statusModeracao, motivoModeracao }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [tipoAnexo, setTipoAnexo] = useState<string>('outros');
@@ -170,6 +176,9 @@ export function ObraVisibilidadeActions({ obraId, visibilidade }: Props) {
   const acaoBusy = patchVisibilidade.isPending;
   const canPublish = visibilidade === 'rascunho';
   const canPause = visibilidade === 'publicada';
+  // Permite re-submeter à moderação quando rejeitada (já está com visibilidade=publicada
+  // mas precisa de gesto explícito do contratante para resetar status_moderacao→pendente).
+  const canResubmit = visibilidade === 'publicada' && statusModeracao === 'rejeitada';
   const canRepublish = visibilidade === 'pausada';
   const canArchive = visibilidade !== 'arquivada';
 
@@ -180,6 +189,52 @@ export function ObraVisibilidadeActions({ obraId, visibilidade }: Props) {
       className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 flex flex-col gap-5"
       data-testid="obra-visibilidade-actions"
     >
+      {visibilidade === 'publicada' && statusModeracao && statusModeracao !== 'aprovada' && (
+        <div
+          className={`rounded-xl border p-4 flex gap-3 ${
+            statusModeracao === 'rejeitada'
+              ? 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-900/10'
+              : 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/10'
+          }`}
+          data-testid={`moderacao-banner-${statusModeracao}`}
+        >
+          {statusModeracao === 'rejeitada' ? (
+            <RiAlertLine className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          ) : (
+            <RiTimeLine className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 text-sm">
+            <p className={`font-bold ${statusModeracao === 'rejeitada' ? 'text-red-800 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'}`}>
+              {statusModeracao === 'rejeitada' ? 'Obra rejeitada pela moderação' : 'Aguardando aprovação da equipe XConstrução'}
+            </p>
+            <p className={`mt-1 ${statusModeracao === 'rejeitada' ? 'text-red-700 dark:text-red-200' : 'text-amber-700 dark:text-amber-200'}`}>
+              {statusModeracao === 'rejeitada'
+                ? motivoModeracao
+                  ? `Motivo: ${motivoModeracao}`
+                  : 'Veja os comentários da moderação e edite a obra antes de reenviar.'
+                : 'Sua obra ainda não aparece no marketplace para empreiteiros — costuma sair em até 24h.'}
+            </p>
+            {statusModeracao === 'rejeitada' && (
+              <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                Edite os dados e clique em <strong>Republicar</strong> para reenviar à moderação.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {visibilidade === 'publicada' && statusModeracao === 'aprovada' && (
+        <div
+          className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 p-3 flex items-center gap-2 text-sm"
+          data-testid="moderacao-banner-aprovada"
+        >
+          <RiShieldCheckLine className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-emerald-800 dark:text-emerald-300 font-semibold">
+            Obra aprovada e visível no marketplace.
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-gray-700 dark:text-gray-200">Visibilidade no marketplace</span>
@@ -228,6 +283,35 @@ export function ObraVisibilidadeActions({ obraId, visibilidade }: Props) {
             >
               <RiPlayCircleLine className="w-4 h-4" />
               Republicar
+            </Button>
+          )}
+          {canResubmit && (
+            <Button
+              size="sm"
+              variant="default"
+              onClick={async () => {
+                // Re-submeter à moderação: pausa + publica novamente, resetando status_moderacao→pendente
+                // (via lógica da PATCH que detecta transição rascunho/pausada → publicada).
+                // Sequencial com await + try/catch — se o publicar falhar, tenta reverter pra publicada
+                // pra não deixar a obra travada como 'pausada' contra a intenção do usuário.
+                try {
+                  await patchVisibilidade.mutateAsync('pausada');
+                  await patchVisibilidade.mutateAsync('publicada');
+                } catch (err) {
+                  // Tentativa best-effort de rollback — se pausou mas falhou ao publicar.
+                  try {
+                    await patchVisibilidade.mutateAsync('publicada');
+                  } catch {
+                    /* rollback falhou; toast de erro já foi mostrado pelo onError */
+                  }
+                }
+              }}
+              disabled={acaoBusy}
+              data-testid="action-reenviar-moderacao"
+              className="gap-1.5"
+            >
+              <RiSendPlaneLine className="w-4 h-4" />
+              Reenviar para moderação
             </Button>
           )}
           {canArchive && (
