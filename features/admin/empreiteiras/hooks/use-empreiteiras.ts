@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import type { AdminEmpreiteira, AdminEmpreiteiraObra, HistoricoBloqueio } from '../types';
 import { mockAdminEmpreiteiras, mockAdminEmpreiteiraObras } from '../mocks';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 export const novaEmpreiteiraSchema = z.object({
   razaoSocial: z.string().min(3, 'Razão social deve ter pelo menos 3 caracteres'),

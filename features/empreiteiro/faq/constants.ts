@@ -1,4 +1,5 @@
 import type { IconType } from 'react-icons';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 import {
   RiUserAddLine,
   RiBuildingLine,
@@ -6,7 +7,7 @@ import {
   RiCustomerService2Line,
 } from 'react-icons/ri';
 
-export const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+export const ENABLE_MOCK = isMockEnabled();
 
 export const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,

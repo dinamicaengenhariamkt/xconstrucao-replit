@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CaixaResumo, Movimentacao, CaixaKpiData, IndiceEconomico, CaixaChartPoint, DateRange } from '../types';
 import type { CaixaPeriodo } from '../types';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 import {
   mockCaixaResumo,
   mockMovimentacoes,
@@ -9,7 +10,7 @@ import {
   getCaixaChartDataByPeriodo,
 } from '../mocks';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,

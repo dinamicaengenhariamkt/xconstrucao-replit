@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 import type {
   AdminCliente,
   AdminClienteObra,
@@ -16,7 +17,7 @@ import {
   mockAdminClienteAtividades,
 } from '../mocks';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 export const novoClienteSchema = z.object({
   tipo: z.enum(['pessoa_fisica', 'pessoa_juridica'], {

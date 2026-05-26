@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AdminPlano, AdminPlanoAssinante, PlanosKpi } from '../types';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 import {
   mockPlanosKpi,
   mockPlanosContratante,
@@ -8,7 +9,7 @@ import {
   mockAssinantesEmpreiteiro,
 } from '../mocks';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,

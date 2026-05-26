@@ -1,10 +1,11 @@
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
+
 /**
  * Constants e Feature Flags para o Dashboard do Empreiteiro
  */
 
 // Feature flag para ativar/desativar mocks
-export const ENABLE_MOCK =
-  process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+export const ENABLE_MOCK = isMockEnabled();
 
 // Cores do dashboard (alinhadas com o design system)
 export const DASHBOARD_COLORS = {

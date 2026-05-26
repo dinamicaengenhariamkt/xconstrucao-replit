@@ -2,7 +2,9 @@
  * Constantes do Dashboard do Contratante
  */
 
-export const ENABLE_MOCK = true;
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
+
+export const ENABLE_MOCK = isMockEnabled();
 
 export const PHASE_COLORS = {
   planejamento: '#f59e0b',

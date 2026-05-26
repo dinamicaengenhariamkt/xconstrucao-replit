@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AnuncioKpi, Campanha, Anunciante } from '../types';
 import { mockAnuncioKpi, mockCampanhas, mockAnunciantes } from '../mocks';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 
 export { useZonasAnuncio } from '@features/shared/anuncios/hooks/use-zonas';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,

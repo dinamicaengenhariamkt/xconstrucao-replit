@@ -1,8 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { mockZonasAnuncio } from '@features/admin/anuncios/mocks';
 import type { ZonaAnuncio } from '../types';
+import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 
-const ENABLE_MOCK = process.env.NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK === 'true';
+const ENABLE_MOCK = isMockEnabled();
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,
