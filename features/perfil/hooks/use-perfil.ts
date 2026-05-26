@@ -39,6 +39,8 @@ export interface PerfilEmpreiteiro {
   raioKm: number | null;
   portfolioUrls: string[];
   portfolioDocs: string[];
+  zonaAtuacaoUfs: string[];
+  zonaAtuacaoCidades: string[];
   descricao: string | null;
   anoFundacao: number | null;
   tamanhoEquipe: string | null;

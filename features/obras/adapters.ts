@@ -52,6 +52,8 @@ export type DbObra = {
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
   anexosCount?: number | null;
+  /** Computado server-side em GET /api/obras (role=empreiteiro): intersecção da UF/cidade da obra com zona de atuação. */
+  naMinhaZona?: boolean | null;
 };
 
 export type DbObraAnexo = {
@@ -247,6 +249,7 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     materiaisPor: o.materiaisPor ?? undefined,
     modalidade: o.modalidade ?? undefined,
     anexosCount: typeof o.anexosCount === 'number' ? o.anexosCount : 0,
+    naMinhaZona: o.naMinhaZona === true,
   };
 }
 

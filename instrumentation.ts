@@ -13,6 +13,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapStorageSchema failed:", err);
     });
 
+    const { bootstrapEmpreiteirasZona } = await import("./server/bootstrap-empreiteiras-zona");
+    await bootstrapEmpreiteirasZona().catch((err) => {
+      console.error("[instrumentation] bootstrapEmpreiteirasZona failed:", err);
+    });
+
     const { bootstrapObrasSchema } = await import("./server/bootstrap-obras");
     await bootstrapObrasSchema().catch((err) => {
       console.error("[instrumentation] bootstrapObrasSchema failed:", err);

@@ -6,6 +6,7 @@ import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters'
 import { COMPLEXIDADE_LABELS, COMPLEXIDADE_BADGE_CLASSES } from '../constants';
 import type { NovaObraCardProps } from '../types';
 import { IconStar, IconLocationOn, IconGroup, IconLock, IconBookmark, IconBookmarkFill, IconAttachFile } from '@shared/components/icons';
+import { RiMapPin2Line } from 'react-icons/ri';
 import { useObrasSalvasIds, useToggleObraSalva } from '@features/empreiteiro/obras-salvas/hooks/use-obras-salvas';
 
 const MODALIDADE_LABEL: Record<string, string> = {
@@ -77,6 +78,16 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
               <div className="absolute top-4 right-4 flex items-center gap-1 bg-amber-400/90 text-amber-900 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
                 <IconStar className="text-xs" />
                 Destaque
+              </div>
+            )}
+            {obra.naMinhaZona && (
+              <div
+                className="absolute bottom-4 left-4 flex items-center gap-1 bg-emerald-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow"
+                data-testid={`badge-na-minha-zona-${obra.id}`}
+                title="Esta obra está na sua zona de atuação"
+              >
+                <RiMapPin2Line className="text-xs" />
+                Na minha zona
               </div>
             )}
           </div>

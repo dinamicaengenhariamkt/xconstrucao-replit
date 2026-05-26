@@ -30,6 +30,8 @@ export interface NovaObra {
   materiaisPor?: 'contratante' | 'empreiteiro' | 'misto';
   modalidade?: 'administracao' | 'empreitada_global' | 'empreitada_etapa';
   anexosCount?: number;
+  /** Empreiteiro: obra bate com `zonaAtuacaoUfs`/`zonaAtuacaoCidades` do perfil. */
+  naMinhaZona?: boolean;
 }
 
 export interface Pendencia {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, getTableColumns, gte, ilike, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, obras, obraAnexos, userFiles } from "@shared/db/schema";
+import { candidaturas, clientes, empreiteiras, obras, obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
@@ -61,11 +61,29 @@ export async function GET(request: NextRequest) {
 
   const role = guard.user.role;
   const filters: any[] = [];
+  // Zona de atuação (Task #87): preenchido apenas para role=empreiteiro;
+  // usado em SELECT para flag `naMinhaZona` por obra.
+  let zonaUfs: string[] = [];
+  let zonaCidades: string[] = [];
 
   if (role === "empreiteiro") {
     filters.push(eq(obras.visibilidade, "publicada"));
     filters.push(eq(obras.statusModeracao, "aprovada"));
     filters.push(isNull(obras.empreiteiraId));
+    const [empRow] = await db
+      .select({
+        ufs: empreiteiras.zonaAtuacaoUfs,
+        cidades: empreiteiras.zonaAtuacaoCidades,
+      })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.userId, guard.user.id));
+    zonaUfs = (empRow?.ufs ?? [])
+      .filter((u): u is string => typeof u === "string" && u.length > 0)
+      .map((u) => u.toUpperCase());
+    zonaCidades = (empRow?.cidades ?? [])
+      .filter((c): c is string => typeof c === "string" && c.length > 0)
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
     // Anti-self-candidatura: empreiteiro não vê obras onde ele já se candidatou.
     // Usa o índice idx_candidaturas_obra_empreiteiro criado em bootstrap-marketplace.
     filters.push(sql`NOT EXISTS (
@@ -140,8 +158,23 @@ export async function GET(request: NextRequest) {
       AND ${userFiles.deletedAt} IS NULL
   )`;
 
+  // Task #87: naMinhaZona = UF da obra ∈ zonaUfs OU cidade da obra (case-insensitive) ∈ zonaCidades.
+  // Calculado em SQL (não no JS) pra ficar isolado por linha já paginada e respeitar nulos.
+  const naMinhaZonaExpr =
+    role === "empreiteiro" && (zonaUfs.length > 0 || zonaCidades.length > 0)
+      ? sql<boolean>`(
+          (${obras.uf} IS NOT NULL AND UPPER(${obras.uf}) = ANY(${zonaUfs}::text[]))
+          OR
+          (${obras.cidade} IS NOT NULL AND LOWER(TRIM(${obras.cidade})) = ANY(${zonaCidades}::text[]))
+        )`
+      : sql<boolean>`false`;
+
   const rows = await db
-    .select({ ...getTableColumns(obras), anexosCount: anexosCountExpr })
+    .select({
+      ...getTableColumns(obras),
+      anexosCount: anexosCountExpr,
+      naMinhaZona: naMinhaZonaExpr,
+    })
     .from(obras)
     .where(whereClause)
     .orderBy(desc(obras.createdAt))
@@ -151,7 +184,7 @@ export async function GET(request: NextRequest) {
   // Empreiteiro: sanitizar PII (clienteId omitido até J05).
   const sanitized = role === "empreiteiro"
     ? rows.map(({ clienteId, ...rest }) => rest)
-    : rows;
+    : rows.map(({ naMinhaZona: _drop, ...rest }) => rest);
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
   const r = NextResponse.json({ rows: sanitized, total, page, pageSize, totalPages });

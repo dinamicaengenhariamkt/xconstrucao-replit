@@ -460,6 +460,8 @@ function SecaoEmpresa() {
     registroProfissional: '',
   });
   const [especialidades, setEspecialidades] = useState<string[]>([]);
+  const [zonaUfs, setZonaUfs] = useState<string[]>([]);
+  const [zonaCidades, setZonaCidades] = useState<string[]>([]);
 
   useEffect(() => {
     if (perfil) {
@@ -479,6 +481,8 @@ function SecaoEmpresa() {
         registroProfissional: perfil.registroProfissional ?? '',
       });
       setEspecialidades(perfil.especialidades ?? []);
+      setZonaUfs(perfil.zonaAtuacaoUfs ?? []);
+      setZonaCidades(perfil.zonaAtuacaoCidades ?? []);
     }
   }, [perfil]);
 
@@ -510,6 +514,8 @@ function SecaoEmpresa() {
         estado: empresa.estado || null,
         raioKm: raio,
         especialidades,
+        zonaAtuacaoUfs: zonaUfs,
+        zonaAtuacaoCidades: zonaCidades,
         descricao: empresa.descricao.trim() || null,
         anoFundacao: ano,
         tamanhoEquipe: empresa.tamanhoEquipe || null,
@@ -642,6 +648,49 @@ function SecaoEmpresa() {
               maxLength={60}
               data-testid="multiselect-especialidades"
             />
+          </div>
+
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Zona de atuação{' '}
+              <span className="text-xs text-muted-foreground ml-1">
+                ({zonaUfs.length} UF{zonaUfs.length === 1 ? '' : 's'} · {zonaCidades.length} cidade{zonaCidades.length === 1 ? '' : 's'})
+              </span>
+            </Label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Estados e cidades onde você aceita obras. Obras compatíveis ganham o selo
+              <strong className="mx-1">"Na minha zona"</strong>
+              no marketplace.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Estados (UFs)</Label>
+                <MultiSelectAdd
+                  value={zonaUfs}
+                  onChange={(next) => setZonaUfs(next.map((v) => v.toUpperCase()).filter((v) => /^[A-Z]{2}$/.test(v) && UF_OPTIONS.includes(v)))}
+                  suggestions={UF_OPTIONS}
+                  placeholder="Adicionar UF…"
+                  maxItems={27}
+                  minLength={2}
+                  maxLength={2}
+                  emptyText="Selecione uma UF da lista."
+                  data-testid="multiselect-zona-ufs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Cidades</Label>
+                <MultiSelectAdd
+                  value={zonaCidades}
+                  onChange={setZonaCidades}
+                  placeholder="Adicionar cidade…"
+                  maxItems={50}
+                  minLength={2}
+                  maxLength={80}
+                  addLabel={(t) => `Adicionar "${t}"`}
+                  data-testid="multiselect-zona-cidades"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

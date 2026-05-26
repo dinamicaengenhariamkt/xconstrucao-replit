@@ -52,6 +52,28 @@ const updateSchema = z.object({
   raioKm: z.number().int().min(0).max(2000).optional().nullable(),
   portfolioUrls: z.array(z.string().max(2_500_000)).max(10).optional(),
   portfolioDocs: z.array(z.string().max(7_000_000)).max(3).optional(),
+  zonaAtuacaoUfs: z
+    .array(z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, "UF inválida"))
+    .max(27)
+    .transform((items) => Array.from(new Set(items)))
+    .optional(),
+  zonaAtuacaoCidades: z
+    .array(z.string().trim().min(2).max(80))
+    .max(50)
+    .transform((items) => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const raw of items) {
+        const t = raw.trim();
+        if (!t) continue;
+        const k = t.toLowerCase();
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push(t);
+      }
+      return out;
+    })
+    .optional(),
   descricao: z.string().max(2000).optional().nullable(),
   anoFundacao: z.number().int().min(1900).max(new Date().getFullYear()).optional().nullable(),
   tamanhoEquipe: z.string().max(50).optional().nullable(),

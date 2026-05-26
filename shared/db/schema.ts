@@ -133,6 +133,8 @@ export const empreiteiras = pgTable("empreiteiras", {
   avatarUrl: text("avatar_url"),
   portfolioUrls: text("portfolio_urls").array().notNull().default(sql`ARRAY[]::text[]`),
   portfolioDocs: text("portfolio_docs").array().notNull().default(sql`ARRAY[]::text[]`),
+  zonaAtuacaoUfs: text("zona_atuacao_ufs").array().notNull().default(sql`ARRAY[]::text[]`),
+  zonaAtuacaoCidades: text("zona_atuacao_cidades").array().notNull().default(sql`ARRAY[]::text[]`),
   descricao: text("descricao"),
   anoFundacao: integer("ano_fundacao"),
   tamanhoEquipe: text("tamanho_equipe"),
