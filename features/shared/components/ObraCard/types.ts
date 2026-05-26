@@ -30,4 +30,8 @@ export interface ObraCardProps {
   candidaturas?: number;
   /** Visibilidade no marketplace (rascunho/publicada/pausada/arquivada). Quando informado, renderiza badge. */
   visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
+  /** Status da moderação admin (Task #86). Quando obra está publicada+pendente/rejeitada, renderiza badge extra com o estado de revisão (e tooltip com motivo, no caso de rejeição). */
+  statusModeracao?: 'pendente' | 'aprovada' | 'rejeitada' | null;
+  /** Motivo da rejeição, usado como tooltip no badge "Rejeitada". */
+  motivoModeracao?: string | null;
 }

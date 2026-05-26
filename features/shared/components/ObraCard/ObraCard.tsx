@@ -36,7 +36,20 @@ export function ObraCard({
   dateMode,
   candidaturas,
   visibilidade,
+  statusModeracao,
+  motivoModeracao,
 }: ObraCardProps) {
+  // Só faz sentido sinalizar moderação em obras publicadas (Task #86).
+  // Aprovadas não recebem badge extra (o status "publicada" já comunica isso).
+  const showModBadge =
+    visibilidade === 'publicada' &&
+    (statusModeracao === 'pendente' || statusModeracao === 'rejeitada');
+  const modBadgeLabel =
+    statusModeracao === 'pendente' ? 'Em revisão' : 'Rejeitada';
+  const modBadgeClass =
+    statusModeracao === 'pendente'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+      : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200';
   const borderColor = STATUS_BORDER_COLORS[status] || 'border-l-gray-300';
   const progressColor = (PROGRESS_COLORS[status] || 'primary') as
     | 'success'
@@ -89,6 +102,18 @@ export function ObraCard({
                 data-testid={`badge-visibilidade-${obraId}`}
               >
                 {VISIBILIDADE_LABELS[visibilidade] || visibilidade}
+              </span>
+            )}
+            {showModBadge && (
+              <span
+                className={cn(
+                  'inline-flex items-center font-bold rounded-full uppercase tracking-wider text-[10px] px-2.5 py-1 backdrop-blur-sm',
+                  modBadgeClass,
+                )}
+                title={statusModeracao === 'rejeitada' && motivoModeracao ? `Motivo: ${motivoModeracao}` : undefined}
+                data-testid={`badge-moderacao-${obraId}`}
+              >
+                {modBadgeLabel}
               </span>
             )}
           </div>
