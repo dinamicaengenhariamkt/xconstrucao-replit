@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { RiSearchLine, RiLoader4Line } from 'react-icons/ri';
+import { RiSearchLine, RiLoader4Line, RiMapPin2Line } from 'react-icons/ri';
 import { cn } from '@shared/lib/utils';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
@@ -48,11 +49,14 @@ export default function NovasObrasPage() {
   const [statusSelected, setStatusSelected] = useState<string[]>([]);
   const [complexidadeSelected, setComplexidadeSelected] = useState<string[]>([]);
 
+  // Task #93: toggle "Só na minha zona" — vai pro servidor como `na_minha_zona=true`.
+  const [naMinhaZonaOnly, setNaMinhaZonaOnly] = useState(false);
+
   const orcMinNum = orcamentoMin === '' ? undefined : Number(orcamentoMin);
   const orcMaxNum = orcamentoMax === '' ? undefined : Number(orcamentoMax);
 
   const queryParams = useMemo(() => {
-    const p: Record<string, string | number | string[]> = { pageSize: PAGE_SIZE };
+    const p: Record<string, string | number | string[] | boolean> = { pageSize: PAGE_SIZE };
     if (debouncedSearch) p.q = debouncedSearch;
     if (cidade.trim()) p.cidade = cidade.trim();
     if (uf.trim()) p.uf = uf.trim().toUpperCase();
@@ -62,8 +66,9 @@ export default function NovasObrasPage() {
     if (materiaisPorSelected.length > 0) p.materiaisPor = materiaisPorSelected;
     if (orcMinNum !== undefined) p.minValor = orcMinNum;
     if (orcMaxNum !== undefined) p.maxValor = orcMaxNum;
+    if (naMinhaZonaOnly) p.naMinhaZona = true;
     return p;
-  }, [debouncedSearch, cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum]);
+  }, [debouncedSearch, cidade, uf, modalidade, tipoSelected, materiaisPorSelected, orcMinNum, orcMaxNum, naMinhaZonaOnly]);
 
   const {
     data: obrasPayload,
@@ -90,6 +95,10 @@ export default function NovasObrasPage() {
     [obrasPayload],
   );
   const total = obrasPayload?.pages?.[0]?.total ?? 0;
+  // Task #93: payload carrega `zonaConfigurada` apenas para role=empreiteiro.
+  // Undefined enquanto a 1ª página carrega — usar `?? true` (assume configurada
+  // até prova em contrário) pra evitar flash do empty-state pedindo configurar.
+  const zonaConfigurada = obrasPayload?.pages?.[0]?.zonaConfigurada ?? true;
 
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
@@ -295,6 +304,22 @@ export default function NovasObrasPage() {
               />
             </AdvancedFiltersPopover>
 
+            <button
+              type="button"
+              onClick={() => setNaMinhaZonaOnly((v) => !v)}
+              aria-pressed={naMinhaZonaOnly}
+              className={cn(
+                'h-9 inline-flex items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-colors',
+                naMinhaZonaOnly
+                  ? 'bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800',
+              )}
+              data-testid="toggle-na-minha-zona"
+            >
+              <RiMapPin2Line className="w-4 h-4" />
+              Só na minha zona
+            </button>
+
             <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
               <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -389,7 +414,68 @@ export default function NovasObrasPage() {
       </div>
 
       <div className={cn(isBlocked && 'opacity-40 pointer-events-none')}>
-        <NovasObrasGrid obras={filteredRows} isBlocked={isBlocked} />
+        {naMinhaZonaOnly && !zonaConfigurada ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-12 text-center"
+            data-testid="empty-state-zona-nao-configurada"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
+              <RiMapPin2Line className="h-6 w-6" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                Configure sua zona de atuação
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                Você ainda não definiu UFs ou cidades em que atua. Configure sua zona para ver
+                apenas obras compatíveis.
+              </p>
+            </div>
+            <Link
+              href="/empreiteiro/configuracoes"
+              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+              data-testid="link-configurar-zona"
+            >
+              Ir para Configurações
+            </Link>
+          </div>
+        ) : naMinhaZonaOnly && rows.length === 0 && !obrasLoading ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-12 text-center"
+            data-testid="empty-state-zona-sem-resultados"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
+              <RiMapPin2Line className="h-6 w-6" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                Nenhuma obra na sua zona no momento
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                Tente desligar o filtro ou ampliar sua zona em Configurações.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setNaMinhaZonaOnly(false)}
+                data-testid="button-desligar-na-minha-zona"
+              >
+                Mostrar todas as obras
+              </Button>
+              <Link
+                href="/empreiteiro/configuracoes"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                data-testid="link-ampliar-zona"
+              >
+                Ampliar zona
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <NovasObrasGrid obras={filteredRows} isBlocked={isBlocked} />
+        )}
       </div>
 
       {!isBlocked && (hasNextPage || isFetchingNextPage) && (

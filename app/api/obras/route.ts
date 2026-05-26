@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
   const visibilidade = q.get("visibilidade");
   const modalidade = q.get("modalidade");
   const scopeAdmin = q.get("scope") === "admin";
+  // Task #93: filtro "Só na minha zona" (apenas role=empreiteiro com zona configurada).
+  const naMinhaZonaFilter = q.get("na_minha_zona") === "true";
   // Busca textual server-side: ILIKE em nome OU descricao. Trim, length>=1, max 80 defensivo.
   const qText = q.get("q")?.trim().slice(0, 80);
 
@@ -141,6 +143,36 @@ export async function GET(request: NextRequest) {
     filters.push(inArray(obras.materiaisPor, materiaisPorList as any));
   }
 
+  // Task #87/93: expressão SQL de match de zona, reusada em SELECT/ORDER BY/WHERE.
+  const zonaConfigurada = role === "empreiteiro" && (zonaUfs.length > 0 || zonaCidades.length > 0);
+  // Task #95: cidade comparada accent-insensitive via TRANSLATE (sem extensão unaccent),
+  // espelhando a normalização NFD aplicada em zonaCidades acima.
+  const zonaMatchExpr = sql`(
+    (${obras.uf} IS NOT NULL AND UPPER(${obras.uf}) = ANY(${zonaUfs}::text[]))
+    OR
+    (${obras.cidade} IS NOT NULL AND LOWER(TRIM(TRANSLATE(${obras.cidade},
+      'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇáàâãäéèêëíìîïóòôõöúùûüç',
+      'AAAAAEEEEIIIIOOOOOUUUUCaaaaaeeeeiiiiooooouuuuc'))) = ANY(${zonaCidades}::text[]))
+  )`;
+
+  // Task #93: filtro "Só na minha zona". Sem zona configurada → 0 rows + flag pro front
+  // mostrar empty-state com link pra /empreiteiro/configuracoes.
+  if (naMinhaZonaFilter && role === "empreiteiro") {
+    if (!zonaConfigurada) {
+      const r = NextResponse.json({
+        rows: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+        zonaConfigurada: false,
+      });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    filters.push(zonaMatchExpr);
+  }
+
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
   // COUNT + page em queries separadas (Drizzle não suporta COUNT(*) OVER()
@@ -160,18 +192,14 @@ export async function GET(request: NextRequest) {
       AND ${userFiles.deletedAt} IS NULL
   )`;
 
-  // Task #87: naMinhaZona = UF da obra ∈ zonaUfs OU cidade da obra (case-insensitive) ∈ zonaCidades.
-  // Calculado em SQL (não no JS) pra ficar isolado por linha já paginada e respeitar nulos.
-  const naMinhaZonaExpr =
-    role === "empreiteiro" && (zonaUfs.length > 0 || zonaCidades.length > 0)
-      ? sql<boolean>`(
-          (${obras.uf} IS NOT NULL AND UPPER(${obras.uf}) = ANY(${zonaUfs}::text[]))
-          OR
-          (${obras.cidade} IS NOT NULL AND LOWER(TRIM(TRANSLATE(${obras.cidade},
-            'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇáàâãäéèêëíìîïóòôõöúùûüç',
-            'AAAAAEEEEIIIIOOOOOUUUUCaaaaaeeeeiiiiooooouuuuc'))) = ANY(${zonaCidades}::text[]))
-        )`
-      : sql<boolean>`false`;
+  // Task #87/95: naMinhaZona = match SQL (UF ∈ zonaUfs OU cidade accent-insensitive ∈ zonaCidades).
+  const naMinhaZonaExpr = zonaConfigurada ? sql<boolean>`${zonaMatchExpr}` : sql<boolean>`false`;
+
+  // Task #93: quando zona está configurada, ordenar primeiro por match de zona (DESC)
+  // pra obras compatíveis subirem pro topo — o sinal de matching deixa de exigir scroll.
+  const orderBy = zonaConfigurada
+    ? [sql`${zonaMatchExpr} DESC`, desc(obras.createdAt)]
+    : [desc(obras.createdAt)];
 
   const rows = await db
     .select({
@@ -181,7 +209,7 @@ export async function GET(request: NextRequest) {
     })
     .from(obras)
     .where(whereClause)
-    .orderBy(desc(obras.createdAt))
+    .orderBy(...orderBy)
     .limit(pageSize)
     .offset(offset);
 
@@ -191,7 +219,14 @@ export async function GET(request: NextRequest) {
     : rows.map(({ naMinhaZona: _drop, ...rest }) => rest);
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
-  const r = NextResponse.json({ rows: sanitized, total, page, pageSize, totalPages });
+  const r = NextResponse.json({
+    rows: sanitized,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    ...(role === "empreiteiro" ? { zonaConfigurada } : {}),
+  });
   setNoCacheHeaders(r);
   return r;
 }

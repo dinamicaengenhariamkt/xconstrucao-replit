@@ -11,6 +11,8 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+  /** Task #93: presente apenas para role=empreiteiro — indica se o perfil tem zona configurada. */
+  zonaConfigurada?: boolean;
 }
 
 export interface GetNovasObrasParams {
@@ -24,22 +26,27 @@ export interface GetNovasObrasParams {
   tipo?: string | string[];
   modalidade?: string;
   materiaisPor?: string | string[];
+  /** Task #93: filtro "Só na minha zona". Mapeia pra `?na_minha_zona=true`. */
+  naMinhaZona?: boolean;
 }
 
 export async function getNovasObras(
   params: GetNovasObrasParams = {},
 ): Promise<PaginatedResponse<NovaObra>> {
   const qs = new URLSearchParams();
+  // Task #93: param do hook é `naMinhaZona` (boolean), mapeado pra query string `na_minha_zona=true`.
+  const KEY_MAP: Record<string, string> = { naMinhaZona: 'na_minha_zona' };
   Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === '') return;
+    if (v === undefined || v === null || v === '' || v === false) return;
+    const key = KEY_MAP[k] ?? k;
     if (Array.isArray(v)) {
       v.forEach((item) => {
         if (item !== undefined && item !== null && item !== '') {
-          qs.append(k, String(item));
+          qs.append(key, String(item));
         }
       });
     } else {
-      qs.set(k, String(v));
+      qs.set(key, String(v));
     }
   });
   const url = `/api/obras${qs.size > 0 ? `?${qs.toString()}` : ''}`;
