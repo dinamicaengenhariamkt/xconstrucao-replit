@@ -62,6 +62,7 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 - [ ] Componente sino no header com contagem de não-lidas
 - [ ] Real-time: avaliar polling (simples) vs. SSE/WebSocket (correto). MVP: polling 30s.
 - [ ] Email para tipos críticos (respeitar preferências J02)
+- [x] Nova obra aprovada → notificação in-app + email para empreiteiros na zona de atuação (respeita `email_novaObra`) _(Task #94)_
 - [ ] Tela admin de monitoramento (auditoria)
 
 ## 10. Critérios de aceite
@@ -85,4 +86,7 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- 2026-05-25 (Task #32): Evento `obra.publicada` precisa notificar **admin** (moderação opcional) e disparar emails segmentados pra empreiteiros com `especialidade` compatível + raio de cobertura — adicionar ao enum `notificacao_tipo` quando esta jornada sair do mock; integrar com J04 (descoberta) e J03 (publicação) no consumo.
+- 2026-05-25 (Task #32): Evento `obra.publicada` precisa notificar **admin** (moderação opcional) e disparar emails segmentados pra empreiteiros com `especialidade` compatível + raio de cobertura — adicionar ao enum `notificacao_tipo` quando esta jornada sair do mock; integrar com J04 (descoberta) e J03 (publicação) no consumo. _Resolvido parcialmente em 2026-05-26 (Task #94)_: aprovação em moderação dispara in-app + email para empreiteiros com match por **UF/cidade** da zona de atuação (J02 §Task #87). Segmentação por especialidade e raio km continuam pendentes.
+- 2026-05-26 (Task #94): Dispatcher `nova-obra-zona` é fire-and-forget pós-commit em `/api/admin/obras/[id]/aprovar` — sem retry/fila persistente. Se o processo morrer entre a aprovação e o disparo, a notificação se perde silenciosamente. Aceitável no MVP (in-app é "nice to have"; empreiteiro ainda vê a obra ao abrir o marketplace), mas vale virar `job + flag idempotente` (padrão do `candidatura-dispatcher`) se passar a ser canal crítico.
+- 2026-05-26 (Task #94): Re-publicação após rejeição re-dispara a notificação (mesma paridade da atividade `obra_publicada`). Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra em ciclos pause→republish. Resolver junto com o agrupamento de "5 mensagens novas" do §11.
+- 2026-05-26 (Task #94): Sem segmentação por **especialidade**, sem **raio km**, sem normalização IBGE de cidades, sem unsubscribe-link direto no email (CTA pro `/empreiteiro/configuracoes` aba notificações via texto). Cada um vira refinamento próprio quando entrar no roteiro.

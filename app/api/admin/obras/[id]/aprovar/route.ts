@@ -5,6 +5,7 @@ import { obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { dispararNotificacaoNovaObraZona } from "@features/notificacoes/nova-obra-zona-dispatcher";
 
 /**
  * POST /api/admin/obras/[id]/aprovar  (J03 — Task #86)
@@ -91,6 +92,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       valorTotal: txResult.updated.valorTotal,
       moderadoPor: guard.user.id,
     },
+  });
+
+  // Task #94 (J13): notifica empreiteiros cuja zona de atuação bate com a obra.
+  // Fire-and-forget — falhas logam mas não derrubam a aprovação.
+  void dispararNotificacaoNovaObraZona(id).catch((err) => {
+    console.error("[aprovar] falha no disparo de nova-obra-zona:", err);
   });
 
   const r = NextResponse.json(txResult.updated);

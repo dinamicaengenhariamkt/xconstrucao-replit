@@ -7,6 +7,9 @@ import PagamentoRecebidoEmail from '@features/notificacoes/emails/pagamento-rece
 import CandidaturaDecididaEmail, {
   type CandidaturaDecididaEmailProps,
 } from '@features/notificacoes/emails/candidatura-decidida';
+import NovaObraZonaEmail, {
+  type NovaObraZonaEmailProps,
+} from '@features/notificacoes/emails/nova-obra-zona';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -174,6 +177,26 @@ export async function sendCandidaturaDecididaEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'candidatura-decidida' });
   } catch (error) {
     console.error('Erro ao enviar email de candidatura decidida:', error);
+    throw error;
+  }
+}
+
+export async function sendNovaObraZonaEmail(
+  to: string,
+  props: NovaObraZonaEmailProps,
+) {
+  const html = await render(NovaObraZonaEmail(props));
+  const subject = `XConstrução - Nova obra na sua zona: ${props.obraNome}`;
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'nova-obra-zona', ...props } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'nova-obra-zona' });
+  } catch (error) {
+    console.error('Erro ao enviar email de nova obra na zona:', error);
     throw error;
   }
 }
