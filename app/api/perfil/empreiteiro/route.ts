@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { empreiteiras, users } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { ensureProfileRow } from "@features/auth/api/auth-storage";
+import { findMunicipio, loadMunicipios } from "@shared/lib/ibge-municipios";
 
 export const ESPECIALIDADES_PERMITIDAS = [
   "Alvenaria",
@@ -159,6 +160,54 @@ export async function PATCH(request: NextRequest) {
 
   const existing = await loadOrCreate(payload.sub);
   if (!existing) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
+
+  // Task #95: validar zonaAtuacaoCidades contra a base IBGE para evitar
+  // duplicatas tipo "São Paulo" vs "Sao Paulo" e cidades inexistentes.
+  // Se a base IBGE não carregou (rede caiu), aceita o que veio — não bloquear
+  // o Salvar inteiro por uma indisponibilidade de terceiro.
+  if (parsed.data.zonaAtuacaoCidades && parsed.data.zonaAtuacaoCidades.length > 0) {
+    const ibgeList = await loadMunicipios();
+    if (ibgeList.length > 0) {
+      const ufHints = parsed.data.zonaAtuacaoUfs ?? [];
+      const canonical: string[] = [];
+      const invalid: string[] = [];
+      for (const c of parsed.data.zonaAtuacaoCidades) {
+        // tenta com cada UF da zona (se houver) como hint; se nenhum match, sem hint.
+        let m = null as Awaited<ReturnType<typeof findMunicipio>>;
+        for (const uf of ufHints) {
+          m = await findMunicipio(c, uf);
+          if (m) break;
+        }
+        if (!m) m = await findMunicipio(c);
+        if (m) canonical.push(m.nome);
+        else invalid.push(c);
+      }
+      if (invalid.length > 0) {
+        return NextResponse.json(
+          {
+            message: `Cidade(s) não reconhecida(s) na base IBGE: ${invalid.join(", ")}`,
+            errors: {
+              fieldErrors: {
+                zonaAtuacaoCidades: [
+                  `Cidade(s) inválida(s): ${invalid.join(", ")}. Selecione uma sugestão da lista.`,
+                ],
+              },
+            },
+          },
+          { status: 422 },
+        );
+      }
+      const seen = new Set<string>();
+      const finalList: string[] = [];
+      for (const n of canonical) {
+        const k = n.toLowerCase();
+        if (seen.has(k)) continue;
+        seen.add(k);
+        finalList.push(n);
+      }
+      parsed.data.zonaAtuacaoCidades = finalList;
+    }
+  }
 
   const { bio, idioma, timezone, ...empreiteiraData } = parsed.data;
 

@@ -82,7 +82,9 @@ export async function GET(request: NextRequest) {
       .map((u) => u.toUpperCase());
     zonaCidades = (empRow?.cidades ?? [])
       .filter((c): c is string => typeof c === "string" && c.length > 0)
-      .map((c) => c.trim().toLowerCase())
+      // Task #95: accent-insensitive match — normalize ambos os lados pra cobrir
+      // dados legados ("Sao Paulo" sem acento) que existam tanto na zona quanto em obras.
+      .map((c) => c.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim())
       .filter(Boolean);
     // Anti-self-candidatura: empreiteiro não vê obras onde ele já se candidatou.
     // Usa o índice idx_candidaturas_obra_empreiteiro criado em bootstrap-marketplace.
@@ -165,7 +167,9 @@ export async function GET(request: NextRequest) {
       ? sql<boolean>`(
           (${obras.uf} IS NOT NULL AND UPPER(${obras.uf}) = ANY(${zonaUfs}::text[]))
           OR
-          (${obras.cidade} IS NOT NULL AND LOWER(TRIM(${obras.cidade})) = ANY(${zonaCidades}::text[]))
+          (${obras.cidade} IS NOT NULL AND LOWER(TRIM(TRANSLATE(${obras.cidade},
+            'ÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇáàâãäéèêëíìîïóòôõöúùûüç',
+            'AAAAAEEEEIIIIOOOOOUUUUCaaaaaeeeeiiiiooooouuuuc'))) = ANY(${zonaCidades}::text[]))
         )`
       : sql<boolean>`false`;
 

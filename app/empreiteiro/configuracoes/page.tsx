@@ -67,6 +67,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { MultiSelectAdd } from '@shared/components/MultiSelectAdd';
 import { formatPhone, unformatPhone, isPhoneValid, formatCnpj, unformatCnpj, isCnpjValid } from '@shared/lib/masks';
 import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS, ESPECIALIDADES_SUGGESTIONS } from '@features/perfil/constants';
+import { useQuery } from '@tanstack/react-query';
 
 /* ── Types ── */
 type Section = 'perfil' | 'empresa' | 'documentos' | 'notificacoes' | 'privacidade' | 'plano';
@@ -81,6 +82,93 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'privacidade',   label: 'Privacidade',     icon: RiShieldLine },
   { id: 'plano',         label: 'Plano & Uso',     icon: RiStarLine },
 ];
+
+/* ── IBGE Cidades autocomplete (Task #95) ── */
+type IbgeCidade = { nome: string; uf: string };
+
+function useDebouncedValue<T>(value: T, delayMs = 250): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return v;
+}
+
+interface CidadesIbgeAutocompleteProps {
+  value: string[];
+  onChange: (next: string[]) => void;
+  ufHints?: string[];
+  maxItems?: number;
+  'data-testid'?: string;
+}
+
+function CidadesIbgeAutocomplete({
+  value,
+  onChange,
+  ufHints,
+  maxItems = 50,
+  ...rest
+}: CidadesIbgeAutocompleteProps) {
+  const [query, setQuery] = useState('');
+  const debounced = useDebouncedValue(query, 200);
+
+  const { data, isLoading } = useQuery<{ rows: IbgeCidade[] }>({
+    queryKey: ['cidades-ibge', debounced],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (debounced.trim()) params.set('q', debounced.trim());
+      params.set('limit', '20');
+      const r = await fetch(`/api/cidades?${params.toString()}`, { credentials: 'include' });
+      if (!r.ok) throw new Error('Falha ao buscar cidades');
+      return r.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Suggestions in display form ("Nome — UF") to disambiguate cidades homônimas
+  // (ex.: Campinas/SP vs Campinas/MG). O valor armazenado é só o "Nome".
+  const suggestions = (data?.rows ?? [])
+    // Prioriza UFs da zona quando o usuário já selecionou alguma.
+    .sort((a, b) => {
+      if (!ufHints || ufHints.length === 0) return 0;
+      const aHit = ufHints.includes(a.uf) ? 0 : 1;
+      const bHit = ufHints.includes(b.uf) ? 0 : 1;
+      return aHit - bHit;
+    })
+    .map((c) => `${c.nome} — ${c.uf}`);
+
+  // Recebe "Nome — UF" → guarda só "Nome" (canônico IBGE).
+  const handleChange = (next: string[]) => {
+    const cleaned = next.map((entry) => {
+      const idx = entry.indexOf(' — ');
+      return idx > 0 ? entry.slice(0, idx) : entry;
+    });
+    onChange(cleaned);
+  };
+
+  // Reapresenta value como "Nome — UF" quando possível (lookup nas sugestões atuais).
+  const displayValue = value.map((nome) => {
+    const hit = (data?.rows ?? []).find((c) => c.nome.toLowerCase() === nome.toLowerCase());
+    return hit ? `${hit.nome} — ${hit.uf}` : nome;
+  });
+
+  return (
+    <MultiSelectAdd
+      value={displayValue}
+      onChange={handleChange}
+      suggestions={suggestions}
+      placeholder="Adicionar cidade…"
+      maxItems={maxItems}
+      minLength={2}
+      maxLength={120}
+      disableCustom
+      onQueryChange={setQuery}
+      emptyText={isLoading ? 'Buscando…' : 'Nenhuma cidade encontrada.'}
+      data-testid={rest['data-testid']}
+    />
+  );
+}
 
 /* ── Helpers ── */
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -679,16 +767,16 @@ function SecaoEmpresa() {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground mb-2 block">Cidades</Label>
-                <MultiSelectAdd
+                <CidadesIbgeAutocomplete
                   value={zonaCidades}
                   onChange={setZonaCidades}
-                  placeholder="Adicionar cidade…"
+                  ufHints={zonaUfs}
                   maxItems={50}
-                  minLength={2}
-                  maxLength={80}
-                  addLabel={(t) => `Adicionar "${t}"`}
                   data-testid="multiselect-zona-cidades"
                 />
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Selecione cidades da lista (base IBGE). Evita duplicatas como "São Paulo" vs "Sao Paulo".
+                </p>
               </div>
             </div>
           </div>

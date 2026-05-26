@@ -19,6 +19,12 @@ interface MultiSelectAddProps {
   addLabel?: (term: string) => string;
   disabled?: boolean;
   className?: string;
+  /** Quando true, apenas itens da lista de sugestões podem ser adicionados (Task #95). */
+  disableCustom?: boolean;
+  /** Notificado a cada keystroke no input — usado para fetch async de sugestões. */
+  onQueryChange?: (q: string) => void;
+  /** Renderização customizada de cada item de sugestão (mantém o key = string da suggestion). */
+  renderSuggestion?: (s: string) => React.ReactNode;
   'data-testid'?: string;
 }
 
@@ -48,11 +54,19 @@ export function MultiSelectAdd({
   addLabel = (t) => `Adicionar "${t}"`,
   disabled,
   className,
+  disableCustom,
+  onQueryChange,
+  renderSuggestion,
   ...rest
 }: MultiSelectAddProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const testid = rest['data-testid'] ?? 'multiselect-add';
+
+  const handleQueryChange = (v: string) => {
+    setQuery(v);
+    onQueryChange?.(v);
+  };
 
   const selectedSet = useMemo(() => new Set(value.map((v) => v.toLowerCase())), [value]);
 
@@ -63,6 +77,7 @@ export function MultiSelectAdd({
 
   const trimmed = query.trim();
   const canAddCustom =
+    !disableCustom &&
     trimmed.length >= minLength &&
     trimmed.length <= maxLength &&
     !selectedSet.has(trimmed.toLowerCase()) &&
@@ -140,7 +155,7 @@ export function MultiSelectAdd({
             <CommandInput
               placeholder="Digite para buscar…"
               value={query}
-              onValueChange={setQuery}
+              onValueChange={handleQueryChange}
               data-testid={`${testid}-input`}
             />
             <CommandList>
@@ -156,7 +171,7 @@ export function MultiSelectAdd({
                       onSelect={() => addItem(s)}
                       data-testid={`${testid}-option-${s}`}
                     >
-                      {s}
+                      {renderSuggestion ? renderSuggestion(s) : s}
                     </CommandItem>
                   ))}
                 </CommandGroup>
