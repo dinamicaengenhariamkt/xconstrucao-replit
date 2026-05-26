@@ -513,6 +513,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
         open={modalState.type === 'progresso'}
         onOpenChange={(open) => { if (!open) closeModal(); }}
         tarefa={modalState.tarefa}
+        obraId={obra.id}
         onConfirmar={handleConfirmarProgresso}
       />
 

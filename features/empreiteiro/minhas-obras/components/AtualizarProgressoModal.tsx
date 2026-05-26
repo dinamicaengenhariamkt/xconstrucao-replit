@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,7 @@ import {
   DialogFooter,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
+import { useToast } from '@shared/hooks/use-toast';
 import type { MinhaObraTarefa } from '../types';
 import { IconDataUsage, IconCheck } from '@shared/components/icons';
 
@@ -19,7 +21,39 @@ interface AtualizarProgressoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tarefa: MinhaObraTarefa | null;
+  obraId: string;
   onConfirmar: (progresso: number) => void;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function postMedicao(body: {
+  obraId: string;
+  etapa: string;
+  descricao?: string;
+  percentual: number;
+}): Promise<{ id: string }> {
+  const res = await fetch('/api/empreiteiro/medicoes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    credentials: 'include',
+  });
+  const text = await res.text();
+  let parsed: unknown = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    /* keep null */
+  }
+  if (!res.ok) {
+    const message =
+      parsed && typeof parsed === 'object' && parsed && 'message' in parsed && typeof (parsed as { message?: string }).message === 'string'
+        ? (parsed as { message: string }).message
+        : `${res.status}: ${text || 'erro'}`;
+    throw new Error(message);
+  }
+  return parsed as { id: string };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -28,30 +62,79 @@ export function AtualizarProgressoModal({
   open,
   onOpenChange,
   tarefa,
+  obraId,
   onConfirmar,
 }: AtualizarProgressoModalProps) {
-  const [valor, setValor] = useState(tarefa?.progresso ?? 0);
+  const progressoAtual = tarefa?.progresso ?? 0;
+  const [valor, setValor] = useState(progressoAtual);
+  const { toast } = useToast();
+  const qc = useQueryClient();
 
-  // Sincroniza quando a tarefa muda
-  const progresso = tarefa?.progresso ?? 0;
+  // Sincroniza o slider quando o modal abre ou a tarefa alvo muda.
+  // Não depende de onOpenChange(true) — em diálogos controlados,
+  // o parent altera `open` direto e o callback nem sempre dispara.
+  useEffect(() => {
+    if (open) setValor(progressoAtual);
+  }, [open, tarefa?.id, progressoAtual]);
 
-  const handleOpen = () => setValor(progresso);
+  const handleClose = () => onOpenChange(false);
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!tarefa) throw new Error('Tarefa não informada.');
+      const delta = valor - progressoAtual;
+      if (delta <= 0) return { skipped: true as const };
+      const etapaRaw = tarefa.etapa && tarefa.etapa !== 'Sem etapa' ? tarefa.etapa : tarefa.titulo;
+      const etapa = (etapaRaw ?? 'Etapa').slice(0, 120);
+      await postMedicao({
+        obraId,
+        etapa,
+        descricao: `Atualização de progresso da tarefa "${tarefa.titulo}" (${progressoAtual}% → ${valor}%).`,
+        percentual: delta,
+      });
+      return { skipped: false as const };
+    },
+    onSuccess: (result) => {
+      // Atualiza a tarefa (parent dispara useUpdateTarefa) em paralelo à medição.
+      onConfirmar(valor);
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'medicoes'] });
+      qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['obras', obraId] });
+      if (result.skipped) {
+        toast({
+          title: 'Progresso atualizado',
+          description: 'Sem aumento de percentual — nenhuma medição nova foi enviada.',
+        });
+      } else {
+        toast({
+          title: 'Medição enviada para aprovação',
+          description: 'O contratante já pode aprovar ou contestar.',
+        });
+      }
+      handleClose();
+    },
+    onError: (err: unknown) => {
+      toast({
+        title: 'Não foi possível registrar a medição',
+        description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleConfirmar = () => {
-    onConfirmar(valor);
-    handleClose();
+    if (!tarefa || mutation.isPending) return;
+    mutation.mutate();
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
-        if (isOpen) handleOpen();
-        else handleClose();
+        if (!isOpen && !mutation.isPending) handleClose();
       }}
     >
       <DialogContent className="w-full max-w-sm p-0 flex flex-col gap-0 overflow-hidden">
@@ -74,7 +157,7 @@ export function AtualizarProgressoModal({
         <div className="p-6 flex flex-col gap-6">
           {/* Valor central em destaque */}
           <div className="flex flex-col items-center gap-2">
-            <span className="text-5xl font-extrabold text-primary tabular-nums">
+            <span className="text-5xl font-extrabold text-primary tabular-nums" data-testid="text-valor-progresso">
               {valor}%
             </span>
             <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -83,6 +166,16 @@ export function AtualizarProgressoModal({
                 style={{ width: `${valor}%` }}
               />
             </div>
+            <p className="text-xs text-gray-500 mt-1 text-center">
+              Atual: <span className="font-semibold">{progressoAtual}%</span>
+              {valor > progressoAtual && (
+                <>
+                  {' · '}
+                  envia medição de{' '}
+                  <span className="font-semibold text-primary">+{valor - progressoAtual}%</span> para aprovação
+                </>
+              )}
+            </p>
           </div>
 
           {/* Slider */}
@@ -93,8 +186,10 @@ export function AtualizarProgressoModal({
             step={5}
             value={valor}
             onChange={(e) => setValor(Number(e.target.value))}
-            className="w-full h-2 rounded-full accent-primary cursor-pointer"
+            disabled={mutation.isPending}
+            className="w-full h-2 rounded-full accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             autoFocus
+            data-testid="input-slider-progresso"
           />
 
           {/* Atalhos rápidos */}
@@ -104,7 +199,8 @@ export function AtualizarProgressoModal({
                 key={v}
                 type="button"
                 onClick={() => setValor(v)}
-                className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                disabled={mutation.isPending}
+                className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {v}%
               </button>
@@ -113,12 +209,17 @@ export function AtualizarProgressoModal({
         </div>
 
         <DialogFooter className="p-6 pt-0 flex flex-row justify-end gap-3">
-          <Button type="button" variant="ghost" onClick={handleClose}>
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={mutation.isPending}>
             Cancelar
           </Button>
-          <Button type="button" onClick={handleConfirmar}>
+          <Button
+            type="button"
+            onClick={handleConfirmar}
+            disabled={mutation.isPending}
+            data-testid="button-submit-progresso"
+          >
             <IconCheck className="text-sm mr-1" />
-            Salvar progresso
+            {mutation.isPending ? 'Enviando...' : 'Salvar progresso'}
           </Button>
         </DialogFooter>
       </DialogContent>
