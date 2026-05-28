@@ -15,6 +15,13 @@ next-env.d.ts
 # Replit config with sensitive credentials
 .replit
 
+# Environment files with secrets (NUNCA versionar .env.local — só o .env.example)
+.env
+.env.local
+.env*.local
+
+# Claude Code (.claude/ e CLAUDE.md SÃO versionados de propósito — skills locais)
+
 # Playwright
 .next-e2e
 test-results/
