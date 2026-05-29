@@ -305,6 +305,7 @@ export const notificacoes = pgTable("notificacoes", {
   titulo: text("titulo").notNull(),
   descricao: text("descricao").notNull(),
   href: text("href"),
+  threadId: varchar("thread_id").references(() => chatThreads.id, { onDelete: "set null" }),
   lida: boolean("lida").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

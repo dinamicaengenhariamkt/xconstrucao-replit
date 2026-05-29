@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, medicoes, obras } from "@shared/db/schema";
@@ -8,6 +8,7 @@ import { isRateLimited } from "@features/auth/api/rate-limit";
 import { assertMedicaoEditableByContratante, recomputeObraProgresso } from "../../_shared";
 import { criarLancamentoFromMedicao } from "@features/financeiro/lancamentos-service";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { dispararNotificacaoMedicaoAprovada } from "@features/notificacoes/medicao-dispatcher";
 
 const VENCIMENTO_DIAS_PADRAO = 15;
 
@@ -216,6 +217,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     },
     request,
   });
+
+  // J06 — notificar empreiteiro de medição aprovada.
+  after(() => dispararNotificacaoMedicaoAprovada({ medicaoId: id }));
 
   const r = NextResponse.json({ ...updatedRow, progresso, lancamentoId });
   setNoCacheHeaders(r);

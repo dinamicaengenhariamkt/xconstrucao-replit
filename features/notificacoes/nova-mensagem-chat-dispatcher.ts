@@ -6,6 +6,13 @@ import { criarNotificacao } from "./service";
 const TRECHO_MAX = 80;
 const COALESCING_WINDOW_MINUTES = 5;
 
+/** Trunca por code point (preserva emoji/surrogate pairs) ao invés de code unit UTF-16. */
+function truncarTexto(texto: string, max: number): string {
+  const cps = Array.from(texto);
+  if (cps.length <= max) return texto;
+  return `${cps.slice(0, max).join("").trimEnd()}…`;
+}
+
 export interface NotificarNovaMensagemArgs {
   threadId: string;
   autorUserId: string;
@@ -61,7 +68,7 @@ export async function notificarNovaMensagem(args: NotificarNovaMensagemArgs): Pr
 
     const href = `${basePath}?conversationId=${args.threadId}`;
 
-    // Coalescing: pula se já há notificação não-lida desta thread na janela.
+    // Coalescing por thread_id (mais robusto que href, que pode ganhar query params no futuro).
     const cutoff = new Date(Date.now() - COALESCING_WINDOW_MINUTES * 60 * 1000);
     const [existente] = await db
       .select({ id: notificacoes.id })
@@ -69,9 +76,8 @@ export async function notificarNovaMensagem(args: NotificarNovaMensagemArgs): Pr
       .where(
         and(
           eq(notificacoes.userId, args.destinatarioUserId),
-          eq(notificacoes.tipo, "info"),
+          eq(notificacoes.threadId, args.threadId),
           eq(notificacoes.lida, false),
-          eq(notificacoes.href, href),
           gt(notificacoes.createdAt, cutoff),
         ),
       )
@@ -81,8 +87,7 @@ export async function notificarNovaMensagem(args: NotificarNovaMensagemArgs): Pr
       return;
     }
 
-    const trecho =
-      args.texto.length > TRECHO_MAX ? `${args.texto.slice(0, TRECHO_MAX).trimEnd()}…` : args.texto;
+    const trecho = truncarTexto(args.texto, TRECHO_MAX);
     const autor = (ctx.autor_nome ?? "").trim() || "Alguém";
 
     await criarNotificacao({
@@ -91,6 +96,7 @@ export async function notificarNovaMensagem(args: NotificarNovaMensagemArgs): Pr
       titulo: `Nova mensagem de ${autor}`,
       descricao: ctx.obra_nome ? `${ctx.obra_nome}: ${trecho}` : trecho,
       href,
+      threadId: args.threadId,
     });
   } catch (err) {
     console.error("[chat-notif] falha ao notificar nova mensagem:", err);

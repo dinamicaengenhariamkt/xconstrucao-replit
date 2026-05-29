@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
@@ -8,6 +8,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { assertMedicaoEditableByContratante, recomputeObraProgresso } from "../../_shared";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { dispararNotificacaoMedicaoContestada } from "@features/notificacoes/medicao-dispatcher";
 
 const bodySchema = z.object({
   motivo: z.string().trim().min(10).max(2000),
@@ -80,6 +81,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     targetUserId: check.medicao.empreiteiroId,
     payload: { medicaoId: id, numero: check.medicao.numero, etapa: check.medicao.etapa, motivo: parsed.data.motivo },
   });
+
+  // J06 — notificar empreiteiro de medição contestada (com motivo).
+  after(() => dispararNotificacaoMedicaoContestada({ medicaoId: id, motivo: parsed.data.motivo }));
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

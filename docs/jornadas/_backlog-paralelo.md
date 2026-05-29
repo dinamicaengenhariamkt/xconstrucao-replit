@@ -109,3 +109,55 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** corrigimos IDOR restringindo anexo à própria obra da thread. Se algum dia o produto quiser permitir anexar OUTRAS obras do próprio user (ex: "olha aquela obra que terminamos"), validar que `autorUserId` é dono/empreiteira da obra anexada.
 - **Prioridade:** P2 (só vira P1 se o anexo expandir além da thread)
+
+---
+
+## Pós-review do Hardening J13 + Notif J06 (2026-05-29)
+
+### Race condition no coalescing de notif de chat
+- **Origem:** J13 hardening review (code-reviewer BLOCK)
+- **Descoberto:** 2026-05-29
+- **Motivação:** o SELECT (coalescing) e INSERT (criarNotificacao) não são atômicos. Duas mensagens em paralelo podem ambas ver "sem notif" e ambas inserir. Hoje é "best-effort coalescing" — funciona 99% dos casos. Mitigar requer advisory lock por `(userId, threadId)` ou índice único parcial `UNIQUE (user_id, thread_id) WHERE lida = false` (não trivial porque `lida` muda no tempo).
+- **Prioridade:** P2 (impacto baixo — duplicar notif raro em condição de corrida)
+
+### `getClientIp` confia em `X-Forwarded-For` sem trusted proxy gate
+- **Origem:** J13 hardening review (security-auditor MEDIUM)
+- **Descoberto:** 2026-05-29
+- **Motivação:** atacante pode rotacionar `X-Forwarded-For` por request e bypassar o tier IP do rate-limit. Tiers user/thread ainda protegem. Fix: gate por env `TRUST_PROXY_HEADERS=1` no `features/auth/api/rate-limit.ts`. Afeta TODOS os usos de rate-limit (J03 anexos, J13 chat, etc).
+- **Prioridade:** P1 antes de produção; P2 enquanto Replit (single instance, sem proxy externo)
+
+### Rate-limit in-memory não funciona em multi-instance
+- **Origem:** J13 hardening review (code-reviewer)
+- **Descoberto:** 2026-05-29
+- **Motivação:** `Map` em memória do processo. Em ambiente serverless/multi-instance, contagem fragmenta — limite efetivo vira `max × instâncias`. Aceitável como soft limit; pra hard limit requer Redis ou similar.
+- **Prioridade:** P2 (afeta produção em escala)
+
+### Idempotência em medicao-dispatcher
+- **Origem:** J06 review (code-reviewer)
+- **Descoberto:** 2026-05-29
+- **Motivação:** sem flag de idempotência. Se a route retentar (raro em medições — são gestos manuais), notificação dispara duas vezes. Padrão do candidatura-dispatcher tem flag `notificacao_disparada` — vale análogo aqui se gerar reclamação real.
+- **Prioridade:** P2
+
+### Hook compartilhado pra auto-marcar lida
+- **Origem:** J13 review (code-reviewer)
+- **Descoberto:** 2026-05-29
+- **Motivação:** os 2 effects (re-marcar quando msg nova + listener `visibilitychange`) estão duplicados em `app/contratante/chat/page.tsx` e `app/empreiteiro/chat/page.tsx`. Próxima edição vai ser propensa a divergência. Extrair `useAutoMarcarLida(...)` em `features/shared/xchat/hooks/`.
+- **Prioridade:** P2
+
+### Gate de re-marcar lida por unread real
+- **Origem:** J13 review (code-reviewer SUGGEST)
+- **Descoberto:** 2026-05-29
+- **Motivação:** listener de `visibilitychange` dispara `marcarLidaMutation` toda vez que aba volta — mesmo sem nada novo. Endpoint retorna `marcadas=0` mas é roundtrip desperdiçado. Gate por "tem unread no estado de conversas?" (consulta cache `useConversations`) reduz noise.
+- **Prioridade:** P2
+
+### Tipar `result.body` do aceitar candidatura
+- **Origem:** J13 review (code-reviewer SUGGEST)
+- **Descoberto:** 2026-05-29
+- **Motivação:** o handler usa `(result.body as any).foo` em vários pontos. Union discriminada ou helper tipado reduz risco de typo silencioso. Padrão sistêmico do arquivo — não regressão.
+- **Prioridade:** P2
+
+### Testes pra novas funções
+- **Origem:** J13 hardening + J06 review (code-reviewer)
+- **Descoberto:** 2026-05-29
+- **Motivação:** sem cobertura unit/integration pras 3 funções de medicao-dispatcher, retry da chat thread, e os useEffects de auto-marcar lida. Padrão do projeto é light em testes — gap aceitável mas registrado.
+- **Prioridade:** P2

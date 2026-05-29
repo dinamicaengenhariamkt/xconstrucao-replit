@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { dispararNotificacaoMedicaoCriada } from "@features/notificacoes/medicao-dispatcher";
 
 const bodySchema = z.object({
   obraId: z.string().min(1),
@@ -145,6 +146,9 @@ export async function POST(request: NextRequest) {
     obraId,
     payload: { medicaoId: created.id, numero, etapa, percentual, valor: valor ?? 0 },
   });
+
+  // J06 — notificar contratante de nova medição aguardando avaliação.
+  after(() => dispararNotificacaoMedicaoCriada({ medicaoId: created.id }));
 
   const r = NextResponse.json(created, { status: 201 });
   setNoCacheHeaders(r);

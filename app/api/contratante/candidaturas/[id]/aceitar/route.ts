@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -110,32 +110,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         .set({ empreiteiraId: emp.id, status: "em_andamento", updatedAt: now })
         .where(eq(obras.id, cand.obraId));
 
-      // 1.5) J13 — garantir thread de chat 1:1 (idempotente).
-      // Try/catch interno: o aceite tem precedência. Se a thread falhar, segue;
-      // backfill futuro pode recuperar (vide docs/jornadas/_backlog-paralelo.md).
-      try {
-        if (obraRow.cliente_id) {
-          const [cliUser] = await tx
-            .select({ userId: clientes.userId })
-            .from(clientes)
-            .where(eq(clientes.id, obraRow.cliente_id));
-          if (cliUser?.userId) {
-            await garantirChatThread(
-              {
-                obraId: cand.obraId,
-                contratanteUserId: cliUser.userId,
-                empreiteiroUserId: cand.empreiteiroId,
-              },
-              tx,
-            );
-          } else {
-            console.warn("[chat] cliente sem userId — thread não criada para obra", cand.obraId);
-          }
-        } else {
-          console.warn("[chat] obra sem cliente_id — thread não criada para obra", cand.obraId);
-        }
-      } catch (chatErr) {
-        console.error("[chat] falha ao garantir thread no aceite (não bloqueante):", chatErr);
+      // 1.5) Resolver contratanteUserId pra criação pós-commit da thread de chat (J13).
+      // Mantemos o lookup dentro da tx (consistência) mas o INSERT da thread roda
+      // fora, isolando o aceite de qualquer falha na chat.
+      let contratanteUserIdParaChat: string | null = null;
+      if (obraRow.cliente_id) {
+        const [cliUser] = await tx
+          .select({ userId: clientes.userId })
+          .from(clientes)
+          .where(eq(clientes.id, obraRow.cliente_id));
+        contratanteUserIdParaChat = cliUser?.userId ?? null;
       }
 
       // 2) Aceitar candidatura — atômico: WHERE id=? AND status='pendente'.
@@ -181,6 +165,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
           rejeitadasCount: rejeitadas.length,
           rejeitadasIds: rejeitadas.map((r) => r.id),
         },
+        chatThreadArgs:
+          contratanteUserIdParaChat && cand.empreiteiroId
+            ? {
+                obraId: cand.obraId,
+                contratanteUserId: contratanteUserIdParaChat,
+                empreiteiroUserId: cand.empreiteiroId,
+              }
+            : null,
       };
     });
 
@@ -243,6 +235,39 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       const rejeitadasIds: string[] = (result.body as any).rejeitadasIds ?? [];
       for (const rid of rejeitadasIds) {
         void dispararNotificacaoCandidaturaDecidida({ candidaturaId: rid, request });
+      }
+
+      // J13 — criar thread de chat fora da tx do aceite (best-effort com 1 retry).
+      // `after()` garante execução pós-response inclusive em runtime serverless.
+      // Erros aqui não afetam o aceite — a thread fica recuperável.
+      const chatThreadArgs = result.chatThreadArgs;
+      if (chatThreadArgs) {
+        after(async () => {
+          try {
+            await garantirChatThread(chatThreadArgs);
+          } catch (firstErr) {
+            console.warn(
+              "[chat] 1ª tentativa de criar thread falhou, tentando novamente:",
+              firstErr,
+              chatThreadArgs,
+            );
+            await new Promise((r) => setTimeout(r, 500));
+            try {
+              await garantirChatThread(chatThreadArgs);
+            } catch (retryErr) {
+              console.error(
+                "[chat] falha persistente ao criar thread:",
+                retryErr,
+                chatThreadArgs,
+              );
+            }
+          }
+        });
+      } else {
+        console.warn(
+          "[chat] thread não criada — contratanteUserId ou empreiteiroUserId ausente para obra",
+          obraIdAceita,
+        );
       }
     }
 

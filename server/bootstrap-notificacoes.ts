@@ -30,6 +30,12 @@ export async function bootstrapNotificacoesSchema(): Promise<void> {
 
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notificacoes_user_created ON notificacoes(user_id, created_at DESC)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notificacoes_user_lida ON notificacoes(user_id, lida)`);
+
+    // J13 hardening — coluna thread_id pra coalescing de notificações de chat
+    // (substitui o match por href, frágil a mudanças de URL).
+    // A FK pra chat_threads é criada em bootstrap-chat (que roda depois deste).
+    await db.execute(sql`ALTER TABLE notificacoes ADD COLUMN IF NOT EXISTS thread_id VARCHAR`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notificacoes_thread_user_lida ON notificacoes(thread_id, user_id, lida) WHERE thread_id IS NOT NULL`);
   } catch (err) {
     console.error("[bootstrap-notificacoes] falha:", err);
     return;

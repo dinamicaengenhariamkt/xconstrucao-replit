@@ -10,6 +10,7 @@ export interface CriarNotificacaoArgs {
   titulo: string;
   descricao: string;
   href?: string | null;
+  threadId?: string | null;
 }
 
 export async function criarNotificacao(args: CriarNotificacaoArgs): Promise<Notificacao | null> {
@@ -22,6 +23,7 @@ export async function criarNotificacao(args: CriarNotificacaoArgs): Promise<Noti
         titulo: args.titulo,
         descricao: args.descricao,
         href: args.href ?? null,
+        threadId: args.threadId ?? null,
       })
       .returning();
     return row ?? null;

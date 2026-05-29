@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(chmod +x /home/runner/workspace/.claude/hooks/check-on-stop.sh)"
+      "Bash(chmod +x /home/runner/workspace/.claude/hooks/check-on-stop.sh)",
+      "Bash(npm run *)",
+      "Bash(git diff *)"
     ]
   }
 }

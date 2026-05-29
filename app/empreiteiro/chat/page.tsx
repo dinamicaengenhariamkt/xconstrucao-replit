@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { ConversationList } from '@features/empreiteiro/xchat/components/ConversationList';
 import { ChatHeader } from '@features/empreiteiro/xchat/components/ChatHeader';
 import { MessageArea } from '@features/empreiteiro/xchat/components/MessageArea';
@@ -40,6 +40,41 @@ export default function ChatPage() {
   useEffect(() => {
     if (!selectedConversationId || !isServerConversation) return;
     marcarLidaMutation.mutate(selectedConversationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationId, isServerConversation]);
+
+  // Marca lida quando chega nova mensagem do counterpart com a aba visível.
+  // O ref reseta a cada troca de conversa pra não disparar marcação espúria
+  // ao reabrir uma thread antiga (len > prev seria true por motivos errados).
+  const prevServerLenRef = useRef(0);
+  useEffect(() => {
+    prevServerLenRef.current = 0;
+  }, [selectedConversationId]);
+  useEffect(() => {
+    if (!selectedConversationId || !isServerConversation || !serverMessages) return;
+    const len = serverMessages.length;
+    const prev = prevServerLenRef.current;
+    prevServerLenRef.current = len;
+    if (len > prev && prev > 0) {
+      const last = serverMessages[len - 1];
+      if (last && !last.isOwn && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        marcarLidaMutation.mutate(selectedConversationId);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverMessages, selectedConversationId, isServerConversation]);
+
+  // Quando a aba volta a ficar visível, re-marca lida (usuário voltou a ler).
+  useEffect(() => {
+    if (!selectedConversationId || !isServerConversation) return;
+    if (typeof document === 'undefined') return;
+    const handle = () => {
+      if (document.visibilityState === 'visible') {
+        marcarLidaMutation.mutate(selectedConversationId);
+      }
+    };
+    document.addEventListener('visibilitychange', handle);
+    return () => document.removeEventListener('visibilitychange', handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversationId, isServerConversation]);
 

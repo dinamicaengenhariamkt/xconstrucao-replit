@@ -41,6 +41,18 @@ export async function bootstrapChatSchema(): Promise<void> {
 
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_thread_criada ON chat_mensagens(thread_id, criada_em DESC)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_nao_lidas ON chat_mensagens(thread_id, autor_user_id) WHERE lida_em IS NULL`);
+
+    // FK cross-table: notificacoes.thread_id → chat_threads.id (ON DELETE SET NULL).
+    // Garante que notificações ficam órfãs nulas quando a thread some (ex: cascade da obra).
+    // Adicionada aqui porque bootstrap-notificacoes roda antes — quando criou a coluna,
+    // chat_threads ainda não existia.
+    await db.execute(sql`
+      DO $$ BEGIN
+        ALTER TABLE notificacoes
+          ADD CONSTRAINT notificacoes_thread_id_fk
+          FOREIGN KEY (thread_id) REFERENCES chat_threads(id) ON DELETE SET NULL;
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
   } catch (err) {
     console.error("[bootstrap-chat] falha:", err);
     return;
