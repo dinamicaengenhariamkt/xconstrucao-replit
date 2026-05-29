@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /home/runner/workspace/.claude/hooks/check-on-stop.sh)"
+    ]
+  }
+}
