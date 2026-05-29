@@ -68,6 +68,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapAtividadesSchema failed:", err);
     });
 
+    const { bootstrapChatSchema } = await import("./server/bootstrap-chat");
+    await bootstrapChatSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapChatSchema failed:", err);
+    });
+
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
     await markOverduePagamentos().catch((err) => {
       console.error("[instrumentation] markOverduePagamentos failed:", err);

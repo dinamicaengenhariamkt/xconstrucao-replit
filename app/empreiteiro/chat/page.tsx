@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ConversationList } from '@features/empreiteiro/xchat/components/ConversationList';
 import { ChatHeader } from '@features/empreiteiro/xchat/components/ChatHeader';
 import { MessageArea } from '@features/empreiteiro/xchat/components/MessageArea';
 import { ChatInput } from '@features/empreiteiro/xchat/components/ChatInput';
 import { EmptyChat } from '@features/empreiteiro/xchat/components/EmptyChat';
 import { useConversations, useMessages } from '@features/empreiteiro/xchat/hooks/use-chat';
+import { useEmpreiteiroSendMessage } from '@features/empreiteiro/xchat/hooks/use-send-message';
+import { useEmpreiteiroMarcarLida } from '@features/empreiteiro/xchat/hooks/use-marcar-lida';
 import { useChatStore } from '@features/empreiteiro/xchat/store/chat-store';
 import { useMinhasObras } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
 import type { MessageAttachment } from '@features/empreiteiro/xchat/types';
@@ -23,12 +25,23 @@ export default function ChatPage() {
     setSelectedConversation,
   } = useChatStore();
   const { data: serverMessages, isLoading: msgLoading } = useMessages(selectedConversationId);
+  const sendMutation = useEmpreiteiroSendMessage();
+  const marcarLidaMutation = useEmpreiteiroMarcarLida();
 
   const selectedConversation =
     conversations?.find((c) => c.id === selectedConversationId) ?? null;
+  const isServerConversation = !!selectedConversation;
 
   const isTyping =
     !!selectedConversationId && typingConversationIds.includes(selectedConversationId);
+
+  // Ao abrir conversa real, marca mensagens do outro lado como lidas no backend
+  // e invalida o cache de conversas/notificações pra atualizar badges imediatamente.
+  useEffect(() => {
+    if (!selectedConversationId || !isServerConversation) return;
+    marcarLidaMutation.mutate(selectedConversationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationId, isServerConversation]);
 
   // Merge server messages with locally sent messages
   const allMessages = useMemo(() => {
@@ -39,7 +52,12 @@ export default function ChatPage() {
 
   const handleSend = (content: string, attachment?: MessageAttachment) => {
     if (!selectedConversationId) return;
-    sendMessage(selectedConversationId, content, attachment);
+    if (isServerConversation) {
+      sendMutation.mutate({ conversationId: selectedConversationId, content, attachment });
+    } else {
+      // Conversa efêmera (sem thread real ainda) — só local.
+      sendMessage(selectedConversationId, content, attachment);
+    }
   };
 
   if (convLoading) {

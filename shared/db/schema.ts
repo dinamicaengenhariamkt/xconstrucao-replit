@@ -311,6 +311,29 @@ export const notificacoes = pgTable("notificacoes", {
 
 export type Notificacao = typeof notificacoes.$inferSelect;
 
+export const chatThreads = pgTable("chat_threads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().unique("chat_threads_obra_unique").references(() => obras.id, { onDelete: "cascade" }),
+  contratanteUserId: varchar("contratante_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  empreiteiroUserId: varchar("empreiteiro_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  criadaEm: timestamp("criada_em").defaultNow().notNull(),
+  ultimaMensagemEm: timestamp("ultima_mensagem_em").defaultNow().notNull(),
+});
+
+export type ChatThread = typeof chatThreads.$inferSelect;
+
+export const chatMensagens = pgTable("chat_mensagens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  threadId: varchar("thread_id").notNull().references(() => chatThreads.id, { onDelete: "cascade" }),
+  autorUserId: varchar("autor_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  texto: text("texto").notNull(),
+  anexoObraId: varchar("anexo_obra_id").references(() => obras.id, { onDelete: "set null" }),
+  lidaEm: timestamp("lida_em"),
+  criadaEm: timestamp("criada_em").defaultNow().notNull(),
+});
+
+export type ChatMensagem = typeof chatMensagens.$inferSelect;
+
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
 export const marketplaceLeads = pgTable("marketplace_leads", {

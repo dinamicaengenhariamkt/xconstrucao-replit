@@ -7,6 +7,7 @@ import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { garantirChatThread } from "@features/chat/service";
 
 const bodySchema = z.object({
   mensagem: z.string().max(1000).optional(),
@@ -108,6 +109,34 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         .update(obras)
         .set({ empreiteiraId: emp.id, status: "em_andamento", updatedAt: now })
         .where(eq(obras.id, cand.obraId));
+
+      // 1.5) J13 — garantir thread de chat 1:1 (idempotente).
+      // Try/catch interno: o aceite tem precedência. Se a thread falhar, segue;
+      // backfill futuro pode recuperar (vide docs/jornadas/_backlog-paralelo.md).
+      try {
+        if (obraRow.cliente_id) {
+          const [cliUser] = await tx
+            .select({ userId: clientes.userId })
+            .from(clientes)
+            .where(eq(clientes.id, obraRow.cliente_id));
+          if (cliUser?.userId) {
+            await garantirChatThread(
+              {
+                obraId: cand.obraId,
+                contratanteUserId: cliUser.userId,
+                empreiteiroUserId: cand.empreiteiroId,
+              },
+              tx,
+            );
+          } else {
+            console.warn("[chat] cliente sem userId — thread não criada para obra", cand.obraId);
+          }
+        } else {
+          console.warn("[chat] obra sem cliente_id — thread não criada para obra", cand.obraId);
+        }
+      } catch (chatErr) {
+        console.error("[chat] falha ao garantir thread no aceite (não bloqueante):", chatErr);
+      }
 
       // 2) Aceitar candidatura — atômico: WHERE id=? AND status='pendente'.
       // Se outra request marcou rejeitada/cancelada entre o SELECT inicial

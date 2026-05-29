@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ conver
     setNoCacheHeaders(r);
     return r;
   } catch (err) {
-    console.error("[POST chat/messages]", err);
+    console.error("[POST empreiteiro chat/messages]", err);
     const r = NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
     setNoCacheHeaders(r);
     return r;

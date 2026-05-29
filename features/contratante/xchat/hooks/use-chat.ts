@@ -8,6 +8,7 @@ export function useContratanteConversations(): UseQueryResult<ContratanteConvers
     queryKey: ['contratante', 'chat', 'conversations'],
     queryFn: getContratanteConversations,
     staleTime: QUERY_CONFIG.staleTime,
+    refetchInterval: QUERY_CONFIG.refetchInterval,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });
 }
@@ -17,6 +18,7 @@ export function useContratanteMessages(conversationId: string | null): UseQueryR
     queryKey: ['contratante', 'chat', 'messages', conversationId],
     queryFn: () => getContratanteMessages(conversationId!),
     staleTime: QUERY_CONFIG.staleTime,
+    refetchInterval: QUERY_CONFIG.refetchInterval,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
     enabled: !!conversationId,
   });

@@ -8,6 +8,7 @@ export function useConversations(): UseQueryResult<Conversation[], Error> {
     queryKey: ['empreiteiro', 'chat', 'conversations'],
     queryFn: getConversations,
     staleTime: QUERY_CONFIG.staleTime,
+    refetchInterval: QUERY_CONFIG.refetchInterval,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
   });
 }
@@ -17,6 +18,7 @@ export function useMessages(conversationId: string | null): UseQueryResult<Messa
     queryKey: ['empreiteiro', 'chat', 'messages', conversationId],
     queryFn: () => getMessages(conversationId!),
     staleTime: QUERY_CONFIG.staleTime,
+    refetchInterval: QUERY_CONFIG.refetchInterval,
     refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
     enabled: !!conversationId,
   });
