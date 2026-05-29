@@ -91,7 +91,10 @@ XConstrução is a comprehensive construction management platform that connects 
 - Sender exibido: `XConstrução <noreply@dinamicareforma.com.br>`.
 - Test mode: `EMAIL_TEST_MODE=1` → emails são capturados em memória (`shared/lib/test-email-store.ts`) e expostos por `/api/test/emails` para os E2E. A API da Brevo NÃO é chamada nesse modo.
 
-## Feature Architecture (Empreiteiro & Contratante)
+## Rate-limit & Trusted Proxy
+- Helper centralizado em `features/auth/api/rate-limit.ts`: `isRateLimited(key, max, windowMs)` + `getClientIp(request)`.
+- Padrão de uso: 3 tiers (`user`/`tipo-recurso`/`ip`) — ex: `chat.message.create:user:<id>` 30/min + `:thread:<id>` 60/min + `:ip:<ip>` 120/min.
+- **`TRUST_PROXY_HEADERS=1`** — quando setado, `getClientIp` lê `X-Forwarded-For`/`X-Real-IP` (necessário em produção atrás de proxy). Sem ele, headers são ignorados (anti-spoof em dev). **No Replit deve estar setado** porque o app roda atrás de proxy confiável.
 Feature-based architecture under `features/empreiteiro/` and `features/contratante/`:
 - Each feature has: types/, mocks/, hooks/, api/, components/ folders
 - Mock data enabled via `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK=true` (shared for both roles)

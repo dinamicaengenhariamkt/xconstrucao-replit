@@ -28,12 +28,29 @@ export function isRateLimited(key: string, max: number, windowMs: number): boole
   return entry.count > max;
 }
 
-/** Extrai o IP do cliente a partir dos headers da request */
+/**
+ * Extrai o IP do cliente a partir dos headers da request.
+ *
+ * `X-Forwarded-For` e `X-Real-IP` só são confiáveis quando o app roda atrás de
+ * um proxy controlado (Replit, Vercel, Cloudflare, etc) — sem isso, qualquer
+ * cliente pode spoofar esses headers e bypassar o tier IP do rate-limit.
+ *
+ * Comportamento:
+ * - `TRUST_PROXY_HEADERS=1`: lê `X-Forwarded-For` (primeiro IP) → `X-Real-IP` → fallback.
+ * - Caso contrário: ignora `X-Forwarded-For` e usa só `X-Real-IP` (alguns proxies setam mesmo sem trust).
+ *
+ * Em dev local sem proxy, o tier IP fica neutralizado (todas requests caem em "unknown"),
+ * mas tiers `user`/`thread` continuam protegendo. Em produção, setar `TRUST_PROXY_HEADERS=1`.
+ */
 export function getClientIp(request: Request): string {
-  const headers = new Headers((request as Request).headers);
-  return (
-    headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    headers.get('x-real-ip') ??
-    'unknown'
-  );
+  const headers = new Headers(request.headers);
+  const trustProxy = process.env.TRUST_PROXY_HEADERS === '1';
+  if (trustProxy) {
+    return (
+      headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+      headers.get('x-real-ip') ??
+      'unknown'
+    );
+  }
+  return headers.get('x-real-ip') ?? 'unknown';
 }

@@ -22,7 +22,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 10 | [Disputas](10-disputas.md) | todas | 3 | mock | baixa |
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | mock | média |
 | 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | parcial | média |
-| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | mock | média |
+| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | pronto | média |
 
 ---
 
@@ -48,6 +48,9 @@ Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → AP
 
 ### Doc viva — seção "Gaps descobertos"
 Cada jornada tem uma seção 13 onde se registra, durante a execução, o que apareceu no caminho e não estava no roteiro original (edge cases, validações implícitas, decisões de UX, integrações que viraram dor). Uma linha por item, com data. Atualizar no mesmo PR que resolve o gap. Isso transforma o markdown em referência viva — quem entrar depois lê o roteiro *e* o aprendizado.
+
+### Backlog paralelo (transversal)
+Itens descobertos durante a execução que **não pertencem a uma jornada só** — refinamentos sistêmicos, dívidas técnicas cross-feature, decisões arquiteturais ainda em aberto — ficam em [_backlog-paralelo.md](_backlog-paralelo.md). O agent `product-owner` lê esse arquivo no `/jornada` pra incluir nas evoluções sugeridas.
 
 ### Sobreposição entre jornadas
 Quando uma feature aparece em duas jornadas (ex: notificação de candidatura aceita aparece em J05 e J13), use a regra do **dono primário**:

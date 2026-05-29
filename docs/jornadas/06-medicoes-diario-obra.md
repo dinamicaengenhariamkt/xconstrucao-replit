@@ -51,7 +51,7 @@ Permitir que o empreiteiro registre etapas concluídas (com fotos/percentual) e 
 - [x] Upload de fotos via R2 — novo kind `obra_foto` + integração com `FileUploader` _(Task #72)_
 - [x] Atualizar `obras.progresso` no aprovar (SUM dos `percentual` aprovados) _(Task #47)_
 - [x] Gerar lançamento financeiro (J08) no aprovar _(Task #82 — hook em transação atômica, idempotente via UNIQUE `financeiro.medicao_id`)_
-- [ ] Notificações em criação/aprovação/contestação (J13)
+- [x] Notificações em criação/aprovação/contestação (J13) _(2026-05-29 — `medicao-dispatcher.ts` plugado nos 3 endpoints via `after()`)_
 - [x] Substituir mock no front (contratante real; empreiteiro/`minhas-obras` zeroado) _(Task #47)_
 - [x] Diário de obra ponta-a-ponta nas 3 personas (texto + fotos) _(Task #72)_
 - [x] Ocorrências (criar + resolver atomicamente) nas 3 personas _(Task #72)_

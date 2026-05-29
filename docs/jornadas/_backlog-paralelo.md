@@ -120,11 +120,11 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Motivação:** o SELECT (coalescing) e INSERT (criarNotificacao) não são atômicos. Duas mensagens em paralelo podem ambas ver "sem notif" e ambas inserir. Hoje é "best-effort coalescing" — funciona 99% dos casos. Mitigar requer advisory lock por `(userId, threadId)` ou índice único parcial `UNIQUE (user_id, thread_id) WHERE lida = false` (não trivial porque `lida` muda no tempo).
 - **Prioridade:** P2 (impacto baixo — duplicar notif raro em condição de corrida)
 
-### `getClientIp` confia em `X-Forwarded-For` sem trusted proxy gate
+### ~~`getClientIp` confia em `X-Forwarded-For` sem trusted proxy gate~~ ✓ Entregue 2026-05-29
 - **Origem:** J13 hardening review (security-auditor MEDIUM)
 - **Descoberto:** 2026-05-29
 - **Motivação:** atacante pode rotacionar `X-Forwarded-For` por request e bypassar o tier IP do rate-limit. Tiers user/thread ainda protegem. Fix: gate por env `TRUST_PROXY_HEADERS=1` no `features/auth/api/rate-limit.ts`. Afeta TODOS os usos de rate-limit (J03 anexos, J13 chat, etc).
-- **Prioridade:** P1 antes de produção; P2 enquanto Replit (single instance, sem proxy externo)
+- **Resolução:** `getClientIp` agora ignora `X-Forwarded-For` quando `TRUST_PROXY_HEADERS != "1"`. Documentado em `.env.example` e `replit.md`. Os 7 endpoints continuam chamando `getClientIp` igual — o gate é centralizado.
 
 ### Rate-limit in-memory não funciona em multi-instance
 - **Origem:** J13 hardening review (code-reviewer)
@@ -161,3 +161,31 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** sem cobertura unit/integration pras 3 funções de medicao-dispatcher, retry da chat thread, e os useEffects de auto-marcar lida. Padrão do projeto é light em testes — gap aceitável mas registrado.
 - **Prioridade:** P2
+
+---
+
+## Gaps descobertos pós-sync (2026-05-29) — preparando wave 3
+
+### Helper `userTemAssinaturaAtiva(userId)` — precondição J11
+- **Origem:** J11 (descoberto durante exploração pós-hardening J13)
+- **Descoberto:** 2026-05-29
+- **Motivação:** J03 (criar obra) e J05 (candidatar-se) vão precisar gating por assinatura ativa quando J11 sair do mock. Sem o helper, esses endpoints precisarão de refactor cirúrgico no futuro. Vale prototipar `features/planos/assinatura-service.ts` com `userTemAssinaturaAtiva(userId): Promise<boolean>` retornando `true` no MVP, e plantar as chamadas em J03/J05. Quando J11 ganhar gateway real, só troca a implementação interna.
+- **Prioridade:** P2 (precondição estratégica — vale plantar antes pra evitar fricção depois)
+
+### Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`
+- **Origem:** J13 §13 (Task #94) — confirmado durante exploração
+- **Descoberto:** 2026-05-29
+- **Motivação:** re-publicação de obra (admin re-aprova após pause→republish) dispara notif duplicada pra empreiteiro na zona. Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra. Mitigação: índice único parcial em `notificacoes` ou flag idempotente na obra. Bate com o "agrupamento de 5 mensagens novas" do §11 J13.
+- **Prioridade:** P1 (UX de spam é visível e gera saída de usuário)
+
+### Decisão arquitetural J09 — `escopo: obra | plataforma`
+- **Origem:** J09 (gap declarado em §6 do doc)
+- **Descoberto:** 2026-05-29 (durante mapeamento de wave 3)
+- **Motivação:** Caixa admin consome lançamentos financeiros. Mesma tabela `financeiro` + coluna `escopo` ou tabela separada? Afeta query de agregação, futuras integrações J08/J11/J12 (assinaturas + anúncios geram entradas de plataforma; obras geram entradas vinculadas). **Não é tarefa de código — é decisão a tomar antes de tirar J09 do mock**, pra evitar refactor de schema.
+- **Prioridade:** P1 (bloqueia início de J09)
+
+### Decisão estratégica J11 — gateway de pagamento
+- **Origem:** J11 (decisão declarada em §9 do doc)
+- **Descoberto:** 2026-05-29 (durante mapeamento de wave 3)
+- **Motivação:** Stripe / Pagar.me / outro. Bloqueia J11 inteira → bloqueia aba Plano & Uso da J02 → bloqueia gating efetivo de J03/J05 (assinatura ativa). Stripe entrega DX melhor; Pagar.me tem PIX/boleto nativo (essencial pro mercado BR). Não é tarefa de código — é decisão de produto + compliance.
+- **Prioridade:** P1 (bloqueia 3 jornadas em cascata)

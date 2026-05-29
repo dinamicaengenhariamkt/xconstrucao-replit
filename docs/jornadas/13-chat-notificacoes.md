@@ -1,7 +1,7 @@
 # Jornada — Chat & Notificações
 
-> Status: mock | Prioridade: média | Wave: 2
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: média | Wave: 2
+> Última atualização: 2026-05-29
 
 ## 1. Contexto & Objetivo
 Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (chat 1:1) + notificações in-app/email para eventos do sistema (candidatura aceita, medição aprovada, pagamento recebido, etc.). Sem isso, as personas não fecham o ciclo de informação.
@@ -53,15 +53,15 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 - [features/admin/notifications/mocks/](../../features/admin/notifications/mocks/)
 
 ## 9. Checklist de implementação
-- [ ] Schema + migration (threads, mensagens, notificacoes)
-- [ ] Hook em J05 aceitar criando thread automaticamente
-- [ ] Endpoints de chat (listar threads, listar mensagens, enviar)
-- [ ] Endpoints de notificações
-- [ ] Helper `notificar(userId, tipo, payload)` em [server/storage.ts](../../server/storage.ts)
-- [ ] Plugar helper em J05, J06, J08 (geradoras)
-- [ ] Componente sino no header com contagem de não-lidas
-- [ ] Real-time: avaliar polling (simples) vs. SSE/WebSocket (correto). MVP: polling 30s.
-- [ ] Email para tipos críticos (respeitar preferências J02)
+- [x] Schema + migration (threads, mensagens, notificacoes) _(2026-05-29 — `chat_threads`/`chat_mensagens` em [shared/db/schema.ts](../../shared/db/schema.ts) + bootstrap em [server/bootstrap-chat.ts](../../server/bootstrap-chat.ts); coluna `notificacoes.thread_id` adicionada com FK em [server/bootstrap-notificacoes.ts](../../server/bootstrap-notificacoes.ts))_
+- [x] Hook em J05 aceitar criando thread automaticamente _(2026-05-29 — `garantirChatThread` em `after()` pós-commit do aceitar/route)_
+- [x] Endpoints de chat (listar threads, listar mensagens, enviar) _(2026-05-29 — 6 rotas em [app/api/contratante/chat/](../../app/api/contratante/chat/) e [app/api/empreiteiro/chat/](../../app/api/empreiteiro/chat/), com rate-limit 3 tiers)_
+- [x] Endpoints de notificações _(GET/POST in-app + `marcar-todas-lidas` em [app/api/notificacoes/](../../app/api/notificacoes/))_
+- [x] Helper `notificar(userId, tipo, payload)` _(2026-05-29 — `criarNotificacao(args)` em [features/notificacoes/service.ts](../../features/notificacoes/service.ts) com suporte a `threadId`)_
+- [x] Plugar helper em J05, J06, J08 (geradoras) _(J05 candidatura-dispatcher; J06 medicao-dispatcher 2026-05-29; J08 Task #52)_
+- [x] Componente sino no header com contagem de não-lidas _(hooks de notif real em ambas as personas)_
+- [x] Real-time: avaliar polling (simples) vs. SSE/WebSocket (correto). MVP: polling 30s. _(2026-05-29 — `refetchInterval` 30s contratante / 60s empreiteiro)_
+- [ ] Email para tipos críticos (respeitar preferências J02) _(parcial: J05 candidatura usa Brevo; chat não envia email — decisão MVP)_
 - [x] Nova obra aprovada → notificação in-app + email para empreiteiros na zona de atuação (respeita `email_novaObra`) _(Task #94)_
 - [ ] Tela admin de monitoramento (auditoria)
 
@@ -90,3 +90,4 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 - 2026-05-26 (Task #94): Dispatcher `nova-obra-zona` é fire-and-forget pós-commit em `/api/admin/obras/[id]/aprovar` — sem retry/fila persistente. Se o processo morrer entre a aprovação e o disparo, a notificação se perde silenciosamente. Aceitável no MVP (in-app é "nice to have"; empreiteiro ainda vê a obra ao abrir o marketplace), mas vale virar `job + flag idempotente` (padrão do `candidatura-dispatcher`) se passar a ser canal crítico.
 - 2026-05-26 (Task #94): Re-publicação após rejeição re-dispara a notificação (mesma paridade da atividade `obra_publicada`). Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra em ciclos pause→republish. Resolver junto com o agrupamento de "5 mensagens novas" do §11.
 - 2026-05-26 (Task #94): Sem segmentação por **especialidade**, sem **raio km**, sem normalização IBGE de cidades, sem unsubscribe-link direto no email (CTA pro `/empreiteiro/configuracoes` aba notificações via texto). Cada um vira refinamento próprio quando entrar no roteiro.
+- 2026-05-29 (MVP + hardening): chat saiu do mock — schema, endpoints reais, polling 30/60s, dispatcher de chat com **coalescing 5min por `threadId`** (coluna dedicada em `notificacoes`), rate-limit 3 tiers no POST com tier `thread` após auth (anti-DoS), validação de anexo restrito à própria obra da thread, marcar-lida automático em mensagem nova com aba visível + listener `visibilitychange`. Detalhes e P1/P2 abertos em [_backlog-paralelo.md](_backlog-paralelo.md).
