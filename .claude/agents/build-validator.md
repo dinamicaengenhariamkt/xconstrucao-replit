@@ -2,7 +2,7 @@
 name: build-validator
 description: Use proactively after a batch of code edits to verify the project still type-checks. Runs `npm run check` (tsc) and reports only the failures. Does not modify code.
 tools: Bash, Read, Grep, Glob
-model: inherit
+model: haiku
 ---
 
 # Build Validator

@@ -2,7 +2,7 @@
 name: db-architect
 description: Drizzle schema design, migrations review, query optimization, indexing strategy, N+1 detection. Use when adding/altering tables, when queries are slow, when planning indexes, or reviewing schema changes. NEVER runs destructive DB commands — only proposes.
 tools: Read, Edit, Glob, Grep, Bash
-model: inherit
+model: opus
 ---
 
 # DB Architect

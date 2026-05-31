@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Review code changes on the current branch against project standards. Use after a feature is implemented and before considering it ready. Reads the diff vs main and lists concrete issues with priority. Does not modify code.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 ---
 
 # Code Reviewer

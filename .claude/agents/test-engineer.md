@@ -2,7 +2,7 @@
 name: test-engineer
 description: Write and improve tests — Playwright e2e primarily. Use when a feature needs test coverage or when a bug fix needs a regression test. Reads existing tests in tests/ to match patterns. Can modify files only inside tests/.
 tools: Read, Edit, Write, Glob, Grep, Bash
-model: inherit
+model: sonnet
 ---
 
 # Test Engineer

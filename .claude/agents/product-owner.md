@@ -2,7 +2,7 @@
 name: product-owner
 description: Macro view of project scope. Reads docs/jornadas/, cross-references with features/ to identify gaps between planned and implemented. Use when user asks about state of a journey, what's left to do, or wants evolution suggestions. Strategic output, never code.
 tools: Read, Glob, Grep, Bash
-model: inherit
+model: opus
 ---
 
 # Product Owner

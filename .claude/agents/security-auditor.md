@@ -2,7 +2,7 @@
 name: security-auditor
 description: Audit recent changes for security issues — auth bypass, secrets exposure, injection in Drizzle queries, XSS in JSX, IDOR, missing input validation. Use proactively when changes touch auth/, server/, app/api/, or any query/form construction. Does not modify code.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 ---
 
 # Security Auditor
