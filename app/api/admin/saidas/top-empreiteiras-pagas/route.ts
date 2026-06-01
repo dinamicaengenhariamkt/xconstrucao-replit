@@ -1,0 +1,19 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { getTopEmpreiteiras } from "@features/admin/financeiro/api/caixa-service";
+
+export async function GET(request: NextRequest) {
+  const guard = await requireVerifiedUser(request);
+  if (guard.error) return guard.error;
+  if (!isAdminLike(guard.user.role)) {
+    const r = NextResponse.json({ message: "Apenas administradores." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const periodo = new URL(request.url).searchParams.get("periodo");
+  const rows = await getTopEmpreiteiras(periodo, Date.now(), "saida");
+  // UI espera { nome, obras, totalSaidas }
+  const r = NextResponse.json(rows.map((x) => ({ nome: x.nome, obras: x.obras, totalSaidas: x.totalSaidas })));
+  setNoCacheHeaders(r);
+  return r;
+}

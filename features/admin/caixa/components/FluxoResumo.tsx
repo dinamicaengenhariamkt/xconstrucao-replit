@@ -1,25 +1,68 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { RiArrowDownLine, RiArrowUpLine, RiArrowUpDownLine } from 'react-icons/ri';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
 import { ANIMATION_CONFIG } from '@features/admin/financeiro/constants';
-import { mockFluxoResumoByPeriodo } from '../mocks';
-import type { CaixaPeriodo } from '../types';
+import { formatCurrency } from '@features/admin/financeiro/utils';
+import { useCaixaKpis } from '../hooks/use-caixa';
+import type { CaixaPeriodo, FluxoItem } from '../types';
 
 interface FluxoResumoProps {
   periodo: CaixaPeriodo;
   luminous?: boolean;
 }
 
+/**
+ * Resumo de fluxo (entradas / saídas / saldo) derivado dos KPIs REAIS do caixa
+ * (J09). Antes consumia mock; agora usa `useCaixaKpis`.
+ */
 export function FluxoResumo({ periodo, luminous = false }: FluxoResumoProps) {
-  const items = mockFluxoResumoByPeriodo[periodo];
+  const { data: kpis } = useCaixaKpis(periodo);
+
+  const entradas = kpis?.entradasPeriodo ?? 0;
+  const saidas = kpis?.saidasPeriodo ?? 0;
+  const resultado = kpis?.resultadoPeriodo ?? 0;
+
+  const items: FluxoItem[] = [
+    {
+      id: 'entradas',
+      icon: RiArrowDownLine,
+      bgClass: 'bg-[#22846D]/5',
+      iconBgClass: 'bg-[#22846D]/10',
+      iconColorClass: 'text-[#22846D]',
+      label: 'Total de entradas',
+      value: formatCurrency(entradas),
+      valueClass: 'text-gray-900 dark:text-gray-100',
+    },
+    {
+      id: 'saidas',
+      icon: RiArrowUpLine,
+      bgClass: 'bg-red-500/5',
+      iconBgClass: 'bg-red-500/10',
+      iconColorClass: 'text-red-600',
+      label: 'Total de saídas',
+      value: formatCurrency(saidas),
+      valueClass: 'text-gray-900 dark:text-gray-100',
+    },
+    {
+      id: 'saldo',
+      icon: RiArrowUpDownLine,
+      bgClass: 'bg-[#22846D]/5',
+      iconBgClass: 'bg-[#22846D]/10',
+      iconColorClass: 'text-[#22846D]',
+      label: 'Resultado do período',
+      value: `${resultado >= 0 ? '+ ' : '- '}${formatCurrency(Math.abs(resultado))}`,
+      valueClass: resultado >= 0 ? 'text-[#22846D]' : 'text-red-600',
+    },
+  ];
 
   return (
     <Card className={cn(luminous && 'luminous-section border-transparent shadow-none')}>
       <CardContent className="p-6">
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
           variants={{
             hidden: { opacity: 0 },
             show: {

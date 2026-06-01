@@ -4,7 +4,9 @@
       "Bash(chmod +x /home/runner/workspace/.claude/hooks/check-on-stop.sh)",
       "Bash(npm run *)",
       "Bash(git diff *)",
-      "Bash(awk 'NR>=253 && NR<=305' shared/schema.ts)"
+      "Bash(awk 'NR>=253 && NR<=305' shared/schema.ts)",
+      "Bash(pkill -f \"drizzle-kit push\")",
+      "Bash(npx tsx *)"
     ]
   }
 }

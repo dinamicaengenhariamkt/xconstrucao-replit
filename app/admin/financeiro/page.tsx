@@ -13,6 +13,7 @@ import { DashboardSkeleton } from '@features/admin/financeiro/components/Dashboa
 import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
 import { SatisfactionMetricsSection } from '@features/admin/financeiro/components/SatisfactionMetricsSection';
 import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
+import { useDashboardStats } from '@features/admin/financeiro/hooks/use-dashboard-stats';
 import { mockAdoptionMetrics } from '@features/admin/financeiro/mocks/adoption-metrics.mock';
 import { mockSatisfactionMetrics } from '@features/admin/financeiro/mocks/satisfaction-metrics.mock';
 import {
@@ -36,6 +37,8 @@ export default function AdminFinanceiroPage() {
   const [periodo, setPeriodo] = useState<PeriodoSeletor>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const { data: obras } = useAdminObras();
+  // KPIs financeiros REAIS (J09). Fallback para o mock do período enquanto carrega.
+  const { data: dashboardStats } = useDashboardStats();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -65,8 +68,8 @@ export default function AdminFinanceiroPage() {
         onCustomRangeChange={setCustomRange}
       />
 
-      {/* Bloco 2: KPI Cards */}
-      <StatsGridContainer data={mockStatsByPeriodo[periodo]} />
+      {/* Bloco 2: KPI Cards — dados reais (J09); mock como fallback de loading */}
+      <StatsGridContainer data={dashboardStats ?? mockStatsByPeriodo[periodo]} />
 
       {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) */}
       <AdoptionMetricsSection metrics={mockAdoptionMetrics} luminous />

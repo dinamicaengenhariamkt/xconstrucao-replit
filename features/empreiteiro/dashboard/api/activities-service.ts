@@ -30,6 +30,8 @@ const TIPO_TO_ACTIVITY_TYPE: Record<AtividadeTipo, ActivityType> = {
   ocorrencia_resolvida: 'milestone',
   lancamento_criado: 'payment',
   lancamento_quitado: 'payment',
+  disputa_aberta: 'alert',
+  disputa_resolvida: 'milestone',
 };
 
 const COLOR_MAP: Record<string, Activity['color']> = {

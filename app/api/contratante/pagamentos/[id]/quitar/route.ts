@@ -14,6 +14,7 @@ import { createSignedReadUrl } from "@shared/lib/storage";
 import { criarNotificacao } from "@features/notificacoes/service";
 import { sendPagamentoRecebidoEmail } from "@shared/lib/email";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { temDisputaAtivaNoAlvo } from "@features/disputas/disputas-service";
 
 const bodySchema = z.object({
   metodoPagamento: z.string().trim().min(2).max(80),
@@ -47,6 +48,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
   if (lanc.status === "pago") {
     const r = NextResponse.json({ error: "ALREADY_PAID" }, { status: 409 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // J10 — pagamento sob disputa ativa fica congelado até a resolução do admin.
+  if (await temDisputaAtivaNoAlvo("pagamento", id)) {
+    const r = NextResponse.json({ error: "EM_DISPUTA" }, { status: 409 });
     setNoCacheHeaders(r);
     return r;
   }

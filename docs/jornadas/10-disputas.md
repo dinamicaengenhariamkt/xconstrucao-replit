@@ -1,7 +1,7 @@
 # Jornada — Disputas
 
-> Status: mock | Prioridade: baixa | Wave: 3
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: baixa | Wave: 3
+> Última atualização: 2026-06-01
 
 ## 1. Contexto & Objetivo
 Mecanismo de resolução quando contratante e empreiteiro discordam — tipicamente sobre uma medição (J06) ou pagamento (J08). Admin medeia e tem poder de aplicar efeito financeiro (estornar, liberar, partir o valor).
@@ -38,13 +38,14 @@ Mecanismo de resolução quando contratante e empreiteiro discordam — tipicame
 - [features/admin/disputas/mocks/](../../features/admin/disputas/mocks/)
 
 ## 9. Checklist de implementação
-- [ ] Schema + migration
-- [ ] Endpoints CRUD + ação de resolução
-- [ ] Tela admin com fila e filtros (status, idade)
-- [ ] Aba dentro do detalhe da obra para as partes
-- [ ] Disparo de notificação (J13) em abertura/resolução
-- [ ] Efeito financeiro da resolução: gerar contra-lançamento em `financeiro` (J08)
-- [ ] Bloquear novo pagamento em alvo com disputa aberta
+- [x] Schema + migration (bootstrap idempotente `server/bootstrap-disputas.ts`)
+- [x] Endpoints CRUD + ação de resolução (`app/api/disputas`, `app/api/admin/disputas`)
+- [x] Disparo de notificação (J13) em abertura/resolução (`features/notificacoes/disputa-dispatcher.ts`)
+- [x] Efeito financeiro da resolução: contra-lançamento em `financeiro` escopo plataforma (idempotente por origem)
+- [x] Bloquear novo pagamento em alvo com disputa aberta (J08 `quitar` → 409 `EM_DISPUTA`)
+- [x] Abertura automática de disputa ao contestar medição (J06)
+- [x] Tela admin: service real (mock removido) — fila/filtros já existentes em `features/admin/disputas`
+- [ ] Aba dedicada dentro do detalhe da obra para as partes (UI — endpoints `/api/disputas` prontos)
 
 ## 10. Critérios de aceite
 1. Empreiteiro contesta medição (J06) → cria disputa automaticamente.
@@ -64,4 +65,8 @@ Mecanismo de resolução quando contratante e empreiteiro discordam — tipicame
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- **2026-06-01** — Modelo rico no DB (status `aberta/em_analise/aguardando_partes/resolvida/cancelada` + `resolucao_tipo` separado `favor_contratante/favor_empreiteiro/meio_termo`) mapeado para o contrato de UI já existente em `features/admin/disputas/types` no endpoint GET admin — evitou reescrever a tela. `cancelada` é exibida como `resolvida` na UI legada.
+- **2026-06-01** — Idempotência da abertura garantida por índice único PARCIAL `uq_disputas_alvo_aberta` (só quando status NOT IN resolvida/cancelada) — permite reabrir disputa sobre o mesmo alvo após encerramento.
+- **2026-06-01** — Efeito financeiro usa `criarLancamentoPlataforma` (escopo=plataforma, categoria=`disputa_estorno`, idempotente por `origem_tipo='disputa'`). `favor_empreiteiro` sobre pagamento cancelado reverte o lançamento para `pendente`.
+- **2026-06-01** — Endpoints das partes (`/api/disputas`, `/api/disputas/[id]`, `/api/disputas/[id]/mensagens`) prontos com ownership + notas internas só p/ admin. Falta apenas a **UI da aba de disputas** no detalhe da obra (contratante/empreiteiro) — backend 100% funcional.
+- **2026-06-01** — SLA/cron de escalonamento automático (risco §11) não implementado nesta fase — candidato a item futuro.

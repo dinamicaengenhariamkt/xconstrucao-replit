@@ -9,6 +9,8 @@ import { isRateLimited } from "@features/auth/api/rate-limit";
 import { assertMedicaoEditableByContratante, recomputeObraProgresso } from "../../_shared";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoMedicaoContestada } from "@features/notificacoes/medicao-dispatcher";
+import { abrirDisputa } from "@features/disputas/disputas-service";
+import { dispararNotificacaoDisputaAberta } from "@features/notificacoes/disputa-dispatcher";
 
 const bodySchema = z.object({
   motivo: z.string().trim().min(10).max(2000),
@@ -84,6 +86,27 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
   // J06 — notificar empreiteiro de medição contestada (com motivo).
   after(() => dispararNotificacaoMedicaoContestada({ medicaoId: id, motivo: parsed.data.motivo }));
+
+  // J10 — contestar uma medição abre automaticamente uma disputa (critério de
+  // aceite #1). Best-effort: se já houver disputa aberta sobre a medição, é
+  // ignorado silenciosamente; a contestação em si já está persistida.
+  after(async () => {
+    try {
+      const aberta = await abrirDisputa({
+        obraId: check.medicao.obraId,
+        abertaPorUserId: guard.user.id,
+        alvoTipo: "medicao",
+        alvoId: id,
+        categoria: "medicao_rejeitada",
+        titulo: `Medição #${check.medicao.numero} contestada — ${check.medicao.etapa}`,
+        descricao: parsed.data.motivo,
+        valorEnvolvido: check.medicao.valor != null ? Number(check.medicao.valor) : null,
+      });
+      if (aberta.ok) await dispararNotificacaoDisputaAberta({ disputaId: aberta.disputa.id });
+    } catch (err) {
+      console.error("[medicoes.contestar] falha ao abrir disputa automática:", err);
+    }
+  });
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

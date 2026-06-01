@@ -1,15 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AdminPlano, AdminPlanoAssinante, PlanosKpi } from '../types';
-import { isMockEnabled } from '@/features/shared/lib/mock-flag';
-import {
-  mockPlanosKpi,
-  mockPlanosContratante,
-  mockPlanosEmpreiteiro,
-  mockAssinantesContratante,
-  mockAssinantesEmpreiteiro,
-} from '../mocks';
-
-const ENABLE_MOCK = isMockEnabled();
 
 const QUERY_CONFIG = {
   staleTime: 30 * 60 * 1000,
@@ -20,7 +10,6 @@ export function usePlanosKpi() {
   return useQuery<PlanosKpi>({
     queryKey: ['admin', 'planos', 'kpi'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockPlanosKpi;
       const res = await fetch('/api/admin/planos/kpi');
       if (!res.ok) throw new Error('Erro ao buscar KPIs de planos');
       return res.json();
@@ -33,7 +22,6 @@ export function usePlanosContratante() {
   return useQuery<AdminPlano[]>({
     queryKey: ['admin', 'planos', 'contratante'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockPlanosContratante;
       const res = await fetch('/api/admin/planos?perfil=contratante');
       if (!res.ok) throw new Error('Erro ao buscar planos de contratante');
       return res.json();
@@ -46,7 +34,6 @@ export function usePlanosEmpreiteiro() {
   return useQuery<AdminPlano[]>({
     queryKey: ['admin', 'planos', 'empreiteiro'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockPlanosEmpreiteiro;
       const res = await fetch('/api/admin/planos?perfil=empreiteiro');
       if (!res.ok) throw new Error('Erro ao buscar planos de empreiteiro');
       return res.json();
@@ -59,7 +46,6 @@ export function useAssinantesContratante() {
   return useQuery<AdminPlanoAssinante[]>({
     queryKey: ['admin', 'planos', 'assinantes', 'contratante'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAssinantesContratante;
       const res = await fetch('/api/admin/planos/assinantes?perfil=contratante');
       if (!res.ok) throw new Error('Erro ao buscar assinantes contratante');
       return res.json();
@@ -72,7 +58,6 @@ export function useAssinantesEmpreiteiro() {
   return useQuery<AdminPlanoAssinante[]>({
     queryKey: ['admin', 'planos', 'assinantes', 'empreiteiro'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAssinantesEmpreiteiro;
       const res = await fetch('/api/admin/planos/assinantes?perfil=empreiteiro');
       if (!res.ok) throw new Error('Erro ao buscar assinantes empreiteiro');
       return res.json();

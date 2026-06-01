@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, desc, inArray, isNull } from "drizzle-orm";
+import { and, eq, desc, inArray, isNull, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { candidaturas, candidaturaAnexos, clientes, obras, userFiles } from "@shared/db/schema";
@@ -7,6 +7,14 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { getLimiteRecurso } from "@features/planos/assinatura-service";
+
+/** Sinaliza estouro de limite de propostas/mês dentro da transação de criação. */
+class PropostaLimiteError extends Error {
+  constructor(public readonly limite: number) {
+    super("LIMITE_PLANO");
+  }
+}
 
 /**
  * Allowlist explícita: somente campos que o empreiteiro pode submeter no form
@@ -201,7 +209,41 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-    const [inserted] = await db.insert(candidaturas).values(insertValues).returning();
+
+    // J11 — limite de propostas/mês do plano ativo (free=5, pro=30, ...). Contagem
+    // + insert na MESMA transação, fechando a corrida check-then-act.
+    const limitePropostas = await getLimiteRecurso(userId, "propostasMes");
+    let inserted: typeof candidaturas.$inferSelect;
+    try {
+      inserted = await db.transaction(async (tx) => {
+        if (limitePropostas != null && limitePropostas < 9999) {
+          const inicioMes = new Date();
+          inicioMes.setDate(1);
+          inicioMes.setHours(0, 0, 0, 0);
+          const [{ usadas }] = await tx
+            .select({ usadas: sql<number>`COUNT(*)::int` })
+            .from(candidaturas)
+            .where(and(eq(candidaturas.empreiteiroId, userId), gte(candidaturas.createdAt, inicioMes)));
+          if (usadas >= limitePropostas) {
+            throw new PropostaLimiteError(limitePropostas);
+          }
+        }
+        const [row] = await tx.insert(candidaturas).values(insertValues).returning();
+        return row;
+      });
+    } catch (err) {
+      if (err instanceof PropostaLimiteError) {
+        return NextResponse.json(
+          {
+            message: `Você atingiu o limite de ${err.limite} propostas/mês do seu plano. Faça upgrade para enviar mais.`,
+            code: "LIMITE_PLANO",
+            limite: err.limite,
+          },
+          { status: 402 },
+        );
+      }
+      throw err;
+    }
     // J07: target = contratante user (dono da obra) — habilita feed do contratante.
     let contratanteUserId: string | null = null;
     if (obra.clienteId) {

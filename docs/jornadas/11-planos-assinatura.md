@@ -1,7 +1,12 @@
 # Jornada — Planos & Assinatura
 
-> Status: mock | Prioridade: média | Wave: 3
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: média | Wave: 3
+> Última atualização: 2026-06-01
+>
+> Observação: ecossistema completo e funcional via **adapter de gateway "manual"**
+> (ativa sem cobrança real). A integração com gateway real (Stripe/PayPal/
+> MercadoPago/Asaas) está documentada e **bloqueada** na Jornada 14, aguardando
+> decisão do gateway — basta plugar o adapter, nada mais muda.
 
 ## 1. Contexto & Objetivo
 Monetização da plataforma via assinatura. Admin define planos com preço e limites (nº de obras ativas, candidaturas/mês, recursos premium); contratante e empreiteiro escolhem e pagam; status de assinatura gateia features nas demais jornadas.
@@ -44,15 +49,19 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - Mocks análogos nas personas (verificar).
 
 ## 9. Checklist de implementação
-- [ ] Decidir gateway (Stripe / Pagar.me / outro) e provisionar
-- [ ] Schema + migration
-- [ ] CRUD admin de planos
-- [ ] Checkout iniciando sessão no gateway e redirect
-- [ ] Webhook de confirmação atualizando `assinaturas.status`
-- [ ] Helper `userTemAssinaturaAtiva(userId)` para gating em outras jornadas
-- [ ] Aplicar gating: limite de obras ativas (J03), limite de candidaturas/mês (J05)
-- [ ] Tela "minha assinatura" (renovação, cancelar, baixar nota)
-- [ ] Lançamento entrada em J09 ao confirmar pagamento
+- [x] **Abstração de gateway**: porta `PaymentGateway` + adapter `manual` ativo + factory por env `PAYMENT_GATEWAY` (`features/planos/gateway/`)
+- [x] Schema + migration (idempotente `server/bootstrap-planos.ts`): `planos`, `assinaturas`, `assinatura_eventos`
+- [x] Seed do catálogo a partir de `shared/lib/plans-catalog` (fonte de verdade dos limites)
+- [x] CRUD admin de planos (`GET /api/admin/planos`, `PATCH /api/admin/planos/[id]`, kpi, assinantes)
+- [x] Checkout (`POST /api/assinaturas/checkout`) — adapter manual ativa imediato; gateway real retornaria redirect
+- [x] Webhook idempotente (`POST /api/webhooks/gateway`) — dedupe por `gateway_event_id`
+- [x] Helper `userTemAssinaturaAtiva(userId)` + `getLimiteRecurso` para gating
+- [x] Gating aplicado: obras abertas (J03) e propostas/mês (J05) → HTTP 402 `LIMITE_PLANO`
+- [x] Lançamento de entrada em J09 ao ativar (escopo plataforma, categoria `assinatura`, idempotente)
+- [x] Cancelar (`POST /api/assinaturas/cancelar`) → rebaixa para free
+- [ ] Decidir e plugar gateway REAL (Stripe/PayPal/MercadoPago/Asaas) → **Jornada 14 (bloqueada)**
+- [ ] Tela "minha assinatura" persona-facing consumindo os endpoints (UI — backend pronto)
+- [ ] Proration na troca de plano no meio do ciclo (hoje: cancela a anterior + cria nova)
 
 ## 10. Critérios de aceite
 1. Admin cria plano "Empreiteiro Pro R$99/mês limite 30 candidaturas".
@@ -74,4 +83,9 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- **2026-06-01** — Já existia `shared/lib/plans-catalog.ts` (limites/preços por persona/tier) consumido por `/api/perfil/plano`. Decisão: catálogo é a FONTE DE VERDADE dos limites; `planos` (DB) é seedado dele; `users.plano` continua sendo o tier ATIVO. `assinaturas` dita `users.plano`. Sem duplicar regra de limites.
+- **2026-06-01** — **Abstração de gateway** (porta + adapter): `features/planos/gateway/payment-gateway.ts` (interface), `manual-gateway.ts` (adapter ativo, sem cobrança), `index.ts` (factory por `PAYMENT_GATEWAY`). Trocar de gateway = 1 adapter novo + env. Service/rotas/schema intocados. Integração real → Jornada 14.
+- **2026-06-01** — Idempotência: `uq_assinaturas_user_ativa` (1 ativa por user), `uq_assinatura_eventos_gateway` (webhook dedupe), `uq_financeiro_origem` (entrada de receita não duplica). Verificado e2e: webhook duplicado → `processed:false`.
+- **2026-06-01** — Gating retorna **HTTP 402** com `code: "LIMITE_PLANO"` em J03 (obras abertas) e J05 (propostas/mês). Tier free = catálogo (empreiteiro: 5 propostas, 2 obras; contratante: 1 obra). Enterprise (9999) tratado como ilimitado (gate não dispara).
+- **2026-06-01** — Backend 100% pronto; falta a **UI persona-facing** ("minha assinatura"/checkout) consumir `/api/planos` + `/api/assinaturas/*`. Páginas `/contratante/planos` e `/empreiteiro/planos` existem mas ainda não plugadas aos endpoints — candidato a fase de UI.
+- **2026-06-01** — Item de backlog `userTemAssinaturaAtiva` (precondição estratégica) materializado de verdade nesta fase.

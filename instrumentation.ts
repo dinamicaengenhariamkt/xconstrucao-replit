@@ -43,6 +43,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapPagamentosSchema failed:", err);
     });
 
+    const { bootstrapFinanceiroEscopoSchema } = await import("./server/bootstrap-financeiro-escopo");
+    await bootstrapFinanceiroEscopoSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapFinanceiroEscopoSchema failed:", err);
+    });
+
     const { bootstrapMedicoesSchema } = await import("./server/bootstrap-medicoes");
     await bootstrapMedicoesSchema().catch((err) => {
       console.error("[instrumentation] bootstrapMedicoesSchema failed:", err);
@@ -71,6 +76,21 @@ export async function register() {
     const { bootstrapChatSchema } = await import("./server/bootstrap-chat");
     await bootstrapChatSchema().catch((err) => {
       console.error("[instrumentation] bootstrapChatSchema failed:", err);
+    });
+
+    const { bootstrapDisputasSchema } = await import("./server/bootstrap-disputas");
+    await bootstrapDisputasSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapDisputasSchema failed:", err);
+    });
+
+    const { bootstrapPlanosSchema } = await import("./server/bootstrap-planos");
+    await bootstrapPlanosSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapPlanosSchema failed:", err);
+    });
+
+    const { bootstrapAnunciosSchema } = await import("./server/bootstrap-anuncios");
+    await bootstrapAnunciosSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapAnunciosSchema failed:", err);
     });
 
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");

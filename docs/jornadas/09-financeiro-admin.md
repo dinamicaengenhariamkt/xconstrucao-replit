@@ -1,7 +1,7 @@
 # Jornada — Financeiro Admin (Caixa, Entradas, Saídas)
 
-> Status: mock | Prioridade: média | Wave: 3
-> Última atualização: 2026-05-05
+> Status: revisão | Prioridade: média | Wave: 3
+> Última atualização: 2026-06-01
 
 ## 1. Contexto & Objetivo
 Visão consolidada do dinheiro **da plataforma** para o admin: entradas (assinaturas J11, taxa por obra, anúncios J12), saídas (custos operacionais), saldo, indicadores. Diferente de J08 (que é financeiro **da obra**).
@@ -49,15 +49,16 @@ Existente: `financeiro` (genérica).
 - Flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` nestes hooks.
 
 ## 9. Checklist de implementação
-- [ ] Decidir modelo: escopo na mesma tabela vs. tabelas separadas
-- [ ] Migration aplicando a decisão
-- [ ] Pluga assinatura (J11) gerando entrada
-- [ ] Pluga aceite/conclusão (J05/J06) gerando taxa de plataforma se houver
-- [ ] Plug J12 (anúncios) gerando entrada
-- [ ] Endpoint `caixa` agregando por período (`day_trunc`/`month_trunc`)
-- [ ] Substituir mocks
-- [ ] Filtros por período (mês, trimestre, custom range)
-- [ ] Exportação CSV (já era item da fase 7.9 arquivada — recuperar)
+- [x] Decidir modelo: **escopo na mesma tabela** `financeiro` (coluna `escopo: obra|plataforma`) — bootstrap `server/bootstrap-financeiro-escopo.ts`
+- [x] Migration aplicando a decisão (idempotente, default `obra` = backfill seguro)
+- [x] Endpoints de caixa/entradas/saídas agregando por período (SUM ... FILTER no banco) — `features/admin/financeiro/api/caixa-service.ts`
+- [x] `POST /api/admin/saidas` — despesa manual (escopo=plataforma)
+- [x] Substituir mocks de caixa/entradas/saídas (deletados; hooks → API real)
+- [x] Filtros por período (7/30/90 dias, ano, custom range)
+- [x] KPIs reais do dashboard financeiro (`/api/admin/financeiro/dashboard-stats`)
+- [ ] Plug assinatura (J11) gerando entrada — depende de Fase 3 (categoria `assinatura` já reconhecida)
+- [ ] Plug J12 (anúncios) gerando entrada — depende de Fase 4 (categoria `anuncio` já reconhecida)
+- [ ] Exportação CSV (item arquivado — recuperar em fase futura)
 
 ## 10. Critérios de aceite
 1. Assinar plano em J11 → aparece como entrada em `/admin/entradas`.
@@ -77,4 +78,8 @@ Existente: `financeiro` (genérica).
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- **2026-06-01** — Modelo escolhido: coluna `escopo` na tabela `financeiro` (não tabela separada). Caixa CONSOLIDADO = obra + plataforma. Service real em `features/admin/financeiro/api/caixa-service.ts`, agregação 100% no banco.
+- **2026-06-01** — Páginas `/admin/caixa`, `/admin/entradas`, `/admin/saidas` estão REAIS (mocks deletados). ~17 endpoints sob `app/api/admin/{caixa,entradas,saidas}` com guard `isAdminLike`.
+- **2026-06-01** — **Pendência de fonte externa** (status `revisão`, não `pronto`): indicadores macroeconômicos (Selic/IPCA/INCC/dólar/BTC/risco-Brasil), NPS/CSAT e métricas de adoção NÃO têm fonte de dados no projeto. Decisão: caixa real agora, esses três ficam como placeholder honesto ("—" / "dados pendentes"), sem inventar número. `GET /api/admin/caixa/indicadores` retorna `[]`; `features/admin/caixa/macro-impacto-placeholder.ts` mostra "—". Candidatos a jornada futura (integração Banco Central/IBGE + sistema de surveys).
+- **2026-06-01** — `FluxoResumo` passou a derivar de `useCaixaKpis` (real). `ImpactoFinanceiroPanel` recebe `saldoDisponivel` real mas os indicadores macro são placeholder.
+- **2026-06-01** — Dashboard composto `/admin/financeiro/page.tsx`: KPIs do topo (`StatsGridContainer`) são reais via `/api/admin/financeiro/dashboard-stats`. Tabelas secundárias (obras-atenção, top clientes/empreiteiras com vol/pago/saldo, distribuição de status, evolução de pagamentos) seguem em mock — candidatas a fase de polimento.

@@ -1,7 +1,7 @@
 # Jornada — Gestão de Anúncios
 
-> Status: parcial | Prioridade: média | Wave: 2
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: média | Wave: 2
+> Última atualização: 2026-06-01
 
 ## 1. Contexto & Objetivo
 Permitir que o admin venda/gerencie campanhas internas exibidas na landing pública e nos dashboards das personas, com tracking de impressão/clique e KPIs (CTR, receita, performance por zona). Hoje a UI está pronta mas tudo lê de mocks atrás de uma flag.
@@ -53,15 +53,16 @@ flowchart LR
 - [features/shared/anuncios/hooks/](../../features/shared/anuncios/hooks/) — flags análogas
 
 ## 9. Checklist de implementação
-- [ ] Criar tabelas `anunciantes`, `anuncios`, `anuncio_eventos` + enums + migration
-- [ ] CRUD admin batendo no banco real (substituir o que está mockado em [features/admin/anuncios/api/](../../features/admin/anuncios/api/))
-- [ ] Endpoint público `GET /api/anuncios` com filtro de zona/persona e revalidação curta
-- [ ] Componente `BannerSlot` shared chamando endpoint público
-- [ ] Plug do `BannerSlot` em landing, dashboard contratante, dashboard empreiteiro
-- [ ] Tracking de impressão (intersection observer) + clique
-- [ ] KPIs reais em `/admin/anuncios` (impressões, cliques, CTR, receita)
-- [ ] Remover flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` do módulo de anúncios
-- [ ] Seeds de exemplo
+- [x] Tabelas `anunciantes`, `anuncios`, `anuncio_eventos` + enums + migration (idempotente `server/bootstrap-anuncios.ts`)
+- [x] CRUD admin no banco real (`features/anuncios/anuncios-service.ts` + `app/api/admin/anuncios/{campanhas,anunciantes,kpi,zonas}`)
+- [x] Endpoint público `GET /api/anuncios?zona=` com filtro de zona/período e `Cache-Control` curto (30s)
+- [x] Tracking de impressão/clique (`POST /api/anuncios/[id]/eventos`) — LGPD: userId só se logado
+- [x] KPIs reais em `/admin/anuncios` (impressões, cliques, CTR, receita)
+- [x] Remover flag/mocks do módulo de anúncios (deletados; hooks → API real)
+- [x] Receita de anunciante alimenta J09 (escopo plataforma, categoria `anuncio`, idempotente)
+- [x] `AdSidebarSlot` consome zonas reais (`useZonasAnuncio` → `/api/admin/anuncios/zonas`)
+- [ ] Plug físico do slot em landing + dashboards (UI — backend e componente prontos)
+- [ ] Tracking de impressão via IntersectionObserver no slot (hoje endpoint pronto; falta disparar do componente)
 
 ## 10. Critérios de aceite
 1. Login como admin → criar campanha "Cimento ACME" zona `home-hero`, ativa hoje.
@@ -83,4 +84,8 @@ flowchart LR
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _Sem registros ainda._
+- **2026-06-01** — README marcava J12 como "parcial" mas não havia backend (dir de API vazio, sem schema). Corrigido: agora backend completo e real, status `pronto`.
+- **2026-06-01** — Zonas (`AnuncioZonaId`) modeladas como catálogo ESTÁTICO em `features/anuncios/anuncios-service.ts` (`ZONAS`), espelhando os 7 ids da UI. `anuncios.zona` é TEXT validado contra esse catálogo (`isZonaValida`). Status da zona (ativo/vazio) é derivado em runtime.
+- **2026-06-01** — Receita de anunciante lança no caixa quando a campanha entra `ativa` com orçamento > 0. Idempotente por `origem_tipo='anuncio'` — pausar/reativar NÃO duplica (verificado e2e).
+- **2026-06-01** — `GET /api/anuncios?zona=` é público (visitante) com `Cache-Control: max-age=30` (risco §11 mitigado: pausa reflete em ≤30s). Tracking (`POST /api/anuncios/[id]/eventos`) também público, rate-limited por IP, userId só se logado (LGPD).
+- **2026-06-01** — Backend + `AdSidebarSlot` prontos. Falta o **plug físico** do slot na landing/dashboards e o disparo de impressão via IntersectionObserver no componente — candidato a fase de UI.

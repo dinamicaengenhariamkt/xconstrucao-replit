@@ -171,6 +171,7 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** J03 (criar obra) e J05 (candidatar-se) vão precisar gating por assinatura ativa quando J11 sair do mock. Sem o helper, esses endpoints precisarão de refactor cirúrgico no futuro. Vale prototipar `features/planos/assinatura-service.ts` com `userTemAssinaturaAtiva(userId): Promise<boolean>` retornando `true` no MVP, e plantar as chamadas em J03/J05. Quando J11 ganhar gateway real, só troca a implementação interna.
 - **Prioridade:** P2 (precondição estratégica — vale plantar antes pra evitar fricção depois)
+- **✅ RESOLVIDO (2026-06-01):** `userTemAssinaturaAtiva` + `getLimiteRecurso` implementados em `features/planos/assinatura-service.ts` (consultam `assinaturas`/`plans-catalog`). Gating de fato aplicado em J03 (obras abertas) e J05 (propostas/mês) com HTTP 402.
 
 ### Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`
 - **Origem:** J13 §13 (Task #94) — confirmado durante exploração
@@ -183,9 +184,11 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29 (durante mapeamento de wave 3)
 - **Motivação:** Caixa admin consome lançamentos financeiros. Mesma tabela `financeiro` + coluna `escopo` ou tabela separada? Afeta query de agregação, futuras integrações J08/J11/J12 (assinaturas + anúncios geram entradas de plataforma; obras geram entradas vinculadas). **Não é tarefa de código — é decisão a tomar antes de tirar J09 do mock**, pra evitar refactor de schema.
 - **Prioridade:** P1 (bloqueia início de J09)
+- **✅ RESOLVIDO (2026-06-01):** decisão = **coluna `escopo` na tabela `financeiro`** (não tabela separada). Bootstrap `server/bootstrap-financeiro-escopo.ts` (+ `origem_tipo`/`origem_id` para idempotência). J11 e J12 já geram entradas `escopo=plataforma`. Caixa consolidado em `features/admin/financeiro/api/caixa-service.ts`.
 
 ### Decisão estratégica J11 — gateway de pagamento
 - **Origem:** J11 (decisão declarada em §9 do doc)
 - **Descoberto:** 2026-05-29 (durante mapeamento de wave 3)
 - **Motivação:** Stripe / Pagar.me / outro. Bloqueia J11 inteira → bloqueia aba Plano & Uso da J02 → bloqueia gating efetivo de J03/J05 (assinatura ativa). Stripe entrega DX melhor; Pagar.me tem PIX/boleto nativo (essencial pro mercado BR). Não é tarefa de código — é decisão de produto + compliance.
 - **Prioridade:** P1 (bloqueia 3 jornadas em cascata)
+- **✅ DESBLOQUEADO via abstração (2026-06-01):** J11 foi entregue COMPLETA sem travar na decisão, usando **porta `PaymentGateway` + adapter `manual`** (ativa sem cobrança real). A decisão do gateway real NÃO bloqueia mais J11/J02/J03/J05 — elas funcionam hoje. A integração real virou a **[Jornada 14](14-integracao-gateway-pagamento.md)** (status `bloqueada`): quando o gateway for escolhido, é só escrever 1 adapter + env var `PAYMENT_GATEWAY`. Decisão pendente movida para J14.

@@ -18,11 +18,12 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 06 | [Medições & Diário de Obra](06-medicoes-diario-obra.md) | empreiteiro, contratante, admin | 2 | pronto | alta |
 | 07 | [Atividades & Timeline](07-atividades-timeline.md) | todas | 3 | pronto | média |
 | 08 | [Pagamentos da Obra](08-pagamentos-obra.md) | contratante, empreiteiro, admin | 2 | pronto | alta |
-| 09 | [Financeiro Admin](09-financeiro-admin.md) | admin | 3 | mock | média |
-| 10 | [Disputas](10-disputas.md) | todas | 3 | mock | baixa |
-| 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | mock | média |
-| 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | parcial | média |
+| 09 | [Financeiro Admin](09-financeiro-admin.md) | admin | 3 | revisão | média |
+| 10 | [Disputas](10-disputas.md) | todas | 3 | pronto | baixa |
+| 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | pronto | média |
+| 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | pronto | média |
 | 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | pronto | média |
+| 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | bloqueada | média |
 
 ---
 
@@ -33,6 +34,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **parcial** — backend real coexiste com mock por trás de uma flag (`ENABLE_MOCK`). Remover flag e deletar mocks.
 - **revisão** — implementação real ponta-a-ponta. Falta auditar pontas soltas e validar critérios de aceite.
 - **pronto** — entregue, validado e mocks removidos.
+- **bloqueada** — fundação pronta, mas a entrega final depende de uma decisão externa/de negócio (ex: escolher gateway de pagamento). Desbloquear quando a decisão chegar.
 
 ### Prioridade
 - **alta** — bloqueia outras jornadas ou destrava experiência crítica de produto.
@@ -42,7 +44,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 ### Waves
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
-- **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10.
+- **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

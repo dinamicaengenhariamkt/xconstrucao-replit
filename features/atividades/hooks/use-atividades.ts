@@ -104,6 +104,8 @@ const TIPO_META: Record<
   ocorrencia_resolvida:  { titulo: 'Ocorrência resolvida',   tipoTimeline: 'progresso', icon: 'check',   color: 'success' },
   lancamento_criado:     { titulo: 'Fatura emitida',         tipoTimeline: 'documento', icon: 'payment', color: 'purple' },
   lancamento_quitado:    { titulo: 'Pagamento efetuado',     tipoTimeline: 'progresso', icon: 'payment', color: 'success' },
+  disputa_aberta:        { titulo: 'Disputa aberta',         tipoTimeline: 'problema',  icon: 'alert',   color: 'amber' },
+  disputa_resolvida:     { titulo: 'Disputa resolvida',      tipoTimeline: 'progresso', icon: 'check',   color: 'success' },
 };
 
 function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, obraNome: string | null): string {
@@ -156,6 +158,14 @@ function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, 
         ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
         : null;
       return fmt ? `Pagamento de ${fmt} efetuado em "${obra}".` : `Pagamento efetuado em "${obra}".`;
+    }
+    case 'disputa_aberta': {
+      const titulo = typeof payload.titulo === 'string' ? payload.titulo : null;
+      return titulo ? `Disputa aberta em "${obra}": ${titulo}.` : `Disputa aberta em "${obra}".`;
+    }
+    case 'disputa_resolvida': {
+      const tipo = typeof payload.resolucaoTipo === 'string' ? payload.resolucaoTipo : null;
+      return tipo ? `Disputa resolvida em "${obra}" (${tipo}).` : `Disputa resolvida em "${obra}".`;
     }
   }
 }

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -35,6 +35,8 @@ export const atividadeTipoEnum = pgEnum("atividade_tipo", [
   "ocorrencia_resolvida",
   "lancamento_criado",
   "lancamento_quitado",
+  "disputa_aberta",
+  "disputa_resolvida",
 ]);
 export type AtividadeTipo =
   | "obra_publicada"
@@ -49,7 +51,9 @@ export type AtividadeTipo =
   | "ocorrencia_aberta"
   | "ocorrencia_resolvida"
   | "lancamento_criado"
-  | "lancamento_quitado";
+  | "lancamento_quitado"
+  | "disputa_aberta"
+  | "disputa_resolvida";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -194,26 +198,46 @@ export const obraAnexos = pgTable("obra_anexos", {
 export type ObraAnexo = typeof obraAnexos.$inferSelect;
 
 export const financeiroStatusEnum = pgEnum("financeiro_status", ["pendente", "pago", "atrasado", "cancelado"]);
+// Escopo separa o dinheiro DA OBRA (pagamentos contratante↔empreiteiro, J06/J08)
+// do dinheiro DA PLATAFORMA (assinaturas J11, anúncios J12, estornos de disputa J10).
+// Default "obra" garante backfill seguro dos lançamentos existentes.
+export const financeiroEscopoEnum = pgEnum("financeiro_escopo", ["obra", "plataforma"]);
 
-export const financeiro = pgTable("financeiro", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tipo: text("tipo").notNull(),
-  descricao: text("descricao").notNull(),
-  valor: numeric("valor", { precision: 15, scale: 2 }).notNull(),
-  data: text("data").notNull(),
-  obraId: varchar("obra_id").references(() => obras.id),
-  categoria: text("categoria"),
-  status: financeiroStatusEnum("status").notNull().default("pendente"),
-  dataVencimento: text("data_vencimento"),
-  dataPagamento: text("data_pagamento"),
-  metodoPagamento: text("metodo_pagamento"),
-  comprovanteUrl: text("comprovante_url"),
-  comprovanteFileId: varchar("comprovante_file_id").references(() => userFiles.id, { onDelete: "set null" }),
-  medicaoId: varchar("medicao_id"),
-  pagadorUserId: varchar("pagador_user_id").references(() => users.id, { onDelete: "set null" }),
-  recebedorUserId: varchar("recebedor_user_id").references(() => users.id, { onDelete: "set null" }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export const financeiro = pgTable(
+  "financeiro",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    tipo: text("tipo").notNull(),
+    descricao: text("descricao").notNull(),
+    valor: numeric("valor", { precision: 15, scale: 2 }).notNull(),
+    data: text("data").notNull(),
+    escopo: financeiroEscopoEnum("escopo").notNull().default("obra"),
+    obraId: varchar("obra_id").references(() => obras.id),
+    categoria: text("categoria"),
+    status: financeiroStatusEnum("status").notNull().default("pendente"),
+    dataVencimento: text("data_vencimento"),
+    dataPagamento: text("data_pagamento"),
+    metodoPagamento: text("metodo_pagamento"),
+    comprovanteUrl: text("comprovante_url"),
+    comprovanteFileId: varchar("comprovante_file_id").references(() => userFiles.id, { onDelete: "set null" }),
+    medicaoId: varchar("medicao_id"),
+    // Referência polimórfica idempotente para a origem do lançamento de plataforma
+    // (ex: origemTipo="assinatura", origemId=<assinatura.id>). Garante que reenvio
+    // de webhook / re-resolução de disputa não duplique entradas (índice único parcial).
+    origemTipo: text("origem_tipo"),
+    origemId: varchar("origem_id"),
+    pagadorUserId: varchar("pagador_user_id").references(() => users.id, { onDelete: "set null" }),
+    recebedorUserId: varchar("recebedor_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    // Caixa consolidado por escopo/período agrega muito por estas colunas.
+    idxEscopoStatusData: index("idx_financeiro_escopo_status_data").on(t.escopo, t.status, t.data),
+    // Idempotência de lançamentos de plataforma por origem. Índice parcial
+    // (WHERE origem_id IS NOT NULL no bootstrap) para não afetar lançamentos de obra.
+    uqOrigem: uniqueIndex("uq_financeiro_origem").on(t.origemTipo, t.origemId).where(sql`${t.origemId} IS NOT NULL`),
+  }),
+);
 
 export const candidaturaStatusEnum = pgEnum("candidatura_status", ["pendente", "aceita", "rejeitada"]);
 
@@ -672,3 +696,235 @@ export const atividades = pgTable("atividades", {
 });
 export type Atividade = typeof atividades.$inferSelect;
 export type InsertAtividade = typeof atividades.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// J10 — Disputas. Fonte de verdade rica; o GET admin mapeia para o contrato de
+// UI existente (features/admin/disputas/types). Schema criado idempotente em
+// server/bootstrap-disputas.ts.
+// ---------------------------------------------------------------------------
+export const disputaStatusEnum = pgEnum("disputa_status", [
+  "aberta",
+  "em_analise",
+  "aguardando_partes",
+  "resolvida",
+  "cancelada",
+]);
+// Alvo da disputa: uma medição (J06) ou um lançamento financeiro (J08).
+export const disputaAlvoEnum = pgEnum("disputa_alvo", ["medicao", "pagamento"]);
+// Tipo de resolução define o efeito financeiro aplicado no fechamento.
+export const disputaResolucaoEnum = pgEnum("disputa_resolucao", [
+  "favor_contratante",
+  "favor_empreiteiro",
+  "meio_termo",
+]);
+export const disputaCategoriaEnum = pgEnum("disputa_categoria", [
+  "pagamento_atrasado",
+  "medicao_rejeitada",
+  "qualidade_obra",
+  "descumprimento_prazo",
+  "escopo_contrato",
+  "outros",
+]);
+export const disputaPrioridadeEnum = pgEnum("disputa_prioridade", ["alta", "media", "baixa"]);
+
+export const disputas = pgTable(
+  "disputas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+    abertaPorUserId: varchar("aberta_por_user_id").notNull().references(() => users.id, { onDelete: "set null" }),
+    contraparteUserId: varchar("contraparte_user_id").references(() => users.id, { onDelete: "set null" }),
+    alvoTipo: disputaAlvoEnum("alvo_tipo").notNull(),
+    alvoId: varchar("alvo_id").notNull(),
+    categoria: disputaCategoriaEnum("categoria").notNull().default("outros"),
+    prioridade: disputaPrioridadeEnum("prioridade").notNull().default("media"),
+    titulo: text("titulo").notNull(),
+    descricao: text("descricao").notNull(),
+    valorEnvolvido: numeric("valor_envolvido", { precision: 15, scale: 2 }),
+    status: disputaStatusEnum("status").notNull().default("aberta"),
+    responsavelAdminId: varchar("responsavel_admin_id").references(() => users.id, { onDelete: "set null" }),
+    resolucaoTipo: disputaResolucaoEnum("resolucao_tipo"),
+    resolucaoTexto: text("resolucao_texto"),
+    // Quanto, da resolução, foi estornado/ajustado no financeiro (auditoria).
+    valorAjustado: numeric("valor_ajustado", { precision: 15, scale: 2 }),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedByUserId: varchar("resolved_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxObra: index("idx_disputas_obra").on(t.obraId),
+    idxStatus: index("idx_disputas_status").on(t.status),
+    // Uma disputa ABERTA por alvo (impede duplicatas / bloqueia pagamento).
+    // Índice parcial aplicado no bootstrap: WHERE status NOT IN ('resolvida','cancelada').
+    uqAlvoAberta: uniqueIndex("uq_disputas_alvo_aberta").on(t.alvoTipo, t.alvoId),
+  }),
+);
+
+export const disputaMensagens = pgTable(
+  "disputa_mensagens",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    disputaId: varchar("disputa_id").notNull().references(() => disputas.id, { onDelete: "cascade" }),
+    autorUserId: varchar("autor_user_id").notNull().references(() => users.id, { onDelete: "set null" }),
+    texto: text("texto").notNull(),
+    anexoFileId: varchar("anexo_file_id").references(() => userFiles.id, { onDelete: "set null" }),
+    // true quando a mensagem é uma nota administrativa (visível só p/ admin).
+    interna: boolean("interna").notNull().default(false),
+    criadaEm: timestamp("criada_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxDisputa: index("idx_disputa_mensagens_disputa").on(t.disputaId),
+  }),
+);
+
+export type Disputa = typeof disputas.$inferSelect;
+export type InsertDisputa = typeof disputas.$inferInsert;
+export type DisputaMensagem = typeof disputaMensagens.$inferSelect;
+export type InsertDisputaMensagem = typeof disputaMensagens.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// J11 — Planos & Assinatura. `users.plano` continua sendo o tier ATIVO (free/
+// pro/enterprise) e dirige o catálogo de limites (shared/lib/plans-catalog).
+// `planos` é o catálogo editável pelo admin; `assinaturas` é o vínculo do user
+// com um plano (dita users.plano); `assinatura_eventos` garante idempotência do
+// webhook. Gateway de pagamento fica atrás de uma porta (features/planos/gateway).
+// Schema criado idempotente em server/bootstrap-planos.ts.
+// ---------------------------------------------------------------------------
+export const planoPersonaEnum = pgEnum("plano_persona", ["contratante", "empreiteiro", "ambos"]);
+export const assinaturaStatusEnum = pgEnum("assinatura_status", ["ativa", "cancelada", "inadimplente", "expirada"]);
+
+export const planos = pgTable(
+  "planos",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    // Tier de referência no catálogo (free/pro/enterprise) — liga ao plans-catalog.
+    tier: planoEnum("tier").notNull(),
+    persona: planoPersonaEnum("persona").notNull(),
+    nome: text("nome").notNull(),
+    descricao: text("descricao"),
+    valorMensal: numeric("valor_mensal", { precision: 15, scale: 2 }).notNull().default("0"),
+    valorAnual: numeric("valor_anual", { precision: 15, scale: 2 }),
+    limitesJson: jsonb("limites_json").$type<Record<string, number>>().notNull().default({}),
+    features: text("features").array().notNull().default(sql`ARRAY[]::text[]`),
+    ativo: boolean("ativo").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Um plano por (tier, persona) — catálogo canônico.
+    uqTierPersona: uniqueIndex("uq_planos_tier_persona").on(t.tier, t.persona),
+  }),
+);
+
+export const assinaturas = pgTable(
+  "assinaturas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    planoId: varchar("plano_id").notNull().references(() => planos.id),
+    status: assinaturaStatusEnum("status").notNull().default("ativa"),
+    ciclo: text("ciclo").notNull().default("mensal"), // mensal | anual
+    iniciadaEm: timestamp("iniciada_em").defaultNow().notNull(),
+    renovaEm: timestamp("renova_em"),
+    canceladaEm: timestamp("cancelada_em"),
+    // Campos agnósticos de gateway — preenchidos pelo adapter real (J14).
+    gatewayProvider: text("gateway_provider").notNull().default("manual"),
+    gatewayCustomerId: text("gateway_customer_id"),
+    gatewaySubscriptionId: text("gateway_subscription_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxUser: index("idx_assinaturas_user").on(t.userId),
+    // No máximo uma assinatura ATIVA por usuário (índice parcial no bootstrap).
+    uqUserAtiva: uniqueIndex("uq_assinaturas_user_ativa").on(t.userId),
+  }),
+);
+
+export const assinaturaEventos = pgTable(
+  "assinatura_eventos",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    assinaturaId: varchar("assinatura_id").references(() => assinaturas.id, { onDelete: "cascade" }),
+    tipo: text("tipo").notNull(), // checkout | renovacao | falha_cobranca | cancelamento
+    // ID único do evento no gateway — chave de idempotência do webhook.
+    gatewayEventId: text("gateway_event_id"),
+    payloadJson: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uqGatewayEvent: uniqueIndex("uq_assinatura_eventos_gateway").on(t.gatewayEventId),
+  }),
+);
+
+export type Plano = typeof planos.$inferSelect;
+export type InsertPlano = typeof planos.$inferInsert;
+export type Assinatura = typeof assinaturas.$inferSelect;
+export type InsertAssinatura = typeof assinaturas.$inferInsert;
+export type AssinaturaEvento = typeof assinaturaEventos.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// J12 — Gestão de Anúncios. Campanhas internas exibidas em zonas (sidebar/banner)
+// na landing e dashboards, com tracking de impressão/clique e KPIs. Entrada de
+// anunciante alimenta J09 (escopo plataforma). Schema criado idempotente em
+// server/bootstrap-anuncios.ts.
+// ---------------------------------------------------------------------------
+export const anuncioStatusEnum = pgEnum("anuncio_status", ["rascunho", "agendada", "ativa", "pausada", "expirada"]);
+export const anuncioEventoTipoEnum = pgEnum("anuncio_evento_tipo", ["impressao", "clique"]);
+export const anuncianteStatusEnum = pgEnum("anunciante_status", ["ativo", "inativo"]);
+
+export const anunciantes = pgTable("anunciantes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nome: text("nome").notNull(),
+  sigla: varchar("sigla", { length: 8 }),
+  contato: text("contato"),
+  email: text("email"),
+  telefone: text("telefone"),
+  cnpj: text("cnpj"),
+  status: anuncianteStatusEnum("status").notNull().default("ativo"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const anuncios = pgTable(
+  "anuncios",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    anuncianteId: varchar("anunciante_id").notNull().references(() => anunciantes.id, { onDelete: "cascade" }),
+    titulo: text("titulo").notNull(),
+    subtitulo: text("subtitulo"),
+    criativoUrl: text("criativo_url"),
+    ctaUrl: text("cta_url"),
+    ctaTexto: text("cta_texto"),
+    // Zona de exibição (ver AnuncioZonaId em features/shared/anuncios/types).
+    zona: text("zona").notNull(),
+    inicio: text("inicio"),
+    fim: text("fim"),
+    orcamento: numeric("orcamento", { precision: 15, scale: 2 }).notNull().default("0"),
+    status: anuncioStatusEnum("status").notNull().default("rascunho"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Hot path: GET /api/anuncios filtra por zona+status. Período filtrado em SQL.
+    idxZonaStatus: index("idx_anuncios_zona_status").on(t.zona, t.status),
+    idxAnunciante: index("idx_anuncios_anunciante").on(t.anuncianteId),
+  }),
+);
+
+export const anuncioEventos = pgTable(
+  "anuncio_eventos",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    anuncioId: varchar("anuncio_id").notNull().references(() => anuncios.id, { onDelete: "cascade" }),
+    tipo: anuncioEventoTipoEnum("tipo").notNull(),
+    // LGPD: só preenchido se o viewer estiver logado; null para visitante público.
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxAnuncioTipo: index("idx_anuncio_eventos_anuncio_tipo").on(t.anuncioId, t.tipo),
+  }),
+);
+
+export type Anunciante = typeof anunciantes.$inferSelect;
+export type InsertAnunciante = typeof anunciantes.$inferInsert;
+export type Anuncio = typeof anuncios.$inferSelect;
+export type InsertAnuncio = typeof anuncios.$inferInsert;
+export type AnuncioEvento = typeof anuncioEventos.$inferSelect;

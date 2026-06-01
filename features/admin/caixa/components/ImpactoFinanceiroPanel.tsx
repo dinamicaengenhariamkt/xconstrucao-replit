@@ -9,7 +9,7 @@ import { Calendar } from '@shared/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@shared/components/ui/popover';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
-import { mockImpactoFinanceiroByPeriodo } from '../mocks';
+import { macroImpactoByPeriodo } from '../macro-impacto-placeholder';
 import { formatCurrency } from '@features/admin/financeiro/utils';
 import type { CaixaPeriodoMacro, DateRange } from '../types';
 
@@ -38,7 +38,7 @@ export function ImpactoFinanceiroPanel({ saldoAtual = 2_450_000 }: ImpactoFinanc
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const items = mockImpactoFinanceiroByPeriodo[periodo];
+  const items = macroImpactoByPeriodo[periodo];
 
   function handleDayPickerSelect(range: DayPickerRange | undefined) {
     if (!range?.from) {
