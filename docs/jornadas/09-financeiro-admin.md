@@ -1,7 +1,13 @@
 # Jornada — Financeiro Admin (Caixa, Entradas, Saídas)
 
-> Status: revisão | Prioridade: média | Wave: 3
+> Status: pronto | Prioridade: média | Wave: 3
 > Última atualização: 2026-06-01
+>
+> Caixa/entradas/saídas + dashboard (KPIs, tabelas de obras-atenção, top
+> clientes/empreiteiras, receitas, adoção) estão REAIS. O que sobrou — detalhe
+> financeiro da obra (`/admin/financeiro/obras/[id]`), NPS/CSAT e gráficos de
+> série temporal — foi movido para a [Jornada 18](18-financeiro-admin-completo.md)
+> (depende de fonte externa / drill-down dedicado).
 
 ## 1. Contexto & Objetivo
 Visão consolidada do dinheiro **da plataforma** para o admin: entradas (assinaturas J11, taxa por obra, anúncios J12), saídas (custos operacionais), saldo, indicadores. Diferente de J08 (que é financeiro **da obra**).
@@ -83,3 +89,5 @@ Existente: `financeiro` (genérica).
 - **2026-06-01** — **Pendência de fonte externa** (status `revisão`, não `pronto`): indicadores macroeconômicos (Selic/IPCA/INCC/dólar/BTC/risco-Brasil), NPS/CSAT e métricas de adoção NÃO têm fonte de dados no projeto. Decisão: caixa real agora, esses três ficam como placeholder honesto ("—" / "dados pendentes"), sem inventar número. `GET /api/admin/caixa/indicadores` retorna `[]`; `features/admin/caixa/macro-impacto-placeholder.ts` mostra "—". Candidatos a jornada futura (integração Banco Central/IBGE + sistema de surveys).
 - **2026-06-01** — `FluxoResumo` passou a derivar de `useCaixaKpis` (real). `ImpactoFinanceiroPanel` recebe `saldoDisponivel` real mas os indicadores macro são placeholder.
 - **2026-06-01** — Dashboard composto `/admin/financeiro/page.tsx`: KPIs do topo (`StatsGridContainer`) são reais via `/api/admin/financeiro/dashboard-stats`. Tabelas secundárias (obras-atenção, top clientes/empreiteiras com vol/pago/saldo, distribuição de status, evolução de pagamentos) seguem em mock — candidatas a fase de polimento.
+- **2026-06-01 (2ª rodada)** — Dashboard agora REAL: `obras-atenção`, `top-clientes`/`top-empreiteiras` (vol/pago/saldo), `receitas-plataforma` (assinatura/anúncio/obra) e `adoção` (usuários ativos/novos, conversão de candidatura) — endpoints sob `app/api/admin/financeiro/*` derivados do banco. Mocks `obras.mock.ts` e `adoption-metrics.mock.ts` deletados. J09 → `pronto`.
+- **2026-06-01 (2ª rodada)** — Movido para J18: detalhe financeiro da obra (`/admin/financeiro/obras/[id]` — drill-down rico com medições/histórico, ainda mock), NPS/CSAT (sem fonte) e gráficos de série temporal (evolução/distribuição). `churnEmpreiteirosPercent` retorna 0 por não haver rastreio de last-login (limitação documentada).

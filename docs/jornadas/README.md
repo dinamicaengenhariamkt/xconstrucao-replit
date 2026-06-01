@@ -18,18 +18,24 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 06 | [Medições & Diário de Obra](06-medicoes-diario-obra.md) | empreiteiro, contratante, admin | 2 | pronto | alta |
 | 07 | [Atividades & Timeline](07-atividades-timeline.md) | todas | 3 | pronto | média |
 | 08 | [Pagamentos da Obra](08-pagamentos-obra.md) | contratante, empreiteiro, admin | 2 | pronto | alta |
-| 09 | [Financeiro Admin](09-financeiro-admin.md) | admin | 3 | revisão | média |
+| 09 | [Financeiro Admin](09-financeiro-admin.md) | admin | 3 | pronto | média |
 | 10 | [Disputas](10-disputas.md) | todas | 3 | pronto | baixa |
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | pronto | média |
 | 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | pronto | média |
 | 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | bloqueada | média |
+| 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pendente | média |
+| 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pendente | média |
+| 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pendente | alta |
+| 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | parcial | média |
+| 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pendente | alta |
 
 ---
 
 ## Convenções
 
 ### Status
+- **pendente** — jornada documentada (roteiro pronto) mas ainda não iniciada.
 - **mock** — UI existe mas dados são fixos / não persistem. Substituir por API + Drizzle.
 - **parcial** — backend real coexiste com mock por trás de uma flag (`ENABLE_MOCK`). Remover flag e deletar mocks.
 - **revisão** — implementação real ponta-a-ponta. Falta auditar pontas soltas e validar critérios de aceite.

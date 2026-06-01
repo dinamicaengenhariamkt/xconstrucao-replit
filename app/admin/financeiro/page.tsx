@@ -14,19 +14,21 @@ import { AdoptionMetricsSection } from '@features/admin/financeiro/components/Ad
 import { SatisfactionMetricsSection } from '@features/admin/financeiro/components/SatisfactionMetricsSection';
 import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
 import { useDashboardStats } from '@features/admin/financeiro/hooks/use-dashboard-stats';
-import { mockAdoptionMetrics } from '@features/admin/financeiro/mocks/adoption-metrics.mock';
+import {
+  useObrasAtencao,
+  useTopClientes,
+  useTopEmpreiteiras,
+  useReceitasPlataforma,
+  useAdoptionMetrics,
+} from '@features/admin/financeiro/hooks/use-dashboard-tables';
+// PENDENTE fonte externa (J18 §11): NPS/CSAT não têm fonte de dados — mantido mock
+// até existir sistema de surveys. Gráficos de evolução/distribuição ficam como
+// placeholder visual até endpoint de série temporal (J18).
 import { mockSatisfactionMetrics } from '@features/admin/financeiro/mocks/satisfaction-metrics.mock';
 import {
   getPaymentEvolutionByPeriodo,
   mockStatusDistributionData,
 } from '@features/admin/financeiro/mocks/financial-data.mock';
-import {
-  mockObrasAtencao,
-  mockTopClientes,
-  mockTopEmpreiteiras,
-  mockReceitasPlataforma,
-  mockTotalReceitas,
-} from '@features/admin/financeiro/mocks/obras.mock';
 import type { PeriodoSeletor, DateRange } from '@features/admin/financeiro/types';
 import { useAdminObras } from '@features/admin/obras/hooks/use-obras-list';
 import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
@@ -37,8 +39,13 @@ export default function AdminFinanceiroPage() {
   const [periodo, setPeriodo] = useState<PeriodoSeletor>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const { data: obras } = useAdminObras();
-  // KPIs financeiros REAIS (J09). Fallback para o mock do período enquanto carrega.
+  // Dados REAIS do dashboard financeiro (J09/J18).
   const { data: dashboardStats } = useDashboardStats();
+  const { data: obrasAtencao } = useObrasAtencao();
+  const { data: topClientes } = useTopClientes();
+  const { data: topEmpreiteiras } = useTopEmpreiteiras();
+  const { data: receitasData } = useReceitasPlataforma();
+  const { data: adoptionMetrics } = useAdoptionMetrics();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -71,8 +78,8 @@ export default function AdminFinanceiroPage() {
       {/* Bloco 2: KPI Cards — dados reais (J09); mock como fallback de loading */}
       <StatsGridContainer data={dashboardStats ?? mockStatsByPeriodo[periodo]} />
 
-      {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) */}
-      <AdoptionMetricsSection metrics={mockAdoptionMetrics} luminous />
+      {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) — real (J18) */}
+      {adoptionMetrics && <AdoptionMetricsSection metrics={adoptionMetrics} luminous />}
 
       {/* Bloco 2.45: Satisfação dos usuários (NPS + CSAT) */}
       <SatisfactionMetricsSection metrics={mockSatisfactionMetrics} luminous />
@@ -101,17 +108,17 @@ export default function AdminFinanceiroPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Obras que requerem acompanhamento de pagamentos ou medições
         </p>
-        <ObrasAtencaoTable obras={mockObrasAtencao} luminous />
+        <ObrasAtencaoTable obras={obrasAtencao ?? []} luminous />
       </div>
 
       {/* Bloco 5: Mini tabelas lado a lado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <TopClientesTable clientes={mockTopClientes} luminous />
-        <TopEmpreiteirasTable empreiteiras={mockTopEmpreiteiras} luminous />
+        <TopClientesTable clientes={topClientes ?? []} luminous />
+        <TopEmpreiteirasTable empreiteiras={topEmpreiteiras ?? []} luminous />
       </div>
 
-      {/* Bloco 6: Resumo de receitas */}
-      <ReceitasPlataformaTable receitas={mockReceitasPlataforma} total={mockTotalReceitas} luminous />
+      {/* Bloco 6: Resumo de receitas (real — J18) */}
+      <ReceitasPlataformaTable receitas={receitasData?.receitas ?? []} total={receitasData?.total ?? 0} luminous />
 
     </div>
   );

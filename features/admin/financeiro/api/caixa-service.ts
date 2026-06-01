@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, financeiro, obras } from "@shared/db/schema";
+import { candidaturas, clientes, empreiteiras, financeiro, obras, users } from "@shared/db/schema";
 
 /**
  * Service de leitura do Financeiro Admin (J09). Caixa CONSOLIDADO = dinheiro de
@@ -648,6 +648,205 @@ export async function getDashboardStats(): Promise<AdminFinanceiroDashboardStats
     taxasPlataforma: Number(finRow?.taxasPlataforma ?? 0),
     obrasRiscoFinanceiro: finRow?.obrasRisco ?? 0,
     inadimplencia: Math.round(inadimplenciaPct * 10) / 10,
+  };
+}
+
+// ─── Tabelas do dashboard (J18) ─────────────────────────────────────────────
+export interface ObraAtencao {
+  id: string;
+  nome: string;
+  codigo: string;
+  cliente: string;
+  empreiteira: string;
+  valorContratado: number;
+  valorPago: number;
+  percentConcluido: number;
+  situacao: "pagamento_atrasado" | "medicao_pendente" | "em_dia" | "obra_suspensa";
+}
+
+/**
+ * Obras que requerem atenção financeira: lançamento atrasado, ou obra pausada.
+ * Deriva de `obras` + `financeiro`. Ordena pelas mais críticas primeiro.
+ */
+export async function getObrasAtencao(): Promise<ObraAtencao[]> {
+  const rows = await db
+    .select({
+      id: obras.id,
+      nome: obras.nome,
+      status: obras.status,
+      valorTotal: obras.valorTotal,
+      valorPago: obras.valorPago,
+      progresso: obras.progresso,
+      clienteNome: clientes.nome,
+      empreiteiraNome: empreiteiras.nome,
+      atrasados: sql<number>`COALESCE((SELECT COUNT(*) FROM financeiro f WHERE f.obra_id = ${obras.id} AND f.status = 'atrasado'), 0)::int`,
+      pendentes: sql<number>`COALESCE((SELECT COUNT(*) FROM financeiro f WHERE f.obra_id = ${obras.id} AND f.status = 'pendente'), 0)::int`,
+    })
+    .from(obras)
+    .leftJoin(clientes, eq(clientes.id, obras.clienteId))
+    .leftJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+    .where(sql`${obras.status} <> 'concluida'`)
+    .orderBy(sql`(SELECT COUNT(*) FROM financeiro f WHERE f.obra_id = ${obras.id} AND f.status = 'atrasado') DESC`)
+    .limit(20);
+
+  return rows
+    .map((r) => {
+      let situacao: ObraAtencao["situacao"];
+      if (r.status === "pausada") situacao = "obra_suspensa";
+      else if (r.atrasados > 0) situacao = "pagamento_atrasado";
+      else if (r.pendentes > 0) situacao = "medicao_pendente";
+      else situacao = "em_dia";
+      return {
+        id: r.id,
+        nome: r.nome,
+        codigo: `OBR-${r.id.slice(0, 6).toUpperCase()}`,
+        cliente: r.clienteNome ?? "—",
+        empreiteira: r.empreiteiraNome ?? "—",
+        valorContratado: Number(r.valorTotal ?? 0),
+        valorPago: Number(r.valorPago ?? 0),
+        percentConcluido: r.progresso ?? 0,
+        situacao,
+      };
+    })
+    .filter((o) => o.situacao !== "em_dia"); // só as que precisam de atenção
+}
+
+export interface TopEntidadeRica {
+  id: string;
+  nome: string;
+  obras: number;
+  volContratado: number;
+  pago: number;
+  saldo: number;
+}
+
+/** Top clientes por volume contratado (obras) com pago/saldo reais. */
+export async function getTopClientesRico(): Promise<TopEntidadeRica[]> {
+  const rows = await db
+    .select({
+      id: clientes.id,
+      nome: clientes.nome,
+      obras: sql<number>`COUNT(DISTINCT ${obras.id})::int`,
+      volContratado: sql<string>`COALESCE(SUM(${obras.valorTotal}), 0)`,
+      pago: sql<string>`COALESCE(SUM(${obras.valorPago}), 0)`,
+    })
+    .from(clientes)
+    .innerJoin(obras, eq(obras.clienteId, clientes.id))
+    .groupBy(clientes.id, clientes.nome)
+    .orderBy(sql`SUM(${obras.valorTotal}) DESC`)
+    .limit(10);
+  return rows.map((r) => {
+    const vol = Number(r.volContratado);
+    const pago = Number(r.pago);
+    return { id: r.id, nome: r.nome ?? "—", obras: r.obras, volContratado: vol, pago, saldo: vol - pago };
+  });
+}
+
+/** Top empreiteiras por volume contratado nas obras atribuídas. */
+export async function getTopEmpreiteirasRico(): Promise<TopEntidadeRica[]> {
+  const rows = await db
+    .select({
+      id: empreiteiras.id,
+      nome: empreiteiras.nome,
+      obras: sql<number>`COUNT(DISTINCT ${obras.id})::int`,
+      volContratado: sql<string>`COALESCE(SUM(${obras.valorTotal}), 0)`,
+      pago: sql<string>`COALESCE(SUM(${obras.valorPago}), 0)`,
+    })
+    .from(empreiteiras)
+    .innerJoin(obras, eq(obras.empreiteiraId, empreiteiras.id))
+    .groupBy(empreiteiras.id, empreiteiras.nome)
+    .orderBy(sql`SUM(${obras.valorTotal}) DESC`)
+    .limit(10);
+  return rows.map((r) => {
+    const vol = Number(r.volContratado);
+    const pago = Number(r.pago);
+    return { id: r.id, nome: r.nome ?? "—", obras: r.obras, volContratado: vol, pago, saldo: vol - pago };
+  });
+}
+
+export interface ReceitaPlataforma {
+  id: string;
+  tipo: "medicoes" | "assinatura" | "outros";
+  nome: string;
+  valor: number;
+  percentTotal: number;
+  iconColor: string;
+  barColor: string;
+}
+
+/** Receita da plataforma por categoria (assinaturas, anúncios, taxas de obra). */
+export async function getReceitasPlataforma(): Promise<{ receitas: ReceitaPlataforma[]; total: number }> {
+  const rows = await db
+    .select({
+      assinatura: sql<string>`COALESCE(SUM(${financeiro.valor}) FILTER (WHERE ${financeiro.categoria} = 'assinatura' AND ${financeiro.tipo} = 'entrada' AND ${financeiro.status} = 'pago'), 0)`,
+      anuncio: sql<string>`COALESCE(SUM(${financeiro.valor}) FILTER (WHERE ${financeiro.categoria} = 'anuncio' AND ${financeiro.tipo} = 'entrada' AND ${financeiro.status} = 'pago'), 0)`,
+      obra: sql<string>`COALESCE(SUM(${financeiro.valor}) FILTER (WHERE ${financeiro.escopo} = 'obra' AND ${financeiro.tipo} = 'entrada' AND ${financeiro.status} = 'pago'), 0)`,
+    })
+    .from(financeiro);
+  const r = rows[0];
+  const assinatura = Number(r?.assinatura ?? 0);
+  const anuncio = Number(r?.anuncio ?? 0);
+  const obra = Number(r?.obra ?? 0);
+  const total = assinatura + anuncio + obra;
+  const pct = (v: number) => (total > 0 ? Math.round((v / total) * 1000) / 10 : 0);
+  const receitas: ReceitaPlataforma[] = [
+    { id: "assinatura", tipo: "assinatura", nome: "Assinaturas", valor: assinatura, percentTotal: pct(assinatura), iconColor: "text-blue-600", barColor: "bg-blue-500" },
+    { id: "anuncio", tipo: "outros", nome: "Anúncios", valor: anuncio, percentTotal: pct(anuncio), iconColor: "text-amber-600", barColor: "bg-amber-500" },
+    { id: "obra", tipo: "medicoes", nome: "Taxas de obra", valor: obra, percentTotal: pct(obra), iconColor: "text-emerald-600", barColor: "bg-emerald-500" },
+  ];
+  return { receitas, total };
+}
+
+export interface AdoptionMetrics {
+  usuariosAtivos30d: number;
+  usuariosAtivos30dDeltaPercent: number;
+  novosUsuarios30d: number;
+  aplicacoes7d: number;
+  aplicacoes7dDeltaPercent: number;
+  taxaConversaoCandidatura: number;
+  churnEmpreiteirosPercent: number;
+}
+
+/**
+ * Métricas de adoção DERIVADAS DO BANCO (sem fonte externa). "Usuários ativos"
+ * = cadastrados que não estão inativos (proxy — não há rastreio de last-login).
+ * Conversão = candidaturas aceitas / total. Churn fica em 0 até existir
+ * last-login (documentado como limitação).
+ */
+export async function getAdoptionMetrics(agoraMs: number): Promise<AdoptionMetrics> {
+  const ms30 = new Date(agoraMs - 30 * 86_400_000).toISOString();
+  const ms7 = new Date(agoraMs - 7 * 86_400_000).toISOString();
+  const ms14 = new Date(agoraMs - 14 * 86_400_000).toISOString();
+
+  const [u] = await db
+    .select({
+      ativos: sql<number>`COUNT(*) FILTER (WHERE ${users.ativo} = true)::int`,
+      novos30d: sql<number>`COUNT(*) FILTER (WHERE ${users.createdAt} >= ${ms30})::int`,
+    })
+    .from(users);
+
+  const [c] = await db
+    .select({
+      total: sql<number>`COUNT(*)::int`,
+      aceitas: sql<number>`COUNT(*) FILTER (WHERE ${candidaturas.status} = 'aceita')::int`,
+      ultimos7: sql<number>`COUNT(*) FILTER (WHERE ${candidaturas.createdAt} >= ${ms7})::int`,
+      semana_anterior: sql<number>`COUNT(*) FILTER (WHERE ${candidaturas.createdAt} >= ${ms14} AND ${candidaturas.createdAt} < ${ms7})::int`,
+    })
+    .from(candidaturas);
+
+  const aplicacoes7d = c?.ultimos7 ?? 0;
+  const semanaAnterior = c?.semana_anterior ?? 0;
+  const deltaAplic = semanaAnterior > 0 ? Math.round(((aplicacoes7d - semanaAnterior) / semanaAnterior) * 100) : 0;
+  const conversao = (c?.total ?? 0) > 0 ? Math.round(((c?.aceitas ?? 0) / (c?.total ?? 1)) * 100) : 0;
+
+  return {
+    usuariosAtivos30d: u?.ativos ?? 0,
+    usuariosAtivos30dDeltaPercent: 0, // sem histórico de login para delta real
+    novosUsuarios30d: u?.novos30d ?? 0,
+    aplicacoes7d,
+    aplicacoes7dDeltaPercent: deltaAplic,
+    taxaConversaoCandidatura: conversao,
+    churnEmpreiteirosPercent: 0, // requer rastreio de last-login (limitação documentada — J18)
   };
 }
 
