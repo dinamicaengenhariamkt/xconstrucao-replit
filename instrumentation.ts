@@ -103,9 +103,19 @@ export async function register() {
       console.error("[instrumentation] bootstrapFaqSchema failed:", err);
     });
 
+    const { bootstrapKpiSnapshotsSchema } = await import("./server/bootstrap-kpi-snapshots");
+    await bootstrapKpiSnapshotsSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapKpiSnapshotsSchema failed:", err);
+    });
+
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
     await markOverduePagamentos().catch((err) => {
       console.error("[instrumentation] markOverduePagamentos failed:", err);
+    });
+
+    const { snapshotKpisJob } = await import("./features/financeiro/snapshot-kpis-job");
+    await snapshotKpisJob().catch((err) => {
+      console.error("[instrumentation] snapshotKpisJob failed:", err);
     });
 
     const { dispatchPendingCandidaturaNotifications } = await import(

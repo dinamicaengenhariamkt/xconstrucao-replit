@@ -1,6 +1,6 @@
 # Jornada — Observabilidade Histórica (snapshots de KPI, deltas reais, churn)
 
-> Status: planejada | Prioridade: baixa | Wave: 6
+> Status: pronto | Prioridade: baixa | Wave: 6
 > Última atualização: 2026-06-05
 >
 > **Criada em 2026-06-05** a partir de auditoria `/jornada`. Pós-MVP: agrupa itens
@@ -58,13 +58,14 @@ flowchart LR
   os preenche com dado real.
 
 ## 9. Checklist de implementação
-- [ ] Tabela `kpi_snapshots` + bootstrap idempotente + espelho no schema
-- [ ] Coluna `users.last_login_at` + gravação no login
-- [ ] Job periódico que materializa os KPIs-chave por período (registrar em `instrumentation.ts`)
-- [ ] Service de delta (atual vs período anterior) consumido pelos dashboards
-- [ ] Definir a janela de churn (ex.: empreiteiro sem login há > N dias) e calcular `churnEmpreiteirosPercent`
-- [ ] Reativar os `*Delta`/`desvioPercentual` ocultados em J17/J18 com os dados reais
-- [ ] (opcional) Série temporal por métrica para gráficos
+- [x] Tabela `kpi_snapshots` (índice ÚNICO `(metrica, periodo)` = idempotência) + bootstrap idempotente ([bootstrap-kpi-snapshots.ts](../../server/bootstrap-kpi-snapshots.ts)) + espelho em [schema.ts](../../shared/db/schema.ts)
+- [x] Coluna `users.last_login_at` + gravação no login — feita no [session-issuer.ts](../../features/auth/api/session-issuer.ts) (`emitirSessao`), que cobre **login normal E 2FA** num só ponto; fire-and-forget (não quebra o login). Helper `updateUserLastLogin` em [auth-storage.ts](../../features/auth/api/auth-storage.ts)
+- [x] Job periódico que materializa os KPIs-chave por período ([snapshot-kpis-job.ts](../../features/financeiro/snapshot-kpis-job.ts), registrado em [instrumentation.ts](../../instrumentation.ts)) — `usuariosAtivos`, `volumeContratado`, `taxasPlataforma`; `ON CONFLICT DO NOTHING` (idempotente). **Validado: 1ª run inserted=3, 2ª run inserted=0**
+- [x] Service de delta (atual vs período anterior) — `getSnapshotValor`/`calcularDeltaPercent` em [caixa-service.ts](../../features/admin/financeiro/api/caixa-service.ts); **validado: base 6 → atual 9 = +50%**
+- [x] Janela de churn (empreiteiro sem login há > 60 dias; conta nunca-logada só conta se cadastro antigo) → `churnEmpreiteirosPercent` real
+- [x] Reativados os deltas em `getAdoptionMetrics` (`usuariosAtivos30dDeltaPercent` e `churnEmpreiteirosPercent` deixaram de ser `0` hardcoded). [AdoptionMetricsSection.tsx](../../features/admin/financeiro/components/AdoptionMetricsSection.tsx) não mudou — só recebe dados reais
+- [ ] (opcional) Série temporal por métrica para gráficos — **follow-up** (a série já é coletada; falta o endpoint/visual)
+- [ ] (opcional) Agendamento dedicado (hoje roda no boot via `instrumentation.ts`, idempotente por dia) — **follow-up**: para garantir 1 snapshot/dia mesmo sem reboot, plugar um Scheduled Deployment chamando o job
 
 ## 10. Critérios de aceite
 1. Após ≥2 períodos de snapshot, os dashboards mostram deltas reais ("X% vs período anterior") em vez de zero.
@@ -89,3 +90,4 @@ flowchart LR
 > Doc viva. Registrar aqui o que apareceu no caminho.
 
 - **2026-06-05** — Jornada criada por auditoria, agrupando itens P2 do backlog. Confirmado: deltas/churn nos dashboards estão honestamente zerados por falta de snapshot histórico e de `last_login_at`. Sem mock a remover — é fundação de dados.
+- **2026-06-05** — **Entregue.** Risco baixo por design (tudo aditivo). `last_login_at` gravado no `emitirSessao` (ponto único que cobre login + 2FA), fire-and-forget. Job de snapshot idempotente por dia (índice único + `ON CONFLICT DO NOTHING`), rodando no boot. Deltas religados em `getAdoptionMetrics` com degradação elegante (0 enquanto não há histórico). type-check limpo; schema aplicado e verificado no banco; job testado 2x (idempotência) e cálculo de delta validado (+50% com base de teste). **Nota de produto:** o delta de usuários ativos só fica != 0 após existir um snapshot de ~30 dias atrás (≥1 mês de coleta); o churn aparece conforme houver contas antigas sem login recente.

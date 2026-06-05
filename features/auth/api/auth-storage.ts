@@ -36,6 +36,11 @@ export async function updateUserEmailVerified(userId: string, timestamp: Date): 
   await db.update(users).set({ emailVerified: timestamp }).where(eq(users.id, userId));
 }
 
+/** Registra o último login (J29 — base do churn por inatividade). */
+export async function updateUserLastLogin(userId: string, when: Date): Promise<void> {
+  await db.update(users).set({ lastLoginAt: when }).where(eq(users.id, userId));
+}
+
 /** Soft-delete: desativa a conta (self-service J02 ou admin). Login passa a recusar. */
 export async function setUserAtivo(userId: string, ativo: boolean): Promise<void> {
   await db.update(users).set({ ativo }).where(eq(users.id, userId));

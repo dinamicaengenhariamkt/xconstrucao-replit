@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, empreiteiras, financeiro, obras, users } from "@shared/db/schema";
+import { candidaturas, clientes, empreiteiras, financeiro, kpiSnapshots, obras, users } from "@shared/db/schema";
 
 /**
  * Service de leitura do Financeiro Admin (J09). Caixa CONSOLIDADO = dinheiro de
@@ -809,10 +809,37 @@ export interface AdoptionMetrics {
 
 /**
  * Métricas de adoção DERIVADAS DO BANCO (sem fonte externa). "Usuários ativos"
- * = cadastrados que não estão inativos (proxy — não há rastreio de last-login).
- * Conversão = candidaturas aceitas / total. Churn fica em 0 até existir
- * last-login (documentado como limitação).
+ * = cadastrados que não estão inativos. Conversão = candidaturas aceitas / total.
+ *
+ * J29: o delta de usuários ativos vem de `kpi_snapshots` (0 até haver ≥1 snapshot
+ * de ~30 dias atrás) e o churn de empreiteiros usa `users.last_login_at`
+ * (inatividade > {@link CHURN_INATIVIDADE_DIAS} dias).
  */
+/**
+ * Valor de um snapshot de KPI (J29) na data mais recente em/antes de `periodoRef`
+ * (YYYY-MM-DD). Retorna `null` se ainda não há histórico — o caller degrada para 0.
+ */
+async function getSnapshotValor(metrica: string, periodoRef: string): Promise<number | null> {
+  const [row] = await db
+    .select({ valor: kpiSnapshots.valor })
+    .from(kpiSnapshots)
+    .where(and(eq(kpiSnapshots.metrica, metrica), lte(kpiSnapshots.periodo, periodoRef)))
+    .orderBy(desc(kpiSnapshots.periodo))
+    .limit(1);
+  if (!row) return null;
+  const n = Number(row.valor);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Variação percentual atual vs anterior. 0 quando não há base (anterior ausente/zero). */
+function calcularDeltaPercent(atual: number, anterior: number | null): number {
+  if (anterior === null || anterior === 0) return 0;
+  return Math.round(((atual - anterior) / anterior) * 100);
+}
+
+/** Janela de inatividade que conta como churn de empreiteiro (J29). */
+const CHURN_INATIVIDADE_DIAS = 60;
+
 export async function getAdoptionMetrics(agoraMs: number): Promise<AdoptionMetrics> {
   const ms30 = new Date(agoraMs - 30 * 86_400_000).toISOString();
   const ms7 = new Date(agoraMs - 7 * 86_400_000).toISOString();
@@ -839,14 +866,39 @@ export async function getAdoptionMetrics(agoraMs: number): Promise<AdoptionMetri
   const deltaAplic = semanaAnterior > 0 ? Math.round(((aplicacoes7d - semanaAnterior) / semanaAnterior) * 100) : 0;
   const conversao = (c?.total ?? 0) > 0 ? Math.round(((c?.aceitas ?? 0) / (c?.total ?? 1)) * 100) : 0;
 
+  // J29 — delta de usuários ativos vs snapshot de ~30 dias atrás (0 até haver histórico).
+  const usuariosAtivos = u?.ativos ?? 0;
+  const periodo30 = new Date(agoraMs - 30 * 86_400_000).toISOString().slice(0, 10);
+  const ativosAnterior = await getSnapshotValor("usuariosAtivos", periodo30);
+  const usuariosAtivos30dDeltaPercent = calcularDeltaPercent(usuariosAtivos, ativosAnterior);
+
+  // J29 — churn de empreiteiros: % com last_login_at além da janela de inatividade.
+  // Empreiteiros que nunca logaram (last_login_at NULL) só contam como churn se a
+  // conta é antiga (cadastro anterior à janela) — evita penalizar quem acabou de se cadastrar.
+  const corteInatividade = new Date(agoraMs - CHURN_INATIVIDADE_DIAS * 86_400_000).toISOString();
+  const [churnRow] = await db
+    .select({
+      total: sql<number>`COUNT(*)::int`,
+      inativos: sql<number>`COUNT(*) FILTER (
+        WHERE (${users.lastLoginAt} IS NOT NULL AND ${users.lastLoginAt} < ${corteInatividade})
+           OR (${users.lastLoginAt} IS NULL AND ${users.createdAt} < ${corteInatividade})
+      )::int`,
+    })
+    .from(users)
+    .where(and(eq(users.role, "empreiteiro"), eq(users.ativo, true)));
+  const churnEmpreiteirosPercent =
+    (churnRow?.total ?? 0) > 0
+      ? Math.round(((churnRow?.inativos ?? 0) / (churnRow?.total ?? 1)) * 100)
+      : 0;
+
   return {
-    usuariosAtivos30d: u?.ativos ?? 0,
-    usuariosAtivos30dDeltaPercent: 0, // sem histórico de login para delta real
+    usuariosAtivos30d: usuariosAtivos,
+    usuariosAtivos30dDeltaPercent,
     novosUsuarios30d: u?.novos30d ?? 0,
     aplicacoes7d,
     aplicacoes7dDeltaPercent: deltaAplic,
     taxaConversaoCandidatura: conversao,
-    churnEmpreiteirosPercent: 0, // requer rastreio de last-login (limitação documentada — J18)
+    churnEmpreiteirosPercent,
   };
 }
 

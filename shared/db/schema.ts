@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -76,6 +76,8 @@ export const users = pgTable("users", {
   ativo: boolean("ativo").notNull().default(true),
   canManageUsers: boolean("can_manage_users").notNull().default(false),
   avatarFileId: varchar("avatar_file_id"),
+  // J29 — rastreio de último login para churn por inatividade.
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -458,6 +460,20 @@ export const platformSettings = pgTable("platform_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
 });
+
+// J29 — Observabilidade histórica: uma fotografia por métrica por dia.
+// Índice único (metrica, periodo) garante a idempotência do job de snapshot.
+export const kpiSnapshots = pgTable("kpi_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metrica: text("metrica").notNull(),
+  valor: numeric("valor").notNull(),
+  periodo: date("periodo").notNull(),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+}, (t) => ({
+  uniqMetricaPeriodo: uniqueIndex("uniq_kpi_snapshots_metrica_periodo").on(t.metrica, t.periodo),
+}));
+
+export type KpiSnapshot = typeof kpiSnapshots.$inferSelect;
 
 export const verificationTokens = pgTable("verification_tokens", {
   identifier: text("identifier").notNull(),

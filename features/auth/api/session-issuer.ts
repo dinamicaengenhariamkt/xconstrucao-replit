@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { createAccessToken, createRefreshToken } from "@features/auth/api/auth-service";
 import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { updateUserLastLogin } from "@features/auth/api/auth-storage";
 import { db } from "@shared/db/db";
 import { sessions, type User } from "@shared/db/schema";
 
@@ -57,6 +58,9 @@ export async function emitirSessao(
       ip,
       lastUsedAt: new Date(),
     });
+    // J29 — registra o último login (cobre login normal e 2º passo do 2FA, que
+    // chamam emitirSessao). Best-effort: falha aqui não impede a sessão.
+    await updateUserLastLogin(userData.id, new Date());
   } catch (err) {
     console.error("Falha ao registrar sessão:", err);
   }

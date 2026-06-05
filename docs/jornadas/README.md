@@ -38,7 +38,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
 | 27 | [Gestão de Leads do Marketplace](27-gestao-leads-marketplace.md) | admin | 5 | pronto | alta |
 | 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | bloqueada | média |
-| 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | planejada | baixa |
+| 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | pronto | baixa |
 | 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | bloqueada | média |
 
 ---
@@ -65,7 +65,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
 - **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20, 23 (bloqueadas).
 - **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads) — entregues 2026-06-05**; 24 (templates + home dinâmica de anúncios) planejada (deve preceder 23). Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14).
-- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): 28 (docs legais versionados — bloqueada por jurídico), 29 (observabilidade histórica/snapshots — ganha valor com volume), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio).
+- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio).
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

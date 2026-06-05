@@ -100,11 +100,12 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Motivação:** `useEffect` de `marcar-lida` dispara apenas na primeira abertura. Se chega mensagem nova enquanto user tem thread aberta, fica `unread` no banco até ele trocar de thread. Disparar `marcar-lida` quando `serverMessages.length` aumenta e aba está visível.
 - **Prioridade:** P1
 
-### Mover `garantirChatThread` pra fora da tx de aceitar
+### ~~Mover `garantirChatThread` pra fora da tx de aceitar~~ ✓ Resolvido 2026-05-29
 - **Origem:** J13 review (code-reviewer)
 - **Descoberto:** 2026-05-29
 - **Motivação:** try/catch interno da chamada `garantirChatThread` dentro da tx pode abortar a tx do aceite se houver erro inesperado (ex: FK violation). Postgres invalida a tx inteira; queries seguintes falham com "current transaction is aborted". Mover criação da thread pra pós-commit, fire-and-forget, com job de backfill.
 - **Prioridade:** P1 (risco de aceite quebrar em edge case)
+- **✅ RESOLVIDO (2026-05-29):** em [aceitar/route.ts](../../app/api/contratante/candidaturas/[id]/aceitar/route.ts) o lookup de `contratanteUserId` permanece DENTRO da tx (consistência), mas o INSERT da thread roda FORA, em `after()` pós-commit — fire-and-forget com 1 retry (500ms). `garantirChatThread` é idempotente (`onConflictDoNothing` em `chat_threads.obraId`). Nenhum erro de chat afeta o aceite (a resposta HTTP já foi enviada). _(Re-confirmado 2026-06-05 ao auditar o fluxo; o item seguia listado como aberto por engano.)_
 
 ### Validar ownership de anexo de obra (defense in depth ampliado)
 - **Origem:** J13 review (security-auditor)
