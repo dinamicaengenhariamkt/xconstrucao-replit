@@ -36,6 +36,19 @@ export async function updateUserEmailVerified(userId: string, timestamp: Date): 
   await db.update(users).set({ emailVerified: timestamp }).where(eq(users.id, userId));
 }
 
+/** Soft-delete: desativa a conta (self-service J02 ou admin). Login passa a recusar. */
+export async function setUserAtivo(userId: string, ativo: boolean): Promise<void> {
+  await db.update(users).set({ ativo }).where(eq(users.id, userId));
+}
+
+/**
+ * Troca o email do usuário e o remarca como verificado (já confirmado pelo
+ * token de verificação enviado ao novo endereço). J02 — trocar email self-service.
+ */
+export async function updateUserEmail(userId: string, email: string, verifiedAt: Date): Promise<void> {
+  await db.update(users).set({ email, emailVerified: verifiedAt }).where(eq(users.id, userId));
+}
+
 /**
  * Cria a row de domínio (clientes / empreiteiras) vinculada a um usuário,
  * caso ainda não exista. Idempotente — pode ser chamado várias vezes para

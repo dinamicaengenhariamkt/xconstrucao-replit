@@ -13,6 +13,7 @@ import {
   RiHistoryLine,
   RiAlertLine,
   RiShieldCheckLine,
+  RiChat3Line,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -22,6 +23,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { title: 'Obras', url: '/admin/obras', icon: RiHammerLine },
   { title: 'Moderação', url: '/admin/obras/moderacao', icon: RiShieldCheckLine },
   { title: 'Disputas', url: '/admin/disputas', icon: RiAlertLine },
+  { title: 'Comunicação', url: '/admin/comunicacao', icon: RiChat3Line },
   { title: 'Financeiro', url: '/admin/financeiro', icon: RiMoneyDollarCircleLine },
   { title: 'Caixa', url: '/admin/caixa', icon: RiWalletLine },
   { title: 'Entradas', url: '/admin/entradas', icon: RiArrowUpLine },

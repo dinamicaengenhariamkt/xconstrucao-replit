@@ -1,6 +1,6 @@
 # Jornada — Exibição de Anúncios (BannerSlot nas telas)
 
-> Status: pendente | Prioridade: média | Wave: 2
+> Status: pronto | Prioridade: média | Wave: 2
 > Última atualização: 2026-06-01
 >
 > Fecha o lado VISÍVEL da J12. Backend, endpoint público e o componente
@@ -8,10 +8,12 @@
 > tracking de impressão.
 
 ## 1. Contexto & Objetivo
-A J12 entregou CRUD de campanhas, endpoint público por zona e tracking. Mas o
-`AdSidebarSlot` não está renderizado em nenhuma tela — campanhas ativas não
-aparecem para ninguém. Esta jornada pluga o slot na landing e nos dashboards e
-faz a impressão ser contabilizada quando o banner entra na viewport.
+A J12 entregou CRUD de campanhas, endpoint público por zona e tracking. O
+`AdSidebarSlot` já era renderizado nas zonas de chat (sidebar) via
+`useActiveAdForZone`, mas não na landing nem nos dashboards, e não disparava
+tracking de impressão/clique. Esta jornada pluga o slot na landing e nos
+dashboards, consome o endpoint público leve por zona, renderiza o criativo real
+e contabiliza impressão (viewport) e clique.
 
 ## 2. Personas
 - **Visitante público**: vê banner na landing.
@@ -47,12 +49,12 @@ Nada novo. Usa `anuncios`, `anuncio_eventos` (J12).
 - Nenhum — J12 já removeu os mocks. Esta jornada só adiciona uso real.
 
 ## 9. Checklist de implementação
-- [ ] Hook `useAnuncioAtivo(zona)` consumindo `GET /api/anuncios?zona=`
-- [ ] Posicionar `AdSidebarSlot` na landing + dashboards (zonas corretas por persona)
-- [ ] IntersectionObserver dispara `POST .../eventos { tipo: "impressao" }` uma vez por exibição
-- [ ] Clique no banner → `POST .../eventos { tipo: "clique" }` + abre `ctaUrl`
-- [ ] Renderizar criativo real (imagem `criativoUrl`) em vez do placeholder de texto atual
-- [ ] Slot some graciosamente quando não há anúncio ativo (já faz `return null`)
+- [x] Hook `useAnuncioAtivo(zona)` consumindo `GET /api/anuncios?zona=` ([features/shared/anuncios/hooks/use-anuncio-ativo.ts](../../features/shared/anuncios/hooks/use-anuncio-ativo.ts))
+- [x] Posicionar `AdSidebarSlot` na landing (`banner-qa`) + dashboards (`banner-dashboard-contratante`/`-empreiteiro`)
+- [x] IntersectionObserver dispara `POST .../eventos { tipo: "impressao" }` uma vez por exibição (flag `impresso` + `disconnect`)
+- [x] Clique no banner → `POST .../eventos { tipo: "clique" }` + abre `ctaUrl` (nova aba, `noopener`)
+- [x] Renderizar criativo real (imagem `criativoUrl`) com fallback de texto
+- [x] Slot some graciosamente quando não há anúncio ativo (`return null`)
 
 ## 10. Critérios de aceite
 1. Admin cria campanha ativa na zona `banner-dashboard-contratante`.
@@ -71,4 +73,6 @@ Nada novo. Usa `anuncios`, `anuncio_eventos` (J12).
 - Alimenta: J09 (impressões/cliques aparecem nos KPIs de anúncios).
 
 ## 13. Gaps descobertos durante execução
-- _Sem registros ainda._
+- 2026-06-01: **Implementada.** `AdSidebarSlot` reescrito ([features/shared/anuncios/components/AdSidebarSlot.tsx](../../features/shared/anuncios/components/AdSidebarSlot.tsx)) para consumir o endpoint público leve por zona (`useAnuncioAtivo`) em vez de listar todas as zonas (`useActiveAdForZone`, agora órfão — mantido pois `useZonasAnuncio` ainda serve a UI admin).
+- 2026-06-01: Slot da landing (`banner-qa`) inserido num container estreito antes da CTA final; como `return null` quando sem campanha, **fica invisível até o admin ativar** — não altera a landing atual.
+- 2026-06-01: Tracking é best-effort (`try/catch` + `keepalive`) — adblock/offline não quebram a página. Impressão dispara uma vez por montagem (threshold 0.5).

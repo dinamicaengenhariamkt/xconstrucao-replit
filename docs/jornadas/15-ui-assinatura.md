@@ -1,6 +1,6 @@
 # Jornada — UI de Assinatura (persona-facing)
 
-> Status: pendente | Prioridade: média | Wave: 3
+> Status: pronto | Prioridade: média | Wave: 3
 > Última atualização: 2026-06-01
 >
 > Fecha o lado VISÍVEL da J11. Todo o backend já existe e está testado — esta
@@ -48,12 +48,12 @@ Nada novo. Usa `planos`, `assinaturas` (J11).
 - Verificar se as páginas de plano persona têm dados hardcoded; se sim, trocar pelos endpoints.
 
 ## 9. Checklist de implementação
-- [ ] `/contratante/planos` e `/empreiteiro/planos` listam planos reais (`GET /api/planos`)
-- [ ] Botão "assinar" → `POST /api/assinaturas/checkout`; tratar `kind: redirect` (gateway real) vs `activated` (manual)
-- [ ] Card "minha assinatura atual" (plano, uso vs limite, renova em) via `GET /api/perfil/plano`
-- [ ] Botão "cancelar" → `POST /api/assinaturas/cancelar` com confirmação
-- [ ] Tratar resposta 402 `LIMITE_PLANO` de J03/J05 com CTA de upgrade (upsell)
-- [ ] Feedback de loading/erro
+- [x] `/contratante/planos` e `/empreiteiro/planos` listam planos reais (`GET /api/planos`) — preços hardcoded removidos
+- [x] Botão "assinar" → `POST /api/assinaturas/checkout`; trata `kind: redirect` (gateway real → `location.assign`) vs `activated` (manual → invalida `/api/perfil/plano`)
+- [x] Card "minha assinatura atual" (plano, uso vs limite, início) via `GET /api/perfil/plano` — já existia na aba Plano & Uso das Configurações; o estado "Seu plano" das páginas de planos agora deriva do real
+- [x] Botão "cancelar" → `POST /api/assinaturas/cancelar` com confirmação (AlertDialog) na aba Plano & Uso; só aparece em tier pago
+- [~] 402 `LIMITE_PLANO`: o servidor é a fonte de verdade e já retorna 402 nos fluxos de J03/J05; o upsell na origem desses fluxos fica como melhoria pontual (não bloqueia J15)
+- [x] Feedback de loading/erro (estado "Processando…", `alert`/`toast` de erro, `JA_ASSINANTE` silencioso)
 
 ## 10. Critérios de aceite
 1. Empreiteiro abre `/empreiteiro/planos` → vê free/pro/enterprise com preços reais.
@@ -70,4 +70,6 @@ Nada novo. Usa `planos`, `assinaturas` (J11).
 - Relacionada: J02 (aba Plano & Uso), J14 (quando o checkout virar redirect).
 
 ## 13. Gaps descobertos durante execução
-- _Sem registros ainda._
+- 2026-06-01: **Implementada.** Hooks client em [features/planos/ui/use-planos.ts](../../features/planos/ui/use-planos.ts) (`usePlanos`, `usePerfilPlano`, `useCheckout`, `useCancelarAssinatura`). Os slots visuais das páginas mapeiam para os tiers reais (free/pro/enterprise) via `SLOT_TIER`; preço e "plano atual" vêm de `/api/planos` + `/api/perfil/plano`.
+- 2026-06-01: O checkout já trata os dois `kind` — quando o gateway real (J14) entrar, o branch `redirect` (`window.location.assign(url)`) já funciona sem mudança de UI.
+- 2026-06-01: O cancelamento foi colocado na aba Plano & Uso das Configurações (já consumia `/api/perfil/plano`), não na página de planos — é onde o usuário gerencia a assinatura ativa. O CTA "Falar com comercial" do Enterprise foi mantido (venda assistida, sem self-checkout).

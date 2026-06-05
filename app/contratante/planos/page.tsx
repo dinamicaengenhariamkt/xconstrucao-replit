@@ -12,11 +12,20 @@ import {
   RiArrowUpSLine,
   RiStarFill,
 } from 'react-icons/ri';
+import { usePlanos, usePerfilPlano, useCheckout, type PlanoApi } from '@features/planos/ui/use-planos';
+import type { PlanoTier } from '@shared/lib/plans-catalog';
 
 /* ─────────────────────────────────────────────
    Data
 ───────────────────────────────────────────── */
 type PlanId = 'starter' | 'empresarial' | 'enterprise';
+
+/** Mapeia o slot visual desta página para o tier real do catálogo. */
+const SLOT_TIER: Record<PlanId, PlanoTier> = {
+  starter: 'free',
+  empresarial: 'pro',
+  enterprise: 'enterprise',
+};
 
 interface Feature {
   label: string;
@@ -37,8 +46,6 @@ const FEATURES: Feature[] = [
   { label: 'Exportação de relatórios',           starter: false,       empresarial: true,        enterprise: true },
   { label: 'Integrações / API',                  starter: false,       empresarial: false,       enterprise: true },
 ];
-
-const PLANO_ATUAL: PlanId = 'empresarial';
 
 const FAQ_ITEMS = [
   {
@@ -111,12 +118,39 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 ───────────────────────────────────────────── */
 export default function ContratantePlanosPage() {
   const [anual, setAnual] = useState(false);
+  const { data: planos } = usePlanos();
+  const { data: perfilPlano } = usePerfilPlano();
+  const checkout = useCheckout();
 
-  const precos = {
-    starter:     { mensal: null,  anual: null },
-    empresarial: { mensal: 149,   anual: 119 },
-    enterprise:  { mensal: 349,   anual: 279 },
-  };
+  const PLANO_ATUAL: PlanId =
+    perfilPlano?.plano === 'pro' ? 'empresarial' : perfilPlano?.plano === 'enterprise' ? 'enterprise' : 'starter';
+
+  function planoDeSlot(slot: PlanId): PlanoApi | undefined {
+    return planos?.find((p) => p.tier === SLOT_TIER[slot]);
+  }
+
+  /** Preço /mês exibido (anual mostra o valor mensal equivalente do plano anual). */
+  function precoMensal(slot: PlanId): number | null {
+    const p = planoDeSlot(slot);
+    if (!p) return null;
+    const v = anual ? p.valorAnual : p.valorMensal;
+    const n = v == null ? null : Number(v);
+    return n && n > 0 ? Math.round(n) : null;
+  }
+
+  function assinar(slot: PlanId) {
+    const p = planoDeSlot(slot);
+    if (!p || checkout.isPending) return;
+    checkout.mutate(
+      { planoId: p.id, ciclo: anual ? 'anual' : 'mensal' },
+      {
+        onError: (err) => {
+          if (err.code === 'JA_ASSINANTE') return; // já é o plano atual
+          alert(err.message);
+        },
+      },
+    );
+  }
 
   return (
     <div className="min-h-full bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-background-dark">
@@ -218,8 +252,12 @@ export default function ContratantePlanosPage() {
                 Plano atual
               </button>
             ) : (
-              <button className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors">
-                Começar grátis
+              <button
+                onClick={() => assinar('starter')}
+                disabled={checkout.isPending || !planoDeSlot('starter')}
+                className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {checkout.isPending ? 'Processando…' : 'Começar grátis'}
               </button>
             )}
           </div>
@@ -255,12 +293,12 @@ export default function ContratantePlanosPage() {
             <div className="mb-8">
               <div className="flex items-end gap-1.5">
                 <span className="text-5xl font-extrabold text-white">
-                  R$ {anual ? precos.empresarial.anual : precos.empresarial.mensal}
+                  R$ {precoMensal('empresarial') ?? '—'}
                 </span>
                 <span className="text-white/70 text-sm mb-2">/mês</span>
               </div>
-              {anual && (
-                <p className="text-xs text-white/60 mt-1">Cobrado anualmente (R$ {(precos.empresarial.anual! * 12).toLocaleString('pt-BR')}/ano)</p>
+              {anual && precoMensal('empresarial') != null && (
+                <p className="text-xs text-white/60 mt-1">Cobrado anualmente (R$ {(precoMensal('empresarial')! * 12).toLocaleString('pt-BR')}/ano)</p>
               )}
             </div>
 
@@ -292,8 +330,12 @@ export default function ContratantePlanosPage() {
                 Plano atual
               </button>
             ) : (
-              <button className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-primary hover:bg-white/90 transition-colors shadow-lg">
-                Assinar agora
+              <button
+                onClick={() => assinar('empresarial')}
+                disabled={checkout.isPending || !planoDeSlot('empresarial')}
+                className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-primary hover:bg-white/90 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {checkout.isPending ? 'Processando…' : 'Assinar agora'}
               </button>
             )}
           </div>
@@ -320,12 +362,12 @@ export default function ContratantePlanosPage() {
             <div className="mb-8">
               <div className="flex items-end gap-1.5">
                 <span className="text-5xl font-extrabold text-white">
-                  R$ {anual ? precos.enterprise.anual : precos.enterprise.mensal}
+                  R$ {precoMensal('enterprise') ?? '—'}
                 </span>
                 <span className="text-white/50 text-sm mb-2">/mês</span>
               </div>
-              {anual && (
-                <p className="text-xs text-white/40 mt-1">Cobrado anualmente (R$ {(precos.enterprise.anual! * 12).toLocaleString('pt-BR')}/ano)</p>
+              {anual && precoMensal('enterprise') != null && (
+                <p className="text-xs text-white/40 mt-1">Cobrado anualmente (R$ {(precoMensal('enterprise')! * 12).toLocaleString('pt-BR')}/ano)</p>
               )}
             </div>
 

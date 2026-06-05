@@ -10,8 +10,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 
 | # | Jornada | Personas | Wave | Status | Prioridade |
 |:-:|---|---|:-:|---|:-:|
-| 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | revisão | alta |
-| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | revisão | média |
+| 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | pronto | alta |
+| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 03 | [Cadastro de Obra](03-cadastro-obra.md) | contratante | 1 | pronto | alta |
 | 04 | [Marketplace & Descoberta](04-marketplace-descoberta.md) | empreiteiro, contratante | 1 | pronto | alta |
 | 05 | [Candidatura & Aceite](05-candidatura-aceite.md) | empreiteiro, contratante, admin | 1 | pronto | alta |
@@ -22,13 +22,18 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 10 | [Disputas](10-disputas.md) | todas | 3 | pronto | baixa |
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | pronto | média |
-| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | pronto | média |
+| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro | 2 | pronto | média |
 | 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | bloqueada | média |
-| 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pendente | média |
-| 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pendente | média |
-| 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pendente | alta |
-| 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | parcial | média |
-| 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pendente | alta |
+| 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pronto | média |
+| 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pronto | média |
+| 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pronto | alta |
+| 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | pronto | média |
+| 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pronto | alta |
+| 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
+| 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | revisão | média |
+| 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | revisão | média |
+| 23 | [Meus Anúncios (Self-Service)](23-meus-anuncios-self-service.md) | contratante, empreiteiro, outsider, admin | 4 | bloqueada | baixa |
+| 24 | [Anúncios Ricos (Preview, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, público | 4 | bloqueada | média |
 
 ---
 

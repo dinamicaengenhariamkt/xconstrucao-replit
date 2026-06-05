@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { isMockEnabled } from '@/features/shared/lib/mock-flag';
 import type {
   AdminCliente,
   AdminClienteObra,
@@ -9,15 +8,6 @@ import type {
   ClienteAtividade,
   HistoricoBloqueio,
 } from '../types';
-import {
-  mockAdminClientes,
-  mockAdminClienteObras,
-  mockAdminClienteFinanceiro,
-  mockAdminClienteDocumentos,
-  mockAdminClienteAtividades,
-} from '../mocks';
-
-const ENABLE_MOCK = isMockEnabled();
 
 export const novoClienteSchema = z.object({
   tipo: z.enum(['pessoa_fisica', 'pessoa_juridica'], {
@@ -45,7 +35,6 @@ export function useAdminClientes() {
   return useQuery<AdminCliente[]>({
     queryKey: ['admin', 'clientes'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClientes;
       const res = await fetch('/api/admin/clientes');
       if (!res.ok) throw new Error('Erro ao buscar clientes');
       return res.json();
@@ -58,7 +47,6 @@ export function useAdminCliente(id: string) {
   return useQuery<AdminCliente | undefined>({
     queryKey: ['admin', 'clientes', id],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClientes.find((c) => c.id === id);
       const res = await fetch(`/api/admin/clientes/${id}`);
       if (!res.ok) throw new Error('Erro ao buscar cliente');
       return res.json();
@@ -72,7 +60,6 @@ export function useAdminClienteObras(id: string) {
   return useQuery<AdminClienteObra[]>({
     queryKey: ['admin', 'clientes', id, 'obras'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClienteObras[id] ?? [];
       const res = await fetch(`/api/admin/clientes/${id}/obras`);
       if (!res.ok) throw new Error('Erro ao buscar obras do cliente');
       return res.json();
@@ -86,7 +73,6 @@ export function useAdminClienteFinanceiro(id: string) {
   return useQuery<ClienteFinanceiro | null>({
     queryKey: ['admin', 'clientes', id, 'financeiro'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClienteFinanceiro[id] ?? null;
       const res = await fetch(`/api/admin/clientes/${id}/financeiro`);
       if (!res.ok) throw new Error('Erro ao buscar financeiro do cliente');
       return res.json();
@@ -100,7 +86,6 @@ export function useAdminClienteDocumentos(id: string) {
   return useQuery<ClienteDocumento[]>({
     queryKey: ['admin', 'clientes', id, 'documentos'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClienteDocumentos[id] ?? [];
       const res = await fetch(`/api/admin/clientes/${id}/documentos`);
       if (!res.ok) throw new Error('Erro ao buscar documentos do cliente');
       return res.json();
@@ -132,7 +117,6 @@ export function useAdminClienteAtividades(id: string) {
   return useQuery<ClienteAtividade[]>({
     queryKey: ['admin', 'clientes', id, 'atividades'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminClienteAtividades[id] ?? [];
       const res = await fetch(`/api/admin/clientes/${id}/atividades`);
       if (!res.ok) throw new Error('Erro ao buscar atividades do cliente');
       return res.json();
@@ -159,10 +143,6 @@ export function useUpdateCliente(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: EditarClienteFormData) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 600));
-        return { ...data, id };
-      }
       const res = await fetch(`/api/admin/clientes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -193,10 +173,6 @@ export function useBloquearCliente() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, novoStatus, motivo, observacoes, responsavel }: BloquearClienteInput) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 600));
-        return { id, status: novoStatus, motivo, observacoes, responsavel };
-      }
       const res = await fetch(`/api/admin/clientes/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -260,10 +236,6 @@ export function useAprovarCliente() {
 export function useResetarSenhaCliente() {
   return useMutation({
     mutationFn: async (_id: string) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 800));
-        return { success: true };
-      }
       const res = await fetch(`/api/admin/clientes/${_id}/reset-senha`, {
         method: 'POST',
       });

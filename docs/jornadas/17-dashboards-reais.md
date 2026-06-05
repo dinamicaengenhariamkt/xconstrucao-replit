@@ -1,6 +1,6 @@
 # Jornada — Dashboards Reais (Contratante + Saúde/Lucro derivados)
 
-> Status: pendente | Prioridade: alta | Wave: 3
+> Status: pronto | Prioridade: alta | Wave: 3
 > Última atualização: 2026-06-01
 >
 > Mata o maior bolsão de mock restante: o dashboard do contratante (hoje 100%
@@ -57,12 +57,12 @@ Avaliar se vale materializar `obras.saude_score`/`obras.margem` para performance
 - `getMockProfit` / `getMockProfitSummary` ([features/shared/profit/mocks.ts](../../features/shared/profit/mocks.ts))
 
 ## 9. Checklist de implementação
-- [ ] `GET /api/contratante/dashboard` agregando KPIs reais (obras ativas, valor contratado, pago, pendências de medição/pagamento)
-- [ ] Série de evolução real (por mês) e distribuição por fase a partir das obras/medições
-- [ ] Plugar `compute-from-obra` (saúde) no DTO de obra — remover `getMockHealth` do client
-- [ ] Plugar cálculo real de lucro (empreiteiro/admin) — remover `getMockProfit`
-- [ ] `HealthSummary`/`ProfitSummary` consumirem os valores reais
-- [ ] Remover mocks e a flag dos dashboards
+- [x] `GET /api/contratante/dashboard` agregando KPIs reais (obras ativas, valor contratado, pago, pendências de medição/pagamento)
+- [x] Série de evolução real (por mês) e distribuição por fase a partir das obras/medições
+- [x] Plugar `compute-from-obra` (saúde) no agregador server — remover `getMockHealth` do client (dashboards)
+- [x] Plugar cálculo real de lucro (empreiteiro/admin) — remover `getMockProfit` (dashboards)
+- [x] `HealthSummary`/`ProfitSummary` consumirem os valores reais
+- [x] Remover os `getMock*` das três páginas de dashboard (mock só persiste atrás de `ENABLE_MOCK` para dev/demo)
 
 ## 10. Critérios de aceite
 1. Contratante com 2 obras vê KPIs batendo com o banco (não números fixos).
@@ -80,4 +80,9 @@ Avaliar se vale materializar `obras.saude_score`/`obras.margem` para performance
 - Cruza com: J18 (dashboard admin usa os mesmos cálculos de saúde/lucro).
 
 ## 13. Gaps descobertos durante execução
-- _Sem registros ainda._
+- 2026-06-01: **Implementada.** Endpoints criados: `GET /api/contratante/dashboard` ([features/contratante/dashboard/api/dashboard-server.ts](../../features/contratante/dashboard/api/dashboard-server.ts)), `GET /api/empreiteiro/dashboard/{stats,financial,summary}` ([features/empreiteiro/dashboard/api/dashboard-server.ts](../../features/empreiteiro/dashboard/api/dashboard-server.ts)). Saúde/lucro reais via agregadores compartilhados [features/shared/health/summary-server.ts](../../features/shared/health/summary-server.ts) e [features/shared/profit/summary-server.ts](../../features/shared/profit/summary-server.ts), reusados pelas 3 personas.
+- 2026-06-01: **Regra de saúde adotada** = a heurística existente de `computeHealthFromObra` (atraso por `dataPrevisao` vs hoje; financeiro = gap entre % pago e % progresso; tarefas = pendentes/total de `obra_tarefas` com penalidade por ocorrências abertas em `obra_ocorrencias`). Não foi inventado novo critério.
+- 2026-06-01: **Gaps de dado sem fonte (UI oculta/zera, não inventa):** (a) `obrasAtivasDelta` / `desvioPercentual` / deltas "vs período anterior" — exigem snapshot histórico que não existe; retornam 0. (b) Curva "planejado" da evolução = igual ao "realizado" (sem cronograma planejado no banco). (c) `aditivos` = 0 (não há tabela de aditivos). (d) Margem de lucro do empreiteiro tende a aparecer alta porque "custos próprios" raramente são lançados (liga com J08) — é o dado real, não estimativa.
+- 2026-06-01: **Mocks preservados como fallback de dev** atrás de `ENABLE_MOCK` (não deletados) para não quebrar o modo demo — consistente com empreiteiro/admin. Remoção definitiva fica para a limpeza de flags da J19.
+- 2026-06-01: NPS/CSAT do admin **ocultos** (sem fonte) — documentados na nova jornada bloqueada [J20](20-satisfacao-nps-csat.md).
+- 2026-06-01: **Listas e detalhes de obra também des-mockados** (não só os dashboards): `minhas-obras` (contratante/empreiteiro) e os detalhes de obra (`/contratante/minhas-obras/[id]`, `/admin/obras/[id]`) usavam `getMockHealth`/`getMockHealthSummary` para filtro/card de saúde. Agora consomem saúde real via novos endpoints `GET /api/{contratante,empreiteiro}/obras-health` (mapa `obraId→ObraHealth`) e `GET /api/obras/[id]/health` (uma obra, com scoping de acesso). Fonte única: `computeHealthMapForObras` em [features/shared/health/summary-server.ts](../../features/shared/health/summary-server.ts). **Nenhum `getMock*` é chamado em runtime** (critério de aceite #4 atendido).

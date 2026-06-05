@@ -23,6 +23,7 @@ import {
   RiTeamLine,
 } from 'react-icons/ri';
 import { UsuariosTab } from '@features/admin/components/UsuariosTab';
+import { TwoFactorSection } from '@features/auth/components/TwoFactorSection';
 import { useUser } from '@features/auth/store/auth-store';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
@@ -406,6 +407,8 @@ function SecaoPerfil() {
           </div>
         </CardContent>
       </Card>
+
+      <TwoFactorSection />
     </div>
   );
 }

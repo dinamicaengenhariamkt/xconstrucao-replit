@@ -359,6 +359,23 @@ export const chatMensagens = pgTable("chat_mensagens", {
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;
 
+// J22 — Autenticação Forte (2FA / TOTP).
+// Tabela dedicada (não engorda `users`): uma linha por conta com 2FA configurado.
+// `secret` guarda o segredo TOTP base32; `recoveryCodes` guarda HASHES (uso único).
+// `enabled` só vira true após o usuário confirmar o primeiro código (confirmadoEm).
+export const userTotp = pgTable("user_totp", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique("user_totp_user_unique").references(() => users.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull().default([]),
+  confirmadoEm: timestamp("confirmado_em"),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+});
+
+export type UserTotp = typeof userTotp.$inferSelect;
+
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
 export const marketplaceLeads = pgTable("marketplace_leads", {
@@ -928,3 +945,33 @@ export type InsertAnunciante = typeof anunciantes.$inferInsert;
 export type Anuncio = typeof anuncios.$inferSelect;
 export type InsertAnuncio = typeof anuncios.$inferInsert;
 export type AnuncioEvento = typeof anuncioEventos.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Admin FAQ — base de perguntas frequentes gerenciável pelo admin.
+// `categoria` é TEXT (não enum) p/ forward-compat: novos grupos não exigem
+// migration. `visao` segmenta por persona. Schema criado idempotente em
+// server/bootstrap-faq.ts (com seed dos itens canônicos).
+// ---------------------------------------------------------------------------
+export const faqVisaoEnum = pgEnum("faq_visao", ["contratante", "empreiteiro", "ambos"]);
+
+export const faq = pgTable(
+  "faq",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    category: text("category").notNull(),
+    visao: faqVisaoEnum("visao").notNull().default("ambos"),
+    ordem: integer("ordem").notNull().default(0),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Listagem ordena por categoria + ordem.
+    idxCategoriaOrdem: index("idx_faq_categoria_ordem").on(t.category, t.ordem),
+  }),
+);
+
+export type Faq = typeof faq.$inferSelect;
+export type InsertFaq = typeof faq.$inferInsert;

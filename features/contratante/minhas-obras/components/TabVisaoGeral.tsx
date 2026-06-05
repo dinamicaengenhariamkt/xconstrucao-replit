@@ -4,7 +4,7 @@ import { cn } from '@shared/lib/utils';
 import { ProgressBar } from '@features/shared/components/ProgressBar';
 import type { ObraContratanteDetalhe, ProgressColor, TimelineEventContratante } from '../types';
 import { IconArrowForward, IconWarning } from '@shared/components/icons';
-import { HealthCard, getMockHealth } from '@features/shared/health';
+import { HealthCard, useObraHealth } from '@features/shared/health';
 
 const TIPO_DOT: Record<TimelineEventContratante['tipo'], string> = {
   progresso: 'bg-green-500',
@@ -32,27 +32,28 @@ interface TabVisaoGeralProps {
 export function TabVisaoGeral({ obra, progressColor, onNavigateToTimeline, onNavigateToHealth }: TabVisaoGeralProps) {
   const ultimasAtualizacoes = (obra.timeline ?? []).slice(0, 3);
   const ocorrenciasAbertas = (obra.ocorrencias ?? []).filter((o) => o.status === 'aberta').length;
-  const health = getMockHealth(obra.id);
+  const { data: health } = useObraHealth(obra.id);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" data-testid="tab-content-visao-geral">
       <div className="lg:col-span-2 space-y-6">
-        {onNavigateToHealth ? (
-          <button
-            type="button"
-            onClick={onNavigateToHealth}
-            className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl cursor-pointer"
-            data-testid="tab-visao-geral-health-teaser"
-          >
+        {health &&
+          (onNavigateToHealth ? (
+            <button
+              type="button"
+              onClick={onNavigateToHealth}
+              className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl cursor-pointer"
+              data-testid="tab-visao-geral-health-teaser"
+            >
+              <HealthCard health={health} />
+              <p className="text-xs text-primary font-semibold mt-2 flex items-center gap-1">
+                Ver diagnóstico completo na aba Saúde
+                <IconArrowForward className="text-[14px]" />
+              </p>
+            </button>
+          ) : (
             <HealthCard health={health} />
-            <p className="text-xs text-primary font-semibold mt-2 flex items-center gap-1">
-              Ver diagnóstico completo na aba Saúde
-              <IconArrowForward className="text-[14px]" />
-            </p>
-          </button>
-        ) : (
-          <HealthCard health={health} />
-        )}
+          ))}
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-800">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Sobre a Obra</h3>

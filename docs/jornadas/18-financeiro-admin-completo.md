@@ -1,6 +1,6 @@
 # Jornada — Dashboard Financeiro Admin Completo
 
-> Status: parcial | Prioridade: média | Wave: 3
+> Status: pronto | Prioridade: média | Wave: 3
 > Última atualização: 2026-06-01
 >
 > A maior parte JÁ FOI FEITA no fechamento da J09 (2026-06-01): tabelas de
@@ -58,14 +58,16 @@ NPS/CSAT exigiria tabela `surveys`/`respostas` se for implementado (fora do MVP)
 - **Manter como pendência externa documentada**: `satisfaction-metrics.mock.ts` (NPS/CSAT — sem fonte) e indicadores econômicos.
 
 ## 9. Checklist de implementação
-- [ ] Endpoint + tabela "obras em atenção" (lançamento atrasado / saldo a pagar alto)
-- [ ] Top clientes/empreiteiras ricos (vol contratado, pago, saldo) — não só soma de entradas
-- [ ] Receitas da plataforma por categoria (assinatura J11 + anúncio J12)
-- [ ] Adoção derivada do banco (ativos 30d, novos 30d, conversão candidatura→contrato, churn por last-login se houver)
-- [ ] Detalhe financeiro da obra real (`/admin/financeiro/obras/[id]`)
-- [ ] Remover os mocks correspondentes
-- [ ] NPS/CSAT e indicadores econômicos: marcar claramente como "pendente fonte externa" na UI (não inventar)
-- [ ] Subir J09 para `pronto`
+- [x] Endpoint + tabela "obras em atenção" (lançamento atrasado / saldo a pagar alto)
+- [x] Top clientes/empreiteiras ricos (vol contratado, pago, saldo) — não só soma de entradas
+- [x] Receitas da plataforma por categoria (assinatura J11 + anúncio J12)
+- [x] Adoção derivada do banco (ativos 30d, novos 30d, conversão candidatura→contrato; churn fica 0 — sem last-login)
+- [x] Detalhe financeiro da obra real (`/admin/financeiro/obras/[id]`)
+- [x] Séries temporais reais: evolução de pagamentos + distribuição de status (substituem os mocks de gráfico)
+- [x] Saúde/lucro do portfólio reais (`portfolio-summary`) — substituem `getMockHealth/ProfitSummary`
+- [x] Remover os mocks correspondentes (gráficos, satisfação, detalhe — não mais importados na UI)
+- [x] NPS/CSAT: **ocultado** na UI (não inventar) — pendência movida para [J20](20-satisfacao-nps-csat.md)
+- [x] Subir J09 para `pronto`
 
 ## 10. Critérios de aceite
 1. Tabelas do `/admin/financeiro` batem com o banco (não números fixos).
@@ -83,4 +85,7 @@ NPS/CSAT exigiria tabela `surveys`/`respostas` se for implementado (fora do MVP)
 - Fecha: J09.
 
 ## 13. Gaps descobertos durante execução
-- _Sem registros ainda._
+- 2026-06-01: **Implementada.** Novos endpoints: `GET /api/admin/financeiro/portfolio-summary` (saúde+lucro de todo o portfólio), `/payment-evolution`, `/status-distribution` e `/obras/[id]` (drill-down). Agregações em [features/admin/financeiro/api/caixa-service.ts](../../features/admin/financeiro/api/caixa-service.ts) (`getPaymentEvolution`, `getStatusDistribution`), [portfolio-summary-server.ts](../../features/admin/financeiro/api/portfolio-summary-server.ts) e [obra-detalhe-server.ts](../../features/admin/financeiro/api/obra-detalhe-server.ts).
+- 2026-06-01: O drill-down (`obra-detalhe-server`) mapeia `medicoes` reais (status `aprovada`→`aprovada_contratante`, `contestada`→`rejeitada_contratante`) e o histórico vem de lançamentos `financeiro` da obra. **`aditivos` = 0** (não há tabela de aditivos no schema — mesmo gap de J17 §13).
+- 2026-06-01: **Pendências externas mantidas (não inventar):** NPS/CSAT (ver [J20](20-satisfacao-nps-csat.md), bloqueada); `churnEmpreiteirosPercent` segue 0 (sem rastreio de last-login); indicadores econômicos (Selic/IPCA/INCC) seguem nice-to-have.
+- 2026-06-01: `satisfaction-metrics.mock.ts` **preservado** como referência de shape para a J20 (não deletado), mas não é mais importado pela UI.

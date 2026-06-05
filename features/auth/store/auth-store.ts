@@ -49,7 +49,9 @@ interface AuthState {
     password: string,
     rememberMe?: boolean,
     options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
-  ) => Promise<void>;
+  ) => Promise<{ twoFactorRequired: boolean; challengeToken?: string }>;
+  // 2º passo do login (J22): troca o challengeToken + código por uma sessão.
+  verifyTwoFactor: (challengeToken: string, codigo: string) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
   logout: () => Promise<{ persona: 'contratante' | 'empreiteiro' | 'administrador'; redirect: string }>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
@@ -206,6 +208,14 @@ export const useAuthStore = create<AuthState>()(
             }
 
             const data = await res.json();
+
+            // 2FA (J22): a senha passou, mas a conta exige segundo fator. Não há
+            // sessão ainda — sinalizamos pro caller (tela de login) pedir o código.
+            if (data.twoFactorRequired) {
+              setLoading(false);
+              return { twoFactorRequired: true, challengeToken: data.challengeToken as string };
+            }
+
             setUser(data.user);
 
             // Evita checkAuth() automático após login bem-sucedido
@@ -221,8 +231,38 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Não foi possível confirmar a sessão. Tente novamente.');
             }
 
+            return { twoFactorRequired: false };
           } catch (error) {
             throw error;
+          }
+        },
+
+        verifyTwoFactor: async (challengeToken: string, codigo: string) => {
+          const { setUser, setSkipInitialCheck, setHasCheckedAuth, setLoading, confirmSessionReady } =
+            get();
+
+          const res = await fetch('/api/auth/2fa/verificar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ challengeToken, codigo }),
+          });
+
+          if (!res.ok) {
+            const error = await res.json().catch(() => ({}));
+            throw new Error(error.message || error.error || 'Código inválido');
+          }
+
+          const data = await res.json();
+          setUser(data.user);
+          setSkipInitialCheck(true);
+          setHasCheckedAuth(false);
+          setLoading(false);
+
+          const sessionReady = await confirmSessionReady();
+          if (!sessionReady) {
+            setUser(null);
+            throw new Error('Não foi possível confirmar a sessão. Tente novamente.');
           }
         },
 

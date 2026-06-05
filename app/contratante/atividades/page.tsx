@@ -8,6 +8,7 @@ import {
   RiUploadLine,
   RiEditLine,
   RiBankCardLine,
+  RiAlertLine,
 } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Card, CardContent } from '@shared/components/ui/card';
@@ -34,18 +35,25 @@ import {
   PaginationPrevious,
 } from '@shared/components/ui/pagination';
 import { getPaginationRange } from '@shared/lib/pagination';
-import { mockActivities } from '@features/contratante/dashboard/mocks/activities.mock';
-import type { ActivityColor } from '@features/contratante/dashboard/types';
+import {
+  useAtividadesFeed,
+  toAtividadeDisplay,
+  formatRelativeBr,
+  type AtividadeDisplay,
+} from '@features/atividades/hooks/use-atividades';
+import { Button } from '@shared/components/ui/button';
 
 const ITEMS_PER_PAGE = 10;
 
-type ActivityIcon = 'check' | 'upload' | 'edit' | 'payment';
+type ActivityIcon = AtividadeDisplay['icon'];
+type ActivityColor = AtividadeDisplay['color'];
 
 const ICON_COMPONENT: Record<ActivityIcon, React.ElementType> = {
   check: RiCheckboxCircleLine,
   upload: RiUploadLine,
   edit: RiEditLine,
   payment: RiBankCardLine,
+  alert: RiAlertLine,
 };
 
 const ICON_LABEL: Record<ActivityIcon, string> = {
@@ -53,6 +61,7 @@ const ICON_LABEL: Record<ActivityIcon, string> = {
   upload: 'Upload',
   edit: 'Edição',
   payment: 'Pagamento',
+  alert: 'Alerta',
 };
 
 const COLOR_CLASSES: Record<ActivityColor, string> = {
@@ -60,6 +69,8 @@ const COLOR_CLASSES: Record<ActivityColor, string> = {
   info: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
   warning: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
   purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
+  amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
+  primary: 'bg-[#22846D]/10 text-[#22846D]',
 };
 
 const TIPO_OPTIONS: { value: ActivityIcon; label: string }[] = (
@@ -72,22 +83,42 @@ export default function AtividadesContratantePage() {
   const [obraSelected, setObraSelected] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useAtividadesFeed(50);
+
+  // API → shape de exibição da página (mesmo mapper do widget de dashboard).
+  const activities = useMemo(() => {
+    const items = data?.pages.flatMap((p) => p.items) ?? [];
+    return items.map((item) => {
+      const d = toAtividadeDisplay(item, 'contratante');
+      return {
+        id: d.id,
+        icon: d.icon,
+        color: d.color,
+        title: d.titulo,
+        obraId: d.obraId ?? '',
+        obraNome: d.obraNome ?? '—',
+        timestamp: formatRelativeBr(d.createdAt),
+      };
+    });
+  }, [data]);
+
   const onFilterChange = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
     setCurrentPage(1);
   };
 
   const obraOptions = useMemo(() => {
-    const set = new Set(mockActivities.map((a) => a.obraNome));
+    const set = new Set(activities.map((a) => a.obraNome));
     return Array.from(set)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .map((nome) => ({ value: nome, label: nome }));
-  }, []);
+  }, [activities]);
 
   const filteredActivities = useMemo(() => {
-    let result = mockActivities;
+    let result = activities;
     if (tipoSelected.length > 0) {
-      result = result.filter((a) => tipoSelected.includes(a.icon as ActivityIcon));
+      result = result.filter((a) => tipoSelected.includes(a.icon));
     }
     if (obraSelected.length > 0) {
       result = result.filter((a) => obraSelected.includes(a.obraNome));
@@ -99,7 +130,7 @@ export default function AtividadesContratantePage() {
       );
     }
     return result;
-  }, [tipoSelected, obraSelected, searchQuery]);
+  }, [activities, tipoSelected, obraSelected, searchQuery]);
 
   const totalPages = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE);
   const paginatedActivities = filteredActivities.slice(
@@ -206,10 +237,16 @@ export default function AtividadesContratantePage() {
 
       <Card className="luminous-section border-transparent shadow-none">
         <CardContent className="p-0">
-          {paginatedActivities.length === 0 ? (
+          {isLoading ? (
+            <div className="py-16 text-center" data-testid="atividades-loading">
+              <p className="text-sm text-muted-foreground">Carregando atividades...</p>
+            </div>
+          ) : paginatedActivities.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-sm text-muted-foreground">
-                Nenhuma atividade encontrada com os filtros aplicados.
+                {activities.length === 0
+                  ? 'Nenhuma atividade registrada ainda.'
+                  : 'Nenhuma atividade encontrada com os filtros aplicados.'}
               </p>
             </div>
           ) : (
@@ -305,6 +342,19 @@ export default function AtividadesContratantePage() {
             </PaginationItem>
           </PaginationContent>
         </Pagination>
+      )}
+
+      {hasNextPage && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            data-testid="atividades-load-more"
+          >
+            {isFetchingNextPage ? 'Carregando...' : 'Carregar mais atividades'}
+          </Button>
+        </div>
       )}
     </div>
   );

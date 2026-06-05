@@ -83,6 +83,11 @@ export async function register() {
       console.error("[instrumentation] bootstrapDisputasSchema failed:", err);
     });
 
+    const { bootstrap2faSchema } = await import("./server/bootstrap-2fa");
+    await bootstrap2faSchema().catch((err) => {
+      console.error("[instrumentation] bootstrap2faSchema failed:", err);
+    });
+
     const { bootstrapPlanosSchema } = await import("./server/bootstrap-planos");
     await bootstrapPlanosSchema().catch((err) => {
       console.error("[instrumentation] bootstrapPlanosSchema failed:", err);
@@ -91,6 +96,11 @@ export async function register() {
     const { bootstrapAnunciosSchema } = await import("./server/bootstrap-anuncios");
     await bootstrapAnunciosSchema().catch((err) => {
       console.error("[instrumentation] bootstrapAnunciosSchema failed:", err);
+    });
+
+    const { bootstrapFaqSchema } = await import("./server/bootstrap-faq");
+    await bootstrapFaqSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapFaqSchema failed:", err);
     });
 
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");

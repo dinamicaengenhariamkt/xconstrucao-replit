@@ -5,7 +5,12 @@ import type {
   TopEmpreiteira,
   ReceitaPlataforma,
   AdoptionMetrics,
+  PaymentEvolutionData,
+  StatusDistributionData,
+  PeriodoSeletor,
 } from '../types';
+import type { HealthSummaryData } from '@features/shared/health';
+import type { ProfitSummaryData } from '@features/shared/profit';
 
 const CFG = { staleTime: 30 * 60 * 1000, refetchOnWindowFocus: false } as const;
 
@@ -63,6 +68,43 @@ export function useAdoptionMetrics() {
     queryFn: async () => {
       const res = await fetch('/api/admin/financeiro/adoption');
       if (!res.ok) throw new Error('Erro ao buscar métricas de adoção');
+      return res.json();
+    },
+    ...CFG,
+  });
+}
+
+/** Saúde + lucro de todo o portfólio (J18) — substitui getMockHealth/ProfitSummary. */
+export function usePortfolioSummary() {
+  return useQuery<{ health: HealthSummaryData; profit: ProfitSummaryData }>({
+    queryKey: ['admin', 'financeiro', 'portfolio-summary'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/financeiro/portfolio-summary');
+      if (!res.ok) throw new Error('Erro ao buscar resumo do portfólio');
+      return res.json();
+    },
+    ...CFG,
+  });
+}
+
+export function usePaymentEvolution(periodo: PeriodoSeletor) {
+  return useQuery<PaymentEvolutionData[]>({
+    queryKey: ['admin', 'financeiro', 'payment-evolution', periodo],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/financeiro/payment-evolution?periodo=${periodo}`);
+      if (!res.ok) throw new Error('Erro ao buscar evolução de pagamentos');
+      return res.json();
+    },
+    ...CFG,
+  });
+}
+
+export function useStatusDistribution() {
+  return useQuery<StatusDistributionData[]>({
+    queryKey: ['admin', 'financeiro', 'status-distribution'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/financeiro/status-distribution');
+      if (!res.ok) throw new Error('Erro ao buscar distribuição de status');
       return res.json();
     },
     ...CFG,

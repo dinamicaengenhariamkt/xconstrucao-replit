@@ -9,6 +9,7 @@ import { IconShield, IconDashboardCustomize, IconTarget, IconHub, IconBolt } fro
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 import { MarketplaceNotificacaoModal } from "@features/landing/components/MarketplaceNotificacaoModal";
+import { AdSidebarSlot } from "@features/shared/anuncios/components/AdSidebarSlot";
 
 export default function HomePage() {
   const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
@@ -435,6 +436,11 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Slot de anúncio público (J16) — invisível enquanto não há campanha ativa */}
+        <div className="max-w-[420px] mx-auto px-6">
+          <AdSidebarSlot zoneId="banner-qa" />
+        </div>
 
         {/* CTA Final */}
         <section className="relative py-32 px-6 bg-[#333333] text-white overflow-hidden">

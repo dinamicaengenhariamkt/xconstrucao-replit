@@ -66,6 +66,29 @@ export function verifyEmailVerificationToken(token: string): { userId: string; e
   return { userId: data.sub as string, email: data.email as string };
 }
 
+// ── Challenge token do 2FA (J22) ─────────────────────────────────────────────
+// Emitido quando a senha está correta MAS a conta tem 2FA ativo. Curtíssima vida
+// (5 min). Carrega `rememberMe` pra preservar a escolha do usuário no 2º passo.
+// NÃO é credencial de sessão — só prova "passei pela senha desta conta".
+export function createTwoFactorChallengeToken(userId: string, rememberMe: boolean): string {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({
+    type: "2fa-challenge",
+    sub: userId,
+    rememberMe: rememberMe === true,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 5 * 60, // 5 minutos
+  })).toString("base64url");
+  const signature = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+  return `${header}.${payload}.${signature}`;
+}
+
+export function verifyTwoFactorChallengeToken(token: string): { userId: string; rememberMe: boolean } | null {
+  const data = verifyJwtPayload(token, "2fa-challenge");
+  if (!data) return null;
+  return { userId: data.sub as string, rememberMe: data.rememberMe === true };
+}
+
 // ==================== SISTEMA JWT CUSTOM (ACCESS + REFRESH TOKENS) ====================
 
 export interface AccessTokenPayload {
@@ -158,6 +181,28 @@ export function createRefreshToken(userId: string, rememberMe: boolean = false):
 export function verifyAccessToken(token: string): AccessTokenPayload | null {
   const data = verifyJwtPayload(token, "access");
   return data ? (data as unknown as AccessTokenPayload) : null;
+}
+
+/**
+ * Valida a ASSINATURA + tipo de um access token, mas TOLERA expiração.
+ * Uso: barreira de páginas (proxy) onde um access token expirado (mas com
+ * assinatura íntegra) deve passar para o client fazer refresh — sem render de
+ * área de outra persona, pois a role decodificada ainda é checada pelo caller.
+ * NÃO usar para autorizar mutações: para isso, `verifyAccessToken` (rejeita exp).
+ */
+export function verifyAccessTokenAllowExpired(token: string): AccessTokenPayload | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [header, payload, signature] = parts;
+    const expectedSig = createHmac("sha256", JWT_SECRET).update(`${header}.${payload}`).digest("base64url");
+    if (signature !== expectedSig) return null;
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString()) as Record<string, unknown>;
+    if (data.type !== "access") return null;
+    return data as unknown as AccessTokenPayload;
+  } catch {
+    return null;
+  }
 }
 
 /**

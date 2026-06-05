@@ -45,7 +45,7 @@ Mecanismo de resolução quando contratante e empreiteiro discordam — tipicame
 - [x] Bloquear novo pagamento em alvo com disputa aberta (J08 `quitar` → 409 `EM_DISPUTA`)
 - [x] Abertura automática de disputa ao contestar medição (J06)
 - [x] Tela admin: service real (mock removido) — fila/filtros já existentes em `features/admin/disputas`
-- [ ] Aba dedicada dentro do detalhe da obra para as partes (UI — endpoints `/api/disputas` prontos)
+- [x] Aba dedicada dentro do detalhe da obra para as partes (UI) _(2026-06-02 — aba "Disputas" em [app/contratante/minhas-obras/[id]](../../app/contratante/minhas-obras/) e [app/empreiteiro/minhas-obras/[id]](../../app/empreiteiro/minhas-obras/) via componente compartilhado [TabDisputas](../../features/disputas/components/TabDisputas.tsx): lista + detalhe + thread de mensagens (responder) + abrir disputa sobre uma medição. Novo endpoint `GET /api/obras/[id]/disputas` (filtrado por obra, ownership via `findObraAccess`); hooks em [use-obra-disputas.ts](../../features/disputas/hooks/use-obra-disputas.ts).)_
 
 ## 10. Critérios de aceite
 1. Empreiteiro contesta medição (J06) → cria disputa automaticamente.
@@ -68,5 +68,5 @@ Mecanismo de resolução quando contratante e empreiteiro discordam — tipicame
 - **2026-06-01** — Modelo rico no DB (status `aberta/em_analise/aguardando_partes/resolvida/cancelada` + `resolucao_tipo` separado `favor_contratante/favor_empreiteiro/meio_termo`) mapeado para o contrato de UI já existente em `features/admin/disputas/types` no endpoint GET admin — evitou reescrever a tela. `cancelada` é exibida como `resolvida` na UI legada.
 - **2026-06-01** — Idempotência da abertura garantida por índice único PARCIAL `uq_disputas_alvo_aberta` (só quando status NOT IN resolvida/cancelada) — permite reabrir disputa sobre o mesmo alvo após encerramento.
 - **2026-06-01** — Efeito financeiro usa `criarLancamentoPlataforma` (escopo=plataforma, categoria=`disputa_estorno`, idempotente por `origem_tipo='disputa'`). `favor_empreiteiro` sobre pagamento cancelado reverte o lançamento para `pendente`.
-- **2026-06-01** — Endpoints das partes (`/api/disputas`, `/api/disputas/[id]`, `/api/disputas/[id]/mensagens`) prontos com ownership + notas internas só p/ admin. Falta apenas a **UI da aba de disputas** no detalhe da obra (contratante/empreiteiro) — backend 100% funcional.
+- **2026-06-01** — Endpoints das partes (`/api/disputas`, `/api/disputas/[id]`, `/api/disputas/[id]/mensagens`) prontos com ownership + notas internas só p/ admin. Falta apenas a **UI da aba de disputas** no detalhe da obra (contratante/empreiteiro) — backend 100% funcional. _Resolvido 2026-06-02: aba `TabDisputas` nas duas personas + endpoint `GET /api/obras/[id]/disputas`. O alvo "pagamento" no form de abertura ainda só lista medições (alvos derivados de `obra.financeiro.medicoes`); abrir disputa sobre um pagamento avulso fica como refinamento — disputas de pagamento atrasado já nascem pelos fluxos de J08._
 - **2026-06-01** — SLA/cron de escalonamento automático (risco §11) não implementado nesta fase — candidato a item futuro.

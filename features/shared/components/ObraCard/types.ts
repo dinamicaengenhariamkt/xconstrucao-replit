@@ -1,4 +1,5 @@
 import type { ObraStatus } from '@features/shared/types';
+import type { HealthStatus } from '@features/shared/health';
 
 /**
  * Dados mínimos para renderizar um card de obra.
@@ -34,4 +35,7 @@ export interface ObraCardProps {
   statusModeracao?: 'pendente' | 'aprovada' | 'rejeitada' | null;
   /** Motivo da rejeição, usado como tooltip no badge "Rejeitada". */
   motivoModeracao?: string | null;
+  /** Saúde real da obra (J17). Quando informada, renderiza o HealthBadge.
+   *  Vem do mapa `useObrasHealthMap` carregado pela grid. Ausente → sem badge. */
+  healthStatus?: HealthStatus;
 }

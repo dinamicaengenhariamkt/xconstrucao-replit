@@ -13,6 +13,7 @@ import {
 import { createSignedReadUrl } from "@shared/lib/storage";
 import { criarNotificacao } from "@features/notificacoes/service";
 import { sendPagamentoRecebidoEmail } from "@shared/lib/email";
+import { emailPreferenceEnabled } from "@features/notificacoes/preferences";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { temDisputaAtivaNoAlvo } from "@features/disputas/disputas-service";
 
@@ -119,7 +120,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         .where(eq(users.id, recebedorId))
         .limit(1);
 
-      if (recebedor?.email) {
+      // Email respeita preferência do empreiteiro (J02 §4); in-app já criada acima.
+      const emailPermitido = recebedor?.email
+        ? await emailPreferenceEnabled(recebedorId, "email_medicao")
+        : false;
+      if (recebedor?.email && emailPermitido) {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "";
         const link = baseUrl ? `${baseUrl}${href}` : href;
         await sendPagamentoRecebidoEmail(recebedor.email, {

@@ -1,9 +1,13 @@
 'use client';
 
 import { ObraCard } from '@features/shared/components/ObraCard';
+import type { HealthStatus } from '@features/shared/health';
 import type { MinhaObraCardProps } from '../types';
 
-export function MinhaObraCard({ obra }: MinhaObraCardProps) {
+export function MinhaObraCard({
+  obra,
+  healthStatus,
+}: MinhaObraCardProps & { healthStatus?: HealthStatus }) {
   return (
     <ObraCard
       obraId={obra.id}
@@ -20,6 +24,7 @@ export function MinhaObraCard({ obra }: MinhaObraCardProps) {
       parteContrariaRole="Contratante"
       basePath="/empreiteiro/minhas-obras"
       dateMode="range"
+      healthStatus={healthStatus}
     />
   );
 }

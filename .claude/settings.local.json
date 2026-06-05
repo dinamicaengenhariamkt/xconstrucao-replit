@@ -6,7 +6,9 @@
       "Bash(git diff *)",
       "Bash(awk 'NR>=253 && NR<=305' shared/schema.ts)",
       "Bash(pkill -f \"drizzle-kit push\")",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(grep -nE \"PLANOS|const planos|hardcode|R\\\\\\\\$|preco|=>\" app/contratante/planos/page.tsx)",
+      "Bash(npx tsc *)"
     ]
   }
 }

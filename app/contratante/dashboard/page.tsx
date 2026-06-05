@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { WelcomeSection } from '@features/contratante/dashboard/components/WelcomeSection';
 import { DashboardPeriodSelector } from '@features/contratante/dashboard/components/DashboardPeriodSelector';
 import { StatsGridContainer } from '@features/contratante/dashboard/components/StatsGrid.container';
@@ -10,26 +10,16 @@ import { RecentActivitiesCard } from '@features/contratante/dashboard/components
 import { PendenciasCard } from '@features/contratante/dashboard/components/PendenciasCard';
 import { ValoresContratados } from '@features/contratante/dashboard/components/ValoresContratados';
 import { DashboardSkeleton } from '@features/contratante/dashboard/components/DashboardSkeleton';
-import {
-  mockDashboardStatsByPeriodo,
-  mockEvolutionDataByPeriodo,
-} from '@features/contratante/dashboard/mocks/dashboard-stats.mock';
-import {
-  mockPhaseData,
-  mockValoresContratados,
-} from '@features/contratante/dashboard/mocks/evolution-data.mock';
-import { mockPendencias } from '@features/contratante/dashboard/mocks/pendencias.mock';
-import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
+import { useContratanteDashboard } from '@features/contratante/dashboard/hooks/use-dashboard';
 import { useAtividadesRecentes, toAtividadeDisplay, formatRelativeBr } from '@features/atividades/hooks/use-atividades';
 import type { ContratanteActivity, ActivityColor } from '@features/contratante/dashboard/types';
-import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { HealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import type { DashboardPeriodo } from '@features/contratante/dashboard/types';
 
 export default function ContratanteDashboardPage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<DashboardPeriodo>('30dias');
-  const { data: obrasPayload } = useObrasContratante({ pageSize: 100 });
-  const obras = obrasPayload?.rows;
+  const { data: dashboard, isLoading } = useContratanteDashboard(periodo);
   const { data: atividadesPage } = useAtividadesRecentes(10);
 
   const COLOR_FALLBACK: Record<string, ActivityColor> = {
@@ -51,18 +41,12 @@ export default function ContratanteDashboardPage() {
     };
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) {
+  if (isLoading || !dashboard) {
     return <DashboardSkeleton />;
   }
 
-  const stats = mockDashboardStatsByPeriodo[periodo];
-  const evolution = mockEvolutionDataByPeriodo[periodo];
-  const healthSummary = getMockHealthSummary((obras ?? []).map((o) => o.id));
+  const { stats, evolution, fases, valoresContratados, pendencias, healthSummary } = dashboard;
+  const totalObras = fases.reduce((sum, f) => sum + f.value, 0);
 
   return (
     <div className="space-y-10 p-10">
@@ -71,6 +55,8 @@ export default function ContratanteDashboardPage() {
       <DashboardPeriodSelector value={periodo} onChange={setPeriodo} />
 
       <StatsGridContainer data={stats} />
+
+      <AdSidebarSlot zoneId="banner-dashboard-contratante" />
 
       <HealthSummary
         summary={healthSummary}
@@ -82,14 +68,14 @@ export default function ContratanteDashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <EvolutionChart data={evolution} luminous />
-        <PhaseDistributionChart data={mockPhaseData} totalObras={12} luminous />
+        <PhaseDistributionChart data={fases} totalObras={totalObras} luminous />
       </div>
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <RecentActivitiesCard activities={activities} luminous />
-        <PendenciasCard pendencias={mockPendencias} luminous />
-        <ValoresContratados data={mockValoresContratados} luminous />
+        <PendenciasCard pendencias={pendencias} luminous />
+        <ValoresContratados data={valoresContratados} luminous />
       </div>
     </div>
   );

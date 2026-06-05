@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -26,7 +25,7 @@ import {
   RiInformationLine,
   RiAddCircleLine,
 } from 'react-icons/ri';
-import { getMockObraDetalhe } from '@features/admin/financeiro/mocks/obra-detalhe.mock';
+import { useAdminObraDetalhe } from '@features/admin/financeiro/hooks/use-obra-detalhe';
 import { SITUACAO_CONFIG } from '@features/admin/financeiro/constants';
 import { formatCurrency } from '@features/admin/financeiro/utils';
 import type { AdminMedicao, AdminHistoricoItem, MedicaoStatus } from '@features/admin/financeiro/types';
@@ -207,14 +206,7 @@ function HistoricoTab({ historico }: { historico: AdminHistoricoItem[] }) {
 
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const obra = getMockObraDetalhe(id);
+  const { data: obra, isLoading } = useAdminObraDetalhe(id);
 
   if (isLoading) {
     return (
@@ -252,7 +244,7 @@ export default function AdminObraDetalhePage() {
 
   const situacaoCfg = SITUACAO_CONFIG[obra.situacao];
   const saldoPagar = obra.valorTotal - obra.valorPago;
-  const percentPago = Math.round((obra.valorPago / obra.valorTotal) * 100);
+  const percentPago = obra.valorTotal > 0 ? Math.round((obra.valorPago / obra.valorTotal) * 100) : 0;
 
   const kpis = [
     {

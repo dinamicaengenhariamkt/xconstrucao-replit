@@ -192,3 +192,43 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Motivação:** Stripe / Pagar.me / outro. Bloqueia J11 inteira → bloqueia aba Plano & Uso da J02 → bloqueia gating efetivo de J03/J05 (assinatura ativa). Stripe entrega DX melhor; Pagar.me tem PIX/boleto nativo (essencial pro mercado BR). Não é tarefa de código — é decisão de produto + compliance.
 - **Prioridade:** P1 (bloqueia 3 jornadas em cascata)
 - **✅ DESBLOQUEADO via abstração (2026-06-01):** J11 foi entregue COMPLETA sem travar na decisão, usando **porta `PaymentGateway` + adapter `manual`** (ativa sem cobrança real). A decisão do gateway real NÃO bloqueia mais J11/J02/J03/J05 — elas funcionam hoje. A integração real virou a **[Jornada 14](14-integracao-gateway-pagamento.md)** (status `bloqueada`): quando o gateway for escolhido, é só escrever 1 adapter + env var `PAYMENT_GATEWAY`. Decisão pendente movida para J14.
+
+---
+
+## Wave de des-mock + hardening (2026-06-01) — J15/J16/J17/J18/J19
+
+### Remover fisicamente os ~28 branches `if (ENABLE_MOCK)`
+- **Origem:** J19 (limpeza de flags)
+- **Descoberto:** 2026-06-01
+- **Motivação:** a flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` já é **inerte em produção** (`isMockEnabled()` retorna `false` quando `NODE_ENV==='production'`). Mas os ~28 branches `if (ENABLE_MOCK)` ainda vivem nos services (FAQ, chat, clientes, empreiteiras, auditoria, dashboards). Remover fisicamente reduz superfície e mock files órfãos — fazer **por feature-set, com teste**, fora desta wave para evitar regressão em fluxos não testados aqui.
+- **Prioridade:** P2
+
+### Tabela de aditivos de obra
+- **Origem:** J17/J18 (descoberto ao des-mockar)
+- **Descoberto:** 2026-06-01
+- **Motivação:** `aditivos` aparece em `ValoresContratadosData` (contratante) e no detalhe financeiro da obra (admin), mas **não há tabela de aditivos** no schema — retornamos `0`. Quando o produto precisar de aditivos contratuais reais, criar `obra_aditivos` (valor, motivo, data, aprovador) e somar em `valorTotal`.
+- **Prioridade:** P2
+
+### Baseline histórico para deltas "vs período anterior"
+- **Origem:** J17/J18 (descoberto ao des-mockar)
+- **Descoberto:** 2026-06-01
+- **Motivação:** vários `*Delta`/`desvioPercentual` foram zerados/ocultados porque não há **snapshot histórico** dos KPIs por período. Para deltas reais, materializar snapshots periódicos (ex: job diário gravando KPIs em `kpi_snapshots`) ou calcular janela anterior on-the-fly onde a query permitir.
+- **Prioridade:** P2
+
+### Churn de empreiteiros por last-login
+- **Origem:** J18 (limitação já documentada, confirmada nesta wave)
+- **Descoberto:** 2026-06-01
+- **Motivação:** `churnEmpreiteirosPercent` segue `0` porque não há rastreio de último login. Para churn real, gravar `users.lastLoginAt` (ou derivar de atividade) e definir a janela de inatividade que conta como churn.
+- **Prioridade:** P2
+
+### Upsell na origem do 402 `LIMITE_PLANO`
+- **Origem:** J15 (item §9 parcial)
+- **Descoberto:** 2026-06-01
+- **Motivação:** o servidor já retorna 402 `LIMITE_PLANO` em J03/J05 quando o limite do plano é excedido. Falta o **CTA de upgrade** (upsell) na UI desses fluxos (criar obra / candidatar-se) levando para `/<persona>/planos`. Não bloqueia J15 (a página de planos está pronta) — é refinamento de conversão na origem.
+- **Prioridade:** P2
+
+### Coleta de NPS/CSAT (surveys) → desbloquear J20
+- **Origem:** J18 → J20
+- **Descoberto:** 2026-06-01
+- **Motivação:** NPS/CSAT não têm fonte de dados; o bloco foi ocultado no dashboard admin (nada inventado). Virou a **[Jornada 20](20-satisfacao-nps-csat.md)** (`bloqueada`): aguarda o cliente final definir a estratégia de coleta. Quando definido, criar `surveys`/`survey_respostas` + endpoint e reconectar `SatisfactionMetricsSection`.
+- **Prioridade:** P2 (decisão de produto)

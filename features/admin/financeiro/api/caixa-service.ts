@@ -850,6 +850,59 @@ export async function getAdoptionMetrics(agoraMs: number): Promise<AdoptionMetri
   };
 }
 
+// ─── Séries temporais do dashboard (J18) ────────────────────────────────────
+const MES_LABELS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+
+export interface PaymentEvolutionPoint {
+  mes: string;
+  medicoes: number;
+  pagamentos: number;
+}
+
+/**
+ * Evolução de medições (entradas de obra) vs pagamentos (saídas de obra) por mês.
+ * Real, derivado de `financeiro`. Substitui `getPaymentEvolutionByPeriodo` (mock).
+ */
+export async function getPaymentEvolution(periodo: string | null, agoraMs: number): Promise<PaymentEvolutionPoint[]> {
+  const intervalo = resolverIntervalo(periodo, agoraMs);
+  const conds = [sql`${financeiro.escopo} = 'obra'`, ...condsPeriodo(intervalo)];
+  const rows = await db
+    .select({
+      mes: sql<string>`to_char(${financeiro.data}::date, 'YYYY-MM')`,
+      medicoes: sql<string>`COALESCE(SUM(${financeiro.valor}) FILTER (WHERE ${financeiro.tipo} = 'entrada' AND ${financeiro.status} = 'pago'), 0)`,
+      pagamentos: sql<string>`COALESCE(SUM(${financeiro.valor}) FILTER (WHERE ${financeiro.tipo} = 'saida' AND ${financeiro.status} = 'pago'), 0)`,
+    })
+    .from(financeiro)
+    .where(and(...conds))
+    .groupBy(sql`to_char(${financeiro.data}::date, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${financeiro.data}::date, 'YYYY-MM')`);
+  return rows.map((r) => {
+    const mm = Number(r.mes.split("-")[1] ?? "1");
+    return { mes: MES_LABELS[mm - 1] ?? r.mes, medicoes: Number(r.medicoes), pagamentos: Number(r.pagamentos) };
+  });
+}
+
+export interface StatusDistributionPoint {
+  name: string;
+  value: number;
+  color: string;
+}
+
+/** Distribuição de obras por status (real). Substitui `mockStatusDistributionData`. */
+export async function getStatusDistribution(): Promise<StatusDistributionPoint[]> {
+  const rows = await db
+    .select({ status: obras.status, total: sql<number>`COUNT(*)::int` })
+    .from(obras)
+    .groupBy(obras.status);
+  const map = new Map(rows.map((r) => [r.status, r.total]));
+  return [
+    { name: "Em andamento", value: map.get("em_andamento") ?? 0, color: "#1E88E5" },
+    { name: "Planejamento", value: map.get("planejamento") ?? 0, color: "#F5A623" },
+    { name: "Concluída", value: map.get("concluida") ?? 0, color: "#22846D" },
+    { name: "Pausada", value: map.get("pausada") ?? 0, color: "#9ca3af" },
+  ].filter((d) => d.value > 0);
+}
+
 // ─── Saída manual (registro de despesa de plataforma) ───────────────────────
 export async function registrarSaidaManual(args: {
   descricao: string;

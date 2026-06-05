@@ -40,7 +40,7 @@ import { useAuthStore } from '@features/auth/store/auth-store';
 import { VISIBILIDADE_LABEL_MAP } from '@features/admin/obras/api/admin-obra-detalhe-service';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
+import { HealthCard, HealthDetailPanel, useObraHealth } from '@features/shared/health';
 import { RiHeartPulseLine } from 'react-icons/ri';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
@@ -582,6 +582,7 @@ function HistoricoTab({ historico }: { historico: AdminObraHistoricoItem[] }) {
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading } = useAdminObraDetalhe(id);
+  const { data: obraHealth } = useObraHealth(id);
   const obra = data?.detalhe;
   const visibilidade = data?.visibilidade;
   const anexos = data?.anexos ?? [];
@@ -640,7 +641,7 @@ export default function AdminObraDetalhePage() {
     obra.valorTotal > 0
       ? Math.min(100, Math.max(0, Math.round((obra.valorPago / obra.valorTotal) * 100)))
       : 0;
-  const health = getMockHealth(obra.id);
+  const health = obraHealth ?? null;
 
   const kpis = [
     {
@@ -772,7 +773,7 @@ export default function AdminObraDetalhePage() {
       </Card>
 
       {/* Health summary card */}
-      <HealthCard health={health} />
+      {health && <HealthCard health={health} />}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -858,7 +859,7 @@ export default function AdminObraDetalhePage() {
         </TabsList>
 
         <TabsContent value="saude" className="mt-4">
-          <HealthDetailPanel health={health} />
+          {health && <HealthDetailPanel health={health} />}
         </TabsContent>
 
         <TabsContent value="financeiro" className="mt-4">

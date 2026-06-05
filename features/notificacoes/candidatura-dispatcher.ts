@@ -4,6 +4,7 @@ import { db } from "@shared/db/db";
 import { candidaturas, notificacoes, obras, users } from "@shared/db/schema";
 import { sendCandidaturaDecididaEmail } from "@shared/lib/email";
 import { recordAudit } from "@features/auth/api/audit";
+import { emailPreferenceEnabled } from "./preferences";
 
 function formatarValorBRL(valor: unknown): string {
   const num = Number(valor);
@@ -198,9 +199,16 @@ export async function dispararNotificacaoCandidaturaDecidida(
     return { status: staged.kind } as DispararResult;
   }
 
-  // 2) Pós-commit: e-mail best-effort.
+  // 2) Pós-commit: e-mail best-effort, respeitando preferência do empreiteiro
+  // (J02 §4). In-app já foi criada acima — opt-out vale só pro email.
+  // O email vai pro EMPREITEIRO; gateamos por `email_contrato` (chave que ele
+  // controla no settings — a decisão da proposta é o vínculo contratual), e não
+  // por `email_novaProposta`, que é uma chave da persona contratante.
   let emailSent = false;
-  if (staged.empreiteiroEmail) {
+  const emailPermitido = staged.empreiteiroEmail
+    ? await emailPreferenceEnabled(staged.empreiteiroId, "email_contrato")
+    : false;
+  if (staged.empreiteiroEmail && emailPermitido) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "";
     const link = baseUrl ? `${baseUrl}${staged.href}` : staged.href;
     try {

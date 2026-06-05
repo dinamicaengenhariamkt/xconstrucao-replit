@@ -9,12 +9,20 @@ import { DashboardSkeleton } from '@features/empreiteiro/dashboard/components/Da
 import { useDashboardStats } from '@features/empreiteiro/dashboard/hooks/use-dashboard-stats';
 import { useFinancialData } from '@features/empreiteiro/dashboard/hooks/use-financial-data';
 import { useRecentActivities } from '@features/empreiteiro/dashboard/hooks/use-recent-activities';
-import { useMinhasObras } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
+import { useEmpreiteiroSummary } from '@features/empreiteiro/dashboard/hooks/use-summary';
 import { DashboardPeriodSelector } from '@features/shared/dashboard/components/DashboardPeriodSelector';
 import type { DashboardPeriodo } from '@features/shared/dashboard/types';
-import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
-import { ProfitSummary, getMockProfitSummary } from '@features/shared/profit';
+import { HealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { ProfitSummary } from '@features/shared/profit';
+import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import { RevealOnScroll } from '@features/shared/components/RevealOnScroll';
+
+const EMPTY_HEALTH = { saudavel: 0, atencao: 0, risco: 0, total: 0 };
+const EMPTY_PROFIT = {
+  metrics: { receitaTotal: 0, custoTotal: 0, lucroEstimado: 0, margem: 0 },
+  trend: [],
+  totalObras: 0,
+};
 
 export default function EmpreiteiroDashboardPage() {
   const [periodo, setPeriodo] = useState<DashboardPeriodo>('30dias');
@@ -22,15 +30,14 @@ export default function EmpreiteiroDashboardPage() {
   const { data: statsData, isLoading: statsLoading } = useDashboardStats(periodo);
   const { data: financialData, isLoading: financialLoading } = useFinancialData(periodo);
   const { data: activitiesData, isLoading: activitiesLoading } = useRecentActivities(periodo);
-  const { data: obras } = useMinhasObras();
+  const { data: summary } = useEmpreiteiroSummary();
 
   if (statsLoading || financialLoading || activitiesLoading) {
     return <DashboardSkeleton />;
   }
 
-  const obraIds = (obras ?? []).map((o) => o.id);
-  const healthSummary = getMockHealthSummary(obraIds);
-  const profitSummary = getMockProfitSummary(obraIds);
+  const healthSummary = summary?.health ?? EMPTY_HEALTH;
+  const profitSummary = summary?.profit ?? EMPTY_PROFIT;
 
   return (
     <div className="space-y-10 p-10">
@@ -45,6 +52,8 @@ export default function EmpreiteiroDashboardPage() {
       <RevealOnScroll delay={0.05}>
         <StatsGridContainer data={statsData!} healthSummary={healthSummary} />
       </RevealOnScroll>
+
+      <AdSidebarSlot zoneId="banner-dashboard-empreiteiro" />
 
       <RevealOnScroll delay={0.1}>
         <HealthSummary

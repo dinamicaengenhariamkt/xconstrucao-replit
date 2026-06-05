@@ -14,6 +14,7 @@ import { TabEquipe } from '@features/contratante/minhas-obras/components/TabEqui
 import { TabFotos } from '@features/contratante/minhas-obras/components/TabFotos';
 import { TabTimeline } from '@features/contratante/minhas-obras/components/TabTimeline';
 import { TabOcorrencias } from '@features/contratante/minhas-obras/components/TabOcorrencias';
+import { TabDisputas, type DisputaAlvoOption } from '@features/disputas/components/TabDisputas';
 import { TabDocumentos } from '@features/contratante/minhas-obras/components/TabDocumentos';
 import { TabChecklists } from '@features/contratante/minhas-obras/components/TabChecklists';
 import { ContatoEmpreiteiroCard } from '@features/contratante/minhas-obras/components/ContatoEmpreiteiroCard';
@@ -38,7 +39,7 @@ import {
   RiFolderLine,
   RiFileList3Line,
 } from 'react-icons/ri';
-import { HealthDetailPanel, getMockHealth } from '@features/shared/health';
+import { HealthDetailPanel, useObraHealth } from '@features/shared/health';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
 import { IconGroups } from '@shared/components/icons';
@@ -50,6 +51,7 @@ type ObraTab =
   | 'timeline'
   | 'ocorrencias'
   | 'financeiro'
+  | 'disputas'
   | 'documentos'
   | 'checklists'
   | 'equipe'
@@ -62,6 +64,7 @@ const TABS: { key: ObraTab; label: string; icon: React.ElementType }[] = [
   { key: 'timeline', label: 'Timeline', icon: RiHistoryLine },
   { key: 'ocorrencias', label: 'Ocorrências', icon: RiAlertLine },
   { key: 'financeiro', label: 'Financeiro', icon: RiMoneyDollarCircleLine },
+  { key: 'disputas', label: 'Disputas', icon: RiAlertLine },
   { key: 'documentos', label: 'Documentos', icon: RiFolderLine },
   { key: 'checklists', label: 'Checklists', icon: RiFileList3Line },
   { key: 'equipe', label: 'Equipe', icon: RiTeamLine },
@@ -80,6 +83,7 @@ export default function ObraDetalhePage() {
   const params = useParams();
   const id = params.id as string;
   const { data: obra, isLoading } = useObraContratanteDetalhe(id);
+  const { data: obraHealth } = useObraHealth(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('visao-geral');
 
   if (isLoading) {
@@ -417,9 +421,9 @@ export default function ObraDetalhePage() {
               transition={{ duration: 0.15 }}
             >
               {activeTab === 'visao-geral' && <TabVisaoGeral obra={obra} progressColor={progressColor} onNavigateToTimeline={() => setActiveTab('timeline')} onNavigateToHealth={() => setActiveTab('saude')} />}
-              {activeTab === 'saude' && (
+              {activeTab === 'saude' && obraHealth && (
                 <HealthDetailPanel
-                  health={getMockHealth(obra.id)}
+                  health={obraHealth}
                   actionsByFactor={{
                     atraso: { label: 'Ver etapas', onClick: () => setActiveTab('etapas') },
                     financeiro: { label: 'Ver financeiro', onClick: () => setActiveTab('financeiro') },
@@ -431,6 +435,16 @@ export default function ObraDetalhePage() {
               {activeTab === 'timeline' && <TabTimeline obra={obra} />}
               {activeTab === 'ocorrencias' && <TabOcorrencias obra={obra} />}
               {activeTab === 'financeiro' && <TabFinanceiro obra={obra} />}
+              {activeTab === 'disputas' && (
+                <TabDisputas
+                  obraId={obra.id}
+                  alvos={obra.financeiro.medicoes.map<DisputaAlvoOption>((m) => ({
+                    tipo: 'medicao',
+                    id: m.id,
+                    label: `Medição #${m.numero} — ${m.periodo}`,
+                  }))}
+                />
+              )}
               {activeTab === 'documentos' && <TabDocumentos documentos={obra.documentos} />}
               {activeTab === 'checklists' && <TabChecklists checklists={obra.checklists} />}
               {activeTab === 'equipe' && <TabEquipe obra={obra} />}
