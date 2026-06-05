@@ -332,7 +332,14 @@ export const notificacoes = pgTable("notificacoes", {
   threadId: varchar("thread_id").references(() => chatThreads.id, { onDelete: "set null" }),
   lida: boolean("lida").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  // Dedupe de notificação não-lida por (user_id, href). Espelha o índice criado
+  // em server/bootstrap-notificacoes.ts (J13 hardening). Re-disparo legítimo
+  // segue possível: ao ler (lida=true), a linha sai do índice parcial.
+  uniqUserHrefUnread: uniqueIndex("uniq_notificacoes_user_href_unread")
+    .on(t.userId, t.href)
+    .where(sql`${t.lida} = false AND ${t.href} IS NOT NULL`),
+}));
 
 export type Notificacao = typeof notificacoes.$inferSelect;
 

@@ -85,6 +85,8 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** `listarMensagensDaThread` usa `LIMIT 100` hardcoded — thread longa corta silenciosamente. `listarConversasPorUsuario` carrega todas as threads + LATERAL subqueries por chamada. Indices já criados ajudam, mas precisa cursor antes de escala.
 - **Prioridade:** P1 quando o uso real crescer; P2 enquanto MVP
+- **✅ PARCIAL — Camada A (2026-06-05):** `listarMensagensDaThread` agora pagina por keyset `(criada_em, id)` DESC, retornando as N **mais recentes** (default 50) em ordem cronológica e expondo cursor no header `X-Next-Cursor` ([service.ts](../../features/chat/service.ts) + [cursor.ts](../../features/chat/cursor.ts) + índice `idx_chat_mensagens_thread_keyset`). Corrige o truncamento silencioso das mensagens recentes. O body permanece `Message[]` (não quebra o client).
+- **Remanescente — Camada B (P2):** "carregar mais antigas" na UI (botão/scroll) com `useInfiniteQuery` + body `{ messages, nextCursor }`. O cursor já está pronto no header, então é só consumir. `listarConversasPorUsuario` segue sem paginação (lista de threads tende a ser pequena — revisitar se escalar).
 
 ### `refetchInterval` adaptativo no chat
 - **Origem:** J13 review (code-reviewer)
@@ -125,6 +127,7 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** atacante pode rotacionar `X-Forwarded-For` por request e bypassar o tier IP do rate-limit. Tiers user/thread ainda protegem. Fix: gate por env `TRUST_PROXY_HEADERS=1` no `features/auth/api/rate-limit.ts`. Afeta TODOS os usos de rate-limit (J03 anexos, J13 chat, etc).
 - **Resolução:** `getClientIp` agora ignora `X-Forwarded-For` quando `TRUST_PROXY_HEADERS != "1"`. Documentado em `.env.example` e `replit.md`. Os 7 endpoints continuam chamando `getClientIp` igual — o gate é centralizado.
+- **⚠️ AÇÃO DE DEPLOY pendente (J19):** o código está completo, mas o tier IP do rate-limit só fica ativo quando **`TRUST_PROXY_HEADERS=1`** estiver setado nas variáveis de ambiente de **produção** — e somente se o app estiver atrás de um proxy confiável (Replit/Vercel/Cloudflare). Sem isso, o tier IP fica neutralizado (tiers user/thread seguem protegendo; não há buraco de segurança). Não é código — é configuração no painel de deploy. **Checklist de go-live.**
 
 ### Rate-limit in-memory não funciona em multi-instance
 - **Origem:** J13 hardening review (code-reviewer)
@@ -173,11 +176,12 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Prioridade:** P2 (precondição estratégica — vale plantar antes pra evitar fricção depois)
 - **✅ RESOLVIDO (2026-06-01):** `userTemAssinaturaAtiva` + `getLimiteRecurso` implementados em `features/planos/assinatura-service.ts` (consultam `assinaturas`/`plans-catalog`). Gating de fato aplicado em J03 (obras abertas) e J05 (propostas/mês) com HTTP 402.
 
-### Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`
+### ~~Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`~~ ✓ Resolvido 2026-06-05
 - **Origem:** J13 §13 (Task #94) — confirmado durante exploração
 - **Descoberto:** 2026-05-29
 - **Motivação:** re-publicação de obra (admin re-aprova após pause→republish) dispara notif duplicada pra empreiteiro na zona. Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra. Mitigação: índice único parcial em `notificacoes` ou flag idempotente na obra. Bate com o "agrupamento de 5 mensagens novas" do §11 J13.
 - **Prioridade:** P1 (UX de spam é visível e gera saída de usuário)
+- **✅ RESOLVIDO (2026-06-05):** índice único parcial `uniq_notificacoes_user_href_unread ON notificacoes (user_id, href) WHERE lida = false AND href IS NOT NULL` ([bootstrap-notificacoes.ts](../../server/bootstrap-notificacoes.ts), com pré-limpeza idempotente de duplicatas legadas + espelho em [schema.ts](../../shared/db/schema.ts)) + `onConflictDoNothing` no [dispatcher](../../features/notificacoes/nova-obra-zona-dispatcher.ts). Duplicata NÃO-LIDA é ignorada e o **email é suprimido junto** (não reforça aviso ainda não lido). Re-disparo legítimo preservado: ao ler, a linha sai do índice parcial.
 
 ### Decisão arquitetural J09 — `escopo: obra | plataforma`
 - **Origem:** J09 (gap declarado em §6 do doc)

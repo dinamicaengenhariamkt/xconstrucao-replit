@@ -160,16 +160,30 @@ export async function dispararNotificacaoNovaObraZona(
   let emailCount = 0;
 
   for (const m of matches) {
-    // In-app: sempre tenta (best-effort por destinatário).
+    // In-app: best-effort por destinatário. Dedupe via índice único parcial
+    // `uniq_notificacoes_user_href_unread`: se já existe uma notificação NÃO-LIDA
+    // com o mesmo (user_id, href), o insert é ignorado (onConflictDoNothing) e o
+    // empreiteiro não acumula avisos repetidos da mesma obra em ciclos republish.
+    let inAppCriada = false;
     try {
-      await db.insert(notificacoes).values({
-        userId: m.userId,
-        tipo: "info",
-        titulo,
-        descricao,
-        href,
-      });
-      notifCount++;
+      const inserted = await db
+        .insert(notificacoes)
+        .values({
+          userId: m.userId,
+          tipo: "info",
+          titulo,
+          descricao,
+          href,
+        })
+        .onConflictDoNothing({
+          target: [notificacoes.userId, notificacoes.href],
+          where: sql`${notificacoes.lida} = false AND ${notificacoes.href} IS NOT NULL`,
+        })
+        .returning({ id: notificacoes.id });
+      if (inserted.length > 0) {
+        inAppCriada = true;
+        notifCount++;
+      }
     } catch (err) {
       console.error(
         "[nova-obra-zona] falha ao criar notificação in-app:",
@@ -178,7 +192,10 @@ export async function dispararNotificacaoNovaObraZona(
       );
     }
 
-    // Email: respeita preferência (default true se ausente).
+    // Email: só envia quando a notificação in-app foi de fato criada (não houve
+    // duplicata pendente) — evita reforçar por email um aviso que o empreiteiro
+    // ainda não leu. Respeita também a preferência (default true se ausente).
+    if (!inAppCriada) continue;
     const prefs = m.prefsNotificacoes ?? null;
     const emailEnabled = prefs ? prefs.email_novaObra !== false : true;
     if (!emailEnabled || !m.email) continue;

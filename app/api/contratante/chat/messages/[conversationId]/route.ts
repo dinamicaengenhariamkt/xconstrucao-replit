@@ -8,6 +8,7 @@ import {
   podeAcessarThread,
 } from "@features/chat/service";
 import { toMessageDTO } from "@features/chat/dto";
+import { clampLimit, decodeCursor, encodeCursor } from "@features/chat/cursor";
 import { notificarNovaMensagem } from "@features/notificacoes/nova-mensagem-chat-dispatcher";
 
 const enviarSchema = z.object({
@@ -27,10 +28,16 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ convers
     return r;
   }
 
-  const rows = await listarMensagensDaThread(conversationId);
-  const dto = rows.map((row) => toMessageDTO(row, guard.user.id));
+  const url = new URL(request.url);
+  const limit = clampLimit(url.searchParams.get("limit"));
+  const before = decodeCursor(url.searchParams.get("before"));
+  const { messages, nextCursor } = await listarMensagensDaThread(conversationId, { limit, before });
+  const dto = messages.map((row) => toMessageDTO(row, guard.user.id));
 
+  // Body permanece um array (contrato atual do client). O cursor para carregar
+  // mensagens mais antigas é exposto via header (Camada B usará isto).
   const r = NextResponse.json(dto);
+  if (nextCursor) r.headers.set("X-Next-Cursor", encodeCursor(nextCursor));
   setNoCacheHeaders(r);
   return r;
 }

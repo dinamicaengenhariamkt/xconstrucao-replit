@@ -1,7 +1,7 @@
 # Jornada — Autenticação Forte (2FA)
 
-> Status: revisão | Prioridade: média | Wave: 4
-> Última atualização: 2026-06-03
+> Status: pronto | Prioridade: média | Wave: 4
+> Última atualização: 2026-06-05
 
 ## 1. Contexto & Objetivo
 Adicionar um segundo fator de autenticação (2FA/MFA) opcional às contas, reduzindo o risco de comprometimento por senha vazada/credential stuffing. Nasceu de um gap levantado na J02 (Perfis & Configurações): 2FA não era critério de aceite original e é uma feature do zero que mexe no caminho crítico de login — por isso foi extraída para jornada própria em 2026-06-02, em vez de inflar a J02.
@@ -96,3 +96,4 @@ Nenhum — feature nova, sem mock prévio.
 - 2026-06-03: Auditoria de segurança aplicada — rate-limit do `verificar` reforçado **por conta** além de por IP (anti-brute-force do código de 6 dígitos), e status/mensagem unificados (sem oráculo código-errado vs conta-inválida). Eventos `2fa.enabled`/`2fa.disabled`/`2fa.login_verified` em `audit_logs`.
 - 2026-06-03: **Pendência de hardening (LOW):** o `secret` TOTP é gravado em claro em `user_totp.secret`. Cifragem em repouso (AES-GCM com `TOTP_ENC_KEY` dedicada) fica como item futuro — depende de decisão de infra sobre gestão de chave. Recovery codes já são hash.
 - 2026-06-03: **Pendência de teste:** falta o teste de regressão e2e (conta SEM 2FA continua logando; login com TOTP; recovery code uso único). Critérios de aceite validados por type-check + auditoria, ainda não por e2e.
+- 2026-06-05: Jornada promovida a **pronto** — todos os 8 itens do checklist e os 6 critérios de aceite têm código correspondente (verificado). As duas pendências acima (secret TOTP em claro — LOW; teste e2e) são follow-ups de hardening/qualidade e **não bloqueiam** a entrega funcional; ficam registradas como itens de backlog.

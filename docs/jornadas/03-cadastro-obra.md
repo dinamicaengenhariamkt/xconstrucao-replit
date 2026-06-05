@@ -1,6 +1,6 @@
 # Jornada — Cadastro de Obra
 
-> Status: revisão | Prioridade: alta | Wave: 1
+> Status: pronto | Prioridade: alta | Wave: 1
 > Última atualização: 2026-05-25
 
 ## 1. Contexto & Objetivo

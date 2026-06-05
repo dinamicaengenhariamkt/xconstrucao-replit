@@ -1,7 +1,7 @@
 # Jornada — Observabilidade de Comunicação (Admin)
 
-> Status: revisão | Prioridade: média | Wave: 4
-> Última atualização: 2026-06-02
+> Status: pronto | Prioridade: média | Wave: 4
+> Última atualização: 2026-06-05
 
 ## 1. Contexto & Objetivo
 Dar ao admin visibilidade **read-only** sobre a comunicação da plataforma: ler os chats 1:1 entre contratante e empreiteiro (auditoria/moderação), ver o painel real de notificações disparadas (hoje mock) e ter uma trilha de rastreio do que foi enviado, para quem e quando. Fecha os dois itens de observabilidade que sobraram da J13 (`tela admin de monitoramento`) e profissionaliza o suporte sem mexer no chat das partes.
@@ -54,14 +54,14 @@ flowchart LR
 - [features/admin/notifications/mocks/](../../features/admin/notifications/mocks/) — substituir o consumo do hook por API real
 
 ## 9. Checklist de implementação
-- [ ] `GET /api/admin/chat/threads` — lista paginada com filtros, guard `isAdminLike`
-- [ ] `GET /api/admin/chat/threads/[id]/mensagens` — leitura read-only + registro em `audit_logs`
-- [ ] `GET /api/admin/notificacoes` — painel real (filtros tipo/destinatário/status/canal)
-- [ ] `features/admin/comunicacao/` — service + hooks (React Query) reais
-- [ ] `app/admin/comunicacao/page.tsx` — tela com abas Chats / Notificações / Auditoria, modo leitura (sem input de envio)
-- [ ] Migrar [features/admin/notifications/](../../features/admin/notifications/) do mock para o hook real
-- [ ] Trilha de auditoria: cada abertura de thread pelo admin grava `action='admin.chat.read'`
-- [ ] (avaliar) Indexar `chat_mensagens (thread_id, criada_em DESC)` se a leitura admin ficar pesada
+- [x] `GET /api/admin/chat/threads` — lista paginada com filtros, guard `isAdminLike` _([app/api/admin/chat/threads/route.ts](../../app/api/admin/chat/threads/route.ts) → `listarThreadsAdmin`)_
+- [x] `GET /api/admin/chat/threads/[id]/mensagens` — leitura read-only + registro em `audit_logs` _([.../[id]/mensagens/route.ts](../../app/api/admin/chat/threads/[id]/mensagens/route.ts), grava `action='admin.chat.read'`)_
+- [x] `GET /api/admin/notificacoes` — painel real (filtros tipo/destinatário/status/canal) _([app/api/admin/notificacoes/route.ts](../../app/api/admin/notificacoes/route.ts) → `listarNotificacoesAdmin`)_
+- [x] `features/admin/comunicacao/` — service + hooks (React Query) reais _([comunicacao-service.ts](../../features/admin/comunicacao/api/comunicacao-service.ts) + [use-comunicacao.ts](../../features/admin/comunicacao/hooks/use-comunicacao.ts))_
+- [x] `app/admin/comunicacao/page.tsx` — tela com abas Chats / Notificações / Auditoria, modo leitura (sem input de envio) _(abas em [features/admin/comunicacao/components/](../../features/admin/comunicacao/components/): `ChatsTab`, `NotificacoesTab`, `AuditoriaTab`)_
+- [x] Migrar [features/admin/notifications/](../../features/admin/notifications/) do mock para o hook real _(`use-notifications.ts` lê `/api/notificacoes`; diretório `mocks/` removido)_
+- [x] Trilha de auditoria: cada abertura de thread pelo admin grava `action='admin.chat.read'` _(+ endpoint [app/api/admin/comunicacao/auditoria/route.ts](../../app/api/admin/comunicacao/auditoria/route.ts) lê a trilha)_
+- [x] Indexar `chat_mensagens (thread_id, criada_em DESC)` _(índice `idx_chat_mensagens_thread_criada` já criado em [server/bootstrap-chat.ts](../../server/bootstrap-chat.ts))_
 
 ## 10. Critérios de aceite
 1. Admin abre `/admin/comunicacao` → vê lista de threads de obras com partes e última mensagem.
@@ -85,3 +85,4 @@ flowchart LR
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
 - 2026-06-02: Jornada criada a partir do levantamento `/jornada`. Decisão registrada: chat admin é **leitura-only por fora**, schema de chat 1:1 fica intocado; canal admin↔áreas (escrita) adiado como escopo separado.
+- 2026-06-05: Jornada promovida a **pronto**. Todos os 8 itens do checklist e os 5 critérios de aceite verificados contra o código (endpoints, service/hooks, abas, trilha `admin.chat.read` + endpoint de leitura da trilha, mock de notifications removido). Decisão de produto da §11 (avisar as partes sobre leitura admin) permanece em aberto — é política/UX, não bloqueia a entrega técnica.
