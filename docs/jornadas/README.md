@@ -30,16 +30,23 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | pronto | média |
 | 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pronto | alta |
 | 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
-| 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | revisão | média |
-| 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | revisão | média |
-| 23 | [Meus Anúncios (Self-Service)](23-meus-anuncios-self-service.md) | contratante, empreiteiro, outsider, admin | 4 | bloqueada | baixa |
-| 24 | [Anúncios Ricos (Preview, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, público | 4 | bloqueada | média |
+| 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | pronto | média |
+| 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | pronto | média |
+| 23 | [Meus Anúncios (Self-Service)](23-meus-anuncios-self-service.md) | contratante, empreiteiro, outsider, admin | 5 | bloqueada | baixa |
+| 24 | [Anúncios Ricos (Templates, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, anunciante, público | 5 | planejada | alta |
+| 25 | [Obras em Destaque na Home (Curadoria + Carrossel)](25-obras-em-destaque-home.md) | admin, público | 5 | pronto | alta |
+| 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
+| 27 | [Gestão de Leads do Marketplace](27-gestao-leads-marketplace.md) | admin | 5 | pronto | alta |
+| 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | bloqueada | média |
+| 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | planejada | baixa |
+| 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | bloqueada | média |
 
 ---
 
 ## Convenções
 
 ### Status
+- **planejada** — roteiro completo e desbloqueado, pronto para entrar na fila de implementação (nada de código ainda). É o "pendente" com aval para começar.
 - **pendente** — jornada documentada (roteiro pronto) mas ainda não iniciada.
 - **mock** — UI existe mas dados são fixos / não persistem. Substituir por API + Drizzle.
 - **parcial** — backend real coexiste com mock por trás de uma flag (`ENABLE_MOCK`). Remover flag e deletar mocks.
@@ -56,6 +63,9 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
 - **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
+- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20, 23 (bloqueadas).
+- **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads) — entregues 2026-06-05**; 24 (templates + home dinâmica de anúncios) planejada (deve preceder 23). Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14).
+- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): 28 (docs legais versionados — bloqueada por jurídico), 29 (observabilidade histórica/snapshots — ganha valor com volume), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio).
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

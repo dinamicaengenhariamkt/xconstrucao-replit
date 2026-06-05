@@ -10,6 +10,8 @@ import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { ModuloIndisponivel } from '@features/shared/components/ModuloIndisponivel';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { useFAQ } from '@features/empreiteiro/faq/hooks/use-faq';
 import {
   FAQ_CATEGORIES,
@@ -25,6 +27,7 @@ const CATEGORY_OPTIONS = Object.entries(FAQ_CATEGORIES).map(([value, label]) => 
 }));
 
 export default function FAQPage() {
+  const { config } = usePublicConfig();
   const { data: items, isLoading } = useFAQ();
   const [categorySelected, setCategorySelected] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +62,17 @@ export default function FAQPage() {
   const advancedActiveCount = categorySelected.length > 0 ? 1 : 0;
   const clearAllAdvanced = () => setCategorySelected([]);
   const showGrid = advancedActiveCount === 0 && !searchQuery.trim();
+
+  if (!config.faq) {
+    return (
+      <div className="p-10">
+        <ModuloIndisponivel
+          titulo="Central de ajuda indisponível"
+          mensagem="A central de perguntas frequentes está temporariamente desativada."
+        />
+      </div>
+    );
+  }
 
   if (isLoading) return <FAQSkeleton />;
 

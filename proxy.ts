@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAccessToken, verifyAccessTokenAllowExpired } from "@features/auth/api/auth-service";
+import { isManutencaoAtiva } from "@features/admin/platform-settings/server/settings-reader";
 
 /** Inline (não importar de auth-utils, que puxa DB/audit p/ o bundle do proxy). */
 function isAdminLike(role: string): boolean {
   return role === "admin" || role === "superadmin";
+}
+
+/** Prefixos das áreas logadas afetadas pelo modo manutenção (admin é isento). */
+const MAINTENANCE_AFFECTED_PREFIXES = ["/contratante", "/empreiteiro"];
+
+/** Extrai a role do token (tolera expirado-mas-íntegro), ou null. */
+function roleFromToken(accessToken: string | undefined): string | null {
+  if (!accessToken) return null;
+  const valid = verifyAccessToken(accessToken);
+  if (valid?.role) return valid.role;
+  const claims = verifyAccessTokenAllowExpired(accessToken);
+  return claims?.role ?? null;
 }
 
 /**
@@ -65,7 +78,7 @@ function loginRedirect(request: NextRequest): NextResponse {
   return NextResponse.redirect(url);
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const pathname = request.nextUrl.pathname;
 
@@ -114,6 +127,21 @@ export function proxy(request: NextRequest) {
         },
       },
     );
+  }
+
+  // ── Modo manutenção (J26) ─────────────────────────────────────────────────
+  // Quando ativo, usuários NÃO-admin nas áreas logadas (/contratante,
+  // /empreiteiro) são levados para /manutencao. Admin/superadmin sempre passam.
+  // A landing pública (/) e /admin não passam por aqui. Fail-open: erro de DB
+  // no leitor NUNCA liga manutenção (ver settings-reader).
+  const isMaintenanceArea = MAINTENANCE_AFFECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  if (isMaintenanceArea) {
+    const role = roleFromToken(accessToken);
+    if (!isAdminLike(role ?? "") && (await isManutencaoAtiva())) {
+      return NextResponse.redirect(new URL("/manutencao", request.url));
+    }
   }
 
   // ── Barreira server-side das páginas autenticadas (J19) ───────────────────

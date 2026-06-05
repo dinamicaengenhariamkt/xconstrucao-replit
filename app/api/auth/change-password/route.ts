@@ -9,6 +9,7 @@ import {
   createRefreshToken,
 } from "@features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
+import { getSenhaMinima } from "@features/admin/platform-settings/server/settings-reader";
 import { requireVerifiedUser, createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { updateUserPassword } from "@features/auth/api/auth-storage";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
     email: user.email,
     name: user.name,
     username: user.username || undefined,
+    minLength: await getSenhaMinima(),
   });
   if (!policy.valid) {
     return jsonNoStore({ message: policy.message ?? "Nova senha inválida." }, 400);

@@ -4,6 +4,8 @@ import { userConsents } from "@shared/db/schema";
 import { getUserByEmail, getUserByUsername, createUserWithProfile } from "@features/auth/api/auth-storage";
 import { hashPassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
 import { registerSchema } from "@features/auth/schemas";
+import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
+import { getSenhaMinima } from "@features/admin/platform-settings/server/settings-reader";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
@@ -47,6 +49,18 @@ export async function POST(request: NextRequest) {
 
     const { name, email, username, password, role, phone } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
+
+    // J26: reforça o tamanho mínimo de senha configurado pelo admin (piso 8).
+    // A registerSchema já validou a política base; aqui só aplicamos o minLength dinâmico.
+    const minPolicy = evaluatePasswordPolicy(password, {
+      email,
+      name,
+      username,
+      minLength: await getSenhaMinima(),
+    });
+    if (!minPolicy.valid) {
+      return jsonNoStore({ message: minPolicy.message ?? "Senha inválida." }, 400);
+    }
 
     const existingEmail = await getUserByEmail(email);
     if (existingEmail) {

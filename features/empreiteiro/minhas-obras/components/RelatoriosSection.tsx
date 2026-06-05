@@ -3,25 +3,11 @@
 import { useState } from 'react';
 import type { ComponentType } from 'react';
 import { useToast } from '@shared/hooks/use-toast';
+import { downloadCSV } from '@shared/lib/csv';
 import { RelatorioObraModal } from './RelatorioObraModal';
 import { CompartilharModal } from './CompartilharModal';
 import type { MinhaObraDetalhe } from '../types';
 import { IconDescription, IconPhotoLibrary, IconTrendingUp, IconChecklist, IconTableChart, IconShare, IconProgressActivity } from '@shared/components/icons';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function downloadCSV(filename: string, headers: string[], rows: string[][]): void {
-  const csv = [headers, ...rows]
-    .map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

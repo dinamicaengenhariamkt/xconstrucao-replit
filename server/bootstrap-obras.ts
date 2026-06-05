@@ -66,6 +66,11 @@ END$$;`),
     { name: "acessibilidade_obs", ddl: "acessibilidade_obs TEXT" },
     { name: "created_at", ddl: "created_at TIMESTAMP DEFAULT NOW()" },
     { name: "updated_at", ddl: "updated_at TIMESTAMP DEFAULT NOW()" },
+    // J25 — Obras em Destaque na Home (curadoria admin).
+    { name: "destaque", ddl: "destaque BOOLEAN NOT NULL DEFAULT false" },
+    { name: "destaque_ordem", ddl: "destaque_ordem INTEGER" },
+    // foto de capa "congelada" escolhida pelo admin (FK criada à parte abaixo).
+    { name: "foto_capa_file_id", ddl: "foto_capa_file_id VARCHAR" },
   ];
 
   for (const col of obrasColumns) {
@@ -167,6 +172,29 @@ END$$;`),
     console.error("[bootstrap-obras] add fk obra_anexos.file_id:", err);
   }
 
+  // FK obras.foto_capa_file_id -> user_files(id) ON DELETE SET NULL (J25).
+  // SET NULL (não CASCADE): se a foto escolhida for deletada, a obra permanece,
+  // mas perde a capa congelada — o endpoint público a esconde do carrossel
+  // (não publicar imagem não-curada).
+  try {
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_files')
+           AND NOT EXISTS (
+             SELECT 1 FROM information_schema.table_constraints
+              WHERE table_name = 'obras' AND constraint_name = 'obras_foto_capa_file_id_fkey'
+           ) THEN
+          ALTER TABLE obras
+            ADD CONSTRAINT obras_foto_capa_file_id_fkey
+            FOREIGN KEY (foto_capa_file_id) REFERENCES user_files(id) ON DELETE SET NULL;
+        END IF;
+      END$$;
+    `);
+  } catch (err) {
+    console.error("[bootstrap-obras] add fk obras.foto_capa_file_id:", err);
+  }
+
   const indexes: Array<{ name: string; ddl: string }> = [
     {
       name: "idx_obras_visibilidade_uf_cidade",
@@ -187,6 +215,10 @@ END$$;`),
     {
       name: "idx_obras_status_moderacao",
       ddl: "CREATE INDEX IF NOT EXISTS idx_obras_status_moderacao ON obras(status_moderacao, visibilidade)",
+    },
+    {
+      name: "idx_obras_destaque_ordem",
+      ddl: "CREATE INDEX IF NOT EXISTS idx_obras_destaque_ordem ON obras(destaque_ordem) WHERE destaque = true",
     },
   ];
 

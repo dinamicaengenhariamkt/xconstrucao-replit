@@ -181,6 +181,10 @@ export const obras = pgTable("obras", {
   progresso: integer("progresso").default(0),
   dataInicio: text("data_inicio"),
   dataPrevisao: text("data_previsao"),
+  // J25 — Obras em Destaque na Home (curadoria admin).
+  destaque: boolean("destaque").notNull().default(false),
+  destaqueOrdem: integer("destaque_ordem"),
+  fotoCapaFileId: varchar("foto_capa_file_id").references(() => userFiles.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
