@@ -699,9 +699,17 @@ function SecaoPlataforma() {
   }, [config]);
 
   const [confirmManutencao, setConfirmManutencao] = useState(false);
+  // J30 — confirmação ao DESLIGAR cadastro por perfil (impede onboarding novo).
+  const [confirmPerfil, setConfirmPerfil] = useState<null | 'empreiteiras' | 'clienteLogin'>(null);
 
   const toggle = (key: string) => (v: boolean) =>
     setFeatures((p) => ({ ...p, [key]: v }));
+
+  // Bloqueio por perfil: ao DESLIGAR (impede novos cadastros), confirma; ao ligar, direto.
+  const handlePerfilToggle = (key: 'empreiteiras' | 'clienteLogin') => (v: boolean) => {
+    if (!v) setConfirmPerfil(key);
+    else setFeatures((p) => ({ ...p, [key]: true }));
+  };
 
   // Modo manutenção: ao LIGAR, exige confirmação reforçada (impacta todos os
   // usuários). Ao desligar, aplica direto.
@@ -761,14 +769,32 @@ function SecaoPlataforma() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
-        <CardContent className="px-6 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Em breve</p>
-          <p className="mt-1 text-sm text-gray-500">
-            Bloqueio de cadastro/login por perfil (empreiteiras, clientes) e relatórios exportáveis
-            dependem de mudanças no fluxo de autenticação — serão liberados na jornada de
-            Configurações Críticas de Segurança (J30).
-          </p>
+      {/* J30 — controles de acesso por perfil + relatórios (antes ocultos). */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Acesso e cadastro</SectionTitle>
+        </CardHeader>
+        <CardContent className="px-6 pb-4 pt-0">
+          <SwitchRow
+            label="Permitir cadastro de empreiteiros"
+            description="Desligar impede NOVOS cadastros de empreiteiro. Contas existentes continuam acessando normalmente."
+            checked={features.empreiteiras}
+            onCheckedChange={handlePerfilToggle('empreiteiras')}
+            danger
+          />
+          <SwitchRow
+            label="Permitir cadastro de contratantes"
+            description="Desligar impede NOVOS cadastros de contratante. Contas existentes continuam acessando normalmente."
+            checked={features.clienteLogin}
+            onCheckedChange={handlePerfilToggle('clienteLogin')}
+            danger
+          />
+          <SwitchRow
+            label="Relatórios exportáveis"
+            description="Libera a exportação de relatórios para o admin (quando disponível)."
+            checked={features.relatorios}
+            onCheckedChange={toggle('relatorios')}
+          />
         </CardContent>
       </Card>
 
@@ -778,6 +804,19 @@ function SecaoPlataforma() {
           {saving ? 'Salvando...' : 'Salvar configurações'}
         </Button>
       </div>
+
+      <ConfirmImpactDialog
+        open={confirmPerfil !== null}
+        onOpenChange={(o) => !o && setConfirmPerfil(null)}
+        title="Bloquear novos cadastros deste perfil?"
+        description="Novos usuários deste perfil não conseguirão se cadastrar enquanto isto estiver desligado. Quem já tem conta continua acessando. Salve para aplicar."
+        confirmLabel="Sim, bloquear novos cadastros"
+        destructive
+        onConfirm={() => {
+          if (confirmPerfil) setFeatures((p) => ({ ...p, [confirmPerfil]: false }));
+          setConfirmPerfil(null);
+        }}
+      />
 
       <ConfirmImpactDialog
         open={confirmManutencao}
@@ -805,6 +844,8 @@ function SecaoSeguranca() {
   const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
   const [politica, setPolitica] = useState({
     senhaMinima: '8',
+    timeout: '',
+    maxTentativas: '5',
   });
 
   useEffect(() => {
@@ -812,17 +853,25 @@ function SecaoSeguranca() {
     if (Object.keys(seg).length === 0) return;
     setPolitica({
       senhaMinima: String(seg.senhaMinima ?? '8'),
+      timeout: seg.timeout != null ? String(seg.timeout) : '',
+      maxTentativas: String(seg.maxTentativas ?? '5'),
     });
   }, [config]);
 
   const handleSave = async () => {
     try {
-      // J26: apenas `senhaMinima` tem efeito real hoje (validação server-side no
-      // registro e troca de senha). Os demais campos críticos (timeout, 2FA, etc.)
-      // foram movidos para a J30 e não são exibidos. Persistimos só o que vale.
+      // J30: senhaMinima (J26) + timeout de sessão + máx tentativas têm efeito real.
+      // timeout vazio = sem override (mantém 7/30 dias). 2FA obrigatório segue fora
+      // (próxima fase). Preserva quaisquer outras chaves já persistidas.
+      const segAtual = (config?.seguranca ?? {}) as Record<string, unknown>;
       await updateConfig({
         chave: 'seguranca',
-        valor: { senhaMinima: politica.senhaMinima },
+        valor: {
+          ...segAtual,
+          senhaMinima: politica.senhaMinima,
+          timeout: politica.timeout, // "" → reader ignora (mantém default)
+          maxTentativas: politica.maxTentativas,
+        },
       });
       toast({ title: 'Políticas atualizadas', description: 'As configurações de segurança foram salvas.' });
     } catch (err) {
@@ -858,14 +907,54 @@ function SecaoSeguranca() {
         </CardContent>
       </Card>
 
+      {/* J30 — controles de sessão/login (antes ocultos). */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Sessão e login</SectionTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-4 flex flex-col gap-5">
+          <FieldRow
+            label="Timeout de sessão"
+            description="Tempo de inatividade até a sessão expirar. 'Padrão do sistema' mantém o comportamento atual (7–30 dias) — não encurta a sessão de ninguém."
+          >
+            <SelectField
+              value={politica.timeout}
+              onChange={(v) => setPolitica((p) => ({ ...p, timeout: v }))}
+              options={[
+                { label: 'Padrão do sistema', value: '' },
+                { label: '30 minutos', value: '30' },
+                { label: '1 hora', value: '60' },
+                { label: '4 horas', value: '240' },
+                { label: '12 horas', value: '720' },
+                { label: '1 dia', value: '1440' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow
+            label="Máximo de tentativas de login"
+            description="Após esse número de falhas no mesmo IP (janela de 15 min), novas tentativas são temporariamente bloqueadas. O mínimo efetivo é 3."
+          >
+            <SelectField
+              value={politica.maxTentativas}
+              onChange={(v) => setPolitica((p) => ({ ...p, maxTentativas: v }))}
+              options={[
+                { label: '5 tentativas', value: '5' },
+                { label: '10 tentativas', value: '10' },
+                { label: '15 tentativas', value: '15' },
+                { label: '20 tentativas', value: '20' },
+              ]}
+            />
+          </FieldRow>
+        </CardContent>
+      </Card>
+
       <Card className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
         <CardContent className="px-6 py-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Em breve</p>
           <p className="mt-1 text-sm text-gray-500">
-            Timeout de sessão, limite de tentativas de login e 2FA obrigatório alteram o fluxo de
-            autenticação de todos os usuários e serão liberados, com confirmação reforçada, na
-            jornada de Configurações Críticas de Segurança (J30). O 2FA individual já está disponível
-            na aba <strong>Segurança</strong> do seu perfil.
+            O <strong>2FA obrigatório</strong> (para admins ou todos) exige um fluxo de setup guiado
+            para não trancar ninguém e será liberado em uma próxima fase. O 2FA individual já está
+            disponível na aba <strong>Segurança</strong> do seu perfil.
           </p>
         </CardContent>
       </Card>

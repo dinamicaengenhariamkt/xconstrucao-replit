@@ -1,13 +1,15 @@
 # Jornada — Configurações Críticas de Segurança
 
-> Status: bloqueada | Prioridade: média | Wave: 6
-> Última atualização: 2026-06-05
+> Status: parcial | Prioridade: média | Wave: 6
+> Última atualização: 2026-06-07
 >
 > **Criada em 2026-06-05**, desmembrada da J26. Reúne os controles de
-> configuração que **alteram o fluxo de autenticação/sessão de todos os usuários**
-> — alto risco de regressão e de auto-bloqueio. Stand-by: cada item exige plano de
-> teste de não-bloqueio próprio antes de ativar. Na J26 esses controles foram
-> **ocultados** da tela ("em breve") para não mentir ao admin.
+> configuração que **alteram o fluxo de autenticação/sessão de todos os usuários**.
+> **Em 2026-06-07 os itens de BAIXO RISCO foram entregues** (timeout de sessão, máx
+> tentativas de login, bloqueio de cadastro por perfil, gate de relatórios), todos
+> com a garantia de **não encurtar/bloquear nada por omissão** (só agem quando o
+> admin configura). **Pendentes (próxima fase, maior risco):** 2FA obrigatório
+> (precisa de setup guiado p/ não trancar) e webhooks reais (dispatcher + fila/SSRF).
 
 ## 1. Contexto & Objetivo
 A J26 tirou as configurações do "modo fantasma" implementando apenas o que é
@@ -85,3 +87,20 @@ Itens em escopo (todos hoje ocultos na página de configurações):
 > Doc viva. Registrar aqui o que apareceu no caminho.
 
 - **2026-06-05** — Jornada criada ao implementar a J26. Decisão: os controles de auth/sessão ficam ocultos ("em breve") na página de configurações até esta jornada, para a J26 cumprir o critério "nenhum toggle fantasma" sem assumir o risco de mexer no login de todos. O `ConfirmImpactDialog` e o `settings-reader` já estão prontos (J26) para reuso aqui.
+- **2026-06-07** — **Itens de baixo risco entregues.** (1) **Timeout de sessão**
+  (`seguranca.timeout`, min) aplicado na janela do refresh/sessão em
+  [session-issuer.ts](../../features/auth/api/session-issuer.ts) e
+  [refresh/route.ts](../../app/api/auth/refresh/route.ts) via override em
+  `createAuthCookies`. (2) **Máx tentativas** (`seguranca.maxTentativas`) no
+  [login/route.ts](../../app/api/auth/login/route.ts). (3) **Bloqueio de cadastro
+  por perfil** (`plataforma.empreiteiras`/`clienteLogin`) no
+  [register/route.ts](../../app/api/auth/register/route.ts) — só barra cadastro
+  novo; `anunciante`/admin nunca barrados; login de conta existente intacto. (4)
+  Gate de **relatórios** exposto. UI reexibida em
+  [configuracoes/page.tsx](../../app/admin/configuracoes/page.tsx) com
+  `ConfirmImpactDialog`. **Decisão crítica de não-lockout:** os helpers em
+  [settings-reader.ts](../../features/admin/platform-settings/server/settings-reader.ts)
+  leem o valor CRU da tabela (não o merge com DEFAULTS) — assim, **sem config
+  explícita, timeout e maxTentativas NÃO se aplicam** (mantêm 7/30 dias e o limite
+  histórico). Pisos (5 min / 3 tentativas) previnem auto-bloqueio por config absurda.
+  **Fora desta leva:** 2FA obrigatório e webhooks reais (próxima fase).

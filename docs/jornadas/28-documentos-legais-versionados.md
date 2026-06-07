@@ -1,11 +1,13 @@
 # Jornada — Documentos Legais Versionados + Re-consentimento
 
-> Status: bloqueada | Prioridade: média | Wave: 6
-> Última atualização: 2026-06-05
+> Status: pronto (infra) | Prioridade: média | Wave: 6
+> Última atualização: 2026-06-07
 >
-> **Criada em 2026-06-05** a partir de auditoria `/jornada`. Pós-MVP, depende de
-> decisão jurídica sobre conteúdo e política de re-consentimento. Estruturada agora
-> para não se perder no roadmap.
+> **Criada em 2026-06-05** a partir de auditoria `/jornada`. **Implementada em
+> 2026-06-07**: toda a infra de versionamento + re-consentimento está funcional, com
+> o texto atual migrado como v1. O que resta é **dado/decisão do jurídico** (publicar
+> uma v2 com texto revisado, e escolher avisar↔bloquear), editável pelo painel admin
+> sem tocar em código — exatamente o "plug" planejado.
 
 ## 1. Contexto & Objetivo
 Os Termos de Uso ([app/termos/page.tsx](../../app/termos/page.tsx)) e a Política de
@@ -110,3 +112,17 @@ flowchart LR
 > Doc viva. Registrar aqui o que apareceu no caminho.
 
 - **2026-06-05** — Jornada criada por auditoria. Confirmado: termos/privacidade são JSX hardcoded; `user_consents.versao` existe mas não há documento versionado correspondente (versionamento de consentimento sem versionamento do documento). Status `bloqueada` por depender de decisão jurídica.
+- **2026-06-07** — **Infra implementada (pronto).** Tabela
+  [legal_documents](../../shared/db/schema.ts) + bootstrap idempotente
+  [bootstrap-legal-documents.ts](../../server/bootstrap-legal-documents.ts) com
+  **seed v1 = texto atual migrado fielmente** (extraído de termos/privacidade para
+  Markdown em `server/legal-seed/`). Endpoints: `GET /api/legal/[tipo]` (público),
+  `GET/POST /api/admin/legal` (admin), `GET /api/legal/pendencias` + `POST
+  /api/legal/consentir`. Páginas [termos](../../app/termos/page.tsx) e
+  [privacidade](../../app/politica-privacidade/page.tsx) leem do banco via
+  `LegalDocumentView` + `MarkdownView` (renderer Markdown **sem dangerouslySetInnerHTML**,
+  XSS-safe). Admin de publicação em [app/admin/legal](../../app/admin/legal/page.tsx).
+  Re-consent global via `ReconsentGate` nos providers, **configurável** (`legal.reconsentModo`)
+  com **padrão `avisar`** (não-bloqueante); `bloquear` é UX (backend não tranca acesso).
+  **Decisões:** conteúdo é dado editável pelo jurídico (não código); re-consent default
+  avisar. **Plug pendente:** jurídico publica a v2 revisada quando quiser.

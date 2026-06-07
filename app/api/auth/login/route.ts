@@ -7,6 +7,7 @@ import {
 } from "@features/auth/api/auth-service";
 import { setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { getMaxTentativasLogin } from "@features/admin/platform-settings/server/settings-reader";
 import { validateAntiBot } from "@features/auth/api/anti-bot";
 import { isTotpEnabled } from "@features/auth/api/totp-storage";
 import { montarUserData, emitirSessao } from "@features/auth/api/session-issuer";
@@ -21,7 +22,9 @@ function jsonNoStore(payload: unknown, status: number) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  if (isRateLimited(`login:${ip}`, 10, 15 * 60 * 1000)) {
+  // J30 — limite de tentativas configurável (seguranca.maxTentativas); fallback 10.
+  const maxTentativas = await getMaxTentativasLogin(10);
+  if (isRateLimited(`login:${ip}`, maxTentativas, 15 * 60 * 1000)) {
     return jsonNoStore(
       { error: "Muitas tentativas. Tente novamente em alguns minutos." },
       429

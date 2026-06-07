@@ -109,6 +109,12 @@ export async function register() {
       console.error("[instrumentation] bootstrapFaqSchema failed:", err);
     });
 
+    // J28 — documentos legais versionados + seed v1 (depende do enum consent_document).
+    const { bootstrapLegalDocumentsSchema } = await import("./server/bootstrap-legal-documents");
+    await bootstrapLegalDocumentsSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapLegalDocumentsSchema failed:", err);
+    });
+
     const { bootstrapKpiSnapshotsSchema } = await import("./server/bootstrap-kpi-snapshots");
     await bootstrapKpiSnapshotsSchema().catch((err) => {
       console.error("[instrumentation] bootstrapKpiSnapshotsSchema failed:", err);

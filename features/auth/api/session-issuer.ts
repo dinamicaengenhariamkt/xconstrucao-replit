@@ -47,9 +47,19 @@ export async function emitirSessao(
   const accessToken = createAccessToken(userData);
   const refreshToken = createRefreshToken(userData.id, rememberMe);
 
+  // J30 — timeout de sessão por inatividade (seguranca.timeout, minutos). Quando
+  // setado, encurta a janela de refresh/sessão; ausente → mantém 7/30 dias.
+  const { getSessionTimeoutMinutes } = await import(
+    "@features/admin/platform-settings/server/settings-reader"
+  );
+  const timeoutMin = await getSessionTimeoutMinutes().catch(() => null);
+  const timeoutSeconds = timeoutMin ? timeoutMin * 60 : null;
+
   try {
     const sessionToken = createHash("sha256").update(refreshToken).digest("hex");
-    const refreshMaxAgeMs = (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
+    const refreshMaxAgeMs = timeoutSeconds
+      ? timeoutSeconds * 1000
+      : (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
     await db.insert(sessions).values({
       sessionToken,
       userId: userData.id,
@@ -77,6 +87,6 @@ export async function emitirSessao(
 
   const response = NextResponse.json({ success: true, user: { ...userData, roles } });
   setNoCacheHeaders(response);
-  createAuthCookies(response, accessToken, refreshToken, rememberMe);
+  createAuthCookies(response, accessToken, refreshToken, rememberMe, timeoutSeconds);
   return response;
 }

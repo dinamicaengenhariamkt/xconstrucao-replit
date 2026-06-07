@@ -487,6 +487,36 @@ export const userPreferencias = pgTable("user_preferencias", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ---------------------------------------------------------------------------
+// J28 — Documentos Legais Versionados. Cada publicação de Termos/Privacidade vira
+// uma versão (conteúdo Markdown + vigência). As páginas públicas leem a versão
+// vigente; o `user_consents.versao` passa a referenciar a versão aceita, permitindo
+// re-consentimento quando a vigente > aceita. Schema idempotente em
+// server/bootstrap-legal-documents.ts. O CONTEÚDO é dado (jurídico edita pelo admin).
+// ---------------------------------------------------------------------------
+export const legalDocuments = pgTable(
+  "legal_documents",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    tipo: consentDocumentEnum("tipo").notNull(),
+    versao: integer("versao").notNull(),
+    titulo: text("titulo").notNull(),
+    // Conteúdo em Markdown (renderizado sanitizado no client).
+    conteudo: text("conteudo").notNull(),
+    vigenteEm: timestamp("vigente_em").defaultNow().notNull(),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoPor: varchar("criado_por").references(() => users.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqTipoVersao: uniqueIndex("legal_documents_tipo_versao_uniq").on(t.tipo, t.versao),
+    idxTipoAtivo: index("idx_legal_documents_tipo_ativo").on(t.tipo, t.ativo),
+  }),
+);
+
+export type LegalDocument = typeof legalDocuments.$inferSelect;
+export type InsertLegalDocument = typeof legalDocuments.$inferInsert;
+
 export const platformSettings = pgTable("platform_settings", {
   chave: text("chave").primaryKey(),
   valor: jsonb("valor").notNull(),

@@ -122,7 +122,11 @@ export function createAuthCookies(
   response: NextResponse,
   accessToken: string,
   refreshToken: string,
-  rememberMe: boolean
+  rememberMe: boolean,
+  // J30 — override opcional da janela do refresh (em segundos), vindo de
+  // `seguranca.timeout`. Quando ausente, mantém o comportamento histórico (7/30d)
+  // — nada encurta por omissão.
+  refreshMaxAgeSecondsOverride?: number | null,
 ): void {
   response.cookies.set("access_token", accessToken, {
     httpOnly: true,
@@ -132,7 +136,11 @@ export function createAuthCookies(
     maxAge: 15 * 60,
   });
 
-  const refreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+  const defaultRefreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+  const refreshMaxAge =
+    refreshMaxAgeSecondsOverride && refreshMaxAgeSecondsOverride > 0
+      ? refreshMaxAgeSecondsOverride
+      : defaultRefreshMaxAge;
   response.cookies.set("refresh_token", refreshToken, {
     httpOnly: true,
     secure: true,

@@ -12,6 +12,7 @@
 // - FAIL-OPEN: se a query falhar, retorna o último valor conhecido (ou os
 //   defaults). Em particular, um erro de DB NUNCA liga o modo manutenção —
 //   evita derrubar o site por um glitch transitório.
+import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { platformSettings } from "@shared/db/schema";
 
@@ -45,6 +46,10 @@ const DEFAULTS: PlatformSettings = {
   },
   integracoes: {},
   notificacoes: {},
+  // J28 — modo de re-consentimento (avisar | bloquear).
+  legal: {
+    reconsentModo: "avisar",
+  },
 };
 
 const TTL_MS = 30_000;
@@ -112,6 +117,67 @@ export async function getSenhaMinima(): Promise<number> {
   const seguranca = await getPlatformSetting("seguranca");
   const raw = Number(seguranca.senhaMinima);
   return Number.isFinite(raw) ? Math.max(8, raw) : 8;
+}
+
+/**
+ * Lê o valor CRU de uma chave dentro de um grupo, direto da tabela (sem o merge com
+ * DEFAULTS). Necessário para distinguir "não configurado" de "igual ao default" —
+ * caso contrário os DEFAULTS mascarariam a ausência de config e aplicariam o valor
+ * por omissão. Fail-open → undefined (= não configurado). Não usa cache (chamadas
+ * raras, em auth) para sempre refletir a realidade da tabela.
+ */
+async function getRawSetting(grupo: string, chave: string): Promise<unknown> {
+  try {
+    const [row] = await db
+      .select({ valor: platformSettings.valor })
+      .from(platformSettings)
+      .where(eq(platformSettings.chave, grupo));
+    const valor = (row?.valor as Record<string, unknown> | null) ?? null;
+    return valor ? valor[chave] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * J30 — Máximo de tentativas de login (`seguranca.maxTentativas`), com piso 3 para
+ * não trancar o fluxo legítimo. Só sobrepõe o `fallback` (limite histórico) quando o
+ * admin SETOU explicitamente o valor — default não-setado mantém o fallback.
+ */
+export async function getMaxTentativasLogin(fallback: number): Promise<number> {
+  const raw = Number(await getRawSetting("seguranca", "maxTentativas"));
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.max(3, raw);
+}
+
+/**
+ * J30 — Timeout de sessão por inatividade em MINUTOS (`seguranca.timeout`).
+ * Retorna `null` quando NÃO foi explicitamente configurado → mantém o comportamento
+ * atual (7/30 dias) e NÃO encurta a sessão de ninguém por omissão. Piso de 5 min.
+ */
+export async function getSessionTimeoutMinutes(): Promise<number | null> {
+  const rawVal = await getRawSetting("seguranca", "timeout");
+  // String vazia ("Padrão do sistema" na UI) ou ausência = sem override.
+  if (rawVal === undefined || rawVal === null || rawVal === "") return null;
+  const raw = Number(rawVal);
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  return Math.max(5, raw);
+}
+
+/**
+ * J30 — Bloqueio de cadastro/login por perfil. `plataforma.empreiteiras` e
+ * `plataforma.clienteLogin` (default true = liberado). Fail-open → liberado.
+ */
+export async function isPerfilHabilitado(role: "contratante" | "empreiteiro"): Promise<boolean> {
+  const plataforma = await getPlatformSetting("plataforma");
+  if (role === "empreiteiro") return plataforma?.empreiteiras !== false;
+  return plataforma?.clienteLogin !== false;
+}
+
+/** J30 — Gate de relatórios exportáveis (`plataforma.relatorios`, default false). */
+export async function isRelatoriosHabilitado(): Promise<boolean> {
+  const plataforma = await getPlatformSetting("plataforma");
+  return plataforma?.relatorios === true;
 }
 
 /** Zera o cache para refletir uma escrita imediatamente (chamar no PATCH). */

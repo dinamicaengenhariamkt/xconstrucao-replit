@@ -5,7 +5,7 @@ import { getUserByEmail, getUserByUsername, createUserWithProfile } from "@featu
 import { hashPassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
 import { registerSchema } from "@features/auth/schemas";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
-import { getSenhaMinima } from "@features/admin/platform-settings/server/settings-reader";
+import { getSenhaMinima, isPerfilHabilitado } from "@features/admin/platform-settings/server/settings-reader";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
@@ -49,6 +49,20 @@ export async function POST(request: NextRequest) {
 
     const { name, email, username, password, role, phone } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
+
+    // J30 — bloqueio de cadastro por perfil. `anunciante` nunca é bloqueado (porta
+    // de entrada da J23). Só barra cadastro NOVO; contas existentes seguem logando.
+    if ((role === "contratante" || role === "empreiteiro") && !(await isPerfilHabilitado(role))) {
+      return jsonNoStore(
+        {
+          message:
+            role === "empreiteiro"
+              ? "O cadastro de empreiteiros está temporariamente indisponível."
+              : "O cadastro de contratantes está temporariamente indisponível.",
+        },
+        403,
+      );
+    }
 
     // J26: reforça o tamanho mínimo de senha configurado pelo admin (piso 8).
     // A registerSchema já validou a política base; aqui só aplicamos o minLength dinâmico.
