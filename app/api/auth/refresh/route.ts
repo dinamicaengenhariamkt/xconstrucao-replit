@@ -67,10 +67,14 @@ export async function POST(request: NextRequest) {
     // Rotacionar refresh token (segurança adicional)
     const newRefreshToken = rotateRefreshToken(refreshToken);
 
+    // J23 — multi-role: papéis efetivos (primário + aditivos) no payload do client.
+    const { getUserRoles } = await import("@features/auth/api/auth-utils");
+    const roles = await getUserRoles(user.id);
+
     // Criar resposta
     const response = NextResponse.json({
       success: true,
-      user: userData,
+      user: { ...userData, roles },
     });
 
     if (!newRefreshToken) {

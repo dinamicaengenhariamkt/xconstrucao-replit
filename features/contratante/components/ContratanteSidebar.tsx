@@ -19,6 +19,8 @@ import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import Image from 'next/image';
+import { RiMegaphoneLine } from 'react-icons/ri';
+import { useHasRole } from '@features/auth/store/auth-store';
 import {
   CONTRATANTE_NAV_ITEMS,
   CONTRATANTE_BOTTOM_NAV_ITEMS,
@@ -28,6 +30,11 @@ export function ContratanteSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  // J23/D6 — "Meus Anúncios" embutido na visão de cliente quando tem o papel.
+  const isAnunciante = useHasRole('anunciante');
+  const navItems = isAnunciante
+    ? [...CONTRATANTE_NAV_ITEMS, { title: 'Meus Anúncios', url: '/contratante/meus-anuncios', icon: RiMegaphoneLine }]
+    : CONTRATANTE_NAV_ITEMS;
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -61,7 +68,7 @@ export function ContratanteSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {CONTRATANTE_NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

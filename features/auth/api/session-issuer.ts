@@ -65,7 +65,17 @@ export async function emitirSessao(
     console.error("Falha ao registrar sessão:", err);
   }
 
-  const response = NextResponse.json({ success: true, user: userData });
+  // J23 — multi-role: anexa os papéis efetivos (primário + aditivos) ao payload do
+  // client. Não vai no token (que carrega só o papel primário). Best-effort.
+  let roles: string[] = [userData.role];
+  try {
+    const { getUserRoles } = await import("@features/auth/api/auth-utils");
+    roles = await getUserRoles(userData.id);
+  } catch (err) {
+    console.error("Falha ao carregar papéis do usuário:", err);
+  }
+
+  const response = NextResponse.json({ success: true, user: { ...userData, roles } });
   setNoCacheHeaders(response);
   createAuthCookies(response, accessToken, refreshToken, rememberMe);
   return response;

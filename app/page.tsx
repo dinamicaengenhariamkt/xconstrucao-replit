@@ -12,6 +12,7 @@ import { MarketplaceNotificacaoModal } from "@features/landing/components/Market
 import { AdSidebarSlot } from "@features/shared/anuncios/components/AdSidebarSlot";
 import { ObrasDestaqueCarousel } from "@features/landing/components/ObrasDestaqueCarousel";
 import { MercadoEmFoco } from "@features/landing/components/MercadoEmFoco";
+import { AnuncieAqui } from "@features/landing/components/AnuncieAqui";
 
 export default function HomePage() {
   const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
@@ -284,6 +285,9 @@ export default function HomePage() {
         <div className="max-w-[420px] mx-auto px-6">
           <AdSidebarSlot zoneId="banner-qa" />
         </div>
+
+        {/* J23 — convite para anunciar (self-service) */}
+        <AnuncieAqui />
 
         {/* CTA Final */}
         <section className="relative py-32 px-6 bg-[#333333] text-white overflow-hidden">

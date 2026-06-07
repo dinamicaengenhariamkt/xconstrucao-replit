@@ -13,6 +13,8 @@ interface User {
   email: string;
   name: string;
   role: string;
+  // J23 — multi-role: papéis efetivos (primário + aditivos). Vem de login/refresh.
+  roles?: string[];
   image?: string | null;
   avatarUrl?: string | null;
   canManageUsers?: boolean;
@@ -364,3 +366,20 @@ export const useAuth = () => {
 // Seletores específicos para performance
 export const useUser = () => useAuthStore((state) => state.user);
 export const useIsLoading = () => useAuthStore((state) => state.isLoading);
+
+/**
+ * J23 — multi-role no client. Considera o papel primário + os papéis aditivos
+ * (`roles`) carregados de login/refresh. Use para mostrar capacidades acopláveis
+ * (ex.: item "Meus Anúncios" para quem tem o papel `anunciante`).
+ */
+export const userHasRoleClient = (
+  user: { role?: string; roles?: string[] } | null | undefined,
+  role: string,
+): boolean => {
+  if (!user) return false;
+  if (user.role === role) return true;
+  return Array.isArray(user.roles) && user.roles.includes(role);
+};
+
+export const useHasRole = (role: string) =>
+  useAuthStore((state) => userHasRoleClient(state.user, role));

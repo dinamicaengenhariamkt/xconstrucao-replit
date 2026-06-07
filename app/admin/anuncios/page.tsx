@@ -63,6 +63,7 @@ import {
 } from '@features/admin/anuncios/hooks/use-anuncios';
 import type { AnuncioStatus, AnuncianteStatus, ZonaAnuncio, Campanha, Anunciante } from '@features/admin/anuncios/types';
 import type { EditarAnuncianteFormData } from '@features/admin/anuncios/schemas';
+import { SolicitacoesAnunciosSection } from '@features/admin/anuncios/components/SolicitacoesAnunciosSection';
 import { formatCurrencyRounded as formatCurrency, formatDate, formatRange } from '@shared/lib/formatters';
 import {
   PAGE_SIZE_CAMPANHAS,
@@ -876,6 +877,11 @@ export default function AdminAnunciosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* J23 — fila de moderação de pedidos self-service */}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 pb-12">
+        <SolicitacoesAnunciosSection />
+      </div>
     </div>
   );
 }

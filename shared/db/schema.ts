@@ -3,7 +3,7 @@ import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro"]);
+export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro", "anunciante"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
 export const obraVisibilidadeEnum = pgEnum("obra_visibilidade", ["rascunho", "publicada", "pausada", "arquivada"]);
@@ -153,6 +153,39 @@ export const empreiteiras = pgTable("empreiteiras", {
   avaliacao: numeric("avaliacao", { precision: 3, scale: 1 }).default("0"),
   status: statusEnum("status").notNull().default("ativo"),
 });
+
+// ---------------------------------------------------------------------------
+// J23 — Papéis aditivos (multi-role). `users.role` segue sendo o papel PRIMÁRIO
+// (canônico para os guards existentes e embutido no JWT). Esta tabela registra
+// papéis ADICIONAIS por usuário (ex.: um contratante que também é anunciante),
+// permitindo upgrade de papel sem duplicar usuário nem deslogar. Backfill dos
+// papéis primários atuais é feito no bootstrap. Schema criado idempotente em
+// server/bootstrap-anuncios-self-service.ts.
+// ---------------------------------------------------------------------------
+export const userRoleOrigemEnum = pgEnum("user_role_origem", ["signup", "upgrade", "backfill"]);
+// J23 — enum DEDICADO para papéis aditivos: NÃO inclui admin/superadmin. Transforma
+// "papel aditivo nunca é privilegiado" em constraint de banco, não convenção de app.
+// O backfill só insere papéis primários de usuários comuns (admins não recebem linha).
+export const userAdditiveRoleEnum = pgEnum("user_additive_role", ["contratante", "empreiteiro", "anunciante"]);
+
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: userAdditiveRoleEnum("role").notNull(),
+    origem: userRoleOrigemEnum("origem").notNull().default("signup"),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Um papel por usuário, sem duplicar (idempotência do backfill + upgrade).
+    uniqUserRole: uniqueIndex("uniq_user_roles_user_role").on(t.userId, t.role),
+    idxUser: index("idx_user_roles_user").on(t.userId),
+  }),
+);
+
+export type UserRole = typeof userRoles.$inferSelect;
+export type InsertUserRole = typeof userRoles.$inferInsert;
 
 export const obras = pgTable("obras", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -549,7 +582,7 @@ export const registerSchema = z.object({
   email: z.string().email("Email inválido"),
   username: z.string().min(3, "Usuário deve ter no mínimo 3 caracteres"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-  role: z.enum(["contratante", "empreiteiro"]),
+  role: z.enum(["contratante", "empreiteiro", "anunciante"]),
   phone: z.string().optional(),
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "Você deve aceitar os Termos de Uso e a Política de Privacidade" }) }),
 });
@@ -917,6 +950,10 @@ export const anuncianteStatusEnum = pgEnum("anunciante_status", ["ativo", "inati
 
 export const anunciantes = pgTable("anunciantes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // J23 — vínculo opcional com o usuário-anunciante (self-service). NULL = anunciante
+  // legado criado manualmente pelo admin (advertiser externo sem conta). Preenchido
+  // = anunciante com login próprio. Unifica o conceito de "anunciante" no banco.
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }).unique(),
   nome: text("nome").notNull(),
   sigla: varchar("sigla", { length: 8 }),
   contato: text("contato"),
@@ -987,6 +1024,80 @@ export type Anuncio = typeof anuncios.$inferSelect;
 export type InsertAnuncio = typeof anuncios.$inferInsert;
 export type AnuncioEvento = typeof anuncioEventos.$inferSelect;
 export type AnuncioConfig = typeof anuncioConfig.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// J23 — Self-Service de Anúncios. Anunciante (usuário) monta um PEDIDO com N
+// SLOTS (cada slot = zona + período + template + criativo, reusando J24). O
+// pedido passa por moderação obrigatória (D4) e, ao ser aprovado, cada slot é
+// MATERIALIZADO em `anuncios` (pipeline J16). Cobrança é protótipo plugável (D5):
+// a cobrança real fica para a J31. Schema idempotente em
+// server/bootstrap-anuncios-self-service.ts.
+// ---------------------------------------------------------------------------
+export const pedidoAnuncioStatusEnum = pgEnum("pedido_anuncio_status", [
+  "em_analise",
+  "aprovado",
+  "recusado",
+  "publicado",
+  "encerrado",
+]);
+export const pedidoCobrancaStatusEnum = pgEnum("pedido_cobranca_status", [
+  "prototipo",
+  "pendente",
+  "paga",
+  "isenta",
+]);
+
+export const pedidosAnuncio = pgTable(
+  "pedidos_anuncio",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    // Quem solicitou (anunciante puro OU cliente que também anuncia). FK direta ao
+    // usuário — a identidade de anunciante (empresa/CNPJ) mora em `anunciantes`.
+    solicitanteUserId: varchar("solicitante_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    status: pedidoAnuncioStatusEnum("status").notNull().default("em_analise"),
+    motivoRecusa: text("motivo_recusa"),
+    valorTotal: numeric("valor_total", { precision: 15, scale: 2 }).notNull().default("0"),
+    cobrancaStatus: pedidoCobrancaStatusEnum("cobranca_status").notNull().default("prototipo"),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    moderadoEm: timestamp("moderado_em"),
+    moderadoPor: varchar("moderado_por").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    idxSolicitante: index("idx_pedidos_anuncio_solicitante").on(t.solicitanteUserId),
+    idxStatus: index("idx_pedidos_anuncio_status").on(t.status),
+  }),
+);
+
+export const pedidoSlots = pgTable(
+  "pedido_slots",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    pedidoId: varchar("pedido_id").notNull().references(() => pedidosAnuncio.id, { onDelete: "cascade" }),
+    // Zona validada em app contra ZONAS (isZonaValida) — TEXT como em `anuncios`.
+    zona: text("zona").notNull(),
+    // Template validado contra o registry (templateAceitoNaZona) — reuso J24.
+    template: text("template").notNull().default("imagem-card"),
+    titulo: text("titulo").notNull(),
+    subtitulo: text("subtitulo"),
+    criativoUrl: text("criativo_url"),
+    ctaUrl: text("cta_url"),
+    ctaTexto: text("cta_texto"),
+    conteudo: jsonb("conteudo"),
+    periodoInicio: text("periodo_inicio"),
+    periodoFim: text("periodo_fim"),
+    valorSlot: numeric("valor_slot", { precision: 15, scale: 2 }).notNull().default("0"),
+    // Preenchido na materialização (aprovação) — liga ao `anuncios` real criado.
+    anuncioId: varchar("anuncio_id").references(() => anuncios.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    idxPedido: index("idx_pedido_slots_pedido").on(t.pedidoId),
+  }),
+);
+
+export type PedidoAnuncio = typeof pedidosAnuncio.$inferSelect;
+export type InsertPedidoAnuncio = typeof pedidosAnuncio.$inferInsert;
+export type PedidoSlot = typeof pedidoSlots.$inferSelect;
+export type InsertPedidoSlot = typeof pedidoSlots.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Admin FAQ — base de perguntas frequentes gerenciável pelo admin.

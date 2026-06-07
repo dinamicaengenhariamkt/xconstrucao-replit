@@ -32,7 +32,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
 | 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | pronto | média |
 | 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | pronto | média |
-| 23 | [Meus Anúncios (Self-Service)](23-meus-anuncios-self-service.md) | contratante, empreiteiro, outsider, admin | 5 | bloqueada | baixa |
+| 23 | [Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)](23-meus-anuncios-self-service.md) | anunciante, contratante, empreiteiro, admin | 6 | revisão | alta |
 | 24 | [Anúncios Ricos (Templates, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, anunciante, público | 5 | planejada | alta |
 | 25 | [Obras em Destaque na Home (Curadoria + Carrossel)](25-obras-em-destaque-home.md) | admin, público | 5 | pronto | alta |
 | 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
@@ -40,6 +40,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | bloqueada | média |
 | 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | pronto | baixa |
 | 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | bloqueada | média |
+| 31 | [Pagamento Real de Anúncios (Billing do Marketplace de Mídia)](31-pagamento-anuncios.md) | anunciante, admin | 7 | bloqueada | média |
 
 ---
 
@@ -63,9 +64,10 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
 - **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
-- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20, 23 (bloqueadas).
-- **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads) — entregues 2026-06-05**; 24 (templates + home dinâmica de anúncios) planejada (deve preceder 23). Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14).
-- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio).
+- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20 (bloqueada). *(23 movida p/ Wave 6 após reestruturação.)*
+- **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads), 24 (templates + home dinâmica de anúncios) — entregues 2026-06-05/06**. Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14). A J24 é pré-requisito da J23 (reuso de templates/preview).
+- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio); **23 (self-service de anúncios — reestruturada e planejada 2026-06-07**: multi-role + visão anunciante + pedido multi-slot + checkout-protótipo; cobrança real extraída p/ a J31).
+- **Wave 7 — Monetização do marketplace de mídia**: **31 (pagamento real de anúncios — bloqueada)**: liga o gateway real ao checkout da J23. Em série atrás de 23 (precisa existir) e 14 (precisa do provedor de pagamento).
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

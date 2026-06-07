@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@features/auth/api/auth-storage";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
+import { getUserRoles } from "@features/auth/api/auth-utils";
 import { readImpersonationFromRequest } from "@features/auth/api/impersonation";
 
 export async function GET(request: NextRequest) {
@@ -42,9 +43,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // J23 — multi-role: papéis efetivos do viewer (primário + aditivos).
+    const roles = await getUserRoles(viewer.id);
+
     const { password: _pw, ...userData } = viewer;
     return NextResponse.json({
       ...userData,
+      roles,
       mustChangePassword: viewer.mustChangePassword ?? false,
       ativo: viewer.ativo ?? true,
       canManageUsers:

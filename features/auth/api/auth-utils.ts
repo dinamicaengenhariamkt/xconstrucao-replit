@@ -189,3 +189,32 @@ export function getBaseUrl(request: Request): string {
 export function isAdminLike(role: string | null | undefined): boolean {
   return role === "admin" || role === "superadmin";
 }
+
+/**
+ * J23 — Multi-role. Retorna TODOS os papéis do usuário (papel primário em
+ * `users.role` + papéis aditivos em `user_roles`), deduplicados. Consulta o DB,
+ * não o token (o JWT só carrega o papel primário e tem TTL de 15min).
+ */
+export async function getUserRoles(userId: string): Promise<string[]> {
+  const { db } = await import("@shared/db/db");
+  const { userRoles, users } = await import("@shared/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const [primary] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+  const additional = await db
+    .select({ role: userRoles.role })
+    .from(userRoles)
+    .where(eq(userRoles.userId, userId));
+  const set = new Set<string>();
+  if (primary?.role) set.add(primary.role);
+  for (const r of additional) set.add(r.role);
+  return [...set];
+}
+
+/**
+ * J23 — true se o usuário tem o papel (primário OU aditivo). Use em guards de
+ * rota que liberam capacidade acoplável (ex.: gerir anúncios self-service).
+ */
+export async function userHasRole(userId: string, role: string): Promise<boolean> {
+  const roles = await getUserRoles(userId);
+  return roles.includes(role);
+}

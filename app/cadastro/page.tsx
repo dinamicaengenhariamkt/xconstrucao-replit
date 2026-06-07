@@ -38,7 +38,16 @@ type RegisterFormInput = Omit<RegisterValues, "acceptTerms"> & { acceptTerms: bo
 const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
   contratante: { Icon: IconBusiness, text: "Contratante" },
   empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
+  // J23 — cadastro de anunciante (outsider que entra direto pela vitrine de anúncios).
+  anunciante: { Icon: IconBusiness, text: "Anunciante" },
 };
+
+const ROLES_CADASTRO = ["contratante", "empreiteiro", "anunciante"] as const;
+function perfilParaRole(perfil: string): "contratante" | "empreiteiro" | "anunciante" {
+  return (ROLES_CADASTRO as readonly string[]).includes(perfil)
+    ? (perfil as "contratante" | "empreiteiro" | "anunciante")
+    : "contratante";
+}
 
 export default function CadastroPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -63,7 +72,7 @@ export default function CadastroPage() {
       email: "",
       username: "",
       password: "",
-      role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+      role: perfilParaRole(perfil),
       phone: "",
       acceptTerms: false,
     },
@@ -80,7 +89,7 @@ export default function CadastroPage() {
       try {
         await registerUser({
           ...values,
-          role: perfil === "empreiteiro" ? "empreiteiro" : "contratante",
+          role: perfilParaRole(perfil),
           acceptTerms: true,
           antiBot: antiBot.getPayload(),
         });

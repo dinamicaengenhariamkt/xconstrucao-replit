@@ -98,6 +98,12 @@ export async function register() {
       console.error("[instrumentation] bootstrapAnunciosSchema failed:", err);
     });
 
+    // J23 — roda DEPOIS de bootstrapAnunciosSchema (precisa de `anunciantes`/`anuncios`).
+    const { bootstrapAnunciosSelfServiceSchema } = await import("./server/bootstrap-anuncios-self-service");
+    await bootstrapAnunciosSelfServiceSchema().catch((err) => {
+      console.error("[instrumentation] bootstrapAnunciosSelfServiceSchema failed:", err);
+    });
+
     const { bootstrapFaqSchema } = await import("./server/bootstrap-faq");
     await bootstrapFaqSchema().catch((err) => {
       console.error("[instrumentation] bootstrapFaqSchema failed:", err);

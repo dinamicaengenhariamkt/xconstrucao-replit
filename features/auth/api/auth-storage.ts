@@ -4,6 +4,8 @@ import {
   users,
   clientes,
   empreiteiras,
+  anunciantes,
+  userRoles,
   type User,
   type InsertUser,
 } from "@shared/db/schema";
@@ -129,6 +131,28 @@ export async function createUserWithProfile(data: InsertUser): Promise<User> {
           status: "aprovacao",
         })
         .onConflictDoNothing({ target: empreiteiras.userId });
+    } else if (user.role === "anunciante") {
+      // J23 — identidade de anunciante vinculada à conta (unifica `anunciantes`).
+      await tx
+        .insert(anunciantes)
+        .values({
+          userId: user.id,
+          nome: user.name,
+          email: user.email,
+          telefone: user.phone ?? null,
+          status: "ativo",
+        })
+        .onConflictDoNothing({ target: anunciantes.userId });
+    }
+
+    // J23 — multi-role: registra o papel PRIMÁRIO como papel aditivo também, para
+    // que userHasRole funcione de forma consistente desde o cadastro. Só papéis
+    // comuns entram em user_roles (o enum aditivo não aceita admin/superadmin).
+    if (user.role === "contratante" || user.role === "empreiteiro" || user.role === "anunciante") {
+      await tx
+        .insert(userRoles)
+        .values({ userId: user.id, role: user.role, origem: "signup" })
+        .onConflictDoNothing();
     }
 
     return user;

@@ -14,7 +14,7 @@ export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
   kind: UploadKind;
-  role: "admin" | "contratante" | "empreiteiro" | "superadmin";
+  role: "admin" | "contratante" | "empreiteiro" | "superadmin" | "anunciante";
   userId: string;
   originalName: string;
   extras?: { tipoDocumento?: string };
@@ -62,7 +62,7 @@ function splitNameExt(originalName: string): { name: string; ext: string } {
 export interface ValidateKeyArgs {
   key: string;
   kind: UploadKind;
-  role: "admin" | "contratante" | "empreiteiro" | "superadmin";
+  role: "admin" | "contratante" | "empreiteiro" | "superadmin" | "anunciante";
   userId: string;
 }
 
@@ -186,7 +186,8 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
   }
 
   if (kind === "anuncio_criativo") {
-    // public/anuncios/{userId}/criativos/<file> — só admin/superadmin (J24).
+    // public/anuncios/{userId}/criativos/<file>. J24 era admin-only; J23 abriu para
+    // quem pode anunciar (self-service). Mantém alinhado com KIND_RULES.anuncio_criativo.
     if (segments.length !== 5) return { ok: false, reason: "shape anuncio-criativo" };
     if (
       segments[0] !== "public" ||
@@ -196,7 +197,8 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo anuncio-criativo" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "admin" && role !== "superadmin") return { ok: false, reason: "role" };
+    const rolesPermitidos = ["admin", "superadmin", "anunciante", "contratante", "empreiteiro"];
+    if (!rolesPermitidos.includes(role)) return { ok: false, reason: "role" };
     return { ok: true };
   }
 

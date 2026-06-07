@@ -20,6 +20,8 @@ import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent } from '@shared/components/ui/card';
 import Image from 'next/image';
+import { RiMegaphoneLine } from 'react-icons/ri';
+import { useHasRole } from '@features/auth/store/auth-store';
 import {
   EMPREITEIRO_NAV_ITEMS,
   EMPREITEIRO_BOTTOM_NAV_ITEMS,
@@ -29,6 +31,11 @@ export function EmpreiteiroSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  // J23/D6 — "Meus Anúncios" embutido quando o empreiteiro tem o papel anunciante.
+  const isAnunciante = useHasRole('anunciante');
+  const navItems = isAnunciante
+    ? [...EMPREITEIRO_NAV_ITEMS, { title: 'Meus Anúncios', url: '/empreiteiro/meus-anuncios', icon: RiMegaphoneLine }]
+    : EMPREITEIRO_NAV_ITEMS;
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -62,7 +69,7 @@ export function EmpreiteiroSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {EMPREITEIRO_NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
