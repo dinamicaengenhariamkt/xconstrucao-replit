@@ -937,6 +937,11 @@ export const anuncios = pgTable(
     criativoUrl: text("criativo_url"),
     ctaUrl: text("cta_url"),
     ctaTexto: text("cta_texto"),
+    // J24 — template do criativo (validado em app contra o registry, como `zona`).
+    template: text("template").notNull().default("imagem-card"),
+    // J24 — campos estruturados específicos do template (texto/fonte/blocos…).
+    // Shape validado por template (zod) na API antes de persistir.
+    conteudo: jsonb("conteudo"),
     // Zona de exibição (ver AnuncioZonaId em features/shared/anuncios/types).
     zona: text("zona").notNull(),
     inicio: text("inicio"),
@@ -967,11 +972,21 @@ export const anuncioEventos = pgTable(
   }),
 );
 
+// J24 — Master toggle por seção/zona (Opção B): interruptor explícito,
+// independente de campanha ativa. `chave`: ex. "secao:mercado-em-foco", "zona:<id>".
+export const anuncioConfig = pgTable("anuncio_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  chave: text("chave").notNull().unique(),
+  visivel: boolean("visivel").notNull().default(true),
+  atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+});
+
 export type Anunciante = typeof anunciantes.$inferSelect;
 export type InsertAnunciante = typeof anunciantes.$inferInsert;
 export type Anuncio = typeof anuncios.$inferSelect;
 export type InsertAnuncio = typeof anuncios.$inferInsert;
 export type AnuncioEvento = typeof anuncioEventos.$inferSelect;
+export type AnuncioConfig = typeof anuncioConfig.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Admin FAQ — base de perguntas frequentes gerenciável pelo admin.

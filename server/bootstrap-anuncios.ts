@@ -55,6 +55,22 @@ export async function bootstrapAnunciosSchema(): Promise<void> {
       )
     `);
 
+    // J24 — Anúncios ricos: template selecionável + conteúdo estruturado por template.
+    // `ADD COLUMN ... NOT NULL DEFAULT` faz backfill → todo anúncio existente vira 'imagem-card'.
+    await db.execute(sql`ALTER TABLE anuncios ADD COLUMN IF NOT EXISTS template TEXT NOT NULL DEFAULT 'imagem-card'`);
+    await db.execute(sql`ALTER TABLE anuncios ADD COLUMN IF NOT EXISTS conteudo JSONB`);
+
+    // J24 — Master toggle por seção/zona (Opção B): interruptor explícito,
+    // independente de haver campanha ativa. `chave` única para upsert.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS anuncio_config (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        chave TEXT NOT NULL UNIQUE,
+        visivel BOOLEAN NOT NULL DEFAULT true,
+        atualizado_em TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_anuncios_zona_status ON anuncios(zona, status)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_anuncios_anunciante ON anuncios(anunciante_id)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_anuncio_eventos_anuncio_tipo ON anuncio_eventos(anuncio_id, tipo)`);
@@ -63,5 +79,5 @@ export async function bootstrapAnunciosSchema(): Promise<void> {
     return;
   }
 
-  console.info("[bootstrap-anuncios] schema ready (anunciantes + anuncios + anuncio_eventos)");
+  console.info("[bootstrap-anuncios] schema ready (anunciantes + anuncios[+template,conteudo] + anuncio_eventos + anuncio_config)");
 }

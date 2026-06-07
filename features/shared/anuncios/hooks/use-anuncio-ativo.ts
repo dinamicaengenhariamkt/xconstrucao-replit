@@ -14,6 +14,8 @@ export interface AnuncioAtivo {
   ctaUrl: string | null;
   ctaTexto: string | null;
   zona: string;
+  template: string;
+  conteudo: unknown | null;
 }
 
 export function useAnuncioAtivo(

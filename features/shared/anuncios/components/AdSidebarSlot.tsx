@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useAnuncioAtivo, registrarEventoAnuncio } from '../hooks/use-anuncio-ativo';
+import { useAnuncioAtivo } from '../hooks/use-anuncio-ativo';
+import { useAnuncioTracking } from '../hooks/use-anuncio-tracking';
+import { AdCreativeCard } from './AdCreativeCard';
+import type { TemplateId } from '../templates/types';
 import type { AnuncioZonaId } from '../types';
 
 interface Props {
@@ -9,89 +11,52 @@ interface Props {
 }
 
 /**
- * Slot de anúncio (J16). Busca o anúncio ativo da zona no endpoint público,
- * renderiza o criativo real (imagem) com fallback de texto, registra UMA
- * impressão quando entra na viewport (IntersectionObserver) e um clique ao ser
- * acionado. Some graciosamente (`return null`) quando não há anúncio ativo.
+ * Slot de anúncio (J16/J24). Busca o anúncio ativo da zona no endpoint público,
+ * renderiza o criativo pelo seu **template** (via AdCreativeCard), registra UMA
+ * impressão ao entrar na viewport e um clique ao ser acionado. Some
+ * graciosamente (`return null`) quando não há anúncio ativo.
+ *
+ * O wrapper clicável e o tracking ficam aqui; o AdCreativeCard é apresentacional
+ * puro. Para o template default (`imagem-card`) o render é idêntico ao da J16.
  */
 export function AdSidebarSlot({ zoneId }: Props) {
   const { data: anuncio } = useAnuncioAtivo(zoneId);
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [impresso, setImpresso] = useState(false);
 
-  useEffect(() => {
-    if (!anuncio || impresso || !ref.current) return;
-    const el = ref.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setImpresso(true);
-            void registrarEventoAnuncio(anuncio.id, 'impressao');
-            observer.disconnect();
-            break;
-          }
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [anuncio, impresso]);
+  // Só permite http(s) — fecha a porta para javascript:/data: (defesa em profundidade).
+  const ctaSeguro =
+    anuncio?.ctaUrl && /^https?:\/\//i.test(anuncio.ctaUrl) ? anuncio.ctaUrl : null;
+  const { ref, clicavel, onClick } = useAnuncioTracking(anuncio?.id ?? null, ctaSeguro);
 
   if (!anuncio) return null;
-
-  const ativo = anuncio;
-  // Só permite http(s) — fecha a porta para javascript:/data: (defesa em profundidade).
-  const ctaSeguro = ativo.ctaUrl && /^https?:\/\//i.test(ativo.ctaUrl) ? ativo.ctaUrl : null;
-  const clicavel = Boolean(ctaSeguro);
-
-  function handleClick() {
-    void registrarEventoAnuncio(ativo.id, 'clique');
-    if (ctaSeguro) {
-      window.open(ctaSeguro, '_blank', 'noopener,noreferrer');
-    }
-  }
 
   return (
     <div className="mx-3 my-3" data-testid={`ad-slot-${zoneId}`} ref={ref}>
       <div
         role={clicavel ? 'link' : undefined}
         tabIndex={clicavel ? 0 : undefined}
-        onClick={clicavel ? handleClick : undefined}
+        onClick={clicavel ? onClick : undefined}
         onKeyDown={
           clicavel
             ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  handleClick();
+                  onClick();
                 }
               }
             : undefined
         }
-        className={`rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 overflow-hidden ${
-          clicavel ? 'cursor-pointer transition-shadow hover:shadow-md' : ''
-        }`}
+        className={clicavel ? 'cursor-pointer transition-shadow hover:shadow-md rounded-xl' : ''}
       >
-        {ativo.criativoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={ativo.criativoUrl}
-            alt={ativo.titulo}
-            className="aspect-[4/3] w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="aspect-[4/3] flex flex-col items-center justify-center gap-1 px-4 text-center">
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{ativo.titulo}</span>
-            {ativo.subtitulo && (
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">{ativo.subtitulo}</span>
-            )}
-          </div>
-        )}
-        <div className="px-3 py-1.5 border-t border-gray-100 dark:border-gray-800 text-[10px] uppercase tracking-wide text-gray-400">
-          {ativo.ctaTexto ?? 'Patrocinado'}
-        </div>
+        <AdCreativeCard
+          template={(anuncio.template ?? 'imagem-card') as TemplateId}
+          titulo={anuncio.titulo}
+          subtitulo={anuncio.subtitulo}
+          criativoUrl={anuncio.criativoUrl}
+          ctaUrl={ctaSeguro}
+          ctaTexto={anuncio.ctaTexto}
+          conteudo={anuncio.conteudo ?? null}
+          variant="live"
+        />
       </div>
     </div>
   );

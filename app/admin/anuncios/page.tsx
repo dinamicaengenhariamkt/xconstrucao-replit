@@ -40,6 +40,7 @@ import { StatsCard } from '@features/admin/financeiro/components/StatsCard';
 import { VincularZonaModal } from '@features/admin/anuncios/components/VincularZonaModal';
 import { CampanhaModal } from '@features/admin/anuncios/components/CampanhaModal';
 import { AnuncianteModal } from '@features/admin/anuncios/components/AnuncianteModal';
+import { MercadoEmFocoToggle } from '@features/admin/anuncios/components/MercadoEmFocoToggle';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
@@ -441,6 +442,9 @@ export default function AdminAnunciosPage() {
           />
         ))}
       </div>
+
+      {/* J24 — master toggle da vitrine pública "Mercado em Foco" */}
+      <MercadoEmFocoToggle />
 
       {/* BLOCO 4+5 — Tabela de campanhas */}
       <div>

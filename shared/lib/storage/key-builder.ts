@@ -9,7 +9,7 @@
  *   private/empreiteiro/{userId}/documentos/{tipo}/{ts}-{slug}.{ext}
  */
 
-export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto";
+export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto" | "anuncio_criativo";
 export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
@@ -47,6 +47,7 @@ export function visibilityForKind(kind: UploadKind): UploadVisibility {
   if (kind === "empreiteiro_documento") return "private";
   if (kind === "comprovante_pagamento") return "private";
   if (kind === "candidatura_anexo") return "private";
+  // anuncio_criativo é público (servido na landing/dashboards).
   return "public";
 }
 
@@ -184,6 +185,21 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: true };
   }
 
+  if (kind === "anuncio_criativo") {
+    // public/anuncios/{userId}/criativos/<file> — só admin/superadmin (J24).
+    if (segments.length !== 5) return { ok: false, reason: "shape anuncio-criativo" };
+    if (
+      segments[0] !== "public" ||
+      segments[1] !== "anuncios" ||
+      segments[3] !== "criativos"
+    ) {
+      return { ok: false, reason: "prefixo anuncio-criativo" };
+    }
+    if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
+    if (role !== "admin" && role !== "superadmin") return { ok: false, reason: "role" };
+    return { ok: true };
+  }
+
   // empreiteiro_documento → private/empreiteiro/{userId}/documentos/{tipo}/<file>
   if (segments.length !== 6) return { ok: false, reason: "shape documento" };
   if (
@@ -227,6 +243,9 @@ export function buildKey(args: KeyBuilderArgs): string {
   }
   if (kind === "obra_foto") {
     return `public/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
+  }
+  if (kind === "anuncio_criativo") {
+    return `public/anuncios/${userId}/criativos/${ts}-${slug}${safeExt}`;
   }
   // empreiteiro_documento
   const tipo = slugify(extras?.tipoDocumento || "outro");

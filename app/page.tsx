@@ -11,6 +11,7 @@ import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landi
 import { MarketplaceNotificacaoModal } from "@features/landing/components/MarketplaceNotificacaoModal";
 import { AdSidebarSlot } from "@features/shared/anuncios/components/AdSidebarSlot";
 import { ObrasDestaqueCarousel } from "@features/landing/components/ObrasDestaqueCarousel";
+import { MercadoEmFoco } from "@features/landing/components/MercadoEmFoco";
 
 export default function HomePage() {
   const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
@@ -276,116 +277,8 @@ export default function HomePage() {
         {/* Projetos em Destaque — curadoria dinâmica do admin (J25). Some quando vazio. */}
         <ObrasDestaqueCarousel />
 
-        {/* Mercado em Foco */}
-        <section className="py-32 px-6 bg-[#fcfcfc] dark:bg-background-dark/50">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
-              <div className="max-w-[600px]">
-                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
-                  Mercado em <br />
-                  Foco
-                </h2>
-                <p className="text-xl text-slate-500">
-                  Informações e conteúdos selecionados para profissionais da
-                  construção.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Card 1: Conteúdo de Marca (Advertorial) */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-lg">
-                <div className="relative">
-                  <div
-                    className="aspect-video bg-cover bg-center"
-                    style={{
-                      backgroundImage:
-                        'url("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600")',
-                    }}
-                  ></div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
-                      Conteúdo de Marca
-                    </span>
-                  </div>
-                  <p className="text-slate-500 text-sm mb-2">
-                    Por{" "}
-                    <span className="font-semibold text-slate-700">
-                      Anunciante
-                    </span>
-                  </p>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
-                    Inovações em construção modular aceleram entregas de
-                    projetos
-                  </h3>
-                </div>
-              </div>
-
-              {/* Card 2: Widget de Cotações (Valor/Mia) */}
-              <div className="bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-lg p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-purple-600 font-bold text-sm">
-                      valor data
-                    </span>
-                    <span className="text-purple-600 font-bold text-xl">
-                      mia
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-400">oferecido por</p>
-                    <span className="text-purple-600 font-bold text-xl">
-                      nu
-                    </span>
-                  </div>
-                </div>
-                <div className="mb-6">
-                  <p className="text-slate-500 text-sm">Ibovespa</p>
-                  <p className="text-slate-400 text-xs">
-                    179.847pts (+4257,19)
-                  </p>
-                  <p className="text-green-500 text-2xl font-bold flex items-center gap-1">
-                    <span>▲</span> 2.43%
-                  </p>
-                </div>
-                <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <div className="flex justify-between text-xs text-slate-400 mb-2">
-                    <span>MOEDAS</span>
-                    <span>COMPRA</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800">
-                    <span className="text-slate-700 dark:text-slate-300">
-                      Dólar Comercial
-                    </span>
-                    <span className="text-orange-500 font-semibold">
-                      R$ 5,287
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="text-slate-700 dark:text-slate-300">
-                      Euro Comercial
-                    </span>
-                    <span className="text-orange-500 font-semibold">
-                      R$ 6,245
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <p className="text-xs text-slate-400">
-                    atualizado 23/01/2026 18h00
-                  </p>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-400">fonte:</p>
-                    <span className="text-red-600 font-bold text-sm">
-                      Valor<sup className="text-xs">PRO</sup>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Mercado em Foco — vitrine dinâmica de anúncios (J24). Some quando vazia. */}
+        <MercadoEmFoco />
 
         {/* Slot de anúncio público (J16) — invisível enquanto não há campanha ativa */}
         <div className="max-w-[420px] mx-auto px-6">

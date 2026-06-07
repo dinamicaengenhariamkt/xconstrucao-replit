@@ -40,8 +40,10 @@ import {
   SelectValue,
 } from '@shared/components/ui/select';
 import { cn } from '@shared/lib/utils';
+import { useToast } from '@shared/hooks/use-toast';
 import { editarCampanhaSchema } from '../schemas';
 import type { EditarCampanhaFormData } from '../schemas';
+import { useAtualizarCampanha } from '../hooks/use-anuncios';
 import type { Campanha, Anunciante, AnuncioZonaId, AnuncioStatus } from '../types';
 
 const zonaOptions: { value: AnuncioZonaId; label: string }[] = [
@@ -98,6 +100,8 @@ export function CampanhaModal({
 }: CampanhaModalProps) {
   const isOpen = campanha !== null;
   const [mode, setMode] = useState<'view' | 'edit'>(initialMode);
+  const { toast } = useToast();
+  const atualizar = useAtualizarCampanha();
 
   const form = useForm<EditarCampanhaFormData>({
     resolver: zodResolver(editarCampanhaSchema),
@@ -133,8 +137,30 @@ export function CampanhaModal({
     onOpenChange(false);
   };
 
-  const onSubmit = (_data: EditarCampanhaFormData) => {
-    handleClose();
+  // Edição é apenas de metadados (título/subtítulo/zona/status/período). O
+  // `conteudo` (blocos/texto) e o criativo são imutáveis pós-criação aqui — são
+  // definidos no VincularZonaModal (form dirigido por template). NÃO enviar
+  // `conteudo` por este caminho sem também enviar o `template` correto, senão a
+  // validação server-side o avalia contra o template efetivo.
+  const onSubmit = async (data: EditarCampanhaFormData) => {
+    if (!campanha) return;
+    try {
+      await atualizar.mutateAsync({
+        id: campanha.id,
+        payload: {
+          titulo: data.titulo,
+          subtitulo: data.subtitulo || undefined,
+          zona: data.zonaId,
+          status: data.status,
+          inicio: data.dataInicio || undefined,
+          fim: data.dataFim || undefined,
+        },
+      });
+      toast({ title: 'Campanha atualizada' });
+      handleClose();
+    } catch (e) {
+      toast({ title: 'Erro ao salvar', description: e instanceof Error ? e.message : 'Tente novamente.', variant: 'destructive' });
+    }
   };
 
   if (!campanha) return null;
@@ -451,10 +477,11 @@ export function CampanhaModal({
               <Button
                 type="submit"
                 form="form-editar-campanha"
+                disabled={atualizar.isPending}
                 data-testid="button-salvar-campanha"
               >
                 <RiSave3Line className="w-4 h-4 mr-2" />
-                Salvar alterações
+                {atualizar.isPending ? 'Salvando…' : 'Salvar alterações'}
               </Button>
             </>
           )}

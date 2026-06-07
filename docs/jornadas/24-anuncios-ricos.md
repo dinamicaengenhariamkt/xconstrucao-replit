@@ -1,7 +1,7 @@
 # Jornada — Anúncios Ricos (Templates, Preview, Home Dinâmica & Master Toggle)
 
-> Status: planejada | Prioridade: alta | Wave: 5
-> Última atualização: 2026-06-05
+> Status: concluída (admin) | Prioridade: alta | Wave: 5
+> Última atualização: 2026-06-06
 >
 > **Desbloqueada em 2026-06-05** (aval de produto dado): pode reescrever a seção
 > "Mercado em Foco" da landing tornando-a dinâmica. Engenharia destravada.
@@ -127,3 +127,4 @@ flowchart LR
 
 - **2026-06-02** — Jornada criada (bloqueada por decisão de produto). Investigação confirmou: seção "Mercado em Foco" em [app/page.tsx](../../app/page.tsx) tem 2 cards hardcoded (Unsplash + dados de bolsa estáticos) + 1 slot dinâmico (`banner-qa`); nenhum preview no [VincularZonaModal.tsx](../../features/admin/anuncios/components/VincularZonaModal.tsx); upload de criativo é por URL manual (presign de [app/api/uploads/](../../app/api/uploads/) existe mas não está plugado aqui — candidato a melhoria junto da J23).
 - **2026-06-05** — **Desbloqueada** (aval de produto). Escopo ampliado com **templates de anúncio** (formatos selecionáveis por zona) a pedido do cliente: o layout do criativo deixa de ser fixo por zona. O widget de "cotações" sugerido pelo cliente foi reenquadrado como o template `destaque-dados` (dados preenchidos manualmente, sem integração de bolsa). Master toggle definido como **Opção B** (`anuncio_config`). Prioridade subiu p/ **alta** e movida p/ **Wave 5** por ser pré-requisito da J23 e por destravar a vitrine pública. Upload de criativo via presign ([app/api/uploads/](../../app/api/uploads/)) em vez de URL manual fica como melhoria a avaliar junto (reduz fricção e o risco de hotlink).
+- **2026-06-06** — **Implementada (visão admin)**. Entregue: registry de templates server-safe (`features/shared/anuncios/templates/`) com 4 templates; colunas `anuncios.template`+`conteudo JSONB` + tabela `anuncio_config` via bootstrap idempotente (backfill p/ `imagem-card`); `AdCreativeCard` dispatcher; `AdSidebarSlot` refatorado sem regressão; `VincularZonaModal` reescrito (form dirigido por template + preview ao vivo + **upload R2** novo kind `anuncio_criativo` + persistência real); `CampanhaModal` com edição de metadados real; rota `GET/PATCH /api/admin/anuncios/config` + toggle no painel; endpoint público com branch single/lista por zona `multiplo`; zona `home-mercado` + `MercadoEmFoco` na landing (some quando vazia/toggle off); JSX hardcoded removido. **Decisões:** upload primário via R2 (não URL manual), sem seed permanente (seção some quando vazia). **Fora desta entrega:** J23 (empreiteiro/contratante/anunciantes externos) — admin-only por ora. Edição de `conteudo` rico pós-criação é feita recriando no VincularZonaModal; o CampanhaModal edita só metadados.

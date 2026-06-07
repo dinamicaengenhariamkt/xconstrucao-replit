@@ -51,6 +51,12 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
     mimes: IMAGE_MIMES,
     roles: ["contratante", "empreiteiro", "superadmin"],
   },
+  // J24 — criativo de anúncio (só admin). Imagem pública até 8 MB.
+  anuncio_criativo: {
+    maxBytes: 8_000_000,
+    mimes: IMAGE_MIMES,
+    roles: ["admin", "superadmin"],
+  },
 };
 
 export interface ValidateUploadInput {
