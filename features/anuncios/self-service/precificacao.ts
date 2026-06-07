@@ -27,7 +27,14 @@ const PRECO_DIA_PADRAO = 30;
 const MIN_DIAS = 1;
 const MAX_DIAS = 365;
 
-/** Dias inclusivos entre duas datas ISO (yyyy-mm-dd). Sem período → 30 dias. */
+/**
+ * Dias inclusivos entre duas datas ISO (yyyy-mm-dd). Sem período → 30 dias.
+ *
+ * NOTA (protótipo): período é opcional no self-service; quando ausente, assume-se
+ * 30 dias para precificar, e o anúncio é materializado sem data-fim (veiculação
+ * contínua). A J31 (cobrança real) deve tornar o período OBRIGATÓRIO — é validação
+ * de app, não muda schema. Ver docs/jornadas/23-...md §14 e 31-pagamento-anuncios.md.
+ */
 export function calcularDias(periodoInicio?: string | null, periodoFim?: string | null): number {
   if (!periodoInicio || !periodoFim) return 30;
   const ini = Date.parse(periodoInicio);

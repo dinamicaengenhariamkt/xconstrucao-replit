@@ -1,6 +1,6 @@
 # Jornada — Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)
 
-> Status: planejada (reestruturada) | Prioridade: alta | Wave: 6
+> Status: pronto | Prioridade: alta | Wave: 6
 > Última atualização: 2026-06-07
 >
 > **Desbloqueada para implementação por etapas (decisão de produto 2026-06-07).**
@@ -476,6 +476,13 @@ decisão de §13).
   preços de protótipo; se editar criativo no ar reentra em moderação; se o protótipo
   lança receita `isenta` ou nenhuma; profundidade da convergência da `anunciantes`
   legada.
+- **2026-06-07** — **Fechada (revisão → pronto).** Auditoria de 3 frentes (pontas
+  soltas, regressão, RBAC) confirmou os 8 critérios de aceite. Corrigido 1 bloqueador:
+  o href das notificações (`anuncio-dispatcher.ts`) era fixo em `/anunciante/meus-anuncios`
+  e quebrava após a convergência D6 (cliente que anuncia é redirecionado) — agora o
+  href é resolvido pelo papel PRIMÁRIO do usuário (contratante/empreiteiro/anunciante).
+  Documentada a nota de período-opcional→30dias no `precificacao.ts` (amarrar período
+  obrigatório na J31). J24 validada 100% pronta em paralelo. `npm run check`+`build` OK.
 - **2026-06-07** — **Implementada (fim a fim).** Etapas A→E entregues. Decisões de
   execução registradas: (1) **enum aditivo dedicado** `user_additive_role`
   (contratante/empreiteiro/anunciante) na coluna `user_roles.role` — admin/superadmin

@@ -32,8 +32,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
 | 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | pronto | média |
 | 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | pronto | média |
-| 23 | [Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)](23-meus-anuncios-self-service.md) | anunciante, contratante, empreiteiro, admin | 6 | revisão | alta |
-| 24 | [Anúncios Ricos (Templates, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, anunciante, público | 5 | planejada | alta |
+| 23 | [Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)](23-meus-anuncios-self-service.md) | anunciante, contratante, empreiteiro, admin | 6 | pronto | alta |
+| 24 | [Anúncios Ricos (Templates, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, anunciante, público | 5 | pronto | alta |
 | 25 | [Obras em Destaque na Home (Curadoria + Carrossel)](25-obras-em-destaque-home.md) | admin, público | 5 | pronto | alta |
 | 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
 | 27 | [Gestão de Leads do Marketplace](27-gestao-leads-marketplace.md) | admin | 5 | pronto | alta |
