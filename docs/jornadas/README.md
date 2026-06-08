@@ -41,6 +41,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | pronto | baixa |
 | 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | parcial | média |
 | 31 | [Pagamento Real de Anúncios (Billing do Marketplace de Mídia)](31-pagamento-anuncios.md) | anunciante, admin | 7 | bloqueada | média |
+| 32 | [FAQ Gerenciável (Admin CRUD + Leitura por Visão)](32-faq-gerenciavel.md) | admin, contratante, empreiteiro | 7 | pronto | alta |
 
 ---
 

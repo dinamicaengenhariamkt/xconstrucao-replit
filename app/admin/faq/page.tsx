@@ -6,7 +6,7 @@ import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { FAQHeroSearch } from '@features/shared/faq/FAQHeroSearch';
 import { FAQCategoryCard } from '@features/shared/faq/FAQCategoryCard';
 import { FAQSectionHeader } from '@features/shared/faq/FAQSectionHeader';
-import { useAdminFAQ } from '@features/admin/faq/hooks/use-faq';
+import { useAdminFAQ, useDeletarFaq } from '@features/admin/faq/hooks/use-faq';
 import {
   ADMIN_FAQ_CATEGORIES,
   ADMIN_FAQ_CATEGORY_META,
@@ -31,7 +31,19 @@ import {
   RiBuildingLine,
   RiSettings3Line,
   RiEditLine,
+  RiDeleteBinLine,
 } from 'react-icons/ri';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@shared/components/ui/alert-dialog';
+import { useToast } from '@shared/hooks/use-toast';
 import type { AdminFAQItem, FAQVisao } from '@features/admin/faq/types';
 import type { IconType } from 'react-icons';
 
@@ -102,11 +114,13 @@ function AdminFAQAccordion({
   isOpen,
   onToggle,
   onEdit,
+  onDelete,
 }: {
   item: AdminFAQItem;
   isOpen: boolean;
   onToggle: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 }) {
   return (
     <div
@@ -178,15 +192,27 @@ function AdminFAQAccordion({
               <span>Ordem: {item.ordem}</span>
               <span>Criado em: {formatDate(item.criadoEm)}</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              data-testid={`button-editar-${item.id}`}
-            >
-              <RiEditLine className="w-3.5 h-3.5 mr-1.5" />
-              Editar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                data-testid={`button-editar-${item.id}`}
+              >
+                <RiEditLine className="w-3.5 h-3.5 mr-1.5" />
+                Editar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                data-testid={`button-excluir-${item.id}`}
+              >
+                <RiDeleteBinLine className="w-3.5 h-3.5 mr-1.5" />
+                Excluir
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -202,6 +228,9 @@ export default function AdminFAQPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<AdminFAQItem | null>(null);
+  const { toast } = useToast();
+  const deletarFaq = useDeletarFaq();
   const [editItem, setEditItem] = useState<AdminFAQItem | null>(null);
 
   const filteredItems = useMemo(() => {
@@ -260,6 +289,22 @@ export default function AdminFAQPage() {
   const handleOpenNew = () => {
     setEditItem(null);
     setIsModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteItem) return;
+    try {
+      await deletarFaq.mutateAsync(deleteItem.id);
+      toast({ title: 'Pergunta excluída' });
+    } catch (err) {
+      toast({
+        title: 'Erro ao excluir',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteItem(null);
+    }
   };
 
   if (isLoading) {
@@ -390,6 +435,7 @@ export default function AdminFAQPage() {
                     isOpen={openItemId === item.id}
                     onToggle={() => setOpenItemId(openItemId === item.id ? null : item.id)}
                     onEdit={() => handleOpenEdit(item)}
+                    onDelete={() => setDeleteItem(item)}
                   />
                 ))}
               </div>
@@ -404,6 +450,26 @@ export default function AdminFAQPage() {
         onOpenChange={setIsModalOpen}
         editItem={editItem}
       />
+
+      <AlertDialog open={deleteItem !== null} onOpenChange={(o) => !o && setDeleteItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta pergunta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A pergunta deixará de aparecer para os usuários.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

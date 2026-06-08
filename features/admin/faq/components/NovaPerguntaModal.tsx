@@ -34,6 +34,7 @@ import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { Switch } from '@shared/components/ui/switch';
 import { cn } from '@shared/lib/utils';
 import { ADMIN_FAQ_CATEGORIES } from '../constants';
+import { useCriarFaq, useEditarFaq } from '../hooks/use-faq';
 import type { AdminFAQItem, FAQVisao } from '../types';
 
 const novaPerguntaSchema = z.object({
@@ -83,6 +84,8 @@ const VISAO_OPTIONS: { value: FAQVisao; label: string; description: string; icon
 export function NovaPerguntaModal({ open, onOpenChange, editItem }: NovaPerguntaModalProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isEditing = !!editItem;
+  const criarFaq = useCriarFaq();
+  const editarFaq = useEditarFaq();
 
   const form = useForm<NovaPerguntaFormData>({
     resolver: zodResolver(novaPerguntaSchema),
@@ -127,13 +130,17 @@ export function NovaPerguntaModal({ open, onOpenChange, editItem }: NovaPergunta
     onOpenChange(false);
   };
 
-  const onSubmit = async (_data: NovaPerguntaFormData) => {
+  const onSubmit = async (data: NovaPerguntaFormData) => {
     setSubmitError(null);
     try {
-      // TODO: integrate with API when available
+      if (isEditing && editItem) {
+        await editarFaq.mutateAsync({ id: editItem.id, ...data });
+      } else {
+        await criarFaq.mutateAsync(data);
+      }
       handleClose();
-    } catch {
-      setSubmitError('Erro ao salvar pergunta. Tente novamente.');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Erro ao salvar pergunta. Tente novamente.');
     }
   };
 
