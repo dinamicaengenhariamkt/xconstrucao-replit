@@ -48,8 +48,14 @@ export function WelcomeSection({ periodo, onPeriodoChange, customRange, onCustom
     }
   }
 
+  const periodoLabel =
+    periodo === 'personalizado'
+      ? formatRange(customRange)
+      : periodos.find((p) => p.key === periodo)?.label ?? '';
+
   return (
-    <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
       <div>
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
           Financeiro
@@ -100,6 +106,20 @@ export function WelcomeSection({ periodo, onPeriodoChange, customRange, onCustom
             </Popover>
           );
         })}
+      </div>
+      </div>
+
+      {/* Legenda honesta de escopo: o período rege apenas a série temporal,
+          não os KPIs/snapshots consolidados. */}
+      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/40 px-4 py-3 flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+          <RiCalendarLine className="w-3.5 h-3.5" />
+          Período: {periodoLabel}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Aplica-se à <strong className="font-semibold">evolução de pagamentos × medições</strong>.
+          Os KPIs, saúde do portfólio e distribuição refletem a posição atual.
+        </span>
       </div>
     </div>
   );

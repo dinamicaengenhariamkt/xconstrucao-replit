@@ -3,9 +3,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Badge } from '@shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -78,14 +78,6 @@ const STATUS_CONFIG: Record<ClienteStatus, { label: string; className: string }>
       'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
   },
 };
-
-const KPI_HOVER = {
-  whileHover: {
-    scale: 1.01 as number,
-    boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-  },
-  transition: { duration: 0.2 },
-} as const;
 
 function formatRelativeDate(isoString: string): string {
   const date = new Date(isoString);
@@ -419,16 +411,13 @@ export default function AdminClienteDetailPage() {
       {/* ③ KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi) => (
-          <motion.div
+          <LuminousHoverCard
             key={kpi.label}
-            className="rounded-3xl overflow-visible"
-            {...KPI_HOVER}
+            className="rounded-3xl"
+            cardClassName="rounded-3xl"
+            testId={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
           >
-            <Card
-              className="h-full rounded-3xl"
-              data-testid={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
-            >
-              <CardContent className="p-6">
+              <CardContent className="relative z-10 p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0 pr-3">
                     <p className="text-sm text-muted-foreground font-medium">{kpi.label}</p>
@@ -442,8 +431,7 @@ export default function AdminClienteDetailPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          </motion.div>
+          </LuminousHoverCard>
         ))}
       </div>
 

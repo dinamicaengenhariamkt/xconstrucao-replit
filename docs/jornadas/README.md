@@ -43,6 +43,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 31 | [Pagamento Real de Anúncios (Billing do Marketplace de Mídia)](31-pagamento-anuncios.md) | anunciante, admin | 7 | bloqueada | média |
 | 32 | [FAQ Gerenciável (Admin CRUD + Leitura por Visão)](32-faq-gerenciavel.md) | admin, contratante, empreiteiro | 7 | pronto | alta |
 | 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | planejada | alta |
+| 34 | [Ajustes Finos de UX (Visão Admin)](34-ajustes-finos-ux-admin.md) | admin | 8 | revisão | média |
 
 ---
 
@@ -70,7 +71,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads), 24 (templates + home dinâmica de anúncios) — entregues 2026-06-05/06**. Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14). A J24 é pré-requisito da J23 (reuso de templates/preview).
 - **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio); **23 (self-service de anúncios — reestruturada e planejada 2026-06-07**: multi-role + visão anunciante + pedido multi-slot + checkout-protótipo; cobrança real extraída p/ a J31).
 - **Wave 7 — Monetização do marketplace de mídia**: **31 (pagamento real de anúncios — bloqueada)**: liga o gateway real ao checkout da J23. Em série atrás de 23 (precisa existir) e 14 (precisa do provedor de pagamento).
-- **Wave 8 — Observabilidade técnica (pré-produção)**: **33 (saúde da plataforma + captura de erros — planejada 2026-06-08)**: camada técnica antes do uso real por clientes — captura proativa de erros (Sentry vs. interno a decidir) + painel de saúde no admin. Complementa a auditoria funcional (J21) e os KPIs (J29).
+- **Wave 8 — Observabilidade técnica (pré-produção)**: **33 (saúde da plataforma + captura de erros — planejada 2026-06-08)**: camada técnica antes do uso real por clientes — captura proativa de erros (Sentry vs. interno a decidir) + painel de saúde no admin. Complementa a auditoria funcional (J21) e os KPIs (J29). **34 (ajustes finos de UX da visão admin — em revisão 2026-06-20)**: jornada agrupadora de refinamentos de consistência (hover de cards, arquitetura de filtros do financeiro, NaN%, top bar) — pacote incremental, recebe novos ajustes do tipo.
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 
