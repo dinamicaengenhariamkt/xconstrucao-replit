@@ -101,7 +101,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Parceiros / Trust Bar */}
+        {/* Parceiros / Trust Bar — OCULTO em stand-by até termos parceiros reais.
+            Reativar removendo o comentário e substituindo os placeholders pelos logos.
         <section className="py-24 px-6">
           <div className="max-w-[1200px] mx-auto">
             <div className="flex flex-col md:flex-row justify-between md:items-end mb-20 gap-8">
@@ -127,6 +128,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        */}
 
         {/* Nossas Soluções */}
         <section id="solucoes" className="py-32 px-6 scroll-mt-24">

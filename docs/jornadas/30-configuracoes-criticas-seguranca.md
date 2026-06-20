@@ -1,15 +1,23 @@
 # Jornada — Configurações Críticas de Segurança
 
-> Status: parcial | Prioridade: média | Wave: 6
-> Última atualização: 2026-06-07
+> Status: concluído | Prioridade: média | Wave: 6
+> Última atualização: 2026-06-08
 >
 > **Criada em 2026-06-05**, desmembrada da J26. Reúne os controles de
 > configuração que **alteram o fluxo de autenticação/sessão de todos os usuários**.
 > **Em 2026-06-07 os itens de BAIXO RISCO foram entregues** (timeout de sessão, máx
 > tentativas de login, bloqueio de cadastro por perfil, gate de relatórios), todos
 > com a garantia de **não encurtar/bloquear nada por omissão** (só agem quando o
-> admin configura). **Pendentes (próxima fase, maior risco):** 2FA obrigatório
-> (precisa de setup guiado p/ não trancar) e webhooks reais (dispatcher + fila/SSRF).
+> admin configura).
+>
+> **Decisão de produto (2026-06-08) — jornada fechada em 100%:**
+> - **2FA obrigatório:** decidido manter **2FA opcional** neste primeiro momento. A
+>   infra de 2FA (J22) já está disponível para quem quiser ativar. Tornar obrigatório
+>   fica como avaliação futura — **não é débito técnico**, é escolha de produto.
+> - **Webhooks reais:** a seção de webhooks foi **ocultada** da UI de configurações
+>   (em stand-by). A config segue persistindo, mas o disparo real só será construído
+>   quando houver uma integração externa concreta (CRM, n8n, etc.) consumindo os
+>   eventos. Será reavaliado como jornada própria quando gerar demanda.
 
 ## 1. Contexto & Objetivo
 A J26 tirou as configurações do "modo fantasma" implementando apenas o que é

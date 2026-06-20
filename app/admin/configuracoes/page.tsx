@@ -1212,7 +1212,9 @@ function SecaoIntegracoes() {
         </CardContent>
       </Card>
 
-      {/* Webhooks */}
+      {/* Webhooks — OCULTO em stand-by até haver demanda/integração externa real.
+          A config (webhookUrl/webhookEvents) continua persistindo; só a UI está escondida.
+          Reativar removendo este comentário quando for implementar o disparo real.
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center justify-between">
@@ -1273,6 +1275,7 @@ function SecaoIntegracoes() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Documentação */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
