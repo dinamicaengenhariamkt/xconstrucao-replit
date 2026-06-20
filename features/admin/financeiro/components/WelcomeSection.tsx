@@ -54,8 +54,8 @@ export function WelcomeSection({ periodo, onPeriodoChange, customRange, onCustom
       : periodos.find((p) => p.key === periodo)?.label ?? '';
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+    <div className="space-y-6">
+      {/* Título da página */}
       <div>
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
           Financeiro
@@ -65,61 +65,62 @@ export function WelcomeSection({ periodo, onPeriodoChange, customRange, onCustom
         </p>
       </div>
 
-      <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-        {periodos.map((p) => {
-          const isActive = periodo === p.key;
-          const isPersonalizado = p.key === 'personalizado';
+      {/* Bloco de filtro de período — legenda + seletor juntos (padrão Caixa).
+          O período rege apenas a série temporal; KPIs/snapshots = posição atual. */}
+      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/40 p-4 space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
+            <RiCalendarLine className="w-3.5 h-3.5" />
+            Período: {periodoLabel}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            Aplica-se à <strong className="font-semibold">evolução de pagamentos × medições</strong>.
+            Os KPIs, saúde do portfólio e distribuição refletem a posição atual.
+          </span>
+        </div>
 
-          const button = (
-            <button
-              key={p.key}
-              onClick={() => handlePeriodoClick(p.key)}
-              className={`
-                px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5
-                ${
-                  isActive
-                    ? 'bg-primary text-white font-bold shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
-                }
-              `}
-            >
-              {isPersonalizado && <RiCalendarLine className="w-3.5 h-3.5 shrink-0" />}
-              {isPersonalizado && isActive ? formatRange(customRange) : p.label}
-            </button>
-          );
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap w-fit">
+          {periodos.map((p) => {
+            const isActive = periodo === p.key;
+            const isPersonalizado = p.key === 'personalizado';
 
-          if (!isPersonalizado) return button;
+            const button = (
+              <button
+                key={p.key}
+                onClick={() => handlePeriodoClick(p.key)}
+                className={`
+                  px-3 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5
+                  ${
+                    isActive
+                      ? 'bg-primary text-white font-bold shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm'
+                  }
+                `}
+              >
+                {isPersonalizado && <RiCalendarLine className="w-3.5 h-3.5 shrink-0" />}
+                {isPersonalizado && isActive ? formatRange(customRange) : p.label}
+              </button>
+            );
 
-          return (
-            <Popover key={p.key} open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <PopoverTrigger asChild>{button}</PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  selected={customRange as DayPickerRange | undefined}
-                  onSelect={handleDayPickerSelect}
-                  disabled={{ after: new Date() }}
-                  numberOfMonths={2}
-                  locale={ptBR}
-                />
-              </PopoverContent>
-            </Popover>
-          );
-        })}
-      </div>
-      </div>
+            if (!isPersonalizado) return button;
 
-      {/* Legenda honesta de escopo: o período rege apenas a série temporal,
-          não os KPIs/snapshots consolidados. */}
-      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/40 px-4 py-3 flex items-center gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-3 py-1">
-          <RiCalendarLine className="w-3.5 h-3.5" />
-          Período: {periodoLabel}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          Aplica-se à <strong className="font-semibold">evolução de pagamentos × medições</strong>.
-          Os KPIs, saúde do portfólio e distribuição refletem a posição atual.
-        </span>
+            return (
+              <Popover key={p.key} open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>{button}</PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={customRange as DayPickerRange | undefined}
+                    onSelect={handleDayPickerSelect}
+                    disabled={{ after: new Date() }}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

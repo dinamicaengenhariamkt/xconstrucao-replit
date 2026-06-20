@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -30,7 +30,20 @@ export function AdminSidebar() {
     router.push(redirect);
   }, [logout, router]);
 
-  const isActive = (url: string): boolean => pathname.startsWith(url);
+  // Best-match: entre todos os itens, só o de URL mais específica (mais longa)
+  // que casa com a rota atual fica ativo. Evita ativar "Obras" (/admin/obras)
+  // junto com filhas como /admin/obras/moderacao, e o falso-positivo de prefixo
+  // de string (/admin/obras-destaque).
+  const activeUrl = useMemo(() => {
+    const all = [...ADMIN_NAV_ITEMS, ...ADMIN_BOTTOM_NAV_ITEMS];
+    return (
+      all
+        .filter((i) => pathname === i.url || pathname.startsWith(`${i.url}/`))
+        .sort((a, b) => b.url.length - a.url.length)[0]?.url ?? null
+    );
+  }, [pathname]);
+
+  const isActive = (url: string): boolean => url === activeUrl;
 
   return (
     <Sidebar className="bg-[#FAFAFA] dark:bg-background-dark">

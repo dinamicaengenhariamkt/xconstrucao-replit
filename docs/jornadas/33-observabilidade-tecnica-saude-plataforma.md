@@ -1,7 +1,13 @@
 # Jornada — Observabilidade Técnica & Saúde da Plataforma (erros, logs e painel admin)
 
 > Status: planejada | Prioridade: alta | Wave: 8
-> Última atualização: 2026-06-08
+> Última atualização: 2026-06-20
+>
+> **Decisão tomada (2026-06-20):** abordagem **híbrida confirmada** — **Sentry (free tier)**
+> para captura/alerta de erros front+back (rápido, completo, alertas prontos) **+ infra
+> própria no nosso Postgres** (**Pino** como logger estruturado + tabela **`app_errors`**)
+> para rastreio independente, com a **meta de longo prazo de não depender/pagar o Sentry**.
+> Execução desta jornada será conduzida pelo dono no Replit; este PRD é o roteiro afiado.
 >
 > **Criada em 2026-06-08** a partir de demanda dos sócios da X Construção: antes de
 > os clientes reais começarem a usar a plataforma em produção, precisamos **captar
@@ -58,6 +64,32 @@ executiva dentro do admin.
 > **Ponto de privacidade a validar:** Sentry recebe payloads de erro. Configurar
 > *data scrubbing* (remover PII: e-mail, CPF, tokens) antes do envio. Há também a
 > opção *self-hosted* do Sentry caso o requisito seja dado 100% on-premise.
+
+### ✅ DECISÃO (2026-06-20) — Híbrido: Sentry free + infra própria (Pino + `app_errors`)
+
+Os dois, com papéis distintos e **redundância proposital**:
+
+1. **Sentry (free tier)** — captura e **alerta** de erros front + back, agrupamento
+   automático, stack trace, contexto. Liga rápido (SDK Next.js). Free cobre o início
+   (≈5k erros/mês); monitorar volume e migrar de plano/desligar conforme a escala.
+2. **Infra própria (do nosso lado, no Postgres)** — **não** depende do Sentry:
+   - **Pino** como logger estruturado do backend (JSON, rápido — roda bem porque o
+     projeto tem servidor Node real em [server/index.ts](../../server/index.ts), não é
+     serverless puro). Substitui gradualmente os ~295 `console.error` espalhados.
+   - Tabela **`app_errors`** no nosso banco persistindo cada erro (mensagem, stack,
+     rota, nível, `user_id` nullable, `meta` JSONB, `created_at`). Um **wrapper de log**
+     centraliza: escreve no Pino **e** grava em `app_errors`.
+
+**Por que os dois:** Sentry entrega valor e alerta **hoje**; a infra própria garante
+**independência** (rastreio nosso, sem PII saindo, e a meta de, no futuro, desligar o
+Sentry sem ficar cego). O painel de saúde (Frente B) lê **da nossa tabela**, não do
+Sentry — então o painel funciona mesmo sem Sentry.
+
+> Nota de arquitetura (correção registrada): o projeto roda **Next.js full-stack com
+> servidor Node customizado** (`tsx server/index.ts`), por isso **Pino/Winston são
+> viáveis** no backend. **Pino** escolhido por ser mais leve/rápido e padrão atual.
+> Para persistir no banco: Pino + um passo que grava em `app_errors` (via wrapper
+> próprio), não só stdout.
 
 ## 3. Personas
 - **Admin / equipe técnica**: recebe alerta quando algo quebra; abre o painel de
@@ -118,12 +150,15 @@ Tela nova e intuitiva no admin, com visão executiva do pulso do sistema:
 - Atualizar os jobs ([instrumentation.ts](../../instrumentation.ts)) para reportar
   falha ao Sentry/tabela em vez de só `console.error`.
 
-## 9. Schema (Drizzle) — depende da decisão da seção 2
-- **Se Sentry:** nenhuma tabela nova de erro (Sentry guarda). Opcional: tabela
-  `job_runs` (id, job, status, started_at, finished_at, erro) para o status de jobs
-  no painel.
-- **Se interno:** `app_errors` (id, mensagem, stack, rota, `user_id` nullable, nível,
-  `meta` JSONB, `created_at`) + índices por `(created_at)` e `(rota)`.
+## 9. Schema (Drizzle) — decisão híbrida (seção 2)
+Como a decisão é **híbrida**, a infra própria tem tabela:
+- **`app_errors`** (id, `level` [error|warn|fatal], `message`, `stack` nullable, `route`
+  nullable, `user_id` nullable → `users.id`, `meta` JSONB, `fingerprint` nullable para
+  agrupar iguais, `created_at`). Índices: `(created_at)` e `(route)`.
+- **`job_runs`** (id, `job` text, `status` [ok|error], `started_at`, `finished_at`
+  nullable, `error` nullable) — status de jobs no painel.
+- Definir em [shared/db/schema.ts](../../shared/db/schema.ts); bootstrap no
+  [instrumentation.ts](../../instrumentation.ts) no mesmo padrão das demais tabelas.
 
 ## 10. Endpoints
 - `GET /api/admin/saude` — payload agregado para o painel (erros recentes, ativos,
@@ -134,14 +169,26 @@ Tela nova e intuitiva no admin, com visão executiva do pulso do sistema:
 - Nenhum mock existente. É fundação nova de observabilidade técnica.
 
 ## 12. Checklist de implementação
-- [ ] **Decisão de negócio:** Sentry vs. interno vs. híbrido (seção 2) — registrar aqui o veredito.
-- [ ] Captura de erros front + back ligada e validada (gerar erro de teste e ver chegando).
+> ✅ Decisão fechada: **híbrido** (Sentry free + Pino + `app_errors` próprio). Ver seção 2.
+
+**Frente A.1 — Sentry (free tier):**
+- [ ] Instalar e configurar o SDK do Sentry para Next.js (front + back).
+- [ ] Gerar erro de teste (front e back) e confirmar que chega no Sentry.
 - [ ] Alertas para a equipe (e-mail/Slack) configurados.
-- [ ] Data scrubbing de PII validado (nenhum CPF/e-mail/token no payload).
-- [ ] Jobs reportam falha (não só console).
-- [ ] Painel `Saúde da Plataforma` no admin: erros recentes, ativos, status de jobs, indicadores.
-- [ ] Endpoint `GET /api/admin/saude` admin-only.
-- [ ] (opcional) `job_runs` para status de jobs.
+- [ ] Data scrubbing de PII validado (nenhum CPF/e-mail/token sai no payload).
+- [ ] Monitorar volume vs. free tier; documentar limite e plano de ação ao estourar.
+
+**Frente A.2 — Infra própria (Pino + `app_errors`):**
+- [ ] Adicionar **Pino** como logger estruturado do backend.
+- [ ] Criar tabela `app_errors` (+ `job_runs`) em `schema.ts` e bootstrap no `instrumentation.ts`.
+- [ ] Criar **wrapper de log** central (`logError`/`logEvent`) que escreve no Pino **e** grava em `app_errors`.
+- [ ] Migrar os `console.error` críticos (auth, api, jobs) para o wrapper — incrementalmente, começando por `app/api/` e `instrumentation.ts`.
+- [ ] **Error boundary no front** (`app/global-error.tsx` + `error.tsx` por rota crítica) capturando e reportando (Sentry + nossa tabela via endpoint).
+- [ ] Jobs reportam falha em `job_runs` (não só console).
+
+**Frente B — Painel "Saúde da Plataforma":**
+- [ ] Painel no admin: erros recentes (de `app_errors`), usuários ativos, status de jobs (`job_runs`), indicadores, atalho p/ auditoria.
+- [ ] Endpoint `GET /api/admin/saude` admin-only, lendo da **nossa** tabela (funciona sem Sentry).
 - [ ] (fase 2) Performance monitoring (telas/endpoints lentos).
 
 ## 13. Critérios de aceite
@@ -180,3 +227,10 @@ Tela nova e intuitiva no admin, com visão executiva do pulso do sistema:
   técnica** (captura de erro persistente, alerta, painel de saúde). Decisão Sentry vs.
   interno deixada explícita para os sócios — recomendação técnica é híbrido (Sentry p/
   erro + painel interno p/ saúde).
+- **2026-06-20** — Decisão fechada pelo dono: **híbrido confirmado** — Sentry free tier
+  (captura/alerta) **+ infra própria** (Pino + `app_errors`) com meta de independência
+  futura. Correção de arquitetura registrada: o projeto tem servidor Node real
+  (`server/index.ts`), então Pino/Winston são viáveis no back; **Pino** escolhido.
+  Execução será conduzida no Replit; este PRD foi afiado para isso. Relaciona-se às
+  novas jornadas de teste J35/J36/J37 (qualidade) — observabilidade + testes são as
+  duas frentes de robustez pré-produção.

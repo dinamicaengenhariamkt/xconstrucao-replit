@@ -71,12 +71,23 @@ Nenhum.
 - [x] Padrão extraído (DRY), `data-testid` preservados, sem `NaN` na UI
 - [x] `npm run check` sem erros
 
+### Item 6 — Unificar legenda + seletor de período no Financeiro (padrão Caixa)
+- [x] `WelcomeSection` reestruturado: título no topo + **um único bloco pontilhado** com legenda em cima e seletor de período (pílulas + calendário) embaixo, espelhando o `FiltrosGlobais` da Caixa
+- [x] Seletor removido do header à direita; props (`periodo`/`customRange`/callbacks) e lógica inalteradas; `page.tsx` não tocado
+
+### Item 7 — Corrigir active da sidebar admin (best-match)
+- [x] Causa: `pathname.startsWith(url)` em `AdminSidebar.tsx` (match de prefixo puro) ativava "Obras" junto com filhas e com `/admin/obras-destaque`
+- [x] Trocado por **best-match**: só o item de URL mais longa que casa (`=== url` ou `startsWith(url + '/')`) fica ativo, via `useMemo` sobre `pathname`
+- [x] Validado: `/admin/obras/moderacao` → só Moderação; `/admin/obras/[id]` → só Obras; `/admin/obras-destaque` → só Destaques
+
 ## 10. Critérios de aceite
 1. Detalhe de cliente e Financeiro: cards de KPI menores com hover idêntico ao `IndicadorCard` (sombra + linha-topo + escurecimento). Cards grandes inalterados.
 2. Financeiro: período do topo com legenda; seções temporais respondem ao período OU estão rotuladas como snapshot. Filtros locais funcionando.
 3. Top bar admin sem ícone de refresh; demais visões inalteradas.
 4. Com `volumeContratado = 0`, "Total pago a empreiteiras" e "Saldo a pagar" exibem `0%` (não `NaN%`).
-5. `npm run check` limpo.
+5. Financeiro: legenda + seletor de período num único bloco pontilhado (igual à Caixa); sem seletor solto no header.
+6. Sidebar admin: em `/admin/obras/moderacao` só "Moderação" fica ativo; cada item ativo só na sua rota.
+7. `npm run check` limpo.
 
 ## 11. Riscos / Pontos de atenção
 - `IndicadorCard` usa `overflow-hidden` + spans `absolute`; o shell precisa de container `relative` e da classe global `luminous-card` disponível onde for usado.
@@ -93,3 +104,5 @@ Nenhum.
 - 2026-06-20: Seletor de período "global" do Financeiro hoje só afeta `PaymentsEvolutionChart` — as demais métricas "no período" não respondem (origem da reorganização do Item 2).
 - 2026-06-20: Item 2 — confirmado na API que adoption/receitas/stats são snapshots de janelas fixas de negócio (não aceitam `periodo`). Decisão de produto: caminho **honesto + legenda** (não reescrever backend). Parear tudo ao período global fica como evolução futura, se houver demanda.
 - 2026-06-20: Item 1 — o padrão luminous já estava (sem nome) duplicado em `StatsCard` e `IndicadorCard`; extraído para `LuminousHoverCard` e os 4 KPI grids do admin (cliente/empreiteira/obra/financeiro-obra) + cards de lista passaram a consumi-lo. O alias `@shared/*` aponta para `./shared/*` (não `./features/shared/`) — o shell mora em `shared/components/ui/`.
+- 2026-06-20 (pacote 2): Item 6 — a legenda do Item 2 tinha ficado separada do seletor (seletor no header, legenda solta embaixo). Unificado num único bloco pontilhado espelhando o `FiltrosGlobais` da Caixa.
+- 2026-06-20 (pacote 2): Item 7 — `pathname.startsWith(url)` ativava múltiplos itens da sidebar (Obras + Moderação; falso-positivo em obras-destaque). Trocado por best-match (item de URL mais longa que casa com separador `/`). Pares futuros como `/admin/financeiro/obras` ficam cobertos automaticamente.
