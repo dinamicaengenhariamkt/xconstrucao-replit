@@ -1,6 +1,6 @@
 # Jornada — Ajustes Finos de UX (Visão Admin)
 
-> Status: revisão | Prioridade: média | Wave: 8
+> Status: pronto | Prioridade: média | Wave: 8
 > Última atualização: 2026-06-20
 
 ## 1. Contexto & Objetivo

@@ -391,26 +391,36 @@ export default function AdminFAQPage() {
         )}
       </div>
 
-      {/* Grid de categorias (visível apenas sem filtros/busca) */}
+      {/* Grid de categorias (visível apenas sem filtros/busca).
+          Só exibe categorias com ao menos 1 pergunta — o cadastro de nova pergunta
+          (NovaPerguntaModal) mantém a lista completa de categorias, então criar numa
+          categoria antes vazia faz o card reaparecer aqui. */}
       {showGrid && items && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(ADMIN_FAQ_CATEGORIES).map(([key, label]) => {
-            const meta = ADMIN_FAQ_CATEGORY_META[key];
-            const Icon = CATEGORY_ICONS[key] ?? RiGroupLine;
-            return (
-              <FAQCategoryCard
-                key={key}
-                categoryKey={key}
-                label={label}
-                description={meta?.description}
-                count={items.filter((i) => i.category === key).length}
-                iconBg={meta?.iconBg}
-                iconColor={meta?.iconColor}
-                Icon={Icon}
-                onSelect={() => setCategorySelected([key])}
-              />
-            );
-          })}
+          {Object.entries(ADMIN_FAQ_CATEGORIES)
+            .map(([key, label]) => ({
+              key,
+              label,
+              count: items.filter((i) => i.category === key).length,
+            }))
+            .filter((c) => c.count > 0)
+            .map(({ key, label, count }) => {
+              const meta = ADMIN_FAQ_CATEGORY_META[key];
+              const Icon = CATEGORY_ICONS[key] ?? RiGroupLine;
+              return (
+                <FAQCategoryCard
+                  key={key}
+                  categoryKey={key}
+                  label={label}
+                  description={meta?.description}
+                  count={count}
+                  iconBg={meta?.iconBg}
+                  iconColor={meta?.iconColor}
+                  Icon={Icon}
+                  onSelect={() => setCategorySelected([key])}
+                />
+              );
+            })}
         </div>
       )}
 
