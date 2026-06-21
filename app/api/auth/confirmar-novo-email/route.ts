@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { verifyEmailVerificationToken } from "@features/auth/api/auth-service";
 import { getUser, getUserByEmail, updateUserEmail } from "@features/auth/api/auth-storage";
 import { getBaseUrl } from "@features/auth/api/auth-utils";
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL("/verificar-email?success=email_trocado", baseUrl));
   } catch (err) {
-    console.error("[confirmar-novo-email] erro:", err);
+    void logError("error", "[confirmar-novo-email] erro inesperado", { stack: (err as Error)?.stack, route: "/api/auth/confirmar-novo-email" });
     return NextResponse.redirect(new URL("/verificar-email?error=server_error", baseUrl));
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
       lastUsedAt: new Date(),
     });
   } catch (err) {
-    console.error("Falha ao registrar sessão (change-password-forced):", err);
+    void logError("warn", "Falha ao registrar sessão (change-password-forced)", { stack: (err as Error)?.stack, route: "/api/auth/change-password-forced" });
   }
 
   const response = jsonNoStore({ success: true }, 200);

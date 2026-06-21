@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { z } from "zod";
 import { comparePassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
 import {
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
   try {
     await sendVerificationEmail(novoEmail, verificationUrl, user.name);
   } catch (err) {
-    console.error("[trocar-email] falha ao enviar email de confirmação:", err);
+    void logError("warn", "[trocar-email] falha ao enviar email de confirmação", { stack: (err as Error)?.stack, route: "/api/auth/trocar-email" });
     return jsonNoStore({ message: "Não foi possível enviar o email de confirmação. Tente novamente." }, 502);
   }
 

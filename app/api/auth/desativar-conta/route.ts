@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { comparePassword } from "@features/auth/api/auth-service";
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
   try {
     await db.delete(sessions).where(eq(sessions.userId, user.id));
   } catch (err) {
-    console.error("[desativar-conta] falha ao revogar sessões:", err);
+    void logError("warn", "[desativar-conta] falha ao revogar sessões", { stack: (err as Error)?.stack, route: "/api/auth/desativar-conta" });
   }
 
   void recordAudit({

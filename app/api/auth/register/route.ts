@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { db } from "@shared/db/db";
 import { userConsents } from "@shared/db/schema";
 import { getUserByEmail, getUserByUsername, createUserWithProfile } from "@features/auth/api/auth-storage";
@@ -107,13 +108,13 @@ export async function POST(request: NextRequest) {
         { userId: user.id, documento: "privacidade", versao: VERSAO_PRIVACIDADE, ip, userAgent },
       ]);
     } catch (consentError) {
-      console.error("Failed to persist consent records:", consentError);
+      void logError("error", "Failed to persist consent records", { stack: (consentError as Error)?.stack, route: "/api/auth/register" });
       try {
         const { users } = await import("@shared/db/schema");
         const { eq } = await import("drizzle-orm");
         await db.delete(users).where(eq(users.id, user.id));
       } catch (rollbackError) {
-        console.error("Failed to rollback user after consent failure:", rollbackError);
+        void logError("error", "Failed to rollback user after consent failure", { stack: (rollbackError as Error)?.stack, route: "/api/auth/register" });
       }
       return jsonNoStore(
         { message: "Não foi possível registrar o aceite dos termos. Tente novamente." },
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
+      void logError("warn", "Failed to send verification email", { stack: (emailError as Error)?.stack, route: "/api/auth/register" });
     }
 
     return jsonNoStore(
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       201
     );
   } catch (error) {
-    console.error("Erro no registro:", error);
+    void logError("error", "Erro no registro", { stack: (error as Error)?.stack, route: "/api/auth/register" });
     return jsonNoStore({ message: "Erro interno do servidor" }, 500);
   }
 }

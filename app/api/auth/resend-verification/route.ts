@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { getUserByEmail } from "@features/auth/api/auth-storage";
 import { createEmailVerificationToken } from "@features/auth/api/auth-service";
 import { sendVerificationEmail } from "@shared/lib/email";
@@ -46,13 +47,13 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
-      console.error("Failed to resend verification email:", emailError);
+      void logError("warn", "Failed to resend verification email", { stack: (emailError as Error)?.stack, route: "/api/auth/resend-verification" });
       return jsonNoStore({ message: "Erro ao enviar email" }, 500);
     }
 
     return jsonNoStore({ success: true }, 200);
   } catch (error) {
-    console.error("Erro ao reenviar verificação:", error);
+    void logError("error", "Erro ao reenviar verificação de email", { stack: (error as Error)?.stack, route: "/api/auth/resend-verification" });
     return jsonNoStore({ message: "Erro interno do servidor" }, 500);
   }
 }

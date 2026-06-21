@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error("Erro no refresh:", error);
+    void logError("error", "Erro no refresh de sessão", { stack: (error as Error)?.stack, route: "/api/auth/refresh" });
     const response = NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }

@@ -1158,3 +1158,51 @@ export const faq = pgTable(
 
 export type Faq = typeof faq.$inferSelect;
 export type InsertFaq = typeof faq.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Observabilidade Técnica (J33) — app_errors + job_runs
+// Tabelas criadas idempotentemente em server/bootstrap-observabilidade.ts.
+// ---------------------------------------------------------------------------
+export const appErrors = pgTable(
+  "app_errors",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    level: text("level").notNull().default("error"),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    route: text("route"),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    meta: jsonb("meta"),
+    fingerprint: text("fingerprint"),
+    source: text("source").notNull().default("server"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxCreatedAt: index("idx_app_errors_created_at").on(t.createdAt),
+    idxRoute: index("idx_app_errors_route").on(t.route),
+    idxLevel: index("idx_app_errors_level").on(t.level),
+  })
+);
+
+export type AppError = typeof appErrors.$inferSelect;
+export type InsertAppError = typeof appErrors.$inferInsert;
+
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    job: text("job").notNull(),
+    status: text("status").notNull(),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+    error: text("error"),
+    meta: jsonb("meta"),
+  },
+  (t) => ({
+    idxJobStarted: index("idx_job_runs_job_started").on(t.job, t.startedAt),
+    idxStatus: index("idx_job_runs_status").on(t.status),
+  })
+);
+
+export type JobRun = typeof jobRuns.$inferSelect;
+export type InsertJobRun = typeof jobRuns.$inferInsert;

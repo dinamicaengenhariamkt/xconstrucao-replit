@@ -179,12 +179,12 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
 - [ ] Monitorar volume vs. free tier; documentar limite e plano de ação ao estourar.
 
 **Frente A.2 — Infra própria (Pino + `app_errors`):**
-- [ ] Adicionar **Pino** como logger estruturado do backend.
-- [ ] Criar tabela `app_errors` (+ `job_runs`) em `schema.ts` e bootstrap no `instrumentation.ts`.
-- [ ] Criar **wrapper de log** central (`logError`/`logEvent`) que escreve no Pino **e** grava em `app_errors`.
-- [ ] Migrar os `console.error` críticos (auth, api, jobs) para o wrapper — incrementalmente, começando por `app/api/` e `instrumentation.ts`.
-- [ ] **Error boundary no front** (`app/global-error.tsx` + `error.tsx` por rota crítica) capturando e reportando (Sentry + nossa tabela via endpoint).
-- [ ] Jobs reportam falha em `job_runs` (não só console).
+- [x] Adicionar **Pino** como logger estruturado do backend. _(Task #105)_
+- [x] Criar tabela `app_errors` (+ `job_runs`) em `schema.ts` e bootstrap no `instrumentation.ts`. _(Task #105)_
+- [x] Criar **wrapper de log** central (`logError`/`logJobRun`) que escreve no Pino **e** grava em `app_errors`/`job_runs`. _(Task #105)_
+- [x] Migrar os `console.error` críticos (auth, api, jobs) para o wrapper — 14 rotas auth + 25 bootstraps via `instrumentation.ts`. _(Task #105)_
+- [x] **Error boundary no front** (`app/global-error.tsx` + `error.tsx` por rota crítica) capturando e reportando via `/api/log/client-error`. _(Task #105)_
+- [x] Jobs reportam falha em `job_runs` (não só console) — `runBootstrap()` wraps todos os 25+ bootstraps. _(Task #105)_
 
 **Frente B — Painel "Saúde da Plataforma":**
 - [ ] Painel no admin: erros recentes (de `app_errors`), usuários ativos, status de jobs (`job_runs`), indicadores, atalho p/ auditoria.

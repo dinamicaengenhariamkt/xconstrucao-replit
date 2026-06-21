@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { loginSchema } from "@features/auth/schemas";
 import { getUserByEmail } from "@features/auth/api/auth-storage";
 import {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent") ?? null,
     });
   } catch (error) {
-    console.error("Erro no login:", error);
+    void logError("error", "Erro no login", { stack: (error as Error)?.stack, route: "/api/auth/login" });
     return jsonNoStore({ error: "Erro interno do servidor" }, 500);
   }
 }

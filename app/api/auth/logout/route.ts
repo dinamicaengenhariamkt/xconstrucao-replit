@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { clearAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
         await db.delete(sessions).where(eq(sessions.sessionToken, sessionToken));
       }
     } catch (err) {
-      console.error("Falha ao remover sessão:", err);
+      void logError("warn", "Falha ao remover sessão no logout", { stack: (err as Error)?.stack, route: "/api/auth/logout" });
     }
 
     const response = NextResponse.json({
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Erro no logout:", error);
+    void logError("error", "Erro no logout", { stack: (error as Error)?.stack, route: "/api/auth/logout" });
     const response = NextResponse.json(
       { error: "Erro interno do servidor", persona: "contratante", redirect: "/login?perfil=contratante" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { auth } from "@/auth";
 import {
   createAccessToken,
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     try {
       await ensureProfileRow(dbUser);
     } catch (profileErr) {
-      console.error("Falha ao garantir profile row no oauth-convert:", profileErr);
+      void logError("warn", "Falha ao garantir profile row no oauth-convert", { stack: (profileErr as Error)?.stack, route: "/api/auth/oauth-convert" });
       const response = NextResponse.json(
         {
           error: "PROFILE_PROVISION_FAILED",
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error("Erro ao converter sessão OAuth:", error);
+    void logError("error", "Erro ao converter sessão OAuth", { stack: (error as Error)?.stack, route: "/api/auth/oauth-convert" });
     const response = NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
         .where(and(eq(sessions.userId, user.id), ne(sessions.id, currentSessionId)));
     }
   } catch (err) {
-    console.error("Falha ao revogar sessões após troca de senha:", err);
+    void logError("warn", "Falha ao revogar sessões após troca de senha", { stack: (err as Error)?.stack, route: "/api/auth/change-password" });
   }
 
   const response = NextResponse.json({ success: true, message: "Senha alterada com sucesso." });
