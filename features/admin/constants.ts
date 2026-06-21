@@ -17,6 +17,7 @@ import {
   RiUserHeartLine,
   RiStarLine,
   RiFileTextLine,
+  RiHeartPulseLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -34,6 +35,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { title: 'Saídas', url: '/admin/saidas', icon: RiArrowDownLine },
   { title: 'Anúncios', url: '/admin/anuncios', icon: RiMegaphoneLine },
   { title: 'Leads', url: '/admin/marketplace-leads', icon: RiUserHeartLine },
+  { title: 'Saúde', url: '/admin/saude', icon: RiHeartPulseLine },
 ];
 
 export const ADMIN_BOTTOM_NAV_ITEMS: NavItem[] = [
