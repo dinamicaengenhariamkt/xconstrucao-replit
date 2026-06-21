@@ -172,10 +172,10 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
 > ✅ Decisão fechada: **híbrido** (Sentry free + Pino + `app_errors` próprio). Ver seção 2.
 
 **Frente A.1 — Sentry (free tier):**
-- [ ] Instalar e configurar o SDK do Sentry para Next.js (front + back).
-- [ ] Gerar erro de teste (front e back) e confirmar que chega no Sentry.
-- [ ] Alertas para a equipe (e-mail/Slack) configurados.
-- [ ] Data scrubbing de PII validado (nenhum CPF/e-mail/token sai no payload).
+- [x] Instalar e configurar o SDK do Sentry para Next.js (front + back). _(Task #106)_
+- [ ] Gerar erro de teste (front e back) e confirmar que chega no Sentry. _(requer SENTRY_DSN no Replit Secrets)_
+- [ ] Alertas para a equipe (e-mail/Slack) configurados. _(requer conta Sentry + DSN)_
+- [x] Data scrubbing de PII validado (`lib/sentry-scrub.ts` — CPF, e-mail, senhas, tokens). _(Task #106)_
 - [ ] Monitorar volume vs. free tier; documentar limite e plano de ação ao estourar.
 
 **Frente A.2 — Infra própria (Pino + `app_errors`):**

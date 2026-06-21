@@ -2,6 +2,7 @@
  * Logger central da plataforma — J33 Observabilidade Técnica.
  *
  * Uso duplo: Pino (stdout JSON estruturado) + persistência em `app_errors` / `job_runs`.
+ * J33-B: erros de nível "error"/"fatal" também vão para Sentry (quando SENTRY_DSN configurado).
  * Falhas no write ao banco são silenciosas — nunca derrubam o app.
  */
 import pino from "pino";
@@ -57,6 +58,26 @@ function buildFingerprint(route?: string, message?: string) {
   return `${route ?? "unknown"}::${(message ?? "").slice(0, 80)}`;
 }
 
+async function captureInSentry(message: string, opts: LogErrorOpts) {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) return;
+  try {
+    const Sentry = await import("@sentry/nextjs");
+    const err = new Error(message);
+    if (opts.stack) err.stack = opts.stack;
+    Sentry.captureException(err, {
+      extra: {
+        route: opts.route,
+        userId: opts.userId,
+        source: opts.source,
+        meta: opts.meta,
+      },
+    });
+  } catch {
+    // Sentry não disponível — ok
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * logError                                                            *
  * ------------------------------------------------------------------ */
@@ -72,25 +93,31 @@ export async function logError(
 
   // 2. Persistência no banco (silenciosa em falha)
   const pool = await getPool();
-  if (!pool) return;
-  try {
-    const fp = fingerprint ?? buildFingerprint(route, message);
-    await pool.query(
-      `INSERT INTO app_errors (level, message, stack, route, user_id, meta, fingerprint, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        level,
-        message.slice(0, 2000),
-        stack ? stack.slice(0, 8000) : null,
-        route ?? null,
-        userId ?? null,
-        meta ? JSON.stringify(meta) : null,
-        fp,
-        source,
-      ]
-    );
-  } catch {
-    // Tabela pode ainda não existir no primeiro boot — ok, Pino já logou.
+  if (pool) {
+    try {
+      const fp = fingerprint ?? buildFingerprint(route, message);
+      await pool.query(
+        `INSERT INTO app_errors (level, message, stack, route, user_id, meta, fingerprint, source)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          level,
+          message.slice(0, 2000),
+          stack ? stack.slice(0, 8000) : null,
+          route ?? null,
+          userId ?? null,
+          meta ? JSON.stringify(meta) : null,
+          fp,
+          source,
+        ]
+      );
+    } catch {
+      // Tabela pode ainda não existir no primeiro boot — ok, Pino já logou.
+    }
+  }
+
+  // 3. Sentry (apenas erros/fatais de origem server, de forma assíncrona)
+  if ((level === "error" || level === "fatal") && source !== "client") {
+    void captureInSentry(message, opts);
   }
 }
 

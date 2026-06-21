@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import * as Sentry from "@sentry/nextjs";
 
 interface ErrorBoundaryProps {
   error: Error & { digest?: string };
@@ -11,6 +12,9 @@ interface ErrorBoundaryProps {
 
 export default function ErrorBoundaryUI({ error, reset, title = "Algo deu errado" }: ErrorBoundaryProps) {
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      Sentry.captureException(error);
+    }
     fetch("/api/log/client-error", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
