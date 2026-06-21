@@ -315,7 +315,7 @@ export default function NovaObraPage() {
   const busy = submitting !== null;
 
   return (
-    <div className="space-y-6 p-6 md:p-10 pb-12">
+    <div className="space-y-6 p-10">
       <PageHeader
         title="Nova obra"
         subtitle="Cadastre uma obra. Salve como rascunho a qualquer momento ou publique para receber candidaturas."

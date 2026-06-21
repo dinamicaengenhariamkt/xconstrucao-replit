@@ -78,3 +78,4 @@ Nenhum novo. `GET /api/obras` já honra `?visibilidade=rascunho` (filtro existen
 - 2026-06-20: O anúncio dinâmico (`AdSidebarSlot`) já existia e já era usado no dashboard/chat — só as sidebars principais tinham banner hardcoded. Fix foi religar, não construir.
 - 2026-06-20: "Salvar rascunho" já persistia no banco (`visibilidade='rascunho'`) e o `GET /api/obras` já filtrava por isso; faltava só a UI expor o filtro. Reusado Minhas Obras (decisão do dono) em vez de criar tela nova.
 - 2026-06-20: FAQ não tinha vazamento entre visões (backend correto) — o bug era só o grid renderizar categorias de um dicionário fixo sem checar `count > 0`. Mesmo fix aplicado também no admin por consistência.
+- 2026-06-21: O `p-6 md:p-10 pb-12` introduzido no Item 3 (margem da Nova Obra) gerava duplo scroll / área branca vazando no rodapé. Padronizado para `p-10` puro (igual a dashboard/minhas-obras), eliminando o `pb-12` redundante.
