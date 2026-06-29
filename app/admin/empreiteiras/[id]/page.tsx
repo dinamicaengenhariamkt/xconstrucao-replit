@@ -115,14 +115,22 @@ export default function AdminEmpreiteiraDetailPage() {
   const handleCuradoria = useCallback(
     async (decisao: 'aprovar' | 'reprovar') => {
       try {
-        await aprovarEmpreiteira({ id, decisao });
-        toast({
-          title: decisao === 'aprovar' ? 'Empreiteira aprovada' : 'Empreiteira reprovada',
-          description:
-            decisao === 'aprovar'
-              ? 'A empreiteira agora está ativa na plataforma.'
-              : 'A empreiteira foi marcada como inativa.',
-        });
+        const result = await aprovarEmpreiteira({ id, decisao });
+        if (decisao === 'aprovar' && result?.warning === 'perfil_incompleto') {
+          toast({
+            title: 'Empreiteira aprovada',
+            description: 'Aprovado. O perfil ainda está incompleto — oriente o usuário a completá-lo no primeiro acesso.',
+            className: 'border-yellow-500 bg-yellow-50 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100',
+          });
+        } else {
+          toast({
+            title: decisao === 'aprovar' ? 'Empreiteira aprovada' : 'Empreiteira reprovada',
+            description:
+              decisao === 'aprovar'
+                ? 'A empreiteira agora está ativa na plataforma.'
+                : 'A empreiteira foi marcada como inativa.',
+          });
+        }
       } catch (err) {
         toast({
           title: 'Erro',

@@ -122,14 +122,22 @@ export default function AdminClienteDetailPage() {
   const handleCuradoria = useCallback(
     async (decisao: 'aprovar' | 'reprovar') => {
       try {
-        await aprovarCliente({ id, decisao });
-        toast({
-          title: decisao === 'aprovar' ? 'Cliente aprovado' : 'Cliente reprovado',
-          description:
-            decisao === 'aprovar'
-              ? 'O cliente agora está ativo na plataforma.'
-              : 'O cliente foi marcado como inativo.',
-        });
+        const result = await aprovarCliente({ id, decisao });
+        if (decisao === 'aprovar' && result?.warning === 'perfil_incompleto') {
+          toast({
+            title: 'Cliente aprovado',
+            description: 'Aprovado. O perfil ainda está incompleto — oriente o usuário a completá-lo no primeiro acesso.',
+            className: 'border-yellow-500 bg-yellow-50 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100',
+          });
+        } else {
+          toast({
+            title: decisao === 'aprovar' ? 'Cliente aprovado' : 'Cliente reprovado',
+            description:
+              decisao === 'aprovar'
+                ? 'O cliente agora está ativo na plataforma.'
+                : 'O cliente foi marcado como inativo.',
+          });
+        }
       } catch (err) {
         toast({
           title: 'Erro',
