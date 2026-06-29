@@ -122,15 +122,15 @@ export async function register() {
     // Jobs de negócio (periódicos — marcados como job_runs independentes)
     // ----------------------------------------------------------------
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
-    await runBootstrap("mark-overdue-pagamentos", markOverduePagamentos);
+    await runBootstrap("mark-overdue-pagamentos", () => markOverduePagamentos().then(() => {}));
 
     const { snapshotKpisJob } = await import("./features/financeiro/snapshot-kpis-job");
-    await runBootstrap("snapshot-kpis", snapshotKpisJob);
+    await runBootstrap("snapshot-kpis", () => snapshotKpisJob().then(() => {}));
 
     const { dispatchPendingCandidaturaNotifications } = await import(
       "./features/notificacoes/candidatura-dispatcher"
     );
-    await runBootstrap("dispatch-candidatura-notifications", dispatchPendingCandidaturaNotifications);
+    await runBootstrap("dispatch-candidatura-notifications", () => dispatchPendingCandidaturaNotifications().then(() => {}));
 
     // backfillConsents tem assinatura diferente — wrapping manual
     const backfillStart = Date.now();
