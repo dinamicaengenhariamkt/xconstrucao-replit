@@ -70,8 +70,8 @@ export default function AdminObrasModeracaoPage() {
         credentials: 'include',
       });
       if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(text || `Erro ${res.status}`);
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.message || `Erro ${res.status}`);
       }
     },
     onSuccess: () => {

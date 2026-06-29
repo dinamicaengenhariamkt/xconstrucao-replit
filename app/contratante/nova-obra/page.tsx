@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -74,7 +75,10 @@ const formSchema = z.object({
   nome: z.string().trim().min(3, 'Nome deve ter no mínimo 3 caracteres').max(160),
   tipo: z.string().optional(),
   descricao: z.string().optional(),
-  cep: z.string().optional(),
+  cep: z.string().optional().refine(
+    (v) => !v || v.replace(/\D/g, '').length === 8,
+    'CEP deve ter 8 dígitos',
+  ),
   endereco: z.string().trim().min(3, 'Endereço obrigatório').max(240),
   cidade: z.string().optional(),
   uf: z.string().optional(),
@@ -131,6 +135,7 @@ function cleanPayload(values: FormValues, visibilidade: 'rascunho' | 'publicada'
 
 export default function NovaObraPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { toast } = useToast();
   const { upload } = useUpload();
   const [submitting, setSubmitting] = useState<'rascunho' | 'publicada' | null>(null);
@@ -171,17 +176,36 @@ export default function NovaObraPage() {
       try {
         const r = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: ctrl.signal });
         const data = await r.json();
-        if (data && !data.erro) {
+        if (data?.erro) {
+          form.setError('cep', { message: 'CEP não encontrado. Verifique e tente novamente.' });
+        } else if (data) {
+          form.clearErrors('cep');
           const cur = form.getValues();
+          let preencheu = false;
           if (!cur.endereco || cur.endereco.length < 3) {
             const linha = [data.logradouro, data.bairro].filter(Boolean).join(', ');
-            if (linha) form.setValue('endereco', linha, { shouldValidate: true });
+            if (linha) {
+              form.setValue('endereco', linha, { shouldValidate: true });
+              preencheu = true;
+            }
           }
-          if (!cur.cidade) form.setValue('cidade', data.localidade ?? '', { shouldValidate: true });
-          if (!cur.uf) form.setValue('uf', (data.uf ?? '').toUpperCase(), { shouldValidate: true });
+          if (!cur.cidade) {
+            form.setValue('cidade', data.localidade ?? '', { shouldValidate: true });
+            preencheu = true;
+          }
+          if (!cur.uf) {
+            form.setValue('uf', (data.uf ?? '').toUpperCase(), { shouldValidate: true });
+            preencheu = true;
+          }
+          if (preencheu) {
+            toast({
+              title: 'Endereço preenchido automaticamente',
+              description: 'Verifique os campos e corrija se necessário.',
+            });
+          }
         }
       } catch {
-        // silencioso — ViaCEP é opcional
+        // silencioso — ViaCEP é opcional; erros de rede não bloqueiam o formulário
       } finally {
         setCepLoading(false);
       }
@@ -303,6 +327,7 @@ export default function NovaObraPage() {
             : 'Você pode continuar editando depois.',
       });
 
+      await qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras'] });
       router.push('/contratante/minhas-obras');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro inesperado';
@@ -411,7 +436,7 @@ export default function NovaObraPage() {
                 name="cep"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>CEP {cepLoading && <span className="ml-2 text-xs text-muted-foreground">buscando…</span>}</FormLabel>
+                    <FormLabel>CEP * {cepLoading && <span className="ml-2 text-xs text-muted-foreground">buscando…</span>}</FormLabel>
                     <FormControl>
                       <Input placeholder="00000-000" data-testid="input-cep" maxLength={9} {...field} />
                     </FormControl>

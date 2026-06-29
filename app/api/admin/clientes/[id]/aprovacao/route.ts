@@ -26,13 +26,6 @@ export async function PATCH(
   const [existing] = await db.select().from(clientes).where(eq(clientes.id, id));
   if (!existing) return NextResponse.json({ message: "Cliente não encontrado" }, { status: 404 });
 
-  if (parsed.data.decisao === "aprovar" && !existing.perfilCompleto) {
-    return NextResponse.json(
-      { message: "Não é possível aprovar um perfil incompleto" },
-      { status: 409 },
-    );
-  }
-
   const novoStatus = parsed.data.decisao === "aprovar" ? "ativo" : "inativo";
   const [updated] = await db
     .update(clientes)
@@ -40,5 +33,11 @@ export async function PATCH(
     .where(eq(clientes.id, id))
     .returning();
 
-  return NextResponse.json(updated);
+  const response: Record<string, unknown> = { ...updated };
+  if (parsed.data.decisao === "aprovar" && !existing.perfilCompleto) {
+    response.warning = "perfil_incompleto";
+    response.warningMessage = "Cliente aprovado, mas o perfil ainda está incompleto. Oriente-o a completar os dados no primeiro acesso.";
+  }
+
+  return NextResponse.json(response);
 }

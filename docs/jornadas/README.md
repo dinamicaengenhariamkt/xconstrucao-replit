@@ -48,6 +48,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | planejada | alta |
 | 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial | alta |
 | 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | revisão | média |
+| 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
 
 ---
 

@@ -216,7 +216,10 @@ export function useAprovarCliente() {
         body: JSON.stringify({ decisao }),
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erro ao processar curadoria do cliente');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.message || 'Erro ao processar curadoria do cliente');
+      }
       return res.json();
     },
     onSuccess: (_data, { id, decisao }) => {
