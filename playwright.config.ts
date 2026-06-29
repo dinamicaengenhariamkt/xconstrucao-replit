@@ -1,21 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Usa uma porta dedicada para os testes E2E (3010 por padrão), evitando conflitos
-// com o workflow de desenvolvimento que roda na 5000. Assim o webServer pode subir
-// um Next.js próprio com EMAIL_TEST_MODE=1 / E2E_TEST_AUTH=1 sem mexer no dev.
+// Porta dedicada para os testes E2E (3010 por padrão), separada do workflow de
+// desenvolvimento (5000). Pode ser sobrescrita via E2E_PORT.
+//
+// reuseExistingServer é sempre true: se um servidor E2E já estiver rodando
+// na porta (ex.: run anterior que não foi encerrado), o Playwright o reutiliza
+// em vez de falhar com EADDRINUSE. Para garantir um estado limpo com as envs
+// corretas use `make test-e2e` ou `make test-e2e-aprovacao` — esses alvos matam
+// qualquer processo legado na porta antes de chamar o Playwright.
 const PORT = Number(process.env.E2E_PORT ?? 3010);
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
-/**
- * Playwright config para a suíte de Onboarding (Identidade & Vínculos).
- *
- * - Reusa o servidor Next.js já rodando localmente (npm run dev).
- *   Se nenhum servidor responder, o Playwright sobe um automaticamente
- *   com EMAIL_TEST_MODE=1 e E2E_TEST_AUTH=1 — necessários para que os
- *   endpoints test-only (/api/test/emails, /api/test/oauth-simulate)
- *   fiquem ativos e os emails sejam capturados em memória ao invés de
- *   irem para a Brevo.
- */
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 300_000,
@@ -39,7 +34,11 @@ export default defineConfig({
   webServer: {
     command: `npx next dev -p ${PORT} -H 127.0.0.1`,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // Sempre reutiliza um servidor existente na porta — evita EADDRINUSE
+    // tanto em CI (onde cada job começa limpo) quanto localmente (onde um
+    // run anterior pode ter deixado o Next.js rodando).
+    // Use os alvos do Makefile para garantir estado limpo quando necessário.
+    reuseExistingServer: true,
     timeout: 180_000,
     env: {
       EMAIL_TEST_MODE: "1",
