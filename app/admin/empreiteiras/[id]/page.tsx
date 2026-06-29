@@ -123,10 +123,10 @@ export default function AdminEmpreiteiraDetailPage() {
               ? 'A empreiteira agora está ativa na plataforma.'
               : 'A empreiteira foi marcada como inativa.',
         });
-      } catch {
+      } catch (err) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível atualizar a curadoria.',
+          description: err instanceof Error ? err.message : 'Não foi possível atualizar a curadoria.',
           variant: 'destructive',
         });
       }

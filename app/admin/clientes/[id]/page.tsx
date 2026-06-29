@@ -130,10 +130,10 @@ export default function AdminClienteDetailPage() {
               ? 'O cliente agora está ativo na plataforma.'
               : 'O cliente foi marcado como inativo.',
         });
-      } catch {
+      } catch (err) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível atualizar a curadoria.',
+          description: err instanceof Error ? err.message : 'Não foi possível atualizar a curadoria.',
           variant: 'destructive',
         });
       }
