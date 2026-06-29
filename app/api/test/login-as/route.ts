@@ -7,13 +7,20 @@
  *
  * Disponível APENAS quando E2E_TEST_AUTH=1.
  *
- *   POST /api/test/login-as
- *   { email }
+ *   POST /api/test/login-as   { email }           → JSON { success, user }
+ *   GET  /api/test/login-as?email=...&to=/path    → redireciona com cookies
+ *
+ * Ambos inserem uma linha em `sessions` (sha256 do refresh token) para que o
+ * /api/auth/refresh consiga validar a sessão sem retornar "Sessão revogada".
+ *
+ * O GET usa secure:false para que os cookies funcionem sobre HTTP (127.0.0.1)
+ * nos testes Playwright, onde não há TLS.
  */
 
+import { createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@shared/db/db";
-import { users } from "@shared/db/schema";
+import { users, sessions } from "@shared/db/schema";
 import { eq } from "drizzle-orm";
 import { createAccessToken, createRefreshToken } from "@features/auth/api/auth-service";
 import { createAuthCookies } from "@features/auth/api/auth-utils";
@@ -22,6 +29,85 @@ function isEnabled(): boolean {
   return process.env.E2E_TEST_AUTH === "1";
 }
 
+async function findUser(email: string) {
+  const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user ?? null;
+}
+
+function buildAccessToken(user: NonNullable<Awaited<ReturnType<typeof findUser>>>) {
+  return createAccessToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    image: user.image ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+  });
+}
+
+async function issueSession(user: NonNullable<Awaited<ReturnType<typeof findUser>>>) {
+  const accessToken = buildAccessToken(user);
+  const refreshToken = createRefreshToken(user.id, false);
+
+  const sessionToken = createHash("sha256").update(refreshToken).digest("hex");
+  await db.insert(sessions).values({
+    sessionToken,
+    userId: user.id,
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    userAgent: "playwright-e2e",
+    ip: "127.0.0.1",
+    lastUsedAt: new Date(),
+  }).onConflictDoNothing();
+
+  return { accessToken, refreshToken };
+}
+
+/** GET /api/test/login-as?email=...&to=/contratante/nova-obra
+ * Sets cookies without secure:true so they work over HTTP in Playwright.
+ * Uses Host header for redirect so cookie domain matches.
+ */
+export async function GET(request: NextRequest) {
+  if (!isEnabled()) {
+    return NextResponse.json({ error: "disabled" }, { status: 404 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const email = searchParams.get("email")?.toLowerCase().trim();
+  const to = searchParams.get("to") ?? "/";
+
+  if (!email) {
+    return NextResponse.json({ error: "email é obrigatório" }, { status: 400 });
+  }
+
+  const user = await findUser(email);
+  if (!user) {
+    return NextResponse.json({ error: "user não encontrado" }, { status: 404 });
+  }
+
+  const { accessToken, refreshToken } = await issueSession(user);
+
+  const host = request.headers.get("host") ?? "127.0.0.1:5000";
+  const response = NextResponse.redirect(`http://${host}${to}`);
+
+  response.cookies.set("access_token", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 15 * 60,
+  });
+  response.cookies.set("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
+
+  return response;
+}
+
+/** POST /api/test/login-as  { email }  → JSON (used by API-only tests) */
 export async function POST(request: NextRequest) {
   if (!isEnabled()) {
     return NextResponse.json({ error: "disabled" }, { status: 404 });
@@ -33,20 +119,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "email é obrigatório" }, { status: 400 });
   }
 
-  const [user] = await db.select().from(users).where(eq(users.email, email));
+  const user = await findUser(email);
   if (!user) {
     return NextResponse.json({ error: "user não encontrado" }, { status: 404 });
   }
 
-  const accessToken = createAccessToken({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    name: user.name,
-    image: user.image ?? null,
-    avatarUrl: user.avatarUrl ?? null,
-  });
-  const refreshToken = createRefreshToken(user.id, false);
+  const { accessToken, refreshToken } = await issueSession(user);
 
   const response = NextResponse.json({
     success: true,

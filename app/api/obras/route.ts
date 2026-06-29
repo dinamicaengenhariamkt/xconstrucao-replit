@@ -193,11 +193,14 @@ export async function GET(request: NextRequest) {
 
   // Subquery escalar correlacionada: conta anexos publicados (file não soft-deleted)
   // por obra. Usa o índice em obra_anexos(obra_id) sem multiplicar rows.
+  // NOTA: usa SQL puro (sem referências Drizzle) para evitar "column reference 'id' is ambiguous"
+  // — Drizzle pode gerar "id" sem qualificação de tabela quando obra_anexos e user_files
+  // ambos têm coluna 'id' visível no escopo do subquery. Aliases _oa/_uf garantem desambiguação.
   const anexosCountExpr = sql<number>`(
-    SELECT COUNT(*)::int FROM ${obraAnexos}
-    INNER JOIN ${userFiles} ON ${userFiles.id} = ${obraAnexos.fileId}
-    WHERE ${obraAnexos.obraId} = ${obras.id}
-      AND ${userFiles.deletedAt} IS NULL
+    SELECT COUNT(*)::int FROM obra_anexos AS _oa
+    INNER JOIN user_files AS _uf ON _uf.id = _oa.file_id
+    WHERE _oa.obra_id = obras.id
+      AND _uf.deleted_at IS NULL
   )`;
 
   // Task #87/95: naMinhaZona = match SQL (UF ∈ zonaUfs OU cidade accent-insensitive ∈ zonaCidades).
