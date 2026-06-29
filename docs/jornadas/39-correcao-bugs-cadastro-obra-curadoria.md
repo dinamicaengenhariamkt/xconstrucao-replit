@@ -1,7 +1,7 @@
 # Jornada — Correção de Bugs: Cadastro de Obra & Curadoria
 
 > Status: pronto | Prioridade: alta | Wave: 10
-> Última atualização: 2026-06-22
+> Última atualização: 2026-06-29
 
 ## 1. Contexto & Objetivo
 
@@ -88,6 +88,15 @@ flowchart LR
   - ViaCEP effect: quando `data.erro === true`, chama `form.setError('cep', { message: 'CEP não encontrado. Verifique e tente novamente.' })`.
   - Toast informativo quando ViaCEP preenche automaticamente o endereço. _(Task #114)_
 
+- [x] **Bug MÉDIO — CEP em desacordo com o endereço não era validado (gap reaberto)**
+  Relato original do Guilherme: "informei CEP em desacordo com o endereço e ele não verificou, deixou passar".
+  A correção #114 só tratava CEP _inexistente_; um CEP válido de outra cidade ainda passava porque o
+  ViaCEP só preenchia cidade/UF quando os campos estavam vazios. Agora `app/contratante/nova-obra/page.tsx`:
+  - Cidade e UF são **sempre** sobrescritas pelo retorno do ViaCEP (o CEP é a fonte de verdade da localização).
+  - Quando o que o usuário digitou diverge do CEP, mostra toast "Cidade/UF ajustadas pelo CEP" informando
+    o município/UF reais e pedindo para conferir se o CEP está correto.
+  - O `endereco` (logradouro) continua respeitando o que o usuário digitou (pode ter número/complemento). _(Task #120)_
+
 ## 10. Critérios de aceite
 
 1. Admin abre `/admin/clientes/[id]` → clica "Aprovar" em cliente com `perfilCompleto = false` → status muda
@@ -131,3 +140,7 @@ flowchart LR
   tratava isso como "sucesso silencioso" — nenhum feedback ao usuário. Fix: `form.setError` no campo.
 - **2026-06-22 (Task #114):** Erro de aprovação de obra mostrava JSON bruto no toast porque
   `res.text()` capturava a string `{"error":"OBRA_NAO_PUBLICADA","message":"..."}`. Fix: `res.json()` + extração do campo `message`.
+- **2026-06-29 (Task #120):** Em re-verificação dos bugs, identificado que o item "CEP em desacordo com o
+  endereço" do relato do Guilherme **não havia sido resolvido** pela #114 — esta só tratava CEP inexistente.
+  Um CEP válido de outra cidade ainda passava porque o ViaCEP só preenchia cidade/UF quando vazios.
+  Fix: ViaCEP passa a sobrescrever cidade/UF sempre e avisar o usuário em caso de divergência.

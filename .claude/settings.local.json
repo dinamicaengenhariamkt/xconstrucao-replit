@@ -9,7 +9,8 @@
       "Bash(npx tsx *)",
       "Bash(grep -nE \"PLANOS|const planos|hardcode|R\\\\\\\\$|preco|=>\" app/contratante/planos/page.tsx)",
       "Bash(npx tsc *)",
-      "Bash(grep -vE \"bootstrap|^\\\\s*$\")"
+      "Bash(grep -vE \"bootstrap|^\\\\s*$\")",
+      "Bash(git show *)"
     ]
   }
 }

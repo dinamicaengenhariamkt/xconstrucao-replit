@@ -181,23 +181,37 @@ export default function NovaObraPage() {
         } else if (data) {
           form.clearErrors('cep');
           const cur = form.getValues();
-          let preencheu = false;
+
+          // Cidade/UF são definidas pelo CEP — ele é a fonte de verdade da localização.
+          // Sobrescrevemos sempre (não só quando vazio) para que um CEP em desacordo
+          // com o que o usuário digitou seja corrigido, em vez de passar silencioso.
+          const cidadeCep = data.localidade ?? '';
+          const ufCep = (data.uf ?? '').toUpperCase();
+          const cidadeDivergente = !!cur.cidade && !!cidadeCep
+            && cur.cidade.trim().toLowerCase() !== cidadeCep.trim().toLowerCase();
+          const ufDivergente = !!cur.uf && !!ufCep
+            && cur.uf.trim().toUpperCase() !== ufCep;
+
+          if (cidadeCep) form.setValue('cidade', cidadeCep, { shouldValidate: true });
+          if (ufCep) form.setValue('uf', ufCep, { shouldValidate: true });
+
+          // Logradouro: só auto-preenche quando vazio, pois o usuário pode ter
+          // incluído número/complemento que o ViaCEP não conhece.
+          let preencheuEndereco = false;
           if (!cur.endereco || cur.endereco.length < 3) {
             const linha = [data.logradouro, data.bairro].filter(Boolean).join(', ');
             if (linha) {
               form.setValue('endereco', linha, { shouldValidate: true });
-              preencheu = true;
+              preencheuEndereco = true;
             }
           }
-          if (!cur.cidade) {
-            form.setValue('cidade', data.localidade ?? '', { shouldValidate: true });
-            preencheu = true;
-          }
-          if (!cur.uf) {
-            form.setValue('uf', (data.uf ?? '').toUpperCase(), { shouldValidate: true });
-            preencheu = true;
-          }
-          if (preencheu) {
+
+          if (cidadeDivergente || ufDivergente) {
+            toast({
+              title: 'Cidade/UF ajustadas pelo CEP',
+              description: `O CEP informado pertence a ${[cidadeCep, ufCep].filter(Boolean).join(' - ')}. Corrigimos os campos; confira se o CEP está correto.`,
+            });
+          } else if (preencheuEndereco) {
             toast({
               title: 'Endereço preenchido automaticamente',
               description: 'Verifique os campos e corrija se necessário.',
