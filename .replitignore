@@ -1,0 +1,4 @@
+.git
+.local/state
+node_modules/.cache
+.next/cache
