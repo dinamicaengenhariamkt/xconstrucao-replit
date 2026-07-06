@@ -21,6 +21,8 @@ next-env.d.ts
 .env*.local
 
 # Claude Code (.claude/ e CLAUDE.md SÃO versionados de propósito — skills locais)
+# Skills e estado do agente — excluir do scan do Tailwind v4 (não é código da app)
+.local
 
 # Playwright
 .next-e2e

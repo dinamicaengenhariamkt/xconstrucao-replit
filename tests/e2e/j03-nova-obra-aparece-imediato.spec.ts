@@ -16,7 +16,12 @@ import { test, expect } from "@playwright/test";
  */
 
 const CONTRATANTE_EMAIL = "joao@construtora.com";
-const BASE = "http://127.0.0.1:5000";
+// Base do helper de cleanup deve apontar para o MESMO servidor que o Playwright
+// sobe (porta E2E, 3010 por padrão) — antes estava fixo em :5000 (workflow de
+// dev), então o cleanup falhava silenciosamente e as obras de teste se
+// acumulavam, estourando o limite de 1 obra aberta do plano free.
+const PORT = Number(process.env.E2E_PORT ?? 3010);
+const BASE = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 /**
  * Navega o browser para o helper GET /api/test/login-as que:

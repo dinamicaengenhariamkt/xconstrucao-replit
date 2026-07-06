@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from '@shared/components/ui/select';
 import { useUpload } from '@features/shared/hooks/use-uploads';
+import { CepInput } from '@features/perfil/components/CepInput';
+import { formatCep } from '@shared/lib/masks';
 
 const ESTADOS_BR = [
   'AC','AL','AM','AP','BA','CE','DF','ES','GO','MA',
@@ -68,6 +70,10 @@ const TIPOS_ANEXO = [
 ] as const;
 
 type TipoAnexo = (typeof TIPOS_ANEXO)[number]['value'];
+
+// Allowlist de MIME espelhada de shared/lib/storage/validation.ts (KIND_RULES).
+// O servidor continua sendo a fonte de verdade; aqui é só feedback imediato.
+const TIPOS_MIME_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
 // Cliente: forma "permissiva" para permitir salvar rascunho com poucos campos.
 // O servidor reaplica insertObraSchemaStrict (com superRefine condicional).
@@ -108,6 +114,50 @@ function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+/**
+ * Select opcional com botão "x" para limpar a seleção.
+ * O Radix Select não permite voltar ao estado vazio depois de escolher um item;
+ * este wrapper adiciona um "x" (visível só quando há valor) que reseta o campo.
+ */
+function ClearableSelect({
+  value,
+  onValueChange,
+  placeholder,
+  testId,
+  children,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  placeholder: string;
+  testId: string;
+  children: React.ReactNode;
+}) {
+  const hasValue = value !== '' && value != null;
+  return (
+    <div className="relative">
+      <Select value={value || ''} onValueChange={onValueChange}>
+        <FormControl>
+          <SelectTrigger data-testid={testId} className={hasValue ? 'pr-14' : undefined}>
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent className="max-h-72">{children}</SelectContent>
+      </Select>
+      {hasValue && (
+        <button
+          type="button"
+          onClick={() => onValueChange('')}
+          className="absolute right-8 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Limpar seleção"
+          data-testid={`${testId}-clear`}
+        >
+          <RiCloseLine className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function cleanPayload(values: FormValues, visibilidade: 'rascunho' | 'publicada') {
   const toNullable = (v?: string) => (v && v.trim() !== '' ? v : null);
   // Colunas numeric do PG chegam como string no Drizzle — mantemos string aqui.
@@ -118,7 +168,7 @@ function cleanPayload(values: FormValues, visibilidade: 'rascunho' | 'publicada'
     endereco: values.endereco.trim(),
     tipo: toNullable(values.tipo),
     descricao: toNullable(values.descricao),
-    cep: toNullable(values.cep),
+    cep: values.cep && values.cep.trim() !== '' ? formatCep(values.cep) : null,
     cidade: toNullable(values.cidade),
     uf: values.uf ? values.uf.toUpperCase() : null,
     modalidade: values.modalidade ? values.modalidade : null,
@@ -140,7 +190,6 @@ export default function NovaObraPage() {
   const { upload } = useUpload();
   const [submitting, setSubmitting] = useState<'rascunho' | 'publicada' | null>(null);
   const [staged, setStaged] = useState<StagedAnexo[]>([]);
-  const [cepLoading, setCepLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -164,72 +213,46 @@ export default function NovaObraPage() {
     },
   });
 
-  // ----- ViaCEP debounce 400ms -----
-  const cep = form.watch('cep');
-  useEffect(() => {
-    if (!cep) return;
-    const digits = cep.replace(/\D/g, '');
-    if (digits.length !== 8) return;
-    const ctrl = new AbortController();
-    setCepLoading(true);
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`https://viacep.com.br/ws/${digits}/json/`, { signal: ctrl.signal });
-        const data = await r.json();
-        if (data?.erro) {
-          form.setError('cep', { message: 'CEP não encontrado. Verifique e tente novamente.' });
-        } else if (data) {
-          form.clearErrors('cep');
-          const cur = form.getValues();
+  // ----- ViaCEP: autofill a partir do CepInput (que já faz máscara + busca) -----
+  function onCepAutofill(data: { endereco: string; bairro: string; cidade: string; estado: string }) {
+    form.clearErrors('cep');
+    const cur = form.getValues();
 
-          // Cidade/UF são definidas pelo CEP — ele é a fonte de verdade da localização.
-          // Sobrescrevemos sempre (não só quando vazio) para que um CEP em desacordo
-          // com o que o usuário digitou seja corrigido, em vez de passar silencioso.
-          const cidadeCep = data.localidade ?? '';
-          const ufCep = (data.uf ?? '').toUpperCase();
-          const cidadeDivergente = !!cur.cidade && !!cidadeCep
-            && cur.cidade.trim().toLowerCase() !== cidadeCep.trim().toLowerCase();
-          const ufDivergente = !!cur.uf && !!ufCep
-            && cur.uf.trim().toUpperCase() !== ufCep;
+    // Cidade/UF são definidas pelo CEP — ele é a fonte de verdade da localização.
+    // Sobrescrevemos sempre (não só quando vazio) para que um CEP em desacordo
+    // com o que o usuário digitou seja corrigido, em vez de passar silencioso.
+    const cidadeCep = data.cidade ?? '';
+    const ufCep = (data.estado ?? '').toUpperCase();
+    const cidadeDivergente = !!cur.cidade && !!cidadeCep
+      && cur.cidade.trim().toLowerCase() !== cidadeCep.trim().toLowerCase();
+    const ufDivergente = !!cur.uf && !!ufCep
+      && cur.uf.trim().toUpperCase() !== ufCep;
 
-          if (cidadeCep) form.setValue('cidade', cidadeCep, { shouldValidate: true });
-          if (ufCep) form.setValue('uf', ufCep, { shouldValidate: true });
+    if (cidadeCep) form.setValue('cidade', cidadeCep, { shouldValidate: true });
+    if (ufCep) form.setValue('uf', ufCep, { shouldValidate: true });
 
-          // Logradouro: só auto-preenche quando vazio, pois o usuário pode ter
-          // incluído número/complemento que o ViaCEP não conhece.
-          let preencheuEndereco = false;
-          if (!cur.endereco || cur.endereco.length < 3) {
-            const linha = [data.logradouro, data.bairro].filter(Boolean).join(', ');
-            if (linha) {
-              form.setValue('endereco', linha, { shouldValidate: true });
-              preencheuEndereco = true;
-            }
-          }
-
-          if (cidadeDivergente || ufDivergente) {
-            toast({
-              title: 'Cidade/UF ajustadas pelo CEP',
-              description: `O CEP informado pertence a ${[cidadeCep, ufCep].filter(Boolean).join(' - ')}. Corrigimos os campos; confira se o CEP está correto.`,
-            });
-          } else if (preencheuEndereco) {
-            toast({
-              title: 'Endereço preenchido automaticamente',
-              description: 'Verifique os campos e corrija se necessário.',
-            });
-          }
-        }
-      } catch {
-        // silencioso — ViaCEP é opcional; erros de rede não bloqueiam o formulário
-      } finally {
-        setCepLoading(false);
+    // Logradouro: só auto-preenche quando vazio, pois o usuário pode ter
+    // incluído número/complemento que o ViaCEP não conhece.
+    let preencheuEndereco = false;
+    if (!cur.endereco || cur.endereco.length < 3) {
+      if (data.endereco) {
+        form.setValue('endereco', data.endereco, { shouldValidate: true });
+        preencheuEndereco = true;
       }
-    }, 400);
-    return () => {
-      ctrl.abort();
-      clearTimeout(t);
-      setCepLoading(false);
-    };
-  }, [cep, form]);
+    }
+
+    if (cidadeDivergente || ufDivergente) {
+      toast({
+        title: 'Cidade/UF ajustadas pelo CEP',
+        description: `O CEP informado pertence a ${[cidadeCep, ufCep].filter(Boolean).join(' - ')}. Corrigimos os campos; confira se o CEP está correto.`,
+      });
+    } else if (preencheuEndereco) {
+      toast({
+        title: 'Endereço preenchido automaticamente',
+        description: 'Verifique os campos e corrija se necessário.',
+      });
+    }
+  }
 
   // ----- Anexos handlers -----
   function onPickFiles(files: FileList | null) {
@@ -237,6 +260,16 @@ export default function NovaObraPage() {
     const next: StagedAnexo[] = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
+      // Espelha a allowlist do servidor (validateUpload / KIND_RULES) para dar
+      // feedback imediato — SVG e outros tipos são bloqueados aqui antes do upload.
+      if (!TIPOS_MIME_PERMITIDOS.includes(f.type)) {
+        toast({
+          title: 'Tipo de arquivo não permitido',
+          description: `${f.name}: envie apenas PNG, JPG, WEBP ou PDF.`,
+          variant: 'destructive',
+        });
+        continue;
+      }
       if (f.size > 15_000_000) {
         toast({
           title: 'Arquivo grande demais',
@@ -268,8 +301,22 @@ export default function NovaObraPage() {
 
   // ----- Submit -----
   async function submit(visibilidade: 'rascunho' | 'publicada') {
-    const valid = await form.trigger();
-    if (!valid) return;
+    if (visibilidade === 'rascunho') {
+      // Rascunho exige só nome e endereço. Validamos apenas esses dois e damos
+      // feedback claro — antes o form.trigger() completo falhava em silêncio.
+      const ok = await form.trigger(['nome', 'endereco']);
+      if (!ok) {
+        toast({
+          title: 'Complete os campos obrigatórios',
+          description: 'Para salvar o rascunho, preencha o nome e o endereço da obra.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      const valid = await form.trigger();
+      if (!valid) return;
+    }
 
     const values = form.getValues();
     setSubmitting(visibilidade);
@@ -393,18 +440,16 @@ export default function NovaObraPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo</FormLabel>
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-tipo">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TIPOS_OBRA.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ClearableSelect
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                      placeholder="Selecione"
+                      testId="select-tipo"
+                    >
+                      {TIPOS_OBRA.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </ClearableSelect>
                     <FormDescription>Obrigatório para publicar.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -450,9 +495,15 @@ export default function NovaObraPage() {
                 name="cep"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>CEP * {cepLoading && <span className="ml-2 text-xs text-muted-foreground">buscando…</span>}</FormLabel>
+                    <FormLabel>CEP *</FormLabel>
                     <FormControl>
-                      <Input placeholder="00000-000" data-testid="input-cep" maxLength={9} {...field} />
+                      <CepInput
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        onAutofill={onCepAutofill}
+                        data-testid="input-cep"
+                        className="max-w-[10rem]"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -496,7 +547,7 @@ export default function NovaObraPage() {
                           <SelectValue placeholder="UF" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-72">
                         {ESTADOS_BR.map((uf) => (
                           <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                         ))}
@@ -539,18 +590,16 @@ export default function NovaObraPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Modalidade</FormLabel>
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-modalidade">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MODALIDADES.map((m) => (
-                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ClearableSelect
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                      placeholder="Selecione"
+                      testId="select-modalidade"
+                    >
+                      {MODALIDADES.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </ClearableSelect>
                     <FormDescription>Obrigatório para publicar.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -562,18 +611,16 @@ export default function NovaObraPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Materiais por</FormLabel>
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-materiais">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MATERIAIS_POR.map((m) => (
-                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ClearableSelect
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                      placeholder="Selecione"
+                      testId="select-materiais"
+                    >
+                      {MATERIAIS_POR.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </ClearableSelect>
                     <FormDescription>Obrigatório para publicar.</FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -681,7 +728,9 @@ export default function NovaObraPage() {
                   Adicionar arquivos
                 </Button>
                 <p className="text-sm text-muted-foreground">
-                  PDF ou imagens. Até 15MB cada. O envio acontece quando você salvar a obra.
+                  PDF ou imagens{' '}
+                  <span className="text-xs">(.png, .jpg, .jpeg, .webp, .pdf)</span>. Até 15MB cada.
+                  O envio acontece quando você salvar a obra.
                 </p>
               </div>
 
@@ -712,7 +761,7 @@ export default function NovaObraPage() {
                         <SelectTrigger data-testid={`select-tipo-anexo-${item.id}`}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-72">
                           {TIPOS_ANEXO.map((t) => (
                             <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                           ))}

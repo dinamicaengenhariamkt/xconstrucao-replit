@@ -1,0 +1,1 @@
+- [Tailwind v4 source scanning & @source none](tailwind-v4-source-none.md) — correct syntax to disable auto-detection and prevent .local/ corruption in v4.1.18
