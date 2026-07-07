@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { verifyEmailVerificationToken } from "@features/auth/api/auth-service";
 import { getUser, updateUserEmailVerified, ensureProfileRow } from "@features/auth/api/auth-storage";
 import { sendWelcomeEmail } from "@shared/lib/email";
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       try {
         await ensureProfileRow({ ...user, emailVerified: new Date() });
       } catch (profileErr) {
-        console.error("Falha ao garantir profile row pós-verificação:", profileErr);
+        void logError("warn", "Falha ao garantir profile row pós-verificação", { stack: (profileErr as Error)?.stack, route: "/api/auth/verify-email" });
       }
     }
 
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       try {
         await sendWelcomeEmail(user.email, user.name, user.role);
       } catch (welcomeErr) {
-        console.error("Falha ao enviar welcome email:", welcomeErr);
+        void logError("warn", "Falha ao enviar welcome email", { stack: (welcomeErr as Error)?.stack, route: "/api/auth/verify-email" });
       }
     }
 
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
       new URL("/verificar-email?success=verified", baseUrl)
     );
   } catch (error) {
-    console.error("Erro ao verificar email:", error);
+    void logError("error", "Erro ao verificar email", { stack: (error as Error)?.stack, route: "/api/auth/verify-email" });
     return NextResponse.redirect(
       new URL("/verificar-email?error=server_error", baseUrl)
     );

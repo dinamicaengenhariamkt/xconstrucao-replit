@@ -3,9 +3,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Badge } from '@shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -87,14 +87,6 @@ const STATUS_CONFIG: Record<EmpreiteiraStatus, { label: string; className: strin
   },
 };
 
-const KPI_HOVER = {
-  whileHover: {
-    scale: 1.01 as number,
-    boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-  },
-  transition: { duration: 0.2 },
-} as const;
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function LabelValue({ label, value }: { label: string; value: string }) {
@@ -123,18 +115,26 @@ export default function AdminEmpreiteiraDetailPage() {
   const handleCuradoria = useCallback(
     async (decisao: 'aprovar' | 'reprovar') => {
       try {
-        await aprovarEmpreiteira({ id, decisao });
-        toast({
-          title: decisao === 'aprovar' ? 'Empreiteira aprovada' : 'Empreiteira reprovada',
-          description:
-            decisao === 'aprovar'
-              ? 'A empreiteira agora está ativa na plataforma.'
-              : 'A empreiteira foi marcada como inativa.',
-        });
-      } catch {
+        const result = await aprovarEmpreiteira({ id, decisao });
+        if (decisao === 'aprovar' && result?.warning === 'perfil_incompleto') {
+          toast({
+            title: 'Empreiteira aprovada',
+            description: 'Aprovado. O perfil ainda está incompleto — oriente o usuário a completá-lo no primeiro acesso.',
+            className: 'border-yellow-500 bg-yellow-50 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100',
+          });
+        } else {
+          toast({
+            title: decisao === 'aprovar' ? 'Empreiteira aprovada' : 'Empreiteira reprovada',
+            description:
+              decisao === 'aprovar'
+                ? 'A empreiteira agora está ativa na plataforma.'
+                : 'A empreiteira foi marcada como inativa.',
+          });
+        }
+      } catch (err) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível atualizar a curadoria.',
+          description: err instanceof Error ? err.message : 'Não foi possível atualizar a curadoria.',
           variant: 'destructive',
         });
       }
@@ -381,16 +381,13 @@ export default function AdminEmpreiteiraDetailPage() {
       {/* ③ KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi) => (
-          <motion.div
+          <LuminousHoverCard
             key={kpi.label}
-            className="rounded-3xl overflow-visible"
-            {...KPI_HOVER}
+            className="rounded-3xl"
+            cardClassName="rounded-3xl"
+            testId={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
           >
-            <Card
-              className="h-full rounded-3xl"
-              data-testid={`kpi-detail-${kpi.label.toLowerCase().replace(/\s/g, '-')}`}
-            >
-              <CardContent className="p-6">
+              <CardContent className="relative z-10 p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0 pr-3">
                     <p className="text-sm text-muted-foreground font-medium">{kpi.label}</p>
@@ -404,8 +401,7 @@ export default function AdminEmpreiteiraDetailPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          </motion.div>
+          </LuminousHoverCard>
         ))}
       </div>
 

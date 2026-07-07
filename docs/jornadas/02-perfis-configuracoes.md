@@ -1,7 +1,7 @@
 # Jornada — Perfis & Configurações
 
-> Status: revisão | Prioridade: média | Wave: 3
-> Última atualização: 2026-05-25
+> Status: pronto | Prioridade: média | Wave: 3
+> Última atualização: 2026-06-02
 
 ## 1. Contexto & Objetivo
 Permitir que cada persona mantenha seus dados (PF/PJ, contato, especialidade no caso do empreiteiro, foto, preferências de notificação) e gerencie senha/sessão. É o "centro do usuário" — alimenta apresentação no marketplace (J04) e contato em obras (J05/J08/J13).
@@ -55,13 +55,19 @@ Existentes: `users` (name, email, phone, image, avatarUrl), `clientes` (cnpj_cpf
 - [x] Zona de atuação do empreiteiro (UFs + cidades) editável + flag `naMinhaZona` server-side no marketplace _(Task #87)_
 - [x] Filtro "Só na minha zona" + ordenação por zona match no marketplace (prioriza obras compatíveis) _(Task #93)_
 - [x] Cidades da zona de atuação validadas contra base IBGE + match SQL accent-insensitive (sem duplicata "São Paulo"/"Sao Paulo") _(Task #95)_
-- [ ] Excluir conta / desativar (soft delete) — apenas admin via aba Usuários hoje (Task #20). Self-service ainda não existe.
+- [x] **Desativar conta (self-service)** _(2026-06-02 — `POST /api/auth/desativar-conta` com confirmação de senha + soft-delete `users.ativo` + revogação de sessões; botão na aba Privacidade via [ContaSection](../../features/perfil/components/ContaSection.tsx). Login passa a recusar com `ACCOUNT_DISABLED`.)_
+- [x] **Preferências respeitadas em TODOS os canais** _(2026-06-02 — helper único [features/notificacoes/preferences.ts](../../features/notificacoes/preferences.ts) plugado nos pontos reais de envio de email: decisão de candidatura → empreiteiro (`email_contrato`, chave que a persona destinatária controla) e pagamento quitado → empreiteiro (`email_medicao`). In-app continua sempre criada; o opt-out vale só pro email. Medição/disputa/chat são in-app puro hoje — quando ganharem email, cruzam o mesmo helper.)_
+- [x] **Trocar email (self-service)** _(2026-06-02 — `POST /api/auth/trocar-email` (senha + envia link ao novo endereço) → `GET /api/auth/confirmar-novo-email` aplica a troca. Reusa o token de verificação de email, que carrega o novo endereço no payload. UI em [ContaSection](../../features/perfil/components/ContaSection.tsx); feedback em `/verificar-email?success=email_trocado`.)_
+- [x] **Export de dados (LGPD)** _(2026-06-02 — `GET /api/auth/exportar-dados` devolve JSON com conta (sem hash), preferências, perfil de domínio e registros originados (obras/candidaturas); download via [ContaSection](../../features/perfil/components/ContaSection.tsx).)_
+- [~] **2FA/MFA** → **movido para [J22 — Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md)** _(2026-06-02 — feature do zero que mexe no caminho crítico de login; não era critério de aceite original da J02. Extraída para jornada própria pra não inflar a J02.)_
 
 ## 10. Critérios de aceite
 1. Editar nome/foto de contratante → recarregar → ver mudança no header.
 2. Editar especialidade de empreiteiro → ver mudança no card do marketplace (J04).
 3. Trocar senha → logout → login com a nova.
-4. Desligar notificação de "candidatura recebida" → criar candidatura → confirmar que não veio email/in-app.
+4. Desligar notificação de "candidatura recebida" → criar candidatura → confirmar que não veio email/in-app. _(hoje falha: só `nova-obra-zona` respeita a preferência)_
+5. Desativar a própria conta (confirmando senha) → login passa a recusar → admin vê a conta como inativa.
+6. Trocar o próprio email → receber link de confirmação → só após confirmar o email muda.
 
 ## 11. Riscos / Pontos de atenção
 - Storage de avatar: decidir antes provider e tamanho máximo.
@@ -82,4 +88,7 @@ Existentes: `users` (name, email, phone, image, avatarUrl), `clientes` (cnpj_cpf
 - 2026-05-25 (Task #41): J04 quer filtrar marketplace por `especialidade` do empreiteiro e por `zonaAtuacao` (raio/UFs cobertos), mas hoje `empreiteiras` só tem `especialidade` text + `especialidades text[]` + `raioKm` (uma cidade-base + raio). Faltam colunas tipo `zonaAtuacaoUfs text[]` e `zonaAtuacaoCidades text[]` (ou índice geo) pra o match marketplace ser server-side. Por ora J04 vai filtrar só por UF/cidade da obra; bater contra perfil do empreiteiro fica como evolução desta jornada. _Resolvido parcialmente (Task #87): colunas `zonaAtuacaoUfs`/`zonaAtuacaoCidades` adicionadas + UI editável + flag `naMinhaZona` no payload do marketplace. Geo/raio em km segue aberto._
 - 2026-05-26 (Task #87): Marketplace hoje só **exibe** o selo "Na minha zona" — falta toggle de filtro "só mostrar obras na minha zona" + ordenação que empurra zone-match pro topo. Decisão consciente da Task #87 (mantém payload e UI mínimos); evolução natural quando J04 abrir filtros avançados. _Resolvido (Task #93): toggle "Só na minha zona" em `/empreiteiro/novas-obras` envia `?na_minha_zona=true` para `/api/obras`; ordenação padrão passa a priorizar `naMinhaZona DESC` no SQL quando o perfil tem zona configurada; empty-state com link para `/empreiteiro/configuracoes` quando o toggle está ligado sem zona configurada._
 - 2026-05-26 (Task #87): Cidade é tag-input livre (sem normalização) — "São Paulo" e "Sao Paulo" contam como cidades diferentes. Match no SQL faz `LOWER(TRIM())` mas não remove acentos. Backlog: usar dicionário IBGE (mesma fonte que J03 já adota no autocomplete de obra) para fechar o input. Notificação "nova obra na sua zona" continua sendo J13. _Resolvido (Task #95): input migrado para autocomplete IBGE (`GET /api/cidades` via `shared/lib/ibge-municipios.ts`), PATCH `/api/perfil/empreiteiro` valida zonaAtuacaoCidades contra a base IBGE (422 em cidade desconhecida) e canonicaliza o nome com acento; match SQL em `/api/obras` agora usa `TRANSLATE()` pra ser accent-insensitive em ambos os lados. J03 na verdade nunca teve autocomplete IBGE (era ViaCEP), mas a nova fonte é reaproveitável._
+- **2026-06-02 (levantamento `/jornada`):** auditoria de código confirmou que **só o dispatcher `nova-obra-zona` lê `user_preferencias`** — os de candidatura, medição, pagamento e chat enviam email sem checar preferência. É a violação mais séria da J02 (critério de aceite §4 falha hoje). Entrou no escopo "matar pendências": uniformizar o check em todos os dispatchers.
+- **2026-06-02 (levantamento `/jornada`):** definido o escopo final pra fechar a J02: desativar conta self-service, preferências em todos os canais, trocar email self-service (com re-verificação), Export LGPD e 2FA. Os dois últimos não eram critério de aceite original — entraram por decisão de produto.
+- **2026-06-02 (fechamento):** 4 dos 5 itens entregues (ver §9). 2FA extraído para [J22](22-autenticacao-forte-2fa.md). Sobre o item de preferências: a auditoria confirmou que os únicos pontos que efetivamente enviam email hoje são candidatura e pagamento-quitado — ambos agora gateados pelo helper [preferences.ts](../../features/notificacoes/preferences.ts). Medição, disputa e chat criam só in-app (sem email no MVP), então não há email a suprimir neles; o helper já está pronto pra quando ganharem. Status promovido `revisão → pronto`.
 - 2026-05-26 (Task #95): Sem extensão `unaccent` no Postgres — accent-insensitivity feita via `TRANSLATE()` com lista explícita de acentos PT-BR. Funciona, mas se aparecer caractere fora dessa lista (ex.: cedilha maiúsculo Ç em obra cadastrada com grafia rara), pode escapar. Migrar pra `CREATE EXTENSION unaccent` quando a infra permitir (Replit/Neon costuma aceitar). Cidade ambígua entre UFs (ex.: Campinas/SP vs Campinas/MG) ainda é gravada só pelo nome — UI mostra "Nome — UF" pra desambiguar, mas a coluna persiste só "Nome". Backlog: armazenar `{nome, uf}` quando essa diferença importar (não bloqueia nenhuma jornada hoje).

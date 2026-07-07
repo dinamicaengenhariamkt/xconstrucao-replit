@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type { AtividadeTipo } from '@shared/db/schema';
 
 export interface AtividadeFeedItem {
@@ -46,6 +46,22 @@ export function useAtividadesRecentes(limit = 10): UseQueryResult<AtividadesPage
     queryKey: ['atividades', 'recentes', limit],
     queryFn: () => fetchAtividades({ limit }),
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Feed completo de atividades do usuário, paginado por cursor (página dedicada
+ * "Atividades"). Acumula as páginas — o consumidor usa `fetchNextPage`/`hasNextPage`
+ * para carregar mais e pagina o conjunto acumulado client-side. Backend já aplica
+ * o visibility gate por persona.
+ */
+export function useAtividadesFeed(limit = 50) {
+  return useInfiniteQuery({
+    queryKey: ['atividades', 'feed', limit],
+    queryFn: ({ pageParam }) => fetchAtividades({ limit, cursor: pageParam ?? undefined }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    staleTime: 30_000,
   });
 }
 

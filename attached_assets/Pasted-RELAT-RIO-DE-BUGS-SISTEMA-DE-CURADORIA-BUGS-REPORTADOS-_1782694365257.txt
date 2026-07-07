@@ -1,0 +1,70 @@
+RELATÓRIO DE BUGS - SISTEMA DE CURADORIA
+
+BUGS REPORTADOS:
+
+1. VALIDAÇÃO DE CEP (Guilherme Henrique - 22/06):
+
+• ❌ CEP em desacordo com endereço não é validado (aceita qualquer CEP)
+• ❌ Campo CEP sem asterisco de obrigatório
+• ❌ Obra cadastrada não aparece na lista
+
+2. ERRO AO CADASTRAR OBRA (Teste Ramon):
+
+• ✅ Sistema aceita cadastro inicial
+• ❌ Obra não aparece na lista "Minhas Obras"
+• ❌ Ao tentar cadastrar novamente: "Você atingiu o limite do seu plano (1 obra)"
+• ❌ Contradição: limite atingido, mas lista vazia
+
+3. ERRO AO APROVAR CURADORIA (ADM):
+
+• ✅ Obra aparece no painel ADM aguardando aprovação
+• ❌ Ao clicar "Aprovar" → ERRO: "Não foi possível atualizar a curadoria"
+• ✅ Ao clicar "Reprovar" → FUNCIONA
+Afeta:
+
+• ❌ Aprovação de obras
+• ❌ Aprovação de empreiteiros
+• ❌ Curadoria de clientes
+
+EVIDÊNCIAS (SCREENSHOTS):
+
+Imagem 1:
+
+• Perfil: Joaozinho (ipa_iocante@hotmail.com, CPF, tel: 11962234562)
+• Status: Ativo
+• Obras Ativas: 1
+• Volume Financeiro: R$ 350.000,00
+• Obras Concluídas: 0
+• ERRO VERMELHO: "Erro - Não foi possível atualizar a curadoria."
+Imagem 2:
+
+• Mesma tela
+• Foco no erro vermelho: "Erro - Não foi possível atualizar a curadoria."
+• Data/hora: 13:27, 22/06/2026
+
+TRANSCRIÇÕES DOS ÁUDIOS:
+
+Áudio 1:
+"Eu tô começando os testes aqui e eu vou anotando os pontos, tá, Ramon? Vai ignorando e depois você pega de uma vez, não precisa ir respondendo tudo, não."
+
+Áudio 2:
+"Eu tento cadastrar novamente, ele fala que eu já atingi o limite do meu plano, que é de uma obra, mas nas minhas obras não aparece nada, não está aparecendo a obra cadastrada."
+
+Áudio 3:
+"Eu entrei no ADM para ver essa questão da obra. Aparece aqui lançada a obra, pede para eu poder aprovar. Quando eu aprovar, fala que eu não consigo, dá esse erro aí, ó."
+
+Áudio 4:
+"Tá bom, eu tentei... eu tô pensando aprovar e reprovar. Eu cliquei em reprovar num dos dois perfis, tá? E o reprovar funcionou. Agora o aprovar não tava funcionando — nem para o empreiteiro, eu não consigo aprovar o empreiteiro, e não tô conseguindo aprovar a obra também, tá? Então, cliente, eu não tô conseguindo fazer a curadoria do cliente aí. Obras tá com visibilidade... tá como... não sei se é isso."
+
+
+RESUMO - BUGS CRÍTICOS:
+
+| Bug                                                  | Severidade | Status |
+| ---------------------------------------------------- | ---------- | ------ |
+| CEP sem validação                                    | ⚠️ Média   | Aberto |
+| CEP sem asterisco obrigatório                        | ⚠️ Baixa   | Aberto |
+| Obra cadastrada não aparece                          | 🔴 Alta    | Aberto |
+| Erro ao aprovar curadoria (obra/empreiteiro/cliente) | 🔴 CRÍTICA | Aberto |
+| Reprovar funciona, aprovar não                       | 🔴 CRÍTICA | Aberto |
+
+🚨 PRIORIDADE: Erro de aprovação de curadoria bloqueia operação (não consegue aprovar nada).

@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Input } from '@shared/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/components/ui/tabs';
 import {
@@ -40,21 +40,13 @@ import { useAuthStore } from '@features/auth/store/auth-store';
 import { VISIBILIDADE_LABEL_MAP } from '@features/admin/obras/api/admin-obra-detalhe-service';
 import type { AdminObraMedicao, AdminObraHistoricoItem, ObraMedicaoStatus } from '@features/admin/obras/types';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-import { HealthCard, HealthDetailPanel, getMockHealth } from '@features/shared/health';
+import { HealthCard, HealthDetailPanel, useObraHealth } from '@features/shared/health';
 import { RiHeartPulseLine } from 'react-icons/ri';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
 import { RangeDateInput } from '@features/shared/components/filters/RangeDateInput';
-
-const KPI_HOVER = {
-  whileHover: {
-    scale: 1.01 as number,
-    boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-  },
-  transition: { duration: 0.2 },
-} as const;
 
 type ObraStatus = 'em_andamento' | 'concluida' | 'pausada' | 'cancelada';
 
@@ -582,6 +574,7 @@ function HistoricoTab({ historico }: { historico: AdminObraHistoricoItem[] }) {
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading } = useAdminObraDetalhe(id);
+  const { data: obraHealth } = useObraHealth(id);
   const obra = data?.detalhe;
   const visibilidade = data?.visibilidade;
   const anexos = data?.anexos ?? [];
@@ -640,7 +633,7 @@ export default function AdminObraDetalhePage() {
     obra.valorTotal > 0
       ? Math.min(100, Math.max(0, Math.round((obra.valorPago / obra.valorTotal) * 100)))
       : 0;
-  const health = getMockHealth(obra.id);
+  const health = obraHealth ?? null;
 
   const kpis = [
     {
@@ -772,14 +765,13 @@ export default function AdminObraDetalhePage() {
       </Card>
 
       {/* Health summary card */}
-      <HealthCard health={health} />
+      {health && <HealthCard health={health} />}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
-          <motion.div key={kpi.label} {...KPI_HOVER}>
-            <Card className="rounded-xl border border-border-light dark:border-gray-800 shadow-sm h-full">
-              <CardContent className="p-5 flex flex-col gap-3">
+          <LuminousHoverCard key={kpi.label} cardClassName="shadow-sm">
+              <CardContent className="relative z-10 p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                     {kpi.label}
@@ -795,8 +787,7 @@ export default function AdminObraDetalhePage() {
                   <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>
                 </div>
               </CardContent>
-            </Card>
-          </motion.div>
+          </LuminousHoverCard>
         ))}
       </div>
 
@@ -858,7 +849,7 @@ export default function AdminObraDetalhePage() {
         </TabsList>
 
         <TabsContent value="saude" className="mt-4">
-          <HealthDetailPanel health={health} />
+          {health && <HealthDetailPanel health={health} />}
         </TabsContent>
 
         <TabsContent value="financeiro" className="mt-4">

@@ -23,6 +23,7 @@ import {
   RiTeamLine,
 } from 'react-icons/ri';
 import { UsuariosTab } from '@features/admin/components/UsuariosTab';
+import { TwoFactorSection } from '@features/auth/components/TwoFactorSection';
 import { useUser } from '@features/auth/store/auth-store';
 import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
@@ -36,6 +37,7 @@ import { Checkbox } from '@shared/components/ui/checkbox';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
 import { useAdminConfig, useUpdateAdminConfig } from '@features/admin/hooks/use-admin-config';
+import { ConfirmImpactDialog } from '@features/admin/configuracoes/components/ConfirmImpactDialog';
 import { useSessoes, useRevokeSessao, usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
 import { usePerfilAdmin, useUpdatePerfilAdmin } from '@features/perfil/hooks/use-perfil';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -406,6 +408,8 @@ function SecaoPerfil() {
           </div>
         </CardContent>
       </Card>
+
+      <TwoFactorSection />
     </div>
   );
 }
@@ -694,8 +698,28 @@ function SecaoPlataforma() {
     }
   }, [config]);
 
+  const [confirmManutencao, setConfirmManutencao] = useState(false);
+  // J30 — confirmação ao DESLIGAR cadastro por perfil (impede onboarding novo).
+  const [confirmPerfil, setConfirmPerfil] = useState<null | 'empreiteiras' | 'clienteLogin'>(null);
+
   const toggle = (key: string) => (v: boolean) =>
     setFeatures((p) => ({ ...p, [key]: v }));
+
+  // Bloqueio por perfil: ao DESLIGAR (impede novos cadastros), confirma; ao ligar, direto.
+  const handlePerfilToggle = (key: 'empreiteiras' | 'clienteLogin') => (v: boolean) => {
+    if (!v) setConfirmPerfil(key);
+    else setFeatures((p) => ({ ...p, [key]: true }));
+  };
+
+  // Modo manutenção: ao LIGAR, exige confirmação reforçada (impacta todos os
+  // usuários). Ao desligar, aplica direto.
+  const handleManutencaoToggle = (v: boolean) => {
+    if (v) {
+      setConfirmManutencao(true);
+    } else {
+      setFeatures((p) => ({ ...p, manutencao: false }));
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -728,38 +752,49 @@ function SecaoPlataforma() {
             onCheckedChange={toggle('faq')}
           />
           <SwitchRow
-            label="Cadastro de empreiteiras"
-            description="Habilita o cadastro e acesso de novas empreiteiras."
-            checked={features.empreiteiras}
-            onCheckedChange={toggle('empreiteiras')}
-          />
-          <SwitchRow
-            label="Acesso de clientes"
-            description="Permite login e uso da plataforma pelos clientes contratantes."
-            checked={features.clienteLogin}
-            onCheckedChange={toggle('clienteLogin')}
-          />
-          <SwitchRow
-            label="Relatórios exportáveis"
-            description="Permite exportar dados em CSV e PDF pela interface."
-            checked={features.relatorios}
-            onCheckedChange={toggle('relatorios')}
-          />
-          <SwitchRow
             label="Modo manutenção"
-            description="Exibe tela de manutenção para todos os usuários finais."
+            description="Leva contratantes e empreiteiros para a tela de manutenção (admins continuam com acesso). A landing pública permanece no ar."
             checked={features.manutencao}
-            onCheckedChange={toggle('manutencao')}
+            onCheckedChange={handleManutencaoToggle}
             danger
           />
           {features.manutencao && (
             <div className="mt-3 flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20">
               <RiAlertLine className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
               <p className="text-xs text-red-700 dark:text-red-400">
-                O modo manutenção está ativo. Todos os usuários (exceto admins) verão a tela de manutenção ao tentar acessar a plataforma.
+                O modo manutenção está ativo. Contratantes e empreiteiros verão a tela de manutenção ao tentar acessar suas áreas. Salve para aplicar.
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* J30 — controles de acesso por perfil + relatórios (antes ocultos). */}
+      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <CardHeader className="p-6 pb-2">
+          <SectionTitle>Acesso e cadastro</SectionTitle>
+        </CardHeader>
+        <CardContent className="px-6 pb-4 pt-0">
+          <SwitchRow
+            label="Permitir cadastro de empreiteiros"
+            description="Desligar impede NOVOS cadastros de empreiteiro. Contas existentes continuam acessando normalmente."
+            checked={features.empreiteiras}
+            onCheckedChange={handlePerfilToggle('empreiteiras')}
+            danger
+          />
+          <SwitchRow
+            label="Permitir cadastro de contratantes"
+            description="Desligar impede NOVOS cadastros de contratante. Contas existentes continuam acessando normalmente."
+            checked={features.clienteLogin}
+            onCheckedChange={handlePerfilToggle('clienteLogin')}
+            danger
+          />
+          <SwitchRow
+            label="Relatórios exportáveis"
+            description="Libera a exportação de relatórios para o admin (quando disponível)."
+            checked={features.relatorios}
+            onCheckedChange={toggle('relatorios')}
+          />
         </CardContent>
       </Card>
 
@@ -769,6 +804,32 @@ function SecaoPlataforma() {
           {saving ? 'Salvando...' : 'Salvar configurações'}
         </Button>
       </div>
+
+      <ConfirmImpactDialog
+        open={confirmPerfil !== null}
+        onOpenChange={(o) => !o && setConfirmPerfil(null)}
+        title="Bloquear novos cadastros deste perfil?"
+        description="Novos usuários deste perfil não conseguirão se cadastrar enquanto isto estiver desligado. Quem já tem conta continua acessando. Salve para aplicar."
+        confirmLabel="Sim, bloquear novos cadastros"
+        destructive
+        onConfirm={() => {
+          if (confirmPerfil) setFeatures((p) => ({ ...p, [confirmPerfil]: false }));
+          setConfirmPerfil(null);
+        }}
+      />
+
+      <ConfirmImpactDialog
+        open={confirmManutencao}
+        onOpenChange={setConfirmManutencao}
+        title="Ativar modo manutenção?"
+        description="Isso vai impedir o acesso de TODOS os contratantes e empreiteiros às suas áreas — eles verão a tela de manutenção. Admins continuam com acesso e a landing pública permanece no ar. Tem certeza?"
+        confirmLabel="Sim, ativar manutenção"
+        destructive
+        onConfirm={() => {
+          setFeatures((p) => ({ ...p, manutencao: true }));
+          setConfirmManutencao(false);
+        }}
+      />
     </div>
   );
 }
@@ -782,39 +843,34 @@ function SecaoSeguranca() {
   const { data: config, isLoading } = useAdminConfig();
   const { mutateAsync: updateConfig, isPending: saving } = useUpdateAdminConfig();
   const [politica, setPolitica] = useState({
-    timeout: '30',
-    maxTentativas: '5',
     senhaMinima: '8',
-  });
-  const [doisFatores, setDoisFatores] = useState({
-    admins: false,
-    todos: false,
+    timeout: '',
+    maxTentativas: '5',
   });
 
   useEffect(() => {
     const seg = (config?.seguranca ?? {}) as Record<string, unknown>;
     if (Object.keys(seg).length === 0) return;
     setPolitica({
-      timeout: String(seg.timeout ?? '30'),
-      maxTentativas: String(seg.maxTentativas ?? '5'),
       senhaMinima: String(seg.senhaMinima ?? '8'),
-    });
-    setDoisFatores({
-      admins: Boolean(seg.doisFatoresAdmins ?? false),
-      todos: Boolean(seg.doisFatoresTodos ?? false),
+      timeout: seg.timeout != null ? String(seg.timeout) : '',
+      maxTentativas: String(seg.maxTentativas ?? '5'),
     });
   }, [config]);
 
   const handleSave = async () => {
     try {
+      // J30: senhaMinima (J26) + timeout de sessão + máx tentativas têm efeito real.
+      // timeout vazio = sem override (mantém 7/30 dias). 2FA obrigatório segue fora
+      // (próxima fase). Preserva quaisquer outras chaves já persistidas.
+      const segAtual = (config?.seguranca ?? {}) as Record<string, unknown>;
       await updateConfig({
         chave: 'seguranca',
         valor: {
-          timeout: politica.timeout,
-          maxTentativas: politica.maxTentativas,
+          ...segAtual,
           senhaMinima: politica.senhaMinima,
-          doisFatoresAdmins: doisFatores.admins,
-          doisFatoresTodos: doisFatores.todos,
+          timeout: politica.timeout, // "" → reader ignora (mantém default)
+          maxTentativas: politica.maxTentativas,
         },
       });
       toast({ title: 'Políticas atualizadas', description: 'As configurações de segurança foram salvas.' });
@@ -822,8 +878,6 @@ function SecaoSeguranca() {
       toast({ title: 'Erro ao salvar', description: err instanceof Error ? err.message : 'Tente novamente.', variant: 'destructive' });
     }
   };
-
-  const doisFatoresAtivo = doisFatores.admins || doisFatores.todos;
 
   if (isLoading) {
     return <div className="flex flex-col gap-6"><Skeleton className="h-64 w-full rounded-xl" /><Skeleton className="h-48 w-full rounded-xl" /></div>;
@@ -834,41 +888,16 @@ function SecaoSeguranca() {
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center gap-2">
-            <RiTimeLine className="w-4 h-4 text-gray-400" />
-            <SectionTitle>Política de acesso</SectionTitle>
+            <RiLockPasswordLine className="w-4 h-4 text-gray-400" />
+            <SectionTitle>Política de senha</SectionTitle>
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-4 flex flex-col gap-5">
-          <FieldRow label="Timeout de sessão" description="Tempo sem atividade até expirar a sessão do usuário.">
-            <SelectField
-              value={politica.timeout}
-              onChange={(v) => setPolitica((p) => ({ ...p, timeout: v }))}
-              options={[
-                { label: '15 minutos', value: '15' },
-                { label: '30 minutos', value: '30' },
-                { label: '1 hora', value: '60' },
-                { label: '4 horas', value: '240' },
-                { label: '8 horas', value: '480' },
-              ]}
-            />
-          </FieldRow>
-          <FieldRow label="Tentativas máximas de login" description="Conta é bloqueada temporariamente após exceder este limite.">
-            <SelectField
-              value={politica.maxTentativas}
-              onChange={(v) => setPolitica((p) => ({ ...p, maxTentativas: v }))}
-              options={[
-                { label: '3 tentativas', value: '3' },
-                { label: '5 tentativas', value: '5' },
-                { label: '10 tentativas', value: '10' },
-              ]}
-            />
-          </FieldRow>
-          <FieldRow label="Tamanho mínimo de senha" description="Exigido no cadastro e na troca de senha.">
+          <FieldRow label="Tamanho mínimo de senha" description="Exigido no cadastro e na troca de senha (o mínimo do sistema é 8; valores menores são ignorados).">
             <SelectField
               value={politica.senhaMinima}
               onChange={(v) => setPolitica((p) => ({ ...p, senhaMinima: v }))}
               options={[
-                { label: '6 caracteres', value: '6' },
                 { label: '8 caracteres', value: '8' },
                 { label: '10 caracteres', value: '10' },
                 { label: '12 caracteres', value: '12' },
@@ -878,36 +907,55 @@ function SecaoSeguranca() {
         </CardContent>
       </Card>
 
+      {/* J30 — controles de sessão/login (antes ocultos). */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <RiLockPasswordLine className="w-4 h-4 text-gray-400" />
-              <SectionTitle>Autenticação em dois fatores (2FA)</SectionTitle>
-            </div>
-            <Badge className={cn(
-              'border-0 text-xs',
-              doisFatoresAtivo
-                ? 'bg-[#22846D]/10 text-[#22846D]'
-                : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
-            )}>
-              {doisFatoresAtivo ? 'Ativo' : 'Não configurado'}
-            </Badge>
-          </div>
+          <SectionTitle>Sessão e login</SectionTitle>
         </CardHeader>
-        <CardContent className="px-6 pb-4 pt-0">
-          <SwitchRow
-            label="Exigir 2FA para admins"
-            description="Todos os administradores deverão configurar o segundo fator."
-            checked={doisFatores.admins}
-            onCheckedChange={(v) => setDoisFatores((p) => ({ ...p, admins: v }))}
-          />
-          <SwitchRow
-            label="Exigir 2FA para todos os usuários"
-            description="Clientes e empreiteiras também precisarão do segundo fator."
-            checked={doisFatores.todos}
-            onCheckedChange={(v) => setDoisFatores((p) => ({ ...p, todos: v }))}
-          />
+        <CardContent className="p-6 pt-4 flex flex-col gap-5">
+          <FieldRow
+            label="Timeout de sessão"
+            description="Tempo de inatividade até a sessão expirar. 'Padrão do sistema' mantém o comportamento atual (7–30 dias) — não encurta a sessão de ninguém."
+          >
+            <SelectField
+              value={politica.timeout}
+              onChange={(v) => setPolitica((p) => ({ ...p, timeout: v }))}
+              options={[
+                { label: 'Padrão do sistema', value: '' },
+                { label: '30 minutos', value: '30' },
+                { label: '1 hora', value: '60' },
+                { label: '4 horas', value: '240' },
+                { label: '12 horas', value: '720' },
+                { label: '1 dia', value: '1440' },
+              ]}
+            />
+          </FieldRow>
+          <FieldRow
+            label="Máximo de tentativas de login"
+            description="Após esse número de falhas no mesmo IP (janela de 15 min), novas tentativas são temporariamente bloqueadas. O mínimo efetivo é 3."
+          >
+            <SelectField
+              value={politica.maxTentativas}
+              onChange={(v) => setPolitica((p) => ({ ...p, maxTentativas: v }))}
+              options={[
+                { label: '5 tentativas', value: '5' },
+                { label: '10 tentativas', value: '10' },
+                { label: '15 tentativas', value: '15' },
+                { label: '20 tentativas', value: '20' },
+              ]}
+            />
+          </FieldRow>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
+        <CardContent className="px-6 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Em breve</p>
+          <p className="mt-1 text-sm text-gray-500">
+            O <strong>2FA obrigatório</strong> (para admins ou todos) exige um fluxo de setup guiado
+            para não trancar ninguém e será liberado em uma próxima fase. O 2FA individual já está
+            disponível na aba <strong>Segurança</strong> do seu perfil.
+          </p>
         </CardContent>
       </Card>
 
@@ -1032,7 +1080,6 @@ function SecaoIntegracoes() {
   const [regenerating, setRegenerating] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState<Set<WebhookEventId>>(new Set());
-  const [testingWebhook, setTestingWebhook] = useState(false);
 
   useEffect(() => {
     const integ = (config?.integracoes ?? {}) as Record<string, unknown>;
@@ -1067,15 +1114,6 @@ function SecaoIntegracoes() {
     } finally {
       setRegenerating(false);
     }
-  };
-
-  const handleTestWebhook = () => {
-    if (!webhookUrl) return;
-    setTestingWebhook(true);
-    setTimeout(() => {
-      setTestingWebhook(false);
-      toast({ title: 'Webhook testado', description: 'Evento de teste disparado.' });
-    }, 800);
   };
 
   const toggleEvent = (eventId: WebhookEventId) => {
@@ -1174,7 +1212,9 @@ function SecaoIntegracoes() {
         </CardContent>
       </Card>
 
-      {/* Webhooks */}
+      {/* Webhooks — OCULTO em stand-by até haver demanda/integração externa real.
+          A config (webhookUrl/webhookEvents) continua persistindo; só a UI está escondida.
+          Reativar removendo este comentário quando for implementar o disparo real.
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">
           <div className="flex items-center justify-between">
@@ -1190,28 +1230,21 @@ function SecaoIntegracoes() {
           </div>
         </CardHeader>
         <CardContent className="p-6 pt-2 flex flex-col gap-5">
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-dashed border-gray-200 dark:border-gray-800 p-3">
+            <RiAlertLine className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+            <p className="text-xs text-gray-500">
+              O disparo real de webhooks ainda não está ativo — você pode salvar a URL e os eventos,
+              mas eles passarão a disparar quando a integração for liberada (J30). Não há envio de
+              teste por enquanto.
+            </p>
+          </div>
           <FieldRow label="URL do webhook" description="Endpoint que receberá as notificações de eventos da plataforma.">
-            <div className="flex gap-2">
-              <Input
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                placeholder="https://sua-api.com/webhook"
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestWebhook}
-                disabled={!webhookUrl || testingWebhook}
-                className="shrink-0"
-              >
-                {testingWebhook ? (
-                  <RiRefreshLine className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Testar'
-                )}
-              </Button>
-            </div>
+            <Input
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+              placeholder="https://sua-api.com/webhook"
+              className="flex-1"
+            />
           </FieldRow>
 
           <div>
@@ -1242,6 +1275,7 @@ function SecaoIntegracoes() {
           </div>
         </CardContent>
       </Card>
+      */}
 
       {/* Documentação */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">

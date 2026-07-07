@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { getUser } from "@features/auth/api/auth-storage";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
+import { getUserRoles } from "@features/auth/api/auth-utils";
 import { readImpersonationFromRequest } from "@features/auth/api/impersonation";
 
 export async function GET(request: NextRequest) {
@@ -42,9 +44,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // J23 — multi-role: papéis efetivos do viewer (primário + aditivos).
+    const roles = await getUserRoles(viewer.id);
+
     const { password: _pw, ...userData } = viewer;
     return NextResponse.json({
       ...userData,
+      roles,
       mustChangePassword: viewer.mustChangePassword ?? false,
       ativo: viewer.ativo ?? true,
       canManageUsers:
@@ -52,7 +58,7 @@ export async function GET(request: NextRequest) {
       impersonation,
     });
   } catch (error) {
-    console.error("/api/auth/me error:", error);
+    void logError("error", "/api/auth/me error", { stack: (error as Error)?.stack, route: "/api/auth/me" });
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
   }
 }

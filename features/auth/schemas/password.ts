@@ -12,6 +12,11 @@ export interface PasswordPolicyContext {
   email?: string;
   name?: string;
   username?: string;
+  /**
+   * Tamanho mínimo configurável (J26 — `seguranca.senhaMinima`). Nunca reduz o
+   * baseline: o efetivo é `max(8, minLength)`. Settings só podem REFORÇAR.
+   */
+  minLength?: number;
 }
 
 export interface PasswordPolicyResult {
@@ -27,8 +32,10 @@ export function evaluatePasswordPolicy(
   password: string,
   ctx: PasswordPolicyContext = {}
 ): PasswordPolicyResult {
-  if (password.length < 8) {
-    return { valid: false, message: "A senha deve ter no mínimo 8 caracteres." };
+  // Piso de 8 sempre; settings (J26) só reforçam, nunca enfraquecem.
+  const minLength = Math.max(8, ctx.minLength ?? 8);
+  if (password.length < minLength) {
+    return { valid: false, message: `A senha deve ter no mínimo ${minLength} caracteres.` };
   }
 
   let categories = 0;

@@ -61,8 +61,8 @@ flowchart LR
 - [x] Remover flag/mocks do módulo de anúncios (deletados; hooks → API real)
 - [x] Receita de anunciante alimenta J09 (escopo plataforma, categoria `anuncio`, idempotente)
 - [x] `AdSidebarSlot` consome zonas reais (`useZonasAnuncio` → `/api/admin/anuncios/zonas`)
-- [ ] Plug físico do slot em landing + dashboards (UI — backend e componente prontos)
-- [ ] Tracking de impressão via IntersectionObserver no slot (hoje endpoint pronto; falta disparar do componente)
+- [x] Plug físico do slot em landing + dashboards _(2026-06 — `AdSidebarSlot` em [app/page.tsx](../../app/page.tsx), [app/contratante/dashboard/page.tsx](../../app/contratante/dashboard/page.tsx), [app/empreiteiro/dashboard/page.tsx](../../app/empreiteiro/dashboard/page.tsx) e listas de chat)_
+- [x] Tracking de impressão via IntersectionObserver no slot _(implementado em [AdSidebarSlot.tsx](../../features/shared/anuncios/components/AdSidebarSlot.tsx): threshold 0.5, flag `impresso`, `disconnect()` após disparo — paridade com J16)_
 
 ## 10. Critérios de aceite
 1. Login como admin → criar campanha "Cimento ACME" zona `home-hero`, ativa hoje.

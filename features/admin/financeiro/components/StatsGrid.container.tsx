@@ -10,7 +10,7 @@ import {
 } from 'react-icons/ri';
 import { StatsGrid } from './StatsGrid';
 import type { StatsGridContainerProps, StatsCardData } from '../types';
-import { formatCurrency, formatPercentage } from '../utils';
+import { formatCurrency, formatPercentage, safePercent } from '../utils';
 
 export function StatsGridContainer({ data }: StatsGridContainerProps) {
   const stats: StatsCardData[] = [
@@ -27,7 +27,7 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       icon: RiCheckboxCircleLine,
       iconBgColor: 'bg-[#22846D]/10 text-[#22846D]',
       badge: {
-        label: `${((data.totalPagoEmpreiteiras / data.volumeContratado) * 100).toFixed(1)}% do total`,
+        label: `${safePercent(data.totalPagoEmpreiteiras, data.volumeContratado).toFixed(1)}% do total`,
         variant: 'success',
       },
     },
@@ -37,7 +37,7 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       icon: RiWalletLine,
       iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20',
       badge: {
-        label: `${((data.saldoPagar / data.volumeContratado) * 100).toFixed(1)}% restante`,
+        label: `${safePercent(data.saldoPagar, data.volumeContratado).toFixed(1)}% restante`,
         variant: 'warning',
       },
     },

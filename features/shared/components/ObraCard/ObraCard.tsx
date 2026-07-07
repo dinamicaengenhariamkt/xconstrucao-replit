@@ -12,7 +12,7 @@ import {
   STATUS_LABELS,
   PROGRESS_COLORS,
 } from '@shared/constants/status';
-import { HealthBadge, getMockHealth } from '@features/shared/health';
+import { HealthBadge } from '@features/shared/health';
 import {
   VISIBILIDADE_LABELS,
   VISIBILIDADE_BADGE_CLASSES,
@@ -38,6 +38,7 @@ export function ObraCard({
   visibilidade,
   statusModeracao,
   motivoModeracao,
+  healthStatus,
 }: ObraCardProps) {
   // Só faz sentido sinalizar moderação em obras publicadas (Task #86).
   // Aprovadas não recebem badge extra (o status "publicada" já comunica isso).
@@ -57,7 +58,6 @@ export function ObraCard({
     | 'error'
     | 'info'
     | 'primary';
-  const health = getMockHealth(obraId);
   const showCandidaturas = typeof candidaturas === 'number' && candidaturas > 0;
 
   return (
@@ -87,12 +87,14 @@ export function ObraCard({
             >
               {STATUS_LABELS[status] || status}
             </span>
-            <HealthBadge
-              status={health.status}
-              size="sm"
-              variant="solid"
-              className="backdrop-blur-sm"
-            />
+            {healthStatus && (
+              <HealthBadge
+                status={healthStatus}
+                size="sm"
+                variant="solid"
+                className="backdrop-blur-sm"
+              />
+            )}
             {visibilidade && (
               <span
                 className={cn(

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { db } from "@shared/db/db";
 import { userConsents } from "@shared/db/schema";
 import { getUserByEmail, getUserByUsername, createUserWithProfile } from "@features/auth/api/auth-storage";
 import { hashPassword, createEmailVerificationToken } from "@features/auth/api/auth-service";
 import { registerSchema } from "@features/auth/schemas";
+import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
+import { getSenhaMinima, isPerfilHabilitado } from "@features/admin/platform-settings/server/settings-reader";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
@@ -48,6 +51,32 @@ export async function POST(request: NextRequest) {
     const { name, email, username, password, role, phone } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
 
+    // J30 — bloqueio de cadastro por perfil. `anunciante` nunca é bloqueado (porta
+    // de entrada da J23). Só barra cadastro NOVO; contas existentes seguem logando.
+    if ((role === "contratante" || role === "empreiteiro") && !(await isPerfilHabilitado(role))) {
+      return jsonNoStore(
+        {
+          message:
+            role === "empreiteiro"
+              ? "O cadastro de empreiteiros está temporariamente indisponível."
+              : "O cadastro de contratantes está temporariamente indisponível.",
+        },
+        403,
+      );
+    }
+
+    // J26: reforça o tamanho mínimo de senha configurado pelo admin (piso 8).
+    // A registerSchema já validou a política base; aqui só aplicamos o minLength dinâmico.
+    const minPolicy = evaluatePasswordPolicy(password, {
+      email,
+      name,
+      username,
+      minLength: await getSenhaMinima(),
+    });
+    if (!minPolicy.valid) {
+      return jsonNoStore({ message: minPolicy.message ?? "Senha inválida." }, 400);
+    }
+
     const existingEmail = await getUserByEmail(email);
     if (existingEmail) {
       return jsonNoStore({ message: "Email já cadastrado" }, 409);
@@ -79,13 +108,13 @@ export async function POST(request: NextRequest) {
         { userId: user.id, documento: "privacidade", versao: VERSAO_PRIVACIDADE, ip, userAgent },
       ]);
     } catch (consentError) {
-      console.error("Failed to persist consent records:", consentError);
+      void logError("error", "Failed to persist consent records", { stack: (consentError as Error)?.stack, route: "/api/auth/register" });
       try {
         const { users } = await import("@shared/db/schema");
         const { eq } = await import("drizzle-orm");
         await db.delete(users).where(eq(users.id, user.id));
       } catch (rollbackError) {
-        console.error("Failed to rollback user after consent failure:", rollbackError);
+        void logError("error", "Failed to rollback user after consent failure", { stack: (rollbackError as Error)?.stack, route: "/api/auth/register" });
       }
       return jsonNoStore(
         { message: "Não foi possível registrar o aceite dos termos. Tente novamente." },
@@ -100,7 +129,7 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
+      void logError("warn", "Failed to send verification email", { stack: (emailError as Error)?.stack, route: "/api/auth/register" });
     }
 
     return jsonNoStore(
@@ -112,7 +141,7 @@ export async function POST(request: NextRequest) {
       201
     );
   } catch (error) {
-    console.error("Erro no registro:", error);
+    void logError("error", "Erro no registro", { stack: (error as Error)?.stack, route: "/api/auth/register" });
     return jsonNoStore({ message: "Erro interno do servidor" }, 500);
   }
 }

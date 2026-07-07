@@ -164,6 +164,65 @@ export async function isParteDaDisputa(disputaId: string, userId: string): Promi
   return partes?.contratanteUserId === userId || partes?.empreiteiroUserId === userId;
 }
 
+export interface DisputaObraView {
+  id: string;
+  codigo: string;
+  alvoTipo: DisputaAlvo;
+  alvoId: string;
+  categoria: DisputaCategoria;
+  prioridade: "alta" | "media" | "baixa";
+  status: DisputaStatusDb;
+  titulo: string;
+  descricao: string;
+  valorEnvolvido: number | null;
+  abertaPorMim: boolean;
+  resolucaoTipo: DisputaResolucao | null;
+  resolucaoTexto: string | null;
+  dataAbertura: string;
+  dataResolucao: string | null;
+  diasAberta: number;
+}
+
+/**
+ * Disputas de UMA obra, na ótica de uma das partes (J10 — aba no detalhe da
+ * obra). Filtra por `obraId` e marca `abertaPorMim` para a UI distinguir quem
+ * abriu. Não expõe notas internas (essas só aparecem no detalhe individual com
+ * gate de admin). O caller deve validar antes que `viewerUserId` é parte da obra.
+ */
+export async function listarDisputasDaObra(
+  obraId: string,
+  viewerUserId: string,
+): Promise<DisputaObraView[]> {
+  const rows = await db
+    .select()
+    .from(disputas)
+    .where(eq(disputas.obraId, obraId))
+    .orderBy(desc(disputas.createdAt));
+  const agora = Date.now();
+  return rows.map((d) => {
+    const fimRef = d.resolvedAt ? d.resolvedAt.getTime() : agora;
+    const diasAberta = Math.max(0, Math.floor((fimRef - d.createdAt.getTime()) / 86_400_000));
+    return {
+      id: d.id,
+      codigo: codigoDisputa(d.id, d.createdAt),
+      alvoTipo: d.alvoTipo,
+      alvoId: d.alvoId,
+      categoria: d.categoria,
+      prioridade: d.prioridade,
+      status: d.status,
+      titulo: d.titulo,
+      descricao: d.descricao,
+      valorEnvolvido: d.valorEnvolvido != null ? Number(d.valorEnvolvido) : null,
+      abertaPorMim: d.abertaPorUserId === viewerUserId,
+      resolucaoTipo: d.resolucaoTipo ?? null,
+      resolucaoTexto: d.resolucaoTexto ?? null,
+      dataAbertura: d.createdAt.toISOString(),
+      dataResolucao: d.resolvedAt ? d.resolvedAt.toISOString() : null,
+      diasAberta,
+    };
+  });
+}
+
 /** Disputas em que o usuário é parte (contratante ou empreiteiro da obra). */
 export async function listarDisputasDoUsuario(userId: string): Promise<typeof disputas.$inferSelect[]> {
   return db

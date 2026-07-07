@@ -4,8 +4,9 @@ import { z } from "zod";
 import { db } from "@shared/db/db";
 import { platformSettings } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders, isAdminLike } from "@features/auth/api/auth-utils";
+import { invalidatePlatformSettingsCache } from "@features/admin/platform-settings/server/settings-reader";
 
-const KEYS = ["geral", "plataforma", "seguranca", "integracoes", "notificacoes"] as const;
+const KEYS = ["geral", "plataforma", "seguranca", "integracoes", "notificacoes", "legal"] as const;
 type SettingKey = typeof KEYS[number];
 
 const patchSchema = z.object({
@@ -47,6 +48,10 @@ const DEFAULTS: Record<SettingKey, Record<string, unknown>> = {
     manutencao: true,
     relatorioSemanal: false,
     atualizacoes: true,
+  },
+  // J28 — modo de re-consentimento quando uma nova versão legal é publicada.
+  legal: {
+    reconsentModo: "avisar", // "avisar" (não-bloqueante) | "bloquear"
   },
 };
 
@@ -102,6 +107,11 @@ export async function PATCH(request: NextRequest) {
       target: platformSettings.chave,
       set: { valor: merged, updatedAt: sql`now()`, updatedBy: guard.user.id },
     });
+
+  // J26: zera o cache do settings-reader para o efeito (modo manutenção, gating,
+  // senha mínima) refletir imediatamente neste processo. Outros workers expiram
+  // pelo TTL de 30s.
+  invalidatePlatformSettingsCache();
 
   const [row] = await db.select().from(platformSettings).where(eq(platformSettings.chave, chave));
   const response = NextResponse.json(row);

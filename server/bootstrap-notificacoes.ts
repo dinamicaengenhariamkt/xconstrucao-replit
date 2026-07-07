@@ -36,6 +36,30 @@ export async function bootstrapNotificacoesSchema(): Promise<void> {
     // A FK pra chat_threads é criada em bootstrap-chat (que roda depois deste).
     await db.execute(sql`ALTER TABLE notificacoes ADD COLUMN IF NOT EXISTS thread_id VARCHAR`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_notificacoes_thread_user_lida ON notificacoes(thread_id, user_id, lida) WHERE thread_id IS NOT NULL`);
+
+    // J13 hardening — dedupe de notificação NÃO-LIDA por (user_id, href).
+    // Impede acúmulo de duplicatas idênticas não-lidas (ex.: obra-zona em pause→republish).
+    // Re-disparo legítimo continua possível: ao ler (lida=true), a linha sai do índice parcial.
+    //
+    // Pré-limpeza idempotente: dado legado pode ter duplicatas que impediriam a criação do
+    // índice único. Mantém a mais recente por (user_id, href) e marca as demais como lidas.
+    await db.execute(sql`
+      WITH ranked AS (
+        SELECT id, ROW_NUMBER() OVER (
+                 PARTITION BY user_id, href
+                 ORDER BY created_at DESC
+               ) AS rn
+        FROM notificacoes
+        WHERE lida = false AND href IS NOT NULL
+      )
+      UPDATE notificacoes n SET lida = true
+      FROM ranked r WHERE n.id = r.id AND r.rn > 1
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS uniq_notificacoes_user_href_unread
+        ON notificacoes (user_id, href)
+        WHERE lida = false AND href IS NOT NULL
+    `);
   } catch (err) {
     console.error("[bootstrap-notificacoes] falha:", err);
     return;

@@ -9,7 +9,6 @@ export type {
   HealthDrivers,
 } from './types';
 export { calculateHealth } from './calculate';
-export { getMockHealth, getMockHealthSummary } from './mocks';
 export { computeHealthFromObra } from './compute-from-obra';
 export type { HealthObraInput } from './compute-from-obra';
 export {
@@ -23,6 +22,8 @@ export {
   HEALTH_WEIGHTS,
 } from './constants';
 export { HEALTH_QUERY_PARAM, parseHealthStatus, buildObrasHealthUrl } from './urls';
+export { useObrasHealthMap, summarizeHealthMap } from './hooks/use-obras-health';
+export { useObraHealth } from './hooks/use-obra-health';
 export { useSaudeFilter } from './hooks/use-saude-filter';
 export type { UseSaudeFilterResult } from './hooks/use-saude-filter';
 export { useSaudeMultiFilter } from './hooks/use-saude-multi-filter';

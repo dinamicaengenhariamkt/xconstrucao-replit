@@ -4,7 +4,7 @@ export interface KindRule {
   maxBytes: number;
   mimes: readonly string[];
   /** Quem pode subir esse kind */
-  roles: readonly ("admin" | "contratante" | "empreiteiro" | "superadmin")[];
+  roles: readonly ("admin" | "contratante" | "empreiteiro" | "superadmin" | "anunciante")[];
 }
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -50,6 +50,13 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
     maxBytes: 8_000_000,
     mimes: IMAGE_MIMES,
     roles: ["contratante", "empreiteiro", "superadmin"],
+  },
+  // J24 — criativo de anúncio. J23 abriu para quem pode anunciar (self-service):
+  // anunciante + cliente que anuncia. Imagem pública até 8 MB.
+  anuncio_criativo: {
+    maxBytes: 8_000_000,
+    mimes: IMAGE_MIMES,
+    roles: ["admin", "superadmin", "anunciante", "contratante", "empreiteiro"],
   },
 };
 

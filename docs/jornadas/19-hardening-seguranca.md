@@ -1,6 +1,6 @@
 # Jornada — Hardening de Segurança (pré-produção)
 
-> Status: pendente | Prioridade: alta | Wave: 3
+> Status: pronto | Prioridade: alta | Wave: 3
 > Última atualização: 2026-06-01
 >
 > Tarefas de blindagem antes de produção, descobertas durante o mapeamento da
@@ -43,13 +43,13 @@ Nenhum novo. As rotas `/api/**` já validam server-side via `requireVerifiedUser
 - Flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` e os fallbacks `if (ENABLE_MOCK)` remanescentes (FAQ, chat, clientes, empreiteiras, auditoria) — depois que as jornadas de dados (J17/J18) tornarem tudo real.
 
 ## 9. Checklist de implementação
-- [ ] `middleware.ts` server-side: ler cookie de sessão, validar JWT, checar role vs. prefixo de rota (`/admin` → admin/superadmin, etc.), redirecionar para `/login?next=` se inválido
-- [ ] Matcher cobrindo `/contratante/:path*`, `/empreiteiro/:path*`, `/admin/:path*`
-- [ ] Manter guard client como UX (evita flash), mas a barreira de verdade é o middleware
-- [ ] Auditar headers de segurança (CSP, no-cache em rotas sensíveis já existe)
-- [ ] Remover/neutralizar a flag de mock em produção (garantir que `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` nunca seja `true` em prod; idealmente remover os branches após J17/J18)
-- [ ] Confirmar adapter de gateway `manual` bloqueado em prod (já feito em J11 — validar)
-- [ ] Revisar `getClientIp` (confia em `x-forwarded-for`) — validar proxy confiável
+- [x] Barreira server-side: validar **assinatura do JWT** + role vs. prefixo de rota, redirecionar para `/login?next=` se inválido — feito em [proxy.ts](../../proxy.ts) (Next 16 renomeou `middleware.ts` → `proxy.ts`, que já roda em nodejs)
+- [x] Matcher cobrindo `/contratante/:path*`, `/empreiteiro/:path*`, `/admin/:path*` (+ `/api/:path*` p/ os guards globais existentes)
+- [x] Manter guard client como UX (evita flash) — preservado nos layouts
+- [x] Neutralizar a flag de mock em produção _(superado pela remoção física — ver item abaixo)_
+- [x] Remover os ~28 branches `if (ENABLE_MOCK)` _(2026-06 — remoção física concluída; `ENABLE_MOCK`/`isMockEnabled` não existem mais no código, `mock-flag.ts` e os diretórios `mocks/` foram deletados. Verificado: 0 ocorrências em `--include=*.ts,*.tsx`)_
+- [ ] Confirmar adapter de gateway `manual` bloqueado em prod (validar quando J14 desbloquear)
+- [x] Revisar `getClientIp` (confia em `x-forwarded-for`) _(código concluído com safeguard `TRUST_PROXY_HEADERS` em [rate-limit.ts](../../features/auth/api/rate-limit.ts): sem a flag, ignora `x-forwarded-for` forjável e usa só `x-real-ip`. **Resta apenas a ação de deploy** `TRUST_PROXY_HEADERS=1` em produção atrás de proxy confiável — registrada no [backlog](_backlog-paralelo.md) como checklist de infra, não código)_
 
 ## 10. Critérios de aceite
 1. Deslogado faz GET direto a `/admin/financeiro` → 307 para `/login` no servidor (não renderiza nada).
@@ -65,4 +65,12 @@ Nenhum novo. As rotas `/api/**` já validam server-side via `requireVerifiedUser
 - Pré-requisito recomendado para: produção / testes com usuários reais.
 
 ## 13. Gaps descobertos durante execução
-- _Sem registros ainda._
+- 2026-06-01: **Descoberta importante:** o Next 16 renomeou `middleware.ts` para **`proxy.ts`**, que **já roda no runtime nodejs** (não é mais edge). O projeto já tinha um `proxy.ts` cobrindo guards globais de `/api/*` (must-change-password e impersonation read-only). Em vez de criar `middleware.ts` (proibido coexistir), **estendi o `proxy.ts`** existente: somei a validação de assinatura do JWT + role para as páginas, preservando os guards de `/api/*`. Como já é nodejs, a decisão "runtime nodejs vs jose" virou não-questão — `verifyAccessToken` (crypto) roda nativo.
+- 2026-06-01: `export const runtime` **não é permitido** no `proxy.ts` (sempre nodejs) — removido.
+- 2026-06-01: `isAdminLike` foi **inlineado** no proxy para não puxar `auth-utils` (DB/audit) para o bundle do proxy.
+- 2026-06-01: A lista de rotas protegidas da versão antiga citava `/administrador` (rota inexistente) — corrigido para `/admin`.
+- 2026-06-01: Flag de mock **forçada off em produção** (não removidos os branches). Acceptance #3 atendida sem risco de regressão na limpeza dos 28 pontos.
+- 2026-06-01: **Tolerância a token expirado (pós-review):** o access token vive só 15 min e o refresh é client-side. Bloquear no proxy todo token expirado causaria logout em navegação normal. Ajuste: token **ausente** → redireciona; token **válido** → checa role (fonte de verdade); token **expirado mas com assinatura íntegra** → deixa passar (client faz refresh, APIs revalidam) mas ainda checa a role decodificada para não renderizar área de outra persona; assinatura **adulterada** → bloqueia. Novo helper `verifyAccessTokenAllowExpired` em [features/auth/api/auth-service.ts](../../features/auth/api/auth-service.ts) (valida HMAC + tipo, tolera `exp`). NÃO usar para autorizar mutações.
+- 2026-06-01: `ctaUrl` de anúncio agora só abre com scheme `http(s)` no `AdSidebarSlot` (defesa em profundidade contra `javascript:`/`data:`).
+- 2026-06: **Limpeza de mock concluída** — a remoção física dos ~28 branches `if (ENABLE_MOCK)` foi finalizada (não ficou só na neutralização da flag). `ENABLE_MOCK`/`isMockEnabled`, o helper `mock-flag.ts` e os diretórios `mocks/` não existem mais no código. Verificação: 0 ocorrências em busca por `--include=*.ts,*.tsx`.
+- 2026-06: **`getClientIp` validado** — código já trazia o safeguard `TRUST_PROXY_HEADERS` (sem a flag, `x-forwarded-for` forjável é ignorado). O único pendente é **operacional/deploy**: setar `TRUST_PROXY_HEADERS=1` em produção atrás de proxy confiável (Replit/Vercel/Cloudflare). Movido para o backlog como item de checklist de infra. O único `[ ]` restante nesta jornada (adapter `manual` em prod) depende do desbloqueio da J14.

@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro"]);
+export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro", "anunciante"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
 export const obraVisibilidadeEnum = pgEnum("obra_visibilidade", ["rascunho", "publicada", "pausada", "arquivada"]);
@@ -76,6 +76,8 @@ export const users = pgTable("users", {
   ativo: boolean("ativo").notNull().default(true),
   canManageUsers: boolean("can_manage_users").notNull().default(false),
   avatarFileId: varchar("avatar_file_id"),
+  // J29 — rastreio de último login para churn por inatividade.
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -152,6 +154,39 @@ export const empreiteiras = pgTable("empreiteiras", {
   status: statusEnum("status").notNull().default("ativo"),
 });
 
+// ---------------------------------------------------------------------------
+// J23 — Papéis aditivos (multi-role). `users.role` segue sendo o papel PRIMÁRIO
+// (canônico para os guards existentes e embutido no JWT). Esta tabela registra
+// papéis ADICIONAIS por usuário (ex.: um contratante que também é anunciante),
+// permitindo upgrade de papel sem duplicar usuário nem deslogar. Backfill dos
+// papéis primários atuais é feito no bootstrap. Schema criado idempotente em
+// server/bootstrap-anuncios-self-service.ts.
+// ---------------------------------------------------------------------------
+export const userRoleOrigemEnum = pgEnum("user_role_origem", ["signup", "upgrade", "backfill"]);
+// J23 — enum DEDICADO para papéis aditivos: NÃO inclui admin/superadmin. Transforma
+// "papel aditivo nunca é privilegiado" em constraint de banco, não convenção de app.
+// O backfill só insere papéis primários de usuários comuns (admins não recebem linha).
+export const userAdditiveRoleEnum = pgEnum("user_additive_role", ["contratante", "empreiteiro", "anunciante"]);
+
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: userAdditiveRoleEnum("role").notNull(),
+    origem: userRoleOrigemEnum("origem").notNull().default("signup"),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Um papel por usuário, sem duplicar (idempotência do backfill + upgrade).
+    uniqUserRole: uniqueIndex("uniq_user_roles_user_role").on(t.userId, t.role),
+    idxUser: index("idx_user_roles_user").on(t.userId),
+  }),
+);
+
+export type UserRole = typeof userRoles.$inferSelect;
+export type InsertUserRole = typeof userRoles.$inferInsert;
+
 export const obras = pgTable("obras", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nome: text("nome").notNull(),
@@ -181,6 +216,10 @@ export const obras = pgTable("obras", {
   progresso: integer("progresso").default(0),
   dataInicio: text("data_inicio"),
   dataPrevisao: text("data_previsao"),
+  // J25 — Obras em Destaque na Home (curadoria admin).
+  destaque: boolean("destaque").notNull().default(false),
+  destaqueOrdem: integer("destaque_ordem"),
+  fotoCapaFileId: varchar("foto_capa_file_id").references(() => userFiles.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -332,7 +371,14 @@ export const notificacoes = pgTable("notificacoes", {
   threadId: varchar("thread_id").references(() => chatThreads.id, { onDelete: "set null" }),
   lida: boolean("lida").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  // Dedupe de notificação não-lida por (user_id, href). Espelha o índice criado
+  // em server/bootstrap-notificacoes.ts (J13 hardening). Re-disparo legítimo
+  // segue possível: ao ler (lida=true), a linha sai do índice parcial.
+  uniqUserHrefUnread: uniqueIndex("uniq_notificacoes_user_href_unread")
+    .on(t.userId, t.href)
+    .where(sql`${t.lida} = false AND ${t.href} IS NOT NULL`),
+}));
 
 export type Notificacao = typeof notificacoes.$inferSelect;
 
@@ -358,6 +404,23 @@ export const chatMensagens = pgTable("chat_mensagens", {
 });
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;
+
+// J22 — Autenticação Forte (2FA / TOTP).
+// Tabela dedicada (não engorda `users`): uma linha por conta com 2FA configurado.
+// `secret` guarda o segredo TOTP base32; `recoveryCodes` guarda HASHES (uso único).
+// `enabled` só vira true após o usuário confirmar o primeiro código (confirmadoEm).
+export const userTotp = pgTable("user_totp", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique("user_totp_user_unique").references(() => users.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  recoveryCodes: jsonb("recovery_codes").$type<string[]>().notNull().default([]),
+  confirmadoEm: timestamp("confirmado_em"),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+});
+
+export type UserTotp = typeof userTotp.$inferSelect;
 
 export const marketplaceLeadStatusEnum = pgEnum("marketplace_lead_status", ["pendente", "notificado", "descartado"]);
 
@@ -424,12 +487,56 @@ export const userPreferencias = pgTable("user_preferencias", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ---------------------------------------------------------------------------
+// J28 — Documentos Legais Versionados. Cada publicação de Termos/Privacidade vira
+// uma versão (conteúdo Markdown + vigência). As páginas públicas leem a versão
+// vigente; o `user_consents.versao` passa a referenciar a versão aceita, permitindo
+// re-consentimento quando a vigente > aceita. Schema idempotente em
+// server/bootstrap-legal-documents.ts. O CONTEÚDO é dado (jurídico edita pelo admin).
+// ---------------------------------------------------------------------------
+export const legalDocuments = pgTable(
+  "legal_documents",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    tipo: consentDocumentEnum("tipo").notNull(),
+    versao: integer("versao").notNull(),
+    titulo: text("titulo").notNull(),
+    // Conteúdo em Markdown (renderizado sanitizado no client).
+    conteudo: text("conteudo").notNull(),
+    vigenteEm: timestamp("vigente_em").defaultNow().notNull(),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoPor: varchar("criado_por").references(() => users.id, { onDelete: "set null" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqTipoVersao: uniqueIndex("legal_documents_tipo_versao_uniq").on(t.tipo, t.versao),
+    idxTipoAtivo: index("idx_legal_documents_tipo_ativo").on(t.tipo, t.ativo),
+  }),
+);
+
+export type LegalDocument = typeof legalDocuments.$inferSelect;
+export type InsertLegalDocument = typeof legalDocuments.$inferInsert;
+
 export const platformSettings = pgTable("platform_settings", {
   chave: text("chave").primaryKey(),
   valor: jsonb("valor").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   updatedBy: varchar("updated_by").references(() => users.id, { onDelete: "set null" }),
 });
+
+// J29 — Observabilidade histórica: uma fotografia por métrica por dia.
+// Índice único (metrica, periodo) garante a idempotência do job de snapshot.
+export const kpiSnapshots = pgTable("kpi_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  metrica: text("metrica").notNull(),
+  valor: numeric("valor").notNull(),
+  periodo: date("periodo").notNull(),
+  criadoEm: timestamp("criado_em").defaultNow().notNull(),
+}, (t) => ({
+  uniqMetricaPeriodo: uniqueIndex("uniq_kpi_snapshots_metrica_periodo").on(t.metrica, t.periodo),
+}));
+
+export type KpiSnapshot = typeof kpiSnapshots.$inferSelect;
 
 export const verificationTokens = pgTable("verification_tokens", {
   identifier: text("identifier").notNull(),
@@ -505,7 +612,7 @@ export const registerSchema = z.object({
   email: z.string().email("Email inválido"),
   username: z.string().min(3, "Usuário deve ter no mínimo 3 caracteres"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-  role: z.enum(["contratante", "empreiteiro"]),
+  role: z.enum(["contratante", "empreiteiro", "anunciante"]),
   phone: z.string().optional(),
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "Você deve aceitar os Termos de Uso e a Política de Privacidade" }) }),
 });
@@ -873,6 +980,10 @@ export const anuncianteStatusEnum = pgEnum("anunciante_status", ["ativo", "inati
 
 export const anunciantes = pgTable("anunciantes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // J23 — vínculo opcional com o usuário-anunciante (self-service). NULL = anunciante
+  // legado criado manualmente pelo admin (advertiser externo sem conta). Preenchido
+  // = anunciante com login próprio. Unifica o conceito de "anunciante" no banco.
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }).unique(),
   nome: text("nome").notNull(),
   sigla: varchar("sigla", { length: 8 }),
   contato: text("contato"),
@@ -893,6 +1004,11 @@ export const anuncios = pgTable(
     criativoUrl: text("criativo_url"),
     ctaUrl: text("cta_url"),
     ctaTexto: text("cta_texto"),
+    // J24 — template do criativo (validado em app contra o registry, como `zona`).
+    template: text("template").notNull().default("imagem-card"),
+    // J24 — campos estruturados específicos do template (texto/fonte/blocos…).
+    // Shape validado por template (zod) na API antes de persistir.
+    conteudo: jsonb("conteudo"),
     // Zona de exibição (ver AnuncioZonaId em features/shared/anuncios/types).
     zona: text("zona").notNull(),
     inicio: text("inicio"),
@@ -923,8 +1039,170 @@ export const anuncioEventos = pgTable(
   }),
 );
 
+// J24 — Master toggle por seção/zona (Opção B): interruptor explícito,
+// independente de campanha ativa. `chave`: ex. "secao:mercado-em-foco", "zona:<id>".
+export const anuncioConfig = pgTable("anuncio_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  chave: text("chave").notNull().unique(),
+  visivel: boolean("visivel").notNull().default(true),
+  atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+});
+
 export type Anunciante = typeof anunciantes.$inferSelect;
 export type InsertAnunciante = typeof anunciantes.$inferInsert;
 export type Anuncio = typeof anuncios.$inferSelect;
 export type InsertAnuncio = typeof anuncios.$inferInsert;
 export type AnuncioEvento = typeof anuncioEventos.$inferSelect;
+export type AnuncioConfig = typeof anuncioConfig.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// J23 — Self-Service de Anúncios. Anunciante (usuário) monta um PEDIDO com N
+// SLOTS (cada slot = zona + período + template + criativo, reusando J24). O
+// pedido passa por moderação obrigatória (D4) e, ao ser aprovado, cada slot é
+// MATERIALIZADO em `anuncios` (pipeline J16). Cobrança é protótipo plugável (D5):
+// a cobrança real fica para a J31. Schema idempotente em
+// server/bootstrap-anuncios-self-service.ts.
+// ---------------------------------------------------------------------------
+export const pedidoAnuncioStatusEnum = pgEnum("pedido_anuncio_status", [
+  "em_analise",
+  "aprovado",
+  "recusado",
+  "publicado",
+  "encerrado",
+]);
+export const pedidoCobrancaStatusEnum = pgEnum("pedido_cobranca_status", [
+  "prototipo",
+  "pendente",
+  "paga",
+  "isenta",
+]);
+
+export const pedidosAnuncio = pgTable(
+  "pedidos_anuncio",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    // Quem solicitou (anunciante puro OU cliente que também anuncia). FK direta ao
+    // usuário — a identidade de anunciante (empresa/CNPJ) mora em `anunciantes`.
+    solicitanteUserId: varchar("solicitante_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    status: pedidoAnuncioStatusEnum("status").notNull().default("em_analise"),
+    motivoRecusa: text("motivo_recusa"),
+    valorTotal: numeric("valor_total", { precision: 15, scale: 2 }).notNull().default("0"),
+    cobrancaStatus: pedidoCobrancaStatusEnum("cobranca_status").notNull().default("prototipo"),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    moderadoEm: timestamp("moderado_em"),
+    moderadoPor: varchar("moderado_por").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    idxSolicitante: index("idx_pedidos_anuncio_solicitante").on(t.solicitanteUserId),
+    idxStatus: index("idx_pedidos_anuncio_status").on(t.status),
+  }),
+);
+
+export const pedidoSlots = pgTable(
+  "pedido_slots",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    pedidoId: varchar("pedido_id").notNull().references(() => pedidosAnuncio.id, { onDelete: "cascade" }),
+    // Zona validada em app contra ZONAS (isZonaValida) — TEXT como em `anuncios`.
+    zona: text("zona").notNull(),
+    // Template validado contra o registry (templateAceitoNaZona) — reuso J24.
+    template: text("template").notNull().default("imagem-card"),
+    titulo: text("titulo").notNull(),
+    subtitulo: text("subtitulo"),
+    criativoUrl: text("criativo_url"),
+    ctaUrl: text("cta_url"),
+    ctaTexto: text("cta_texto"),
+    conteudo: jsonb("conteudo"),
+    periodoInicio: text("periodo_inicio"),
+    periodoFim: text("periodo_fim"),
+    valorSlot: numeric("valor_slot", { precision: 15, scale: 2 }).notNull().default("0"),
+    // Preenchido na materialização (aprovação) — liga ao `anuncios` real criado.
+    anuncioId: varchar("anuncio_id").references(() => anuncios.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    idxPedido: index("idx_pedido_slots_pedido").on(t.pedidoId),
+  }),
+);
+
+export type PedidoAnuncio = typeof pedidosAnuncio.$inferSelect;
+export type InsertPedidoAnuncio = typeof pedidosAnuncio.$inferInsert;
+export type PedidoSlot = typeof pedidoSlots.$inferSelect;
+export type InsertPedidoSlot = typeof pedidoSlots.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Admin FAQ — base de perguntas frequentes gerenciável pelo admin.
+// `categoria` é TEXT (não enum) p/ forward-compat: novos grupos não exigem
+// migration. `visao` segmenta por persona. Schema criado idempotente em
+// server/bootstrap-faq.ts (com seed dos itens canônicos).
+// ---------------------------------------------------------------------------
+export const faqVisaoEnum = pgEnum("faq_visao", ["contratante", "empreiteiro", "ambos"]);
+
+export const faq = pgTable(
+  "faq",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    category: text("category").notNull(),
+    visao: faqVisaoEnum("visao").notNull().default("ambos"),
+    ordem: integer("ordem").notNull().default(0),
+    ativo: boolean("ativo").notNull().default(true),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Listagem ordena por categoria + ordem.
+    idxCategoriaOrdem: index("idx_faq_categoria_ordem").on(t.category, t.ordem),
+  }),
+);
+
+export type Faq = typeof faq.$inferSelect;
+export type InsertFaq = typeof faq.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Observabilidade Técnica (J33) — app_errors + job_runs
+// Tabelas criadas idempotentemente em server/bootstrap-observabilidade.ts.
+// ---------------------------------------------------------------------------
+export const appErrors = pgTable(
+  "app_errors",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    level: text("level").notNull().default("error"),
+    message: text("message").notNull(),
+    stack: text("stack"),
+    route: text("route"),
+    userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+    meta: jsonb("meta"),
+    fingerprint: text("fingerprint"),
+    source: text("source").notNull().default("server"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxCreatedAt: index("idx_app_errors_created_at").on(t.createdAt),
+    idxRoute: index("idx_app_errors_route").on(t.route),
+    idxLevel: index("idx_app_errors_level").on(t.level),
+  })
+);
+
+export type AppError = typeof appErrors.$inferSelect;
+export type InsertAppError = typeof appErrors.$inferInsert;
+
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    job: text("job").notNull(),
+    status: text("status").notNull(),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+    error: text("error"),
+    meta: jsonb("meta"),
+  },
+  (t) => ({
+    idxJobStarted: index("idx_job_runs_job_started").on(t.job, t.startedAt),
+    idxStatus: index("idx_job_runs_status").on(t.status),
+  })
+);
+
+export type JobRun = typeof jobRuns.$inferSelect;
+export type InsertJobRun = typeof jobRuns.$inferInsert;

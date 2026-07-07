@@ -85,6 +85,8 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** `listarMensagensDaThread` usa `LIMIT 100` hardcoded — thread longa corta silenciosamente. `listarConversasPorUsuario` carrega todas as threads + LATERAL subqueries por chamada. Indices já criados ajudam, mas precisa cursor antes de escala.
 - **Prioridade:** P1 quando o uso real crescer; P2 enquanto MVP
+- **✅ PARCIAL — Camada A (2026-06-05):** `listarMensagensDaThread` agora pagina por keyset `(criada_em, id)` DESC, retornando as N **mais recentes** (default 50) em ordem cronológica e expondo cursor no header `X-Next-Cursor` ([service.ts](../../features/chat/service.ts) + [cursor.ts](../../features/chat/cursor.ts) + índice `idx_chat_mensagens_thread_keyset`). Corrige o truncamento silencioso das mensagens recentes. O body permanece `Message[]` (não quebra o client).
+- **Remanescente — Camada B (P2):** "carregar mais antigas" na UI (botão/scroll) com `useInfiniteQuery` + body `{ messages, nextCursor }`. O cursor já está pronto no header, então é só consumir. `listarConversasPorUsuario` segue sem paginação (lista de threads tende a ser pequena — revisitar se escalar).
 
 ### `refetchInterval` adaptativo no chat
 - **Origem:** J13 review (code-reviewer)
@@ -98,11 +100,12 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Motivação:** `useEffect` de `marcar-lida` dispara apenas na primeira abertura. Se chega mensagem nova enquanto user tem thread aberta, fica `unread` no banco até ele trocar de thread. Disparar `marcar-lida` quando `serverMessages.length` aumenta e aba está visível.
 - **Prioridade:** P1
 
-### Mover `garantirChatThread` pra fora da tx de aceitar
+### ~~Mover `garantirChatThread` pra fora da tx de aceitar~~ ✓ Resolvido 2026-05-29
 - **Origem:** J13 review (code-reviewer)
 - **Descoberto:** 2026-05-29
 - **Motivação:** try/catch interno da chamada `garantirChatThread` dentro da tx pode abortar a tx do aceite se houver erro inesperado (ex: FK violation). Postgres invalida a tx inteira; queries seguintes falham com "current transaction is aborted". Mover criação da thread pra pós-commit, fire-and-forget, com job de backfill.
 - **Prioridade:** P1 (risco de aceite quebrar em edge case)
+- **✅ RESOLVIDO (2026-05-29):** em [aceitar/route.ts](../../app/api/contratante/candidaturas/[id]/aceitar/route.ts) o lookup de `contratanteUserId` permanece DENTRO da tx (consistência), mas o INSERT da thread roda FORA, em `after()` pós-commit — fire-and-forget com 1 retry (500ms). `garantirChatThread` é idempotente (`onConflictDoNothing` em `chat_threads.obraId`). Nenhum erro de chat afeta o aceite (a resposta HTTP já foi enviada). _(Re-confirmado 2026-06-05 ao auditar o fluxo; o item seguia listado como aberto por engano.)_
 
 ### Validar ownership de anexo de obra (defense in depth ampliado)
 - **Origem:** J13 review (security-auditor)
@@ -125,6 +128,7 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-05-29
 - **Motivação:** atacante pode rotacionar `X-Forwarded-For` por request e bypassar o tier IP do rate-limit. Tiers user/thread ainda protegem. Fix: gate por env `TRUST_PROXY_HEADERS=1` no `features/auth/api/rate-limit.ts`. Afeta TODOS os usos de rate-limit (J03 anexos, J13 chat, etc).
 - **Resolução:** `getClientIp` agora ignora `X-Forwarded-For` quando `TRUST_PROXY_HEADERS != "1"`. Documentado em `.env.example` e `replit.md`. Os 7 endpoints continuam chamando `getClientIp` igual — o gate é centralizado.
+- **⚠️ AÇÃO DE DEPLOY pendente (J19):** o código está completo, mas o tier IP do rate-limit só fica ativo quando **`TRUST_PROXY_HEADERS=1`** estiver setado nas variáveis de ambiente de **produção** — e somente se o app estiver atrás de um proxy confiável (Replit/Vercel/Cloudflare). Sem isso, o tier IP fica neutralizado (tiers user/thread seguem protegendo; não há buraco de segurança). Não é código — é configuração no painel de deploy. **Checklist de go-live.**
 
 ### Rate-limit in-memory não funciona em multi-instance
 - **Origem:** J13 hardening review (code-reviewer)
@@ -173,11 +177,12 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Prioridade:** P2 (precondição estratégica — vale plantar antes pra evitar fricção depois)
 - **✅ RESOLVIDO (2026-06-01):** `userTemAssinaturaAtiva` + `getLimiteRecurso` implementados em `features/planos/assinatura-service.ts` (consultam `assinaturas`/`plans-catalog`). Gating de fato aplicado em J03 (obras abertas) e J05 (propostas/mês) com HTTP 402.
 
-### Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`
+### ~~Dedupe em `nova-obra-zona-dispatcher` por `(obraId, userId)`~~ ✓ Resolvido 2026-06-05
 - **Origem:** J13 §13 (Task #94) — confirmado durante exploração
 - **Descoberto:** 2026-05-29
 - **Motivação:** re-publicação de obra (admin re-aprova após pause→republish) dispara notif duplicada pra empreiteiro na zona. Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra. Mitigação: índice único parcial em `notificacoes` ou flag idempotente na obra. Bate com o "agrupamento de 5 mensagens novas" do §11 J13.
 - **Prioridade:** P1 (UX de spam é visível e gera saída de usuário)
+- **✅ RESOLVIDO (2026-06-05):** índice único parcial `uniq_notificacoes_user_href_unread ON notificacoes (user_id, href) WHERE lida = false AND href IS NOT NULL` ([bootstrap-notificacoes.ts](../../server/bootstrap-notificacoes.ts), com pré-limpeza idempotente de duplicatas legadas + espelho em [schema.ts](../../shared/db/schema.ts)) + `onConflictDoNothing` no [dispatcher](../../features/notificacoes/nova-obra-zona-dispatcher.ts). Duplicata NÃO-LIDA é ignorada e o **email é suprimido junto** (não reforça aviso ainda não lido). Re-disparo legítimo preservado: ao ler, a linha sai do índice parcial.
 
 ### Decisão arquitetural J09 — `escopo: obra | plataforma`
 - **Origem:** J09 (gap declarado em §6 do doc)
@@ -192,3 +197,43 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Motivação:** Stripe / Pagar.me / outro. Bloqueia J11 inteira → bloqueia aba Plano & Uso da J02 → bloqueia gating efetivo de J03/J05 (assinatura ativa). Stripe entrega DX melhor; Pagar.me tem PIX/boleto nativo (essencial pro mercado BR). Não é tarefa de código — é decisão de produto + compliance.
 - **Prioridade:** P1 (bloqueia 3 jornadas em cascata)
 - **✅ DESBLOQUEADO via abstração (2026-06-01):** J11 foi entregue COMPLETA sem travar na decisão, usando **porta `PaymentGateway` + adapter `manual`** (ativa sem cobrança real). A decisão do gateway real NÃO bloqueia mais J11/J02/J03/J05 — elas funcionam hoje. A integração real virou a **[Jornada 14](14-integracao-gateway-pagamento.md)** (status `bloqueada`): quando o gateway for escolhido, é só escrever 1 adapter + env var `PAYMENT_GATEWAY`. Decisão pendente movida para J14.
+
+---
+
+## Wave de des-mock + hardening (2026-06-01) — J15/J16/J17/J18/J19
+
+### Remover fisicamente os ~28 branches `if (ENABLE_MOCK)`
+- **Origem:** J19 (limpeza de flags)
+- **Descoberto:** 2026-06-01
+- **Motivação:** a flag `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` já é **inerte em produção** (`isMockEnabled()` retorna `false` quando `NODE_ENV==='production'`). Mas os ~28 branches `if (ENABLE_MOCK)` ainda vivem nos services (FAQ, chat, clientes, empreiteiras, auditoria, dashboards). Remover fisicamente reduz superfície e mock files órfãos — fazer **por feature-set, com teste**, fora desta wave para evitar regressão em fluxos não testados aqui.
+- **Prioridade:** P2
+
+### Tabela de aditivos de obra
+- **Origem:** J17/J18 (descoberto ao des-mockar)
+- **Descoberto:** 2026-06-01
+- **Motivação:** `aditivos` aparece em `ValoresContratadosData` (contratante) e no detalhe financeiro da obra (admin), mas **não há tabela de aditivos** no schema — retornamos `0`. Quando o produto precisar de aditivos contratuais reais, criar `obra_aditivos` (valor, motivo, data, aprovador) e somar em `valorTotal`.
+- **Prioridade:** P2
+
+### Baseline histórico para deltas "vs período anterior"
+- **Origem:** J17/J18 (descoberto ao des-mockar)
+- **Descoberto:** 2026-06-01
+- **Motivação:** vários `*Delta`/`desvioPercentual` foram zerados/ocultados porque não há **snapshot histórico** dos KPIs por período. Para deltas reais, materializar snapshots periódicos (ex: job diário gravando KPIs em `kpi_snapshots`) ou calcular janela anterior on-the-fly onde a query permitir.
+- **Prioridade:** P2
+
+### Churn de empreiteiros por last-login
+- **Origem:** J18 (limitação já documentada, confirmada nesta wave)
+- **Descoberto:** 2026-06-01
+- **Motivação:** `churnEmpreiteirosPercent` segue `0` porque não há rastreio de último login. Para churn real, gravar `users.lastLoginAt` (ou derivar de atividade) e definir a janela de inatividade que conta como churn.
+- **Prioridade:** P2
+
+### Upsell na origem do 402 `LIMITE_PLANO`
+- **Origem:** J15 (item §9 parcial)
+- **Descoberto:** 2026-06-01
+- **Motivação:** o servidor já retorna 402 `LIMITE_PLANO` em J03/J05 quando o limite do plano é excedido. Falta o **CTA de upgrade** (upsell) na UI desses fluxos (criar obra / candidatar-se) levando para `/<persona>/planos`. Não bloqueia J15 (a página de planos está pronta) — é refinamento de conversão na origem.
+- **Prioridade:** P2
+
+### Coleta de NPS/CSAT (surveys) → desbloquear J20
+- **Origem:** J18 → J20
+- **Descoberto:** 2026-06-01
+- **Motivação:** NPS/CSAT não têm fonte de dados; o bloco foi ocultado no dashboard admin (nada inventado). Virou a **[Jornada 20](20-satisfacao-nps-csat.md)** (`bloqueada`): aguarda o cliente final definir a estratégia de coleta. Quando definido, criar `surveys`/`survey_respostas` + endpoint e reconectar `SatisfactionMetricsSection`.
+- **Prioridade:** P2 (decisão de produto)

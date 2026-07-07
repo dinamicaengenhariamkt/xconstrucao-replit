@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { eq } from "drizzle-orm";
 import { getUserByEmail, getUser, createUser, updateUserPassword, updateUserEmailVerified } from "@features/auth/api/auth-storage";
@@ -67,10 +68,14 @@ export async function POST(request: NextRequest) {
     // Rotacionar refresh token (segurança adicional)
     const newRefreshToken = rotateRefreshToken(refreshToken);
 
+    // J23 — multi-role: papéis efetivos (primário + aditivos) no payload do client.
+    const { getUserRoles } = await import("@features/auth/api/auth-utils");
+    const roles = await getUserRoles(user.id);
+
     // Criar resposta
     const response = NextResponse.json({
       success: true,
-      user: userData,
+      user: { ...userData, roles },
     });
 
     if (!newRefreshToken) {
@@ -82,7 +87,16 @@ export async function POST(request: NextRequest) {
     // Sessão precisa existir no banco — sessões revogadas não podem ressuscitar.
     const oldHash = createHash("sha256").update(refreshToken).digest("hex");
     const newHash = createHash("sha256").update(newRefreshToken).digest("hex");
-    const refreshMaxAgeMs = (payload.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
+    // J30 — timeout de sessão (seguranca.timeout, minutos). Setado → encurta a
+    // janela; ausente → mantém 7/30 dias. O refresh renova a janela (inatividade).
+    const { getSessionTimeoutMinutes } = await import(
+      "@features/admin/platform-settings/server/settings-reader"
+    );
+    const timeoutMin = await getSessionTimeoutMinutes().catch(() => null);
+    const timeoutSeconds = timeoutMin ? timeoutMin * 60 : null;
+    const refreshMaxAgeMs = timeoutSeconds
+      ? timeoutSeconds * 1000
+      : (payload.rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
     const updated = await db
       .update(sessions)
       .set({
@@ -104,11 +118,11 @@ export async function POST(request: NextRequest) {
 
     // Configurar headers de segurança e cookies
     setNoCacheHeaders(response);
-    createAuthCookies(response, newAccessToken, newRefreshToken, payload.rememberMe);
+    createAuthCookies(response, newAccessToken, newRefreshToken, payload.rememberMe, timeoutSeconds);
     return response;
 
   } catch (error) {
-    console.error("Erro no refresh:", error);
+    void logError("error", "Erro no refresh de sessão", { stack: (error as Error)?.stack, route: "/api/auth/refresh" });
     const response = NextResponse.json(
       { error: "Erro interno do servidor" },
       { status: 500 }

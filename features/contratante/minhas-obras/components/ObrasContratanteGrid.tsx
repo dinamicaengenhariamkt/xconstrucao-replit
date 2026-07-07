@@ -3,8 +3,11 @@
 import { ObraContratanteCard } from './ObraContratanteCard';
 import type { ObrasContratanteGridProps } from '../types';
 import { RiBuildingLine } from 'react-icons/ri';
+import { useObrasHealthMap } from '@features/shared/health';
 
 export function ObrasContratanteGrid({ obras }: ObrasContratanteGridProps) {
+  const { data: healthMap } = useObrasHealthMap('contratante');
+
   if (obras.length === 0) {
     return (
       <div className="text-center py-20" data-testid="empty-state-obras">
@@ -18,7 +21,11 @@ export function ObrasContratanteGrid({ obras }: ObrasContratanteGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
       {obras.map((obra) => (
-        <ObraContratanteCard key={obra.id} obra={obra} />
+        <ObraContratanteCard
+          key={obra.id}
+          obra={obra}
+          healthStatus={healthMap?.[obra.id]?.status}
+        />
       ))}
     </div>
   );

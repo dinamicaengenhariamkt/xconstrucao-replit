@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { getUserByEmail } from "@features/auth/api/auth-storage";
 import { createPasswordResetToken } from "@features/auth/api/auth-service";
 import { sendPasswordResetEmail } from "@shared/lib/email";
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     return jsonNoStore({ success: true }, 200);
   } catch (error) {
-    console.error("Erro ao processar solicitação de reset:", error);
+    void logError("error", "Erro ao processar solicitação de reset de senha", { stack: (error as Error)?.stack, route: "/api/auth/forgot-password" });
     return jsonNoStore(
       { message: "Erro ao processar solicitação. Tente novamente mais tarde." },
       500

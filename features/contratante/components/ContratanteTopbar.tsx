@@ -24,6 +24,7 @@ import {
   RiSettings3Line,
   RiMenuLine,
   RiUserLine,
+  RiDraftLine,
   RiLogoutBoxRLine,
   RiCheckDoubleLine,
   RiAlarmLine,
@@ -282,6 +283,10 @@ export function ContratanteTopbar() {
             <DropdownMenuItem onClick={() => router.push('/contratante/configuracoes')}>
               <RiSettings3Line className="w-4 h-4 mr-2" />
               Configurações
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/contratante/minhas-obras?visibilidade=rascunho')}>
+              <RiDraftLine className="w-4 h-4 mr-2" />
+              Meus rascunhos
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -28,7 +28,7 @@ export const registerSchema = z
       .min(3, "Usuário deve ter no mínimo 3 caracteres")
       .regex(/^[a-z0-9_.]+$/, "Use apenas letras, números, ponto ou underline"),
     password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
-    role: z.enum(["contratante", "empreiteiro"]),
+    role: z.enum(["contratante", "empreiteiro", "anunciante"]),
     phone: z.string().optional(),
     acceptTerms: z.literal(true, {
       errorMap: () => ({

@@ -47,9 +47,38 @@ export default function LoginPage() {
   // Só impõe expectedRole quando o usuário entrou explicitamente
   // pela tela específica de um perfil; /login sem ?perfil= aceita qualquer role.
   const enforceRole = !!perfilParam && !!perfilConfig[perfilParam];
-  const { login } = useAuth();
+  const { login, verifyTwoFactor } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
+
+  // 2FA (J22): quando o login pede segundo fator, guardamos o challengeToken e
+  // trocamos o formulário pelo input do código.
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [codigo2fa, setCodigo2fa] = useState('');
+  const [verificando2fa, setVerificando2fa] = useState(false);
+
+  const navegarPosLogin = () => {
+    const user = useAuthStore.getState().user;
+    if (user) {
+      const next = searchParams.get('next');
+      router.replace(resolvePostLoginRedirect(user.role, next));
+    }
+  };
+
+  const handleVerificar2fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challengeToken) return;
+    setVerificando2fa(true);
+    try {
+      await verifyTwoFactor(challengeToken, codigo2fa.trim());
+      navegarPosLogin();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Código inválido.';
+      toast({ title: 'Verificação falhou', description: message, variant: 'destructive' });
+    } finally {
+      setVerificando2fa(false);
+    }
+  };
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -62,15 +91,19 @@ export default function LoginPage() {
   const onSubmit = form.handleSubmit(async (values) => {
     setIsLoading(true);
     try {
-      await login(values.email, values.password, rememberMe, {
+      const result = await login(values.email, values.password, rememberMe, {
         expectedRole: enforceRole ? config.role : undefined,
         antiBot: antiBot.getPayload(),
       });
-      const user = useAuthStore.getState().user;
-      if (user) {
-        const next = searchParams.get("next");
-        router.replace(resolvePostLoginRedirect(user.role, next));
+
+      // 2FA (J22): conta exige segundo fator — troca o form pelo input do código.
+      if (result?.twoFactorRequired && result.challengeToken) {
+        setChallengeToken(result.challengeToken);
+        setCodigo2fa("");
+        return;
       }
+
+      navegarPosLogin();
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes("EMAIL_NOT_VERIFIED")) {
         toast({
@@ -122,12 +155,50 @@ export default function LoginPage() {
               className="text-2xl font-extrabold text-center mb-2"
               data-testid="text-login-title"
             >
-              Bem-vindo de volta
+              {challengeToken ? "Verificação em duas etapas" : "Bem-vindo de volta"}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-8">
-              Acesse sua conta para continuar
+              {challengeToken
+                ? "Digite o código de 6 dígitos do seu app autenticador."
+                : "Acesse sua conta para continuar"}
             </p>
 
+            {/* Segundo passo do 2FA */}
+            {challengeToken ? (
+              <form onSubmit={handleVerificar2fa} className="space-y-4" data-testid="form-2fa">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Código de verificação</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    placeholder="000000 ou código de recuperação"
+                    value={codigo2fa}
+                    onChange={(e) => setCodigo2fa(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    data-testid="input-codigo-2fa"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={verificando2fa || codigo2fa.trim().length < 6}
+                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm"
+                  data-testid="button-verificar-2fa"
+                >
+                  {verificando2fa ? "Verificando..." : "Verificar e entrar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setChallengeToken(null); setCodigo2fa(""); }}
+                  className="w-full text-sm text-slate-500 hover:opacity-70 transition-opacity"
+                  data-testid="button-voltar-login"
+                >
+                  Voltar
+                </button>
+              </form>
+            ) : (
+            <>
             {/* Social Login */}
             <div className="space-y-3 mb-6">
               <button
@@ -229,6 +300,8 @@ export default function LoginPage() {
                   Cadastre-se
                 </Link>
               </p>
+            )}
+            </>
             )}
           </div>
         </div>

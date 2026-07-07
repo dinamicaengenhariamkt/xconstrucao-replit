@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logError } from "@/server/lib/logger";
 import { createHash } from "crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import {
   createRefreshToken,
 } from "@features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
+import { getSenhaMinima } from "@features/admin/platform-settings/server/settings-reader";
 import { requireVerifiedUser, createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { updateUserPassword } from "@features/auth/api/auth-storage";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
     email: user.email,
     name: user.name,
     username: user.username || undefined,
+    minLength: await getSenhaMinima(),
   });
   if (!policy.valid) {
     return jsonNoStore({ message: policy.message ?? "Nova senha inválida." }, 400);
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
         .where(and(eq(sessions.userId, user.id), ne(sessions.id, currentSessionId)));
     }
   } catch (err) {
-    console.error("Falha ao revogar sessões após troca de senha:", err);
+    void logError("warn", "Falha ao revogar sessões após troca de senha", { stack: (err as Error)?.stack, route: "/api/auth/change-password" });
   }
 
   const response = NextResponse.json({ success: true, message: "Senha alterada com sucesso." });

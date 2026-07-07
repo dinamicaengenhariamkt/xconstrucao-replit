@@ -14,8 +14,8 @@ import {
   HealthFilterSelect,
   HEALTH_LABELS,
   HEALTH_DOT_CLASSES,
-  getMockHealth,
-  getMockHealthSummary,
+  useObrasHealthMap,
+  summarizeHealthMap,
   useSaudeFilter,
 } from '@features/shared/health';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
@@ -36,6 +36,7 @@ import { formatRange } from '@shared/lib/formatters';
 
 export default function MinhasObrasPage() {
   const { data: obras, isLoading } = useMinhasObras();
+  const { data: healthMap } = useObrasHealthMap('empreiteiro');
   const searchParams = useSearchParams();
   const saude = useSaudeFilter();
   const [statusSelected, setStatusSelected] = useState<string[]>(() => {
@@ -97,7 +98,7 @@ export default function MinhasObrasPage() {
       result = result.filter((o) => statusSelected.includes(o.status));
     }
     if (saude.value) {
-      result = result.filter((o) => getMockHealth(o.id).status === saude.value);
+      result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
     }
     if (tipoSelected.length > 0) {
       result = result.filter((o) => tipoSelected.includes(o.tipo));
@@ -126,6 +127,7 @@ export default function MinhasObrasPage() {
     return result;
   }, [
     obras,
+    healthMap,
     statusSelected,
     saude.value,
     tipoSelected,
@@ -143,10 +145,7 @@ export default function MinhasObrasPage() {
     currentPage * ITEMS_PER_PAGE,
   );
 
-  const healthSummary = useMemo(
-    () => getMockHealthSummary((obras ?? []).map((o) => o.id)),
-    [obras],
-  );
+  const healthSummary = useMemo(() => summarizeHealthMap(healthMap), [healthMap]);
 
   const advancedActiveCount =
     (statusSelected.length > 0 ? 1 : 0) +

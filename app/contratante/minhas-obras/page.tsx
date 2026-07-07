@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { RiSearchLine, RiLoader4Line } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { Input } from '@shared/components/ui/input';
@@ -14,8 +14,8 @@ import {
   HealthFilterSelect,
   HEALTH_LABELS,
   HEALTH_DOT_CLASSES,
-  getMockHealth,
-  getMockHealthSummary,
+  useObrasHealthMap,
+  summarizeHealthMap,
   useSaudeFilter,
 } from '@features/shared/health';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
@@ -27,19 +27,24 @@ import { formatRange } from '@shared/lib/formatters';
 const PAGE_SIZE = 20;
 
 export default function MinhasObrasContratantePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  // "Meus rascunhos" (dropdown do usuário) navega para cá com ?visibilidade=rascunho.
+  const visibilidadeFilter = searchParams?.get('visibilidade') ?? undefined;
+  const isRascunhoView = visibilidadeFilter === 'rascunho';
   const {
     data: obrasPayload,
     isLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useObrasContratanteInfinite({ pageSize: PAGE_SIZE });
+  } = useObrasContratanteInfinite({ pageSize: PAGE_SIZE, visibilidade: visibilidadeFilter });
   const obras = useMemo(
     () => (obrasPayload?.pages ?? []).flatMap((p) => p.rows),
     [obrasPayload],
   );
   const totalServer = obrasPayload?.pages?.[0]?.total ?? 0;
-  const searchParams = useSearchParams();
+  const { data: healthMap } = useObrasHealthMap('contratante');
   const saude = useSaudeFilter();
   const [statusSelected, setStatusSelected] = useState<string[]>(() => {
     const param = searchParams?.get('status');
@@ -116,7 +121,7 @@ export default function MinhasObrasContratantePage() {
       result = result.filter((o) => statusSelected.includes(o.status));
     }
     if (saude.value) {
-      result = result.filter((o) => getMockHealth(o.id).status === saude.value);
+      result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
     }
     if (tipoSelected.length > 0) {
       result = result.filter((o) => tipoSelected.includes(o.tipo));
@@ -145,6 +150,7 @@ export default function MinhasObrasContratantePage() {
     return result;
   }, [
     obras,
+    healthMap,
     statusSelected,
     saude.value,
     tipoSelected,
@@ -156,10 +162,7 @@ export default function MinhasObrasContratantePage() {
     searchQuery,
   ]);
 
-  const healthSummary = useMemo(
-    () => getMockHealthSummary((obras ?? []).map((o) => o.id)),
-    [obras],
-  );
+  const healthSummary = useMemo(() => summarizeHealthMap(healthMap), [healthMap]);
 
   const advancedActiveCount =
     (statusSelected.length > 0 ? 1 : 0) +
@@ -189,9 +192,22 @@ export default function MinhasObrasContratantePage() {
     <div className="p-10 flex flex-col gap-10" data-testid="minhas-obras-contratante-page">
       <div className="flex flex-col gap-6 mb-12">
         <PageHeader
-          title="Minhas Obras"
-          subtitle="Acompanhe todas as suas obras em andamento e finalizadas."
+          title={isRascunhoView ? 'Meus rascunhos' : 'Minhas Obras'}
+          subtitle={
+            isRascunhoView
+              ? 'Obras salvas como rascunho. Continue a edição ou publique para receber candidaturas.'
+              : 'Acompanhe todas as suas obras em andamento e finalizadas.'
+          }
         />
+        {isRascunhoView && (
+          <div>
+            <ActiveFilterChip
+              label="Visibilidade: Rascunho"
+              onRemove={() => router.push('/contratante/minhas-obras')}
+              testId="filter-chip-rascunho"
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <AdvancedFiltersPopover

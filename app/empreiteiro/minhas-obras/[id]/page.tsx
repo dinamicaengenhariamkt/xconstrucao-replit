@@ -19,6 +19,7 @@ import { ContatoContratanteCard } from '@features/empreiteiro/minhas-obras/compo
 import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card';
 import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
 import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
+import { TabDisputas, type DisputaAlvoOption } from '@features/disputas/components/TabDisputas';
 import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
 import { useAuthStore } from '@features/auth/store/auth-store';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
@@ -46,7 +47,7 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   success: 'bg-green-500',
 };
 
-type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias' | 'saude' | 'lucro';
+type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias' | 'disputas' | 'saude' | 'lucro';
 
 const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'saude', label: 'Saúde', Icon: IconHealthAndSafety },
@@ -57,6 +58,7 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
   { key: 'cronograma', label: 'Cronograma', Icon: IconCalendarMonth },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
+  { key: 'disputas', label: 'Disputas', Icon: IconWarning },
   { key: 'lucro', label: 'Lucro', Icon: IconPayments },
 ];
 
@@ -367,6 +369,16 @@ export default function MinhaObraDetalhePage() {
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
               {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
+              {activeTab === 'disputas' && (
+                <TabDisputas
+                  obraId={obra.id}
+                  alvos={obra.financeiro.medicoes.map<DisputaAlvoOption>((m) => ({
+                    tipo: 'medicao',
+                    id: m.id,
+                    label: `Medição #${m.numero}`,
+                  }))}
+                />
+              )}
               {activeTab === 'saude' && (
                 <HealthDetailPanel
                   health={computeHealthFromObra(obra)}

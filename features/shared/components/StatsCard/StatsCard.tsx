@@ -1,9 +1,8 @@
 'use client';
 
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { CardContent, CardHeader } from '@shared/components/ui/card';
 import { cn } from '@shared/lib/utils';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import type { StatsCardBadgeVariant, StatsCardProps } from './types';
 
 const BADGE_CLASSES: Record<StatsCardBadgeVariant, string> = {
@@ -29,28 +28,15 @@ export function StatsCard({
   luminous = false,
   compact = false,
 }: StatsCardProps) {
-  const inner = (
-    <Card
-      className={cn(
-        'h-full transition-colors',
-        luminous && 'luminous-card group overflow-hidden hover:bg-gray-50/60 dark:hover:bg-gray-800/40',
+  return (
+    <LuminousHoverCard
+      href={href}
+      testId={testId}
+      luminous={luminous}
+      cardClassName={cn(
         href && (luminous ? 'cursor-pointer' : 'cursor-pointer hover:border-primary/30'),
       )}
     >
-      {luminous && (
-        <>
-          {/* Linha primary fina no topo do card — aparece no hover */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[2]"
-          />
-          {/* Gradient bg sutil — aparece no hover */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
-          />
-        </>
-      )}
       <CardHeader className="relative z-10 flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
         <div
           className={cn(
@@ -83,30 +69,6 @@ export function StatsCard({
         </p>
         <p className={cn('font-extrabold text-gray-900 dark:text-gray-100', compact ? 'text-2xl' : 'text-3xl')}>{value}</p>
       </CardContent>
-    </Card>
-  );
-
-  // Sombra mais sutil quando o card tem borda luminous (não compete com a borda branca).
-  const hoverBoxShadow = luminous
-    ? '0 2px 8px -2px rgba(0, 0, 0, 0.06), 0 1px 3px -1px rgba(0, 0, 0, 0.03)'
-    : '0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-
-  return (
-    <motion.div
-      className="rounded-xl"
-      whileHover={{
-        scale: 1.01,
-        boxShadow: hoverBoxShadow,
-      }}
-      transition={{ duration: 0.2 }}
-    >
-      {href ? (
-        <Link href={href} data-testid={testId}>
-          {inner}
-        </Link>
-      ) : (
-        inner
-      )}
-    </motion.div>
+    </LuminousHoverCard>
   );
 }

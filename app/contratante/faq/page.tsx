@@ -10,6 +10,8 @@ import { FAQEmptyState } from '@features/shared/faq/FAQEmptyState';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
+import { ModuloIndisponivel } from '@features/shared/components/ModuloIndisponivel';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { useContratanteFAQ } from '@features/contratante/faq/hooks/use-faq';
 import {
   CONTRATANTE_FAQ_CATEGORIES,
@@ -24,6 +26,7 @@ const CATEGORY_OPTIONS = Object.entries(CONTRATANTE_FAQ_CATEGORIES).map(
 );
 
 export default function ContratanteFAQPage() {
+  const { config } = usePublicConfig();
   const { data: items, isLoading } = useContratanteFAQ();
   const [categorySelected, setCategorySelected] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +61,17 @@ export default function ContratanteFAQPage() {
   const advancedActiveCount = categorySelected.length > 0 ? 1 : 0;
   const clearAllAdvanced = () => setCategorySelected([]);
   const showGrid = advancedActiveCount === 0 && !searchQuery.trim();
+
+  if (!config.faq) {
+    return (
+      <div className="p-10">
+        <ModuloIndisponivel
+          titulo="Central de ajuda indisponível"
+          mensagem="A central de perguntas frequentes está temporariamente desativada."
+        />
+      </div>
+    );
+  }
 
   if (isLoading) return <FAQSkeleton />;
 
@@ -105,23 +119,31 @@ export default function ContratanteFAQPage() {
 
       {showGrid && items && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(CONTRATANTE_FAQ_CATEGORIES).map(([key, label]) => {
-            const meta = CONTRATANTE_FAQ_CATEGORY_META[key];
-            const Icon = CONTRATANTE_FAQ_CATEGORY_ICONS[key] ?? RiQuestionLine;
-            return (
-              <FAQCategoryCard
-                key={key}
-                categoryKey={key}
-                label={label}
-                description={meta?.description}
-                count={items.filter((i) => i.category === key).length}
-                iconBg={meta?.iconBg}
-                iconColor={meta?.iconColor}
-                Icon={Icon}
-                onSelect={() => setCategorySelected([key])}
-              />
-            );
-          })}
+          {Object.entries(CONTRATANTE_FAQ_CATEGORIES)
+            // Só exibe categorias que têm ao menos 1 pergunta nesta visão.
+            .map(([key, label]) => ({
+              key,
+              label,
+              count: items.filter((i) => i.category === key).length,
+            }))
+            .filter((c) => c.count > 0)
+            .map(({ key, label, count }) => {
+              const meta = CONTRATANTE_FAQ_CATEGORY_META[key];
+              const Icon = CONTRATANTE_FAQ_CATEGORY_ICONS[key] ?? RiQuestionLine;
+              return (
+                <FAQCategoryCard
+                  key={key}
+                  categoryKey={key}
+                  label={label}
+                  description={meta?.description}
+                  count={count}
+                  iconBg={meta?.iconBg}
+                  iconColor={meta?.iconColor}
+                  Icon={Icon}
+                  onSelect={() => setCategorySelected([key])}
+                />
+              );
+            })}
         </div>
       )}
 

@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
+import { CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
 import { Input } from '@shared/components/ui/input';
@@ -59,17 +58,13 @@ function EmpreiteiraCard({ empreiteira }: { empreiteira: AdminEmpreiteira }) {
   const status = statusConfig[empreiteira.status];
 
   return (
-    <Link href={`/admin/empreiteiras/${empreiteira.id}`} data-testid={`link-empreiteira-${empreiteira.id}`}>
-      <motion.div
-        className="rounded-2xl overflow-visible"
-        whileHover={{
-          scale: 1.01,
-          boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-        }}
-        transition={{ duration: 0.2 }}
-      >
-        <Card className="h-full rounded-2xl transition-colors hover:border-primary/20">
-          <CardContent className="p-5 flex flex-col gap-4">
+    <LuminousHoverCard
+      href={`/admin/empreiteiras/${empreiteira.id}`}
+      testId={`link-empreiteira-${empreiteira.id}`}
+      className="rounded-2xl"
+      cardClassName="rounded-2xl hover:border-primary/20"
+    >
+      <CardContent className="relative z-10 p-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10" data-testid={`avatar-empreiteira-${empreiteira.id}`}>
                 {empreiteira.avatarUrl && <AvatarImage src={empreiteira.avatarUrl} alt={empreiteira.razaoSocial} />}
@@ -126,10 +121,8 @@ function EmpreiteiraCard({ empreiteira }: { empreiteira: AdminEmpreiteira }) {
                 {formatCurrency(empreiteira.valorTotalContratado)}
               </span>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </Link>
+      </CardContent>
+    </LuminousHoverCard>
   );
 }
 

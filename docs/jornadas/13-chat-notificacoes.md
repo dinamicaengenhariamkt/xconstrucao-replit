@@ -8,7 +8,7 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 
 ## 2. Personas
 - **Contratante ↔ Empreiteiro**: thread 1:1 por obra após aceite (J05).
-- **Admin**: pode ver canais (auditoria) e enviar mensagem broadcast/suporte.
+- **Admin**: monitoramento/auditoria dos canais → **escopo movido para [J21](21-observabilidade-comunicacao-admin.md)** (leitura-only; o schema 1:1 não comporta admin como participante).
 
 ## 3. Fluxo ponta-a-ponta
 1. Aceite de candidatura (J05) cria thread `obra↔contratante↔empreiteiro` automaticamente.
@@ -61,9 +61,9 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 - [x] Plugar helper em J05, J06, J08 (geradoras) _(J05 candidatura-dispatcher; J06 medicao-dispatcher 2026-05-29; J08 Task #52)_
 - [x] Componente sino no header com contagem de não-lidas _(hooks de notif real em ambas as personas)_
 - [x] Real-time: avaliar polling (simples) vs. SSE/WebSocket (correto). MVP: polling 30s. _(2026-05-29 — `refetchInterval` 30s contratante / 60s empreiteiro)_
-- [ ] Email para tipos críticos (respeitar preferências J02) _(parcial: J05 candidatura usa Brevo; chat não envia email — decisão MVP)_
+- [ ] Email para tipos críticos (respeitar preferências J02) _(parcial: J05 candidatura usa Brevo; chat não envia email — decisão MVP. Aplicação uniforme de `user_preferencias` nos dispatchers → **movido para J02**)_
 - [x] Nova obra aprovada → notificação in-app + email para empreiteiros na zona de atuação (respeita `email_novaObra`) _(Task #94)_
-- [ ] Tela admin de monitoramento (auditoria)
+- [~] Tela admin de monitoramento (auditoria) → **movida para [J21 — Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md)** _(2026-06-02 — escopo cresceu o suficiente p/ jornada própria: leitura read-only de chats + painel de notificações reais + trilha de auditoria)_
 
 ## 10. Critérios de aceite
 1. Após J05 aceite → contratante e empreiteiro abrem chat e veem thread vazia.
@@ -88,6 +88,7 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 
 - 2026-05-25 (Task #32): Evento `obra.publicada` precisa notificar **admin** (moderação opcional) e disparar emails segmentados pra empreiteiros com `especialidade` compatível + raio de cobertura — adicionar ao enum `notificacao_tipo` quando esta jornada sair do mock; integrar com J04 (descoberta) e J03 (publicação) no consumo. _Resolvido parcialmente em 2026-05-26 (Task #94)_: aprovação em moderação dispara in-app + email para empreiteiros com match por **UF/cidade** da zona de atuação (J02 §Task #87). Segmentação por especialidade e raio km continuam pendentes.
 - 2026-05-26 (Task #94): Dispatcher `nova-obra-zona` é fire-and-forget pós-commit em `/api/admin/obras/[id]/aprovar` — sem retry/fila persistente. Se o processo morrer entre a aprovação e o disparo, a notificação se perde silenciosamente. Aceitável no MVP (in-app é "nice to have"; empreiteiro ainda vê a obra ao abrir o marketplace), mas vale virar `job + flag idempotente` (padrão do `candidatura-dispatcher`) se passar a ser canal crítico.
-- 2026-05-26 (Task #94): Re-publicação após rejeição re-dispara a notificação (mesma paridade da atividade `obra_publicada`). Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra em ciclos pause→republish. Resolver junto com o agrupamento de "5 mensagens novas" do §11.
+- 2026-05-26 (Task #94): Re-publicação após rejeição re-dispara a notificação (mesma paridade da atividade `obra_publicada`). Sem dedupe por `(obraId, userId)` — empreiteiro pode receber 2+ avisos da mesma obra em ciclos pause→republish. Resolver junto com o agrupamento de "5 mensagens novas" do §11. **Resolvido em 2026-06-05:** índice único parcial `uniq_notificacoes_user_href_unread ON notificacoes (user_id, href) WHERE lida = false` ([bootstrap-notificacoes.ts](../../server/bootstrap-notificacoes.ts) + espelho em [schema.ts](../../shared/db/schema.ts)) + `onConflictDoNothing` no dispatcher ([nova-obra-zona-dispatcher.ts](../../features/notificacoes/nova-obra-zona-dispatcher.ts)). Duplicata NÃO-LIDA é ignorada (e o email é suprimido junto); re-disparo legítimo volta a funcionar após o empreiteiro ler (a linha sai do índice parcial).
+- 2026-06-05 (paginação — Camada A): corrigido o `LIMIT 100` hardcoded de `listarMensagensDaThread` que truncava threads longas escondendo as mensagens **recentes**. Agora retorna as N **mais recentes** (default 50) em ordem cronológica, via keyset `(criada_em, id)` DESC + inversão, com cursor opaco exposto no header `X-Next-Cursor` ([service.ts](../../features/chat/service.ts), [cursor.ts](../../features/chat/cursor.ts), índice `idx_chat_mensagens_thread_keyset`). O **infinite-scroll na UI** ("carregar mais antigas" com `useInfiniteQuery` + body `{ messages, nextCursor }`) fica como **Camada B / P2** — o cursor já está pronto no header para habilitá-la sem nova mudança de service. Ver [_backlog-paralelo.md](_backlog-paralelo.md).
 - 2026-05-26 (Task #94): Sem segmentação por **especialidade**, sem **raio km**, sem normalização IBGE de cidades, sem unsubscribe-link direto no email (CTA pro `/empreiteiro/configuracoes` aba notificações via texto). Cada um vira refinamento próprio quando entrar no roteiro.
 - 2026-05-29 (MVP + hardening): chat saiu do mock — schema, endpoints reais, polling 30/60s, dispatcher de chat com **coalescing 5min por `threadId`** (coluna dedicada em `notificacoes`), rate-limit 3 tiers no POST com tier `thread` após auth (anti-DoS), validação de anexo restrito à própria obra da thread, marcar-lida automático em mensagem nova com aba visível + listener `visibilitychange`. Detalhes e P1/P2 abertos em [_backlog-paralelo.md](_backlog-paralelo.md).

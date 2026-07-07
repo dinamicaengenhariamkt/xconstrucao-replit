@@ -7,7 +7,8 @@ export type AnuncioZonaId =
   | 'sidebar-inf-empreiteiro'
   | 'banner-dashboard-contratante'
   | 'banner-dashboard-empreiteiro'
-  | 'banner-qa';
+  | 'banner-qa'
+  | 'home-mercado';
 
 export interface ZonaAnuncio {
   id: AnuncioZonaId;
@@ -16,4 +17,8 @@ export interface ZonaAnuncio {
   icone: 'web' | 'dashboard' | 'help';
   status: AnuncioZonaStatus;
   anuncioAtual?: string;
+  /** Templates aceitos pela zona (J24). */
+  templates?: string[];
+  /** Zona aceita múltiplos criativos (vitrine). */
+  multiplo?: boolean;
 }

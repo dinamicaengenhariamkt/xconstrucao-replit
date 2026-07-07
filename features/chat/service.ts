@@ -6,6 +6,7 @@ import {
   type ChatMensagem,
   type ChatThread,
 } from "@shared/db/schema";
+import type { ChatCursor } from "./cursor";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -147,7 +148,41 @@ export interface MensagemRow {
   criadaEm: Date;
 }
 
-export async function listarMensagensDaThread(threadId: string, limit = 100): Promise<MensagemRow[]> {
+export interface ListarMensagensOpts {
+  /** Tamanho da página (default 50). */
+  limit?: number;
+  /** Cursor keyset: traz mensagens ANTERIORES a este par (criada_em, id). */
+  before?: ChatCursor | null;
+}
+
+export interface ListarMensagensResult {
+  /** Sempre em ordem cronológica ASC (a UI renderiza de cima pra baixo). */
+  messages: MensagemRow[];
+  /** Cursor para carregar mensagens mais antigas; `null` quando não há mais. */
+  nextCursor: ChatCursor | null;
+}
+
+/**
+ * Lista mensagens de uma thread com paginação keyset (J13 — Camada A).
+ *
+ * Por padrão retorna as N mensagens MAIS RECENTES (em ordem cronológica ASC),
+ * corrigindo o antigo `LIMIT 100` que truncava as recentes silenciosamente.
+ * Para carregar mais antigas, passar `before` com o cursor da mensagem mais
+ * antiga já carregada.
+ *
+ * Internamente busca DESC com `LIMIT limit + 1` (a linha extra detecta se há
+ * página anterior) e inverte o resultado para devolver ASC.
+ */
+export async function listarMensagensDaThread(
+  threadId: string,
+  opts: ListarMensagensOpts = {},
+): Promise<ListarMensagensResult> {
+  const limit = opts.limit ?? 50;
+  const before = opts.before ?? null;
+  const beforeFilter = before
+    ? sql`AND (m.criada_em, m.id) < (${before.criadaEm}, ${before.id})`
+    : sql``;
+
   const result = await db.execute<{
     id: string;
     thread_id: string;
@@ -179,24 +214,43 @@ export async function listarMensagensDaThread(threadId: string, limit = 100): Pr
     LEFT JOIN users u ON u.id = m.autor_user_id
     LEFT JOIN obras ao ON ao.id = m.anexo_obra_id
     WHERE m.thread_id = ${threadId}
-    ORDER BY m.criada_em ASC
-    LIMIT ${limit}
+    ${beforeFilter}
+    ORDER BY m.criada_em DESC, m.id DESC
+    LIMIT ${limit + 1}
   `);
 
-  return result.rows.map((row) => ({
-    id: row.id,
-    threadId: row.thread_id,
-    autorUserId: row.autor_user_id,
-    autorName: row.autor_name,
-    texto: row.texto,
-    anexoObraId: row.anexo_obra_id,
-    anexoObraNome: row.anexo_obra_nome,
-    anexoObraStatus: row.anexo_obra_status,
-    anexoObraProgresso: row.anexo_obra_progresso,
-    anexoObraEndereco: row.anexo_obra_endereco,
-    lidaEm: row.lida_em,
-    criadaEm: row.criada_em,
-  }));
+  // Linha extra além de `limit` indica que há mensagens mais antigas.
+  const temMaisAntigas = result.rows.length > limit;
+  const pageDesc = temMaisAntigas ? result.rows.slice(0, limit) : result.rows;
+
+  // pageDesc está em DESC (mais recente → mais antiga). O cursor para "mais
+  // antigas" é a última linha desta página (a mais antiga retornada).
+  const maisAntiga = pageDesc[pageDesc.length - 1];
+  const nextCursor =
+    temMaisAntigas && maisAntiga
+      ? { criadaEm: maisAntiga.criada_em, id: maisAntiga.id }
+      : null;
+
+  // Inverte para ASC (ordem cronológica esperada pela UI).
+  const messages = pageDesc
+    .slice()
+    .reverse()
+    .map((row) => ({
+      id: row.id,
+      threadId: row.thread_id,
+      autorUserId: row.autor_user_id,
+      autorName: row.autor_name,
+      texto: row.texto,
+      anexoObraId: row.anexo_obra_id,
+      anexoObraNome: row.anexo_obra_nome,
+      anexoObraStatus: row.anexo_obra_status,
+      anexoObraProgresso: row.anexo_obra_progresso,
+      anexoObraEndereco: row.anexo_obra_endereco,
+      lidaEm: row.lida_em,
+      criadaEm: row.criada_em,
+    }));
+
+  return { messages, nextCursor };
 }
 
 export async function podeAcessarThread(userId: string, threadId: string): Promise<ChatThread | null> {

@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import type { AdminEmpreiteira, AdminEmpreiteiraObra, HistoricoBloqueio } from '../types';
-import { mockAdminEmpreiteiras, mockAdminEmpreiteiraObras } from '../mocks';
-import { isMockEnabled } from '@/features/shared/lib/mock-flag';
-
-const ENABLE_MOCK = isMockEnabled();
 
 export const novaEmpreiteiraSchema = z.object({
   razaoSocial: z.string().min(3, 'Razão social deve ter pelo menos 3 caracteres'),
@@ -34,7 +30,6 @@ export function useAdminEmpreiteiras() {
   return useQuery<AdminEmpreiteira[]>({
     queryKey: ['admin', 'empreiteiras'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminEmpreiteiras;
       const res = await fetch('/api/admin/empreiteiras');
       if (!res.ok) throw new Error('Erro ao buscar empreiteiras');
       return res.json();
@@ -47,7 +42,6 @@ export function useAdminEmpreiteira(id: string) {
   return useQuery<AdminEmpreiteira | undefined>({
     queryKey: ['admin', 'empreiteiras', id],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminEmpreiteiras.find((e) => e.id === id);
       const res = await fetch(`/api/admin/empreiteiras/${id}`);
       if (!res.ok) throw new Error('Erro ao buscar empreiteira');
       return res.json();
@@ -79,7 +73,6 @@ export function useAdminEmpreiteiraObras(id: string) {
   return useQuery<AdminEmpreiteiraObra[]>({
     queryKey: ['admin', 'empreiteiras', id, 'obras'],
     queryFn: async () => {
-      if (ENABLE_MOCK) return mockAdminEmpreiteiraObras[id] ?? [];
       const res = await fetch(`/api/admin/empreiteiras/${id}/obras`);
       if (!res.ok) throw new Error('Erro ao buscar obras da empreiteira');
       return res.json();
@@ -116,10 +109,6 @@ export function useUpdateEmpreiteira(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: EditarEmpreiteiraFormData) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 600));
-        return { ...data, id };
-      }
       const res = await fetch(`/api/admin/empreiteiras/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -153,10 +142,6 @@ export function useBloquearEmpreiteira() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, novoStatus, motivo, observacoes, responsavel }: BloquearEmpreiteiraInput) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 600));
-        return { id, status: novoStatus, motivo, observacoes, responsavel };
-      }
       const res = await fetch(`/api/admin/empreiteiras/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -200,7 +185,10 @@ export function useAprovarEmpreiteira() {
         body: JSON.stringify({ decisao }),
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erro ao processar curadoria da empreiteira');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.message || 'Erro ao processar curadoria da empreiteira');
+      }
       return res.json();
     },
     onSuccess: (_data, { id, decisao }) => {
@@ -220,10 +208,6 @@ export function useAprovarEmpreiteira() {
 export function useResetarAcessoEmpreiteira() {
   return useMutation({
     mutationFn: async (_id: string) => {
-      if (ENABLE_MOCK) {
-        await new Promise((r) => setTimeout(r, 800));
-        return { success: true };
-      }
       const res = await fetch(`/api/admin/empreiteiras/${_id}/reset-acesso`, {
         method: 'POST',
       });

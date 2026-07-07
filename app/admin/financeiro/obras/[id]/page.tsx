@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { Card, CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@shared/components/ui/tabs';
 import {
   RiArrowLeftLine,
@@ -26,18 +25,10 @@ import {
   RiInformationLine,
   RiAddCircleLine,
 } from 'react-icons/ri';
-import { getMockObraDetalhe } from '@features/admin/financeiro/mocks/obra-detalhe.mock';
+import { useAdminObraDetalhe } from '@features/admin/financeiro/hooks/use-obra-detalhe';
 import { SITUACAO_CONFIG } from '@features/admin/financeiro/constants';
 import { formatCurrency } from '@features/admin/financeiro/utils';
 import type { AdminMedicao, AdminHistoricoItem, MedicaoStatus } from '@features/admin/financeiro/types';
-
-const KPI_HOVER = {
-  whileHover: {
-    scale: 1.01 as number,
-    boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-  },
-  transition: { duration: 0.2 },
-} as const;
 
 const MEDICAO_STATUS_CONFIG: Record<MedicaoStatus, { label: string; className: string }> = {
   pago: {
@@ -207,14 +198,7 @@ function HistoricoTab({ historico }: { historico: AdminHistoricoItem[] }) {
 
 export default function AdminObraDetalhePage() {
   const { id } = useParams<{ id: string }>();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const obra = getMockObraDetalhe(id);
+  const { data: obra, isLoading } = useAdminObraDetalhe(id);
 
   if (isLoading) {
     return (
@@ -252,7 +236,7 @@ export default function AdminObraDetalhePage() {
 
   const situacaoCfg = SITUACAO_CONFIG[obra.situacao];
   const saldoPagar = obra.valorTotal - obra.valorPago;
-  const percentPago = Math.round((obra.valorPago / obra.valorTotal) * 100);
+  const percentPago = obra.valorTotal > 0 ? Math.round((obra.valorPago / obra.valorTotal) * 100) : 0;
 
   const kpis = [
     {
@@ -378,9 +362,8 @@ export default function AdminObraDetalhePage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi) => (
-          <motion.div key={kpi.label} {...KPI_HOVER}>
-            <Card className="rounded-xl border border-border-light dark:border-gray-800 shadow-sm h-full">
-              <CardContent className="p-5 flex flex-col gap-3">
+          <LuminousHoverCard key={kpi.label} cardClassName="shadow-sm">
+              <CardContent className="relative z-10 p-5 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                     {kpi.label}
@@ -396,8 +379,7 @@ export default function AdminObraDetalhePage() {
                   <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>
                 </div>
               </CardContent>
-            </Card>
-          </motion.div>
+          </LuminousHoverCard>
         ))}
       </div>
 

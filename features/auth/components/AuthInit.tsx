@@ -18,6 +18,7 @@ const PROTECTED_ROUTE_PREFIXES = [
   '/admin',
   '/contratante',
   '/empreiteiro',
+  '/anunciante',
 ];
 
 function isProtectedRoute(pathname: string | null): boolean {

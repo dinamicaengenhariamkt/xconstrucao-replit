@@ -48,6 +48,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
   const out = rows.map((r) => ({
     id: r.id,
+    fileId: r.fileId,
     url: r.visibility === "public" ? (r.publicUrl ?? publicUrlForKey(r.bucketKey)) : "",
     fase: r.fase,
     tag: r.tag,

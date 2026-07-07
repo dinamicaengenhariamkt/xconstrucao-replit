@@ -20,6 +20,9 @@ import { Separator } from '@shared/components/ui/separator';
 import { Button } from '@shared/components/ui/button';
 import { Card, CardContent } from '@shared/components/ui/card';
 import Image from 'next/image';
+import { RiMegaphoneLine } from 'react-icons/ri';
+import { useHasRole } from '@features/auth/store/auth-store';
+import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import {
   EMPREITEIRO_NAV_ITEMS,
   EMPREITEIRO_BOTTOM_NAV_ITEMS,
@@ -29,6 +32,11 @@ export function EmpreiteiroSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  // J23/D6 — "Meus Anúncios" embutido quando o empreiteiro tem o papel anunciante.
+  const isAnunciante = useHasRole('anunciante');
+  const navItems = isAnunciante
+    ? [...EMPREITEIRO_NAV_ITEMS, { title: 'Meus Anúncios', url: '/empreiteiro/meus-anuncios', icon: RiMegaphoneLine }]
+    : EMPREITEIRO_NAV_ITEMS;
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -62,7 +70,7 @@ export function EmpreiteiroSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {EMPREITEIRO_NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -84,32 +92,8 @@ export function EmpreiteiroSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Banner Monetização Superior */}
-        <div className="px-2 mt-4">
-          <a
-            href="#"
-            className="block bg-white dark:bg-gray-900 rounded-xl overflow-hidden shadow-sm border border-border-light dark:border-gray-800 hover:shadow-md transition-shadow"
-          >
-            <div
-              className="aspect-[4/3] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=300')",
-              }}
-            />
-            <div className="p-3">
-              <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                Anúncio
-              </span>
-              <p className="text-[10px] text-gray-400 mt-2">
-                Por <span className="font-medium text-gray-500">Parceiro</span>
-              </p>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1 line-clamp-2">
-                Materiais de construção com até 30% de desconto
-              </p>
-            </div>
-          </a>
-        </div>
+        {/* Anúncio — só aparece quando há criativo ativo cadastrado para a zona. */}
+        <AdSidebarSlot zoneId="sidebar-sup-empreiteiro" />
       </SidebarContent>
 
       <SidebarFooter className="p-4">

@@ -10,8 +10,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 
 | # | Jornada | Personas | Wave | Status | Prioridade |
 |:-:|---|---|:-:|---|:-:|
-| 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | revisão | alta |
-| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | revisão | média |
+| 01 | [Identidade & Onboarding](01-identidade-onboarding.md) | todas | 1 | pronto | alta |
+| 02 | [Perfis & Configurações](02-perfis-configuracoes.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 03 | [Cadastro de Obra](03-cadastro-obra.md) | contratante | 1 | pronto | alta |
 | 04 | [Marketplace & Descoberta](04-marketplace-descoberta.md) | empreiteiro, contratante | 1 | pronto | alta |
 | 05 | [Candidatura & Aceite](05-candidatura-aceite.md) | empreiteiro, contratante, admin | 1 | pronto | alta |
@@ -22,19 +22,41 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 10 | [Disputas](10-disputas.md) | todas | 3 | pronto | baixa |
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | pronto | média |
-| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro, admin | 2 | pronto | média |
+| 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro | 2 | pronto | média |
 | 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | bloqueada | média |
-| 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pendente | média |
-| 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pendente | média |
-| 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pendente | alta |
-| 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | parcial | média |
-| 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pendente | alta |
+| 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pronto | média |
+| 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pronto | média |
+| 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pronto | alta |
+| 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | pronto | média |
+| 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pronto | alta |
+| 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
+| 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | pronto | média |
+| 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | pronto | média |
+| 23 | [Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)](23-meus-anuncios-self-service.md) | anunciante, contratante, empreiteiro, admin | 6 | pronto | alta |
+| 24 | [Anúncios Ricos (Templates, Home Dinâmica & Toggle)](24-anuncios-ricos.md) | admin, anunciante, público | 5 | pronto | alta |
+| 25 | [Obras em Destaque na Home (Curadoria + Carrossel)](25-obras-em-destaque-home.md) | admin, público | 5 | pronto | alta |
+| 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
+| 27 | [Gestão de Leads do Marketplace](27-gestao-leads-marketplace.md) | admin | 5 | pronto | alta |
+| 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | pronto (infra) | média |
+| 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | pronto | baixa |
+| 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | concluído | média |
+| 31 | [Pagamento Real de Anúncios (Billing do Marketplace de Mídia)](31-pagamento-anuncios.md) | anunciante, admin | 7 | bloqueada | média |
+| 32 | [FAQ Gerenciável (Admin CRUD + Leitura por Visão)](32-faq-gerenciavel.md) | admin, contratante, empreiteiro | 7 | pronto | alta |
+| 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | planejada | alta |
+| 34 | [Ajustes Finos de UX (Visão Admin)](34-ajustes-finos-ux-admin.md) | admin | 8 | pronto | média |
+| 35 | [Testes Unitários (fundação de qualidade)](35-testes-unitarios.md) | dev/sistema | 9 | planejada | alta |
+| 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | planejada | alta |
+| 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial | alta |
+| 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | revisão | média |
+| 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
+| 40 | [Ajustes Finos de UX: Nova Obra (Contratante)](40-ajustes-finos-nova-obra-contratante.md) | contratante | 8 | pronto | média |
 
 ---
 
 ## Convenções
 
 ### Status
+- **planejada** — roteiro completo e desbloqueado, pronto para entrar na fila de implementação (nada de código ainda). É o "pendente" com aval para começar.
 - **pendente** — jornada documentada (roteiro pronto) mas ainda não iniciada.
 - **mock** — UI existe mas dados são fixos / não persistem. Substituir por API + Drizzle.
 - **parcial** — backend real coexiste com mock por trás de uma flag (`ENABLE_MOCK`). Remover flag e deletar mocks.
@@ -51,6 +73,12 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
 - **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
+- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20 (bloqueada). *(23 movida p/ Wave 6 após reestruturação.)*
+- **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads), 24 (templates + home dinâmica de anúncios) — entregues 2026-06-05/06**. Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14). A J24 é pré-requisito da J23 (reuso de templates/preview).
+- **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio); **23 (self-service de anúncios — reestruturada e planejada 2026-06-07**: multi-role + visão anunciante + pedido multi-slot + checkout-protótipo; cobrança real extraída p/ a J31).
+- **Wave 7 — Monetização do marketplace de mídia**: **31 (pagamento real de anúncios — bloqueada)**: liga o gateway real ao checkout da J23. Em série atrás de 23 (precisa existir) e 14 (precisa do provedor de pagamento).
+- **Wave 8 — Observabilidade técnica (pré-produção)**: **33 (saúde da plataforma + captura de erros — planejada 2026-06-08; decisão fechada 2026-06-20: híbrido Sentry free + Pino + `app_errors` próprio)**: camada técnica antes do uso real por clientes — captura proativa de erros + painel de saúde no admin, com meta de independência do Sentry. Complementa a auditoria funcional (J21) e os KPIs (J29). **34 (ajustes finos de UX da visão admin — pronto 2026-06-20)**: jornada agrupadora de refinamentos de consistência (hover de cards, arquitetura de filtros do financeiro, NaN%, top bar, active da sidebar). **38 (ajustes finos de UX empreiteiro & contratante — em revisão 2026-06-20)**: irmã da J34 nas demais visões (anúncio dinâmico na sidebar, FAQ sem cards vazios, margem da Nova Obra, acesso a "Meus rascunhos") — em sua maioria religação de UI a serviços/persistência já existentes. **40 (ajustes finos de UX: Nova Obra do contratante — pronto 2026-07-06)**: novo lote focado na tela Nova Obra (altura do select de UF, máscara de CEP reusando `CepInput`, duplo scroll do layout, extensões/validação de anexos, selects opcionais limpáveis, feedback do "Salvar rascunho") — guarda-chuva dos próximos refinamentos das telas do contratante. Inclui correção do E2E `j03-nova-obra` (porta de cleanup) descoberta na verificação.
+- **Wave 9 — Qualidade & robustez (rede de segurança automatizada)**: trio de testes criado 2026-06-20 para dar robustez pré-produção, complementando a observabilidade (J33). **35 (testes unitários — planejada)**: base da pirâmide + fundação (Vitest, ESLint, hook de auto-validação local — CI no GitHub Actions fora de escopo por ora, deploy é direto no Replit). **36 (testes de integração — planejada)**: API + banco isolado. **37 (testes E2E — parcial)**: base Playwright já existe; expandir cobertura dos fluxos críticos. Princípio: muitos unitários (baratos) → alguns de integração → poucos E2E (caros). Teste automatizado **protege contra regressão**; não substitui o teste manual exploratório (que descobre o que falta).
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Button } from '@shared/components/ui/button';
@@ -14,7 +13,6 @@ import {
   RiNotification3Line,
   RiSettings3Line,
   RiMenuLine,
-  RiRefreshLine,
   RiUserLine,
   RiLogoutBoxRLine,
   RiCheckDoubleLine,
@@ -36,26 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@shared/components/ui/dropdown-menu';
-
-function useRelativeTime(date: Date | null): string {
-  const [label, setLabel] = useState('');
-
-  const compute = useCallback(() => {
-    if (!date) { setLabel(''); return; }
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diff < 60) setLabel('agora mesmo');
-    else if (diff < 3600) setLabel(`há ${Math.floor(diff / 60)} min`);
-    else setLabel(`há ${Math.floor(diff / 3600)}h`);
-  }, [date]);
-
-  useEffect(() => {
-    compute();
-    const id = setInterval(compute, 30_000);
-    return () => clearInterval(id);
-  }, [compute]);
-
-  return label;
-}
 
 const NOTIF_ICON: Record<NotificacaoTipo, React.ElementType> = {
   lembrete: RiAlarmLine,
@@ -88,7 +66,6 @@ function formatNotifTime(isoDate: string): string {
 
 export function AdminTopbar() {
   const { user, logout } = useAuth();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const { notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } = useAdminNotifications();
 
@@ -97,19 +74,7 @@ export function AdminTopbar() {
     router.push(redirect);
   };
   const [searchOpen, setSearchOpen] = useState(false);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(() => new Date());
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const relativeTime = useRelativeTime(lastRefreshedAt);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await queryClient.invalidateQueries();
-    setLastRefreshedAt(new Date());
-    setIsRefreshing(false);
-    setPopoverOpen(false);
-  }, [queryClient]);
 
   // Atalho de teclado Cmd/Ctrl + K para abrir busca global
   useEffect(() => {
@@ -270,35 +235,6 @@ export function AdminTopbar() {
                 <RiArrowRightSLine className="w-3.5 h-3.5" />
               </button>
             </div>
-          </PopoverContent>
-        </Popover>
-
-        {/* Sincronizar dados */}
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-              aria-label="Sincronizar dados"
-            >
-              <RiRefreshLine className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-4" align="end">
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Sincronização de dados</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              {lastRefreshedAt ? `Última atualização: ${relativeTime}` : 'Carregando dados...'}
-            </p>
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RiRefreshLine className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Atualizando...' : 'Sincronizar agora'}
-            </Button>
           </PopoverContent>
         </Popover>
 

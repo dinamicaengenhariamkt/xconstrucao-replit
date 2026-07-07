@@ -1,7 +1,7 @@
 # Jornada — Identidade & Onboarding
 
-> Status: revisão | Prioridade: alta | Wave: 1
-> Última atualização: 2026-05-05
+> Status: pronto | Prioridade: alta | Wave: 1
+> Última atualização: 2026-06-02
 
 ## 1. Contexto & Objetivo
 Garantir que qualquer pessoa entre na plataforma com a persona certa (contratante / empreiteiro / admin), tenha email verificado e perfil mínimo preenchido para usar as demais jornadas. É a base de identidade — sem ela, nada do marketplace funciona.
@@ -102,3 +102,4 @@ Nenhum mock relevante aqui — auth é real. Auditar se restou alguma flag.
 - 2026-05-07 — **Banner persistente + toast em mutations**: `EmailVerificationBanner` (amber, não-dispensável) montado nos layouts de `/contratante` e `/empreiteiro`, com botão "Reenviar email". O `MutationCache` global em `lib/queryClient.ts` faz toast destrutivo padronizado quando qualquer mutation devolve `403 EMAIL_NOT_VERIFIED`.
 - 2026-05-07 — **Redirect pós-login com allowlist por role**: `resolvePostLoginRedirect(role, next)` aceita `?next=` apenas se for path interno (começa com `/`, não com `//`) e o prefixo bater com a role do usuário (`/admin*` para admin, `/contratante*` para contratante, etc.). Bloqueia open redirect e escalação cruzada de role.
 - 2026-05-07 — **Validação E2E (curl)**: login `joão@construtora.com` → `POST /api/obras` = 201; com `email_verified=NULL` → 403 `{ error: "EMAIL_NOT_VERIFIED" }`. Register transacional cria user + empreiteira juntos. Suíte Playwright completa fica como follow-up (#4).
+- **2026-06-02 (levantamento `/jornada`)**: auditoria de código confirmou todos os `[x]` implementados (transação atômica, `userId` UNIQUE, redirect allowlist, guard de email verificado, persona OAuth). Status promovido `revisão → pronto`. Único item em aberto é o gate em `app/api/auth/oauth-convert/route.ts:59` (`dbUser.role !== "admin"`) que impede troca de persona p/ superadmin no 1º login OAuth — **proposital** (superadmin nasce via seed, não registro público), **não bloqueia nenhuma jornada**. Mantido como gap consciente.

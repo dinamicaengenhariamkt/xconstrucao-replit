@@ -1,21 +1,40 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifyAccessToken, verifyAccessTokenAllowExpired } from "@features/auth/api/auth-service";
+import { isManutencaoAtiva } from "@features/admin/platform-settings/server/settings-reader";
+
+/** Inline (não importar de auth-utils, que puxa DB/audit p/ o bundle do proxy). */
+function isAdminLike(role: string): boolean {
+  return role === "admin" || role === "superadmin";
+}
+
+/** Prefixos das áreas logadas afetadas pelo modo manutenção (admin é isento). */
+const MAINTENANCE_AFFECTED_PREFIXES = ["/contratante", "/empreiteiro"];
+
+/** Extrai a role do token (tolera expirado-mas-íntegro), ou null. */
+function roleFromToken(accessToken: string | undefined): string | null {
+  if (!accessToken) return null;
+  const valid = verifyAccessToken(accessToken);
+  if (valid?.role) return valid.role;
+  const claims = verifyAccessTokenAllowExpired(accessToken);
+  return claims?.role ?? null;
+}
 
 /**
- * Middleware para proteção de rotas
+ * Proxy (middleware) de proteção de rotas.
  *
- * Nota: Este middleware roda no Edge Runtime, que não suporta módulos Node.js
- * como 'crypto'. Por isso, apenas verificamos a PRESENÇA do cookie access_token.
+ * J19 — Hardening: o Proxy do Next 16 já roda no runtime nodejs, então agora
+ * validamos a ASSINATURA do JWT (via `verifyAccessToken`, que usa
+ * `crypto.createHmac`). Antes a barreira de páginas era só presença de cookie;
+ * agora valida assinatura + role ANTES de renderizar a página. Reusa a
+ * verificação existente sem migrar a assinatura dos tokens já emitidos.
  *
- * A validação COMPLETA do JWT acontece em:
- * 1. Dashboard Layout - useAuth() hook valida token e redireciona se inválido
- * 2. API Routes - Validam tokens server-side (Node.js runtime) antes de retornar dados
- *
- * Esta abordagem mantém 3 camadas de segurança (defense in depth):
- * - Middleware: barreira inicial (verifica presença do cookie)
- * - Frontend: validação + UX (useAuth redireciona usuários não autenticados)
- * - Backend: validação final (APIs rejeitam requests com tokens inválidos)
+ * Defense in depth (mantido):
+ * - Proxy: barreira server-side de páginas (assinatura + role) e guards globais de /api/*.
+ * - Frontend: `useAuth` redireciona (UX, evita flash).
+ * - Backend: APIs revalidam via `requireVerifiedUser`.
  */
+
 const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 const PASSWORD_CHANGE_API_ALLOWLIST = new Set<string>([
@@ -26,11 +45,17 @@ const PASSWORD_CHANGE_API_ALLOWLIST = new Set<string>([
   "/api/auth/definir-senha-inicial",
 ]);
 
+/** Prefixo de rota de página → predicado de role autorizado. */
+const PROTECTED_PAGES: Array<{ prefix: string; allow: (role: string) => boolean }> = [
+  { prefix: "/contratante", allow: (r) => r === "contratante" || r === "superadmin" },
+  { prefix: "/empreiteiro", allow: (r) => r === "empreiteiro" || r === "superadmin" },
+  { prefix: "/admin", allow: (r) => isAdminLike(r) },
+];
+
 /**
  * Lê o claim `mustChangePassword` do access token sem validar assinatura
- * (Edge Runtime não tem `crypto.createHmac`). A validação completa acontece
- * no `requireVerifiedUser`. Aqui só precisamos do hint para bloquear
- * todas as rotas /api/* enquanto a senha não foi trocada.
+ * (decodificação rápida do payload). A validação completa acontece no
+ * `requireVerifiedUser`. Aqui só precisamos do hint para bloquear /api/*.
  */
 function decodeMustChangePassword(token: string | undefined): boolean {
   if (!token) return false;
@@ -38,7 +63,7 @@ function decodeMustChangePassword(token: string | undefined): boolean {
   if (parts.length < 2) return false;
   try {
     const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
-    const json = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
+    const json = Buffer.from(padded.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
     const claims = JSON.parse(json) as { mustChangePassword?: boolean };
     return claims.mustChangePassword === true;
   } catch {
@@ -46,13 +71,20 @@ function decodeMustChangePassword(token: string | undefined): boolean {
   }
 }
 
-export function proxy(request: NextRequest) {
+function loginRedirect(request: NextRequest): NextResponse {
+  const url = new URL("/login", request.url);
+  const next = request.nextUrl.pathname + request.nextUrl.search;
+  url.search = `?next=${encodeURIComponent(next)}`;
+  return NextResponse.redirect(url);
+}
+
+export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const pathname = request.nextUrl.pathname;
 
-  // Bloqueio GLOBAL: enquanto must_change_password=true, todas as rotas
-  // /api/* são bloqueadas (com allowlist mínima). Cobre rotas legadas que
-  // não usam `requireVerifiedUser` (ex.: GET /api/clientes).
+  // ── Guards globais de /api/* (mantidos da versão anterior) ────────────────
+
+  // Bloqueio GLOBAL: must_change_password=true → bloqueia /api/* (allowlist mínima).
   if (
     pathname.startsWith("/api/") &&
     !PASSWORD_CHANGE_API_ALLOWLIST.has(pathname) &&
@@ -74,8 +106,7 @@ export function proxy(request: NextRequest) {
     );
   }
 
-  // Modo "Ver como" (impersonation) — bloqueio GLOBAL de mutações em /api/*
-  // Independe do `requireVerifiedUser` interno; cobre rotas legadas também.
+  // Modo "Ver como" (impersonation) — bloqueio GLOBAL de mutações em /api/*.
   if (
     pathname.startsWith("/api/") &&
     pathname !== "/api/admin/impersonate/exit" &&
@@ -98,56 +129,54 @@ export function proxy(request: NextRequest) {
     );
   }
 
-  // Debug em desenvolvimento
-  const isDev = process.env.NODE_ENV === 'development';
-  if (isDev) {
-    console.log(`[Middleware] ${pathname} - access_token: ${accessToken ? '✅ presente' : '❌ ausente'}`);
-  }
-
-  // Rotas protegidas que requerem autenticação
-  const protectedRoutes = [
-    "/dashboard",
-    "/empreiteiro",
-    "/contratante",
-    "/administrador",
-  ];
-
-  // Verifica se a rota atual é protegida
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
+  // ── Modo manutenção (J26) ─────────────────────────────────────────────────
+  // Quando ativo, usuários NÃO-admin nas áreas logadas (/contratante,
+  // /empreiteiro) são levados para /manutencao. Admin/superadmin sempre passam.
+  // A landing pública (/) e /admin não passam por aqui. Fail-open: erro de DB
+  // no leitor NUNCA liga manutenção (ver settings-reader).
+  const isMaintenanceArea = MAINTENANCE_AFFECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
-
-  if (isProtectedRoute) {
-    // Se não tem access token, redirecionar para login
-    // Nota: Não validamos JWT aqui (Edge Runtime não suporta crypto)
-    // Validação completa acontece no useAuth() hook e API routes
-    if (!accessToken) {
-      if (isDev) {
-        console.log(`[Middleware] Redirecionando para /login - sem access_token`);
-      }
-      const loginUrl = new URL("/login", request.url);
-      return NextResponse.redirect(loginUrl);
+  if (isMaintenanceArea) {
+    const role = roleFromToken(accessToken);
+    if (!isAdminLike(role ?? "") && (await isManutencaoAtiva())) {
+      return NextResponse.redirect(new URL("/manutencao", request.url));
     }
-
-    // Cookie existe - permitir acesso
-    // Layout específico de cada área fará validação completa via useAuth
-    if (isDev) {
-      console.log(`[Middleware] Permitindo acesso a rota protegida: ${pathname}`);
-    }
-    return NextResponse.next();
   }
 
-  // Permitir acesso a outras rotas
+  // ── Barreira server-side das páginas autenticadas (J19) ───────────────────
+  const rule = PROTECTED_PAGES.find(
+    (r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`),
+  );
+  if (rule) {
+    // Sem cookie algum → não autenticado, redireciona.
+    if (!accessToken) return loginRedirect(request);
+
+    const payload = verifyAccessToken(accessToken);
+    if (payload?.sub) {
+      // Token VÁLIDO → fonte de verdade da role. Role errada para a área → bloqueia.
+      if (!rule.allow(payload.role)) return loginRedirect(request);
+    } else {
+      // Token presente mas inválido. Se for só EXPIRADO (assinatura íntegra,
+      // exp vencido), deixa passar: o access token vive 15 min e o `useAuth`
+      // faz refresh client-side; as APIs revalidam server-side. Bloquear aqui
+      // causaria logout em navegação normal. Se a assinatura for inválida
+      // (adulterado) → bloqueia. Se a role não bate com a área → redireciona.
+      const claims = verifyAccessTokenAllowExpired(accessToken);
+      if (!claims?.sub) return loginRedirect(request);
+      if (!rule.allow(claims.role)) return loginRedirect(request);
+    }
+  }
+
   return NextResponse.next();
 }
 
-// Configurar rotas que devem passar pelo middleware
+// Rotas que passam pelo proxy. As páginas autenticadas + /api/* (para os guards globais).
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/empreiteiro/:path*",
     "/contratante/:path*",
-    "/administrador/:path*",
+    "/empreiteiro/:path*",
+    "/admin/:path*",
     "/api/:path*",
   ],
 };

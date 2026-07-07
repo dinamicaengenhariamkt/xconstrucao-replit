@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
+import { logError } from "@/server/lib/logger";
 import { loginSchema } from "@features/auth/schemas";
 import { getUserByEmail } from "@features/auth/api/auth-storage";
 import {
   comparePassword,
-  createAccessToken,
-  createRefreshToken,
+  createTwoFactorChallengeToken,
 } from "@features/auth/api/auth-service";
-import { createAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { getMaxTentativasLogin } from "@features/admin/platform-settings/server/settings-reader";
 import { validateAntiBot } from "@features/auth/api/anti-bot";
-import { db } from "@shared/db/db";
-import { sessions } from "@shared/db/schema";
+import { isTotpEnabled } from "@features/auth/api/totp-storage";
+import { montarUserData, emitirSessao } from "@features/auth/api/session-issuer";
 
 const GENERIC_INVALID = "Email ou senha inválidos";
 
@@ -23,7 +23,9 @@ function jsonNoStore(payload: unknown, status: number) {
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  if (isRateLimited(`login:${ip}`, 10, 15 * 60 * 1000)) {
+  // J30 — limite de tentativas configurável (seguranca.maxTentativas); fallback 10.
+  const maxTentativas = await getMaxTentativasLogin(10);
+  if (isRateLimited(`login:${ip}`, maxTentativas, 15 * 60 * 1000)) {
     return jsonNoStore(
       { error: "Muitas tentativas. Tente novamente em alguns minutos." },
       429
@@ -92,42 +94,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const userData = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-      image: user.image,
-      avatarUrl: user.avatarUrl,
-      canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
-      mustChangePassword: user.mustChangePassword === true,
-    };
-
-    const accessToken = createAccessToken(userData);
-    const refreshToken = createRefreshToken(user.id, rememberMe);
-
-    try {
-      const sessionToken = createHash("sha256").update(refreshToken).digest("hex");
-      const refreshMaxAgeMs = (rememberMe ? 30 : 7) * 24 * 60 * 60 * 1000;
-      const userAgent = request.headers.get("user-agent") ?? null;
-      await db.insert(sessions).values({
-        sessionToken,
-        userId: user.id,
-        expires: new Date(Date.now() + refreshMaxAgeMs),
-        userAgent,
-        ip,
-        lastUsedAt: new Date(),
-      });
-    } catch (err) {
-      console.error("Falha ao registrar sessão:", err);
+    // 2FA (J22): senha correta + conta válida, mas com 2FA ativo → segundo passo.
+    // NÃO emitimos sessão aqui; devolvemos um challengeToken curto pro 2º request.
+    if (await isTotpEnabled(user.id)) {
+      const challengeToken = createTwoFactorChallengeToken(user.id, rememberMe);
+      return jsonNoStore({ twoFactorRequired: true, challengeToken }, 200);
     }
 
-    const response = NextResponse.json({ success: true, user: userData });
-    setNoCacheHeaders(response);
-    createAuthCookies(response, accessToken, refreshToken, rememberMe);
-    return response;
+    const userData = montarUserData(user);
+    return emitirSessao(userData, {
+      rememberMe,
+      ip,
+      userAgent: request.headers.get("user-agent") ?? null,
+    });
   } catch (error) {
-    console.error("Erro no login:", error);
+    void logError("error", "Erro no login", { stack: (error as Error)?.stack, route: "/api/auth/login" });
     return jsonNoStore({ error: "Erro interno do servidor" }, 500);
   }
 }

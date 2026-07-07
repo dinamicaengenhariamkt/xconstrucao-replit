@@ -14,3 +14,12 @@ export function formatCompactCurrency(value: number): string {
 export function formatPercentage(value: number, decimals = 1): string {
   return `${value.toFixed(decimals).replace('.', ',')}%`;
 }
+
+/**
+ * Percentual seguro de `part` sobre `total`. Retorna 0 quando o total é ≤ 0
+ * ou não-finito, evitando NaN%/Infinity% na UI quando não há base.
+ */
+export function safePercent(part: number, total: number): number {
+  if (!Number.isFinite(total) || total <= 0) return 0;
+  return (part / total) * 100;
+}

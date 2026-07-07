@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Card, CardContent } from '@shared/components/ui/card';
+import { CardContent } from '@shared/components/ui/card';
+import { LuminousHoverCard } from '@shared/components/ui/LuminousHoverCard';
 import { Badge } from '@shared/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { cn } from '@shared/lib/utils';
@@ -25,17 +24,13 @@ export function ClienteCard({ cliente }: ClienteCardProps) {
   const status = statusConfig[cliente.status];
 
   return (
-    <Link href={`/admin/clientes/${cliente.id}`} data-testid={`link-cliente-${cliente.id}`}>
-      <motion.div
-        className="rounded-2xl overflow-visible"
-        whileHover={{
-          scale: 1.01,
-          boxShadow: '0 4px 12px -2px rgba(0,0,0,0.12), 0 2px 4px -1px rgba(0,0,0,0.06)',
-        }}
-        transition={{ duration: 0.2 }}
-      >
-        <Card className="h-full rounded-2xl">
-          <CardContent className="p-5 flex flex-col gap-4">
+    <LuminousHoverCard
+      href={`/admin/clientes/${cliente.id}`}
+      testId={`link-cliente-${cliente.id}`}
+      className="rounded-2xl"
+      cardClassName="rounded-2xl"
+    >
+      <CardContent className="relative z-10 p-5 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10" data-testid={`avatar-cliente-${cliente.id}`}>
                 {cliente.avatarUrl && <AvatarImage src={cliente.avatarUrl} alt={cliente.nome} />}
@@ -64,9 +59,7 @@ export function ClienteCard({ cliente }: ClienteCardProps) {
                 {formatCurrency(cliente.valorTotalContratado)}
               </span>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </Link>
+      </CardContent>
+    </LuminousHoverCard>
   );
 }

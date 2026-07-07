@@ -29,9 +29,12 @@ function VerificarEmailContent() {
   const getStatus = () => {
     if (success === "verified") return "verified";
     if (success === "already_verified") return "verified";
+    if (success === "email_trocado") return "verified";
     if (error) return "error";
     return "pending";
   };
+
+  const emailTrocado = success === "email_trocado";
 
   const status = getStatus();
 
@@ -75,6 +78,7 @@ function VerificarEmailContent() {
     token_missing: "Link de verificação incompleto.",
     user_not_found: "Usuário não encontrado.",
     server_error: "Erro no servidor. Tente novamente.",
+    email_em_uso: "Este email já está em uso por outra conta. A troca não foi concluída.",
   };
 
   return (
@@ -95,10 +99,12 @@ function VerificarEmailContent() {
                   </div>
                 </div>
                 <h2 className="text-2xl font-extrabold mb-2" data-testid="text-verified-title">
-                  Email Verificado!
+                  {emailTrocado ? "Email Atualizado!" : "Email Verificado!"}
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                  Sua conta foi ativada com sucesso. Você já pode fazer login.
+                  {emailTrocado
+                    ? "Seu email de acesso foi alterado com sucesso. Use o novo email para entrar."
+                    : "Sua conta foi ativada com sucesso. Você já pode fazer login."}
                 </p>
                 <button
                   onClick={() => router.push("/login")}

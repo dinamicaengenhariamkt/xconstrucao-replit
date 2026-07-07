@@ -1,0 +1,160 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@shared/components/ui/button';
+import { useToast } from '@shared/hooks/use-toast';
+import { RiAddLine, RiShoppingBag3Line } from 'react-icons/ri';
+import { SlotEditor } from './SlotEditor';
+import type { SlotDraft, ZonaOption } from './types';
+
+/** Calcula dias inclusivos (mesma regra do server precificacao.calcularDias). */
+function calcDias(ini: string | null, fim: string | null): number {
+  if (!ini || !fim) return 30;
+  const a = Date.parse(ini);
+  const b = Date.parse(fim);
+  if (Number.isNaN(a) || Number.isNaN(b) || b < a) return 30;
+  return Math.min(365, Math.max(1, Math.floor((b - a) / 86_400_000) + 1));
+}
+
+const TEMPLATES_SELF_SERVICE = ['imagem-card', 'banner-imagem', 'conteudo-texto'];
+
+function novoSlot(zonas: ZonaOption[]): SlotDraft {
+  const z = zonas[0];
+  const templatePadrao = (z?.templates ?? []).find((t) => TEMPLATES_SELF_SERVICE.includes(t)) ?? 'imagem-card';
+  return {
+    zona: z?.zona ?? '',
+    template: templatePadrao as SlotDraft['template'],
+    titulo: '',
+    subtitulo: null,
+    criativoUrl: null,
+    ctaUrl: null,
+    ctaTexto: null,
+    conteudo: null,
+    periodoInicio: null,
+    periodoFim: null,
+  };
+}
+
+/**
+ * J23 — montador de pedido multi-slot + checkout-protótipo. Usado na visão do
+ * anunciante e (via wrapper) nas visões de cliente. Soma o preço (simulado) dos
+ * slots, envia para POST /api/anuncios/pedidos e mostra "adquirido com sucesso".
+ */
+export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [zonas, setZonas] = useState<ZonaOption[]>([]);
+  const [slots, setSlots] = useState<SlotDraft[]>([]);
+  const [enviando, setEnviando] = useState(false);
+  const [carregandoZonas, setCarregandoZonas] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/anuncios/precos', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          const opts: ZonaOption[] = (data.precos ?? []).map((p: ZonaOption) => ({
+            zona: p.zona,
+            nome: p.nome,
+            precoDia: p.precoDia,
+            multiplo: p.multiplo,
+            templates: p.templates ?? [],
+          }));
+          setZonas(opts);
+          setSlots([novoSlot(opts)]);
+        }
+      } finally {
+        setCarregandoZonas(false);
+      }
+    })();
+  }, []);
+
+  const precoDeSlot = (s: SlotDraft): number => {
+    const z = zonas.find((x) => x.zona === s.zona);
+    if (!z) return 0;
+    return Math.round(z.precoDia * calcDias(s.periodoInicio, s.periodoFim) * 100) / 100;
+  };
+
+  const total = useMemo(() => slots.reduce((acc, s) => acc + precoDeSlot(s), 0), [slots, zonas]);
+
+  const atualizarSlot = (i: number, patch: Partial<SlotDraft>) => {
+    setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  };
+
+  const podeEnviar = slots.length > 0 && slots.every((s) => s.zona && s.titulo.trim().length >= 2);
+
+  const enviar = async () => {
+    if (!podeEnviar) {
+      toast({ title: 'Preencha os campos', description: 'Cada local precisa de zona e título.', variant: 'destructive' });
+      return;
+    }
+    setEnviando(true);
+    try {
+      const res = await fetch('/api/anuncios/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ slots }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Falha ao enviar o pedido');
+      }
+      toast({
+        title: 'Pedido adquirido com sucesso!',
+        description: 'Seu pedido entrou em análise. Você será avisado quando for aprovado.',
+      });
+      router.push(redirectTo);
+    } catch (e) {
+      toast({ title: 'Erro', description: (e as Error).message, variant: 'destructive' });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  if (carregandoZonas) {
+    return <p className="text-sm text-gray-500">Carregando opções de anúncio…</p>;
+  }
+
+  return (
+    <div className="space-y-5">
+      {slots.map((slot, i) => (
+        <SlotEditor
+          key={i}
+          slot={slot}
+          index={i}
+          zonas={zonas}
+          precoSlot={precoDeSlot(slot)}
+          onChange={(patch) => atualizarSlot(i, patch)}
+          onRemove={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))}
+        />
+      ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setSlots((prev) => [...prev, novoSlot(zonas)])}
+        disabled={slots.length >= 10}
+      >
+        <RiAddLine className="w-4 h-4 mr-1" /> Adicionar outro local
+      </Button>
+
+      {/* Checkout-protótipo */}
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-900 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-gray-500">Total estimado ({slots.length} local{slots.length !== 1 ? 'is' : ''})</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <span className="text-xs font-normal text-amber-600 ml-2">simulação — sem cobrança real</span>
+          </p>
+        </div>
+        <Button type="button" onClick={enviar} disabled={!podeEnviar || enviando} size="lg">
+          <RiShoppingBag3Line className="w-5 h-5 mr-2" />
+          {enviando ? 'Processando…' : 'Confirmar aquisição'}
+        </Button>
+      </div>
+    </div>
+  );
+}

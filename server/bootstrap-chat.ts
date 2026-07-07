@@ -41,6 +41,9 @@ export async function bootstrapChatSchema(): Promise<void> {
 
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_thread_criada ON chat_mensagens(thread_id, criada_em DESC)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_nao_lidas ON chat_mensagens(thread_id, autor_user_id) WHERE lida_em IS NULL`);
+    // J13 — paginação keyset (criada_em, id) DESC. Cobre o tiebreaker `id` usado
+    // na comparação de tupla de `listarMensagensDaThread`.
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_thread_keyset ON chat_mensagens(thread_id, criada_em DESC, id DESC)`);
 
     // FK cross-table: notificacoes.thread_id → chat_threads.id (ON DELETE SET NULL).
     // Garante que notificações ficam órfãs nulas quando a thread some (ex: cascade da obra).

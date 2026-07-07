@@ -11,8 +11,6 @@ import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopE
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
 import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
-import { SatisfactionMetricsSection } from '@features/admin/financeiro/components/SatisfactionMetricsSection';
-import { mockStatsByPeriodo } from '@features/admin/financeiro/mocks/dashboard-stats.mock';
 import { useDashboardStats } from '@features/admin/financeiro/hooks/use-dashboard-stats';
 import {
   useObrasAtencao,
@@ -20,25 +18,25 @@ import {
   useTopEmpreiteiras,
   useReceitasPlataforma,
   useAdoptionMetrics,
+  usePortfolioSummary,
+  usePaymentEvolution,
+  useStatusDistribution,
 } from '@features/admin/financeiro/hooks/use-dashboard-tables';
-// PENDENTE fonte externa (J18 §11): NPS/CSAT não têm fonte de dados — mantido mock
-// até existir sistema de surveys. Gráficos de evolução/distribuição ficam como
-// placeholder visual até endpoint de série temporal (J18).
-import { mockSatisfactionMetrics } from '@features/admin/financeiro/mocks/satisfaction-metrics.mock';
-import {
-  getPaymentEvolutionByPeriodo,
-  mockStatusDistributionData,
-} from '@features/admin/financeiro/mocks/financial-data.mock';
 import type { PeriodoSeletor, DateRange } from '@features/admin/financeiro/types';
-import { useAdminObras } from '@features/admin/obras/hooks/use-obras-list';
-import { HealthSummary, getMockHealthSummary, buildObrasHealthUrl } from '@features/shared/health';
-import { ProfitSummary, getMockProfitSummary } from '@features/shared/profit';
+import { HealthSummary, buildObrasHealthUrl } from '@features/shared/health';
+import { ProfitSummary } from '@features/shared/profit';
+
+const EMPTY_HEALTH = { saudavel: 0, atencao: 0, risco: 0, total: 0 };
+const EMPTY_PROFIT = {
+  metrics: { receitaTotal: 0, custoTotal: 0, lucroEstimado: 0, margem: 0 },
+  trend: [],
+  totalObras: 0,
+};
 
 export default function AdminFinanceiroPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [periodo, setPeriodo] = useState<PeriodoSeletor>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
-  const { data: obras } = useAdminObras();
   // Dados REAIS do dashboard financeiro (J09/J18).
   const { data: dashboardStats } = useDashboardStats();
   const { data: obrasAtencao } = useObrasAtencao();
@@ -46,6 +44,9 @@ export default function AdminFinanceiroPage() {
   const { data: topEmpreiteiras } = useTopEmpreiteiras();
   const { data: receitasData } = useReceitasPlataforma();
   const { data: adoptionMetrics } = useAdoptionMetrics();
+  const { data: portfolioSummary } = usePortfolioSummary();
+  const { data: paymentEvolution } = usePaymentEvolution(periodo);
+  const { data: statusDistribution } = useStatusDistribution();
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
@@ -57,13 +58,14 @@ export default function AdminFinanceiroPage() {
     setPeriodo(p);
   }
 
-  if (isLoading) {
+  if (isLoading || !dashboardStats) {
     return <DashboardSkeleton />;
   }
 
-  const obraIds = (obras?.rows ?? []).map((o) => o.id);
-  const healthSummary = getMockHealthSummary(obraIds);
-  const profitSummary = getMockProfitSummary(obraIds);
+  const healthSummary = portfolioSummary?.health ?? EMPTY_HEALTH;
+  const profitSummary = portfolioSummary?.profit ?? EMPTY_PROFIT;
+  const statusData = statusDistribution ?? [];
+  const totalObrasStatus = statusData.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <div className="space-y-8 p-6 md:p-10">
@@ -75,14 +77,14 @@ export default function AdminFinanceiroPage() {
         onCustomRangeChange={setCustomRange}
       />
 
-      {/* Bloco 2: KPI Cards — dados reais (J09); mock como fallback de loading */}
-      <StatsGridContainer data={dashboardStats ?? mockStatsByPeriodo[periodo]} />
+      {/* Bloco 2: KPI Cards — dados reais (J09/J18) */}
+      <StatsGridContainer data={dashboardStats} />
 
       {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) — real (J18) */}
       {adoptionMetrics && <AdoptionMetricsSection metrics={adoptionMetrics} luminous />}
 
-      {/* Bloco 2.45: Satisfação dos usuários (NPS + CSAT) */}
-      <SatisfactionMetricsSection metrics={mockSatisfactionMetrics} luminous />
+      {/* Bloco 2.45: Satisfação (NPS/CSAT) OCULTO — sem fonte de dados real.
+          Reativar quando houver sistema de surveys. Ver docs/jornadas/20-satisfacao-nps-csat.md. */}
 
       {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -94,10 +96,10 @@ export default function AdminFinanceiroPage() {
         <ProfitSummary summary={profitSummary} luminous />
       </div>
 
-      {/* Bloco 3: Gráficos */}
+      {/* Bloco 3: Gráficos — dados reais (J18) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <PaymentsEvolutionChart data={getPaymentEvolutionByPeriodo(periodo)} luminous />
-        <StatusDistributionChart data={mockStatusDistributionData} totalObras={42} luminous />
+        <PaymentsEvolutionChart data={paymentEvolution ?? []} luminous />
+        <StatusDistributionChart data={statusData} totalObras={totalObrasStatus} luminous />
       </div>
 
       {/* Bloco 4: Tabela - Obras com atenção financeira */}

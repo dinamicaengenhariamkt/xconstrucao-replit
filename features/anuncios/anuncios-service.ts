@@ -1,25 +1,50 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { anuncioEventos, anuncios, anunciantes } from "@shared/db/schema";
+import { anuncioConfig, anuncioEventos, anuncios, anunciantes } from "@shared/db/schema";
 import { criarLancamentoPlataforma } from "@features/financeiro/lancamentos-service";
+import { isTemplateValido } from "@features/shared/anuncios/templates/schemas";
+import type { TemplateId } from "@features/shared/anuncios/templates/types";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // ─── Catálogo estático de zonas (espelha AnuncioZonaId da UI) ────────────────
+// Cada zona declara os templates (J24) que aceita e se comporta múltiplos
+// criativos (`multiplo`). `zona` é TEXT validado contra ZONA_IDS — sem migration
+// para novas zonas. `templates` é validado contra o registry (isTemplateValido).
 export const ZONAS = [
-  { id: "sidebar-sup-contratante", nome: "Sidebar Superior - Contratante", descricao: "Card vertical com imagem 4:3", icone: "web" as const },
-  { id: "sidebar-inf-contratante", nome: "Sidebar Inferior - Contratante", descricao: "Card vertical com imagem 4:3", icone: "web" as const },
-  { id: "sidebar-sup-empreiteiro", nome: "Sidebar Superior - Empreiteiro", descricao: "Card vertical com imagem 4:3", icone: "web" as const },
-  { id: "sidebar-inf-empreiteiro", nome: "Sidebar Inferior - Empreiteiro", descricao: "Card vertical com imagem 4:3", icone: "web" as const },
-  { id: "banner-dashboard-contratante", nome: "Banner Dashboard - Contratante", descricao: "Banner horizontal 728x90", icone: "dashboard" as const },
-  { id: "banner-dashboard-empreiteiro", nome: "Banner Dashboard - Empreiteiro", descricao: "Banner horizontal 728x90", icone: "dashboard" as const },
-  { id: "banner-qa", nome: "Banner Q&A - Todas as personas", descricao: "Card horizontal", icone: "help" as const },
+  { id: "sidebar-sup-contratante", nome: "Sidebar Superior - Contratante", descricao: "Card vertical com imagem 4:3", icone: "web" as const, templates: ["imagem-card"] as const },
+  { id: "sidebar-inf-contratante", nome: "Sidebar Inferior - Contratante", descricao: "Card vertical com imagem 4:3", icone: "web" as const, templates: ["imagem-card"] as const },
+  { id: "sidebar-sup-empreiteiro", nome: "Sidebar Superior - Empreiteiro", descricao: "Card vertical com imagem 4:3", icone: "web" as const, templates: ["imagem-card"] as const },
+  { id: "sidebar-inf-empreiteiro", nome: "Sidebar Inferior - Empreiteiro", descricao: "Card vertical com imagem 4:3", icone: "web" as const, templates: ["imagem-card"] as const },
+  { id: "banner-dashboard-contratante", nome: "Banner Dashboard - Contratante", descricao: "Banner horizontal 728x90", icone: "dashboard" as const, templates: ["banner-imagem"] as const },
+  { id: "banner-dashboard-empreiteiro", nome: "Banner Dashboard - Empreiteiro", descricao: "Banner horizontal 728x90", icone: "dashboard" as const, templates: ["banner-imagem"] as const },
+  { id: "banner-qa", nome: "Banner Q&A - Todas as personas", descricao: "Card horizontal", icone: "help" as const, templates: ["imagem-card", "conteudo-texto"] as const },
+  // J24 — vitrine pública "Mercado em Foco" (landing). Aceita múltiplos criativos
+  // de templates variados lado a lado; some quando vazia ou toggle off.
+  { id: "home-mercado", nome: "Home — Mercado em Foco", descricao: "Vitrine na landing · múltiplos cards editoriais/dados", icone: "web" as const, multiplo: true, templates: ["conteudo-texto", "destaque-dados", "imagem-card"] as const },
 ] as const;
 
 export type ZonaId = (typeof ZONAS)[number]["id"];
 export const ZONA_IDS = ZONAS.map((z) => z.id) as ZonaId[];
 export function isZonaValida(z: string): z is ZonaId {
   return ZONA_IDS.includes(z as ZonaId);
+}
+
+/** Zona aceita múltiplos criativos (vitrine) em vez de um único anúncio? */
+export function isZonaMultipla(zona: string): boolean {
+  const z = ZONAS.find((x) => x.id === zona) as { multiplo?: boolean } | undefined;
+  return z?.multiplo === true;
+}
+
+/**
+ * O template é compatível com a zona? (J24) Reflete o `templates` declarado na
+ * zona. Validado também no backend — o seletor admin só oferece compatíveis, mas
+ * não se confia no client.
+ */
+export function templateAceitoNaZona(template: string, zona: string): boolean {
+  if (!isTemplateValido(template)) return false;
+  const z = ZONAS.find((x) => x.id === zona) as { templates?: readonly string[] } | undefined;
+  return z?.templates?.includes(template) ?? false;
 }
 
 // ─── Anúncio ativo por zona (hot path público) ──────────────────────────────
@@ -31,6 +56,33 @@ export interface AnuncioPublico {
   ctaUrl: string | null;
   ctaTexto: string | null;
   zona: string;
+  template: TemplateId;
+  conteudo: unknown | null;
+}
+
+/** Cláusula "anúncio ativo no período" — compartilhada entre single e lista. */
+function whereAtivo(zona: string, hoje: string) {
+  return and(
+    eq(anuncios.zona, zona),
+    eq(anuncios.status, "ativa"),
+    sql`(${anuncios.inicio} IS NULL OR ${anuncios.inicio} <= ${hoje})`,
+    sql`(${anuncios.fim} IS NULL OR ${anuncios.fim} >= ${hoje})`,
+  );
+}
+
+function toAnuncioPublico(row: typeof anuncios.$inferSelect): AnuncioPublico {
+  return {
+    id: row.id,
+    titulo: row.titulo,
+    subtitulo: row.subtitulo,
+    criativoUrl: row.criativoUrl,
+    ctaUrl: row.ctaUrl,
+    ctaTexto: row.ctaTexto,
+    zona: row.zona,
+    // Backfill garante 'imagem-card'; defesa extra contra valor inesperado.
+    template: (isTemplateValido(row.template) ? row.template : "imagem-card") as TemplateId,
+    conteudo: row.conteudo ?? null,
+  };
 }
 
 /**
@@ -41,26 +93,24 @@ export async function getAnuncioAtivoPorZona(zona: string, hoje: string): Promis
   const [row] = await db
     .select()
     .from(anuncios)
-    .where(
-      and(
-        eq(anuncios.zona, zona),
-        eq(anuncios.status, "ativa"),
-        sql`(${anuncios.inicio} IS NULL OR ${anuncios.inicio} <= ${hoje})`,
-        sql`(${anuncios.fim} IS NULL OR ${anuncios.fim} >= ${hoje})`,
-      ),
-    )
+    .where(whereAtivo(zona, hoje))
     .orderBy(desc(anuncios.createdAt))
     .limit(1);
-  if (!row) return null;
-  return {
-    id: row.id,
-    titulo: row.titulo,
-    subtitulo: row.subtitulo,
-    criativoUrl: row.criativoUrl,
-    ctaUrl: row.ctaUrl,
-    ctaTexto: row.ctaTexto,
-    zona: row.zona,
-  };
+  return row ? toAnuncioPublico(row) : null;
+}
+
+/**
+ * Lista de anúncios ativos de uma zona (J24) — para zonas `multiplo` (vitrine da
+ * home). Mais recentes primeiro, cap defensivo de 8 criativos.
+ */
+export async function getAnunciosAtivosPorZona(zona: string, hoje: string): Promise<AnuncioPublico[]> {
+  const rows = await db
+    .select()
+    .from(anuncios)
+    .where(whereAtivo(zona, hoje))
+    .orderBy(desc(anuncios.createdAt))
+    .limit(8);
+  return rows.map(toAnuncioPublico);
 }
 
 /** Status de cada zona (ativo se há anúncio ativo no período). Para a UI admin/slot. */
@@ -71,6 +121,8 @@ export interface ZonaView {
   icone: "web" | "dashboard" | "help";
   status: "ativo" | "vazio";
   anuncioAtual?: string;
+  templates: TemplateId[];
+  multiplo: boolean;
 }
 
 export async function getZonas(hoje: string): Promise<ZonaView[]> {
@@ -93,6 +145,8 @@ export async function getZonas(hoje: string): Promise<ZonaView[]> {
     icone: z.icone,
     status: porZona.has(z.id) ? "ativo" : "vazio",
     anuncioAtual: porZona.get(z.id),
+    templates: [...z.templates] as TemplateId[],
+    multiplo: (z as { multiplo?: boolean }).multiplo === true,
   }));
 }
 
@@ -297,6 +351,8 @@ export async function criarCampanha(args: {
   ctaUrl?: string;
   ctaTexto?: string;
   zona: string;
+  template?: string;
+  conteudo?: unknown;
   inicio?: string;
   fim?: string;
   orcamento?: number;
@@ -312,6 +368,8 @@ export async function criarCampanha(args: {
       ctaUrl: args.ctaUrl ?? null,
       ctaTexto: args.ctaTexto ?? null,
       zona: args.zona,
+      template: args.template ?? "imagem-card",
+      conteudo: args.conteudo ?? null,
       inicio: args.inicio ?? null,
       fim: args.fim ?? null,
       orcamento: String(args.orcamento ?? 0),
@@ -325,13 +383,18 @@ export async function criarCampanha(args: {
 
 export async function atualizarCampanha(
   id: string,
-  patch: Partial<{ titulo: string; subtitulo: string; zona: string; inicio: string; fim: string; orcamento: number; status: "rascunho" | "agendada" | "ativa" | "pausada" | "expirada" }>,
+  patch: Partial<{ titulo: string; subtitulo: string; criativoUrl: string; ctaUrl: string; ctaTexto: string; zona: string; template: string; conteudo: unknown; inicio: string; fim: string; orcamento: number; status: "rascunho" | "agendada" | "ativa" | "pausada" | "expirada" }>,
 ): Promise<typeof anuncios.$inferSelect | null> {
   return db.transaction(async (tx) => {
     const set: Record<string, unknown> = {};
     if (patch.titulo !== undefined) set.titulo = patch.titulo;
     if (patch.subtitulo !== undefined) set.subtitulo = patch.subtitulo;
+    if (patch.criativoUrl !== undefined) set.criativoUrl = patch.criativoUrl;
+    if (patch.ctaUrl !== undefined) set.ctaUrl = patch.ctaUrl;
+    if (patch.ctaTexto !== undefined) set.ctaTexto = patch.ctaTexto;
     if (patch.zona !== undefined) set.zona = patch.zona;
+    if (patch.template !== undefined) set.template = patch.template;
+    if (patch.conteudo !== undefined) set.conteudo = patch.conteudo;
     if (patch.inicio !== undefined) set.inicio = patch.inicio;
     if (patch.fim !== undefined) set.fim = patch.fim;
     if (patch.orcamento !== undefined) set.orcamento = String(patch.orcamento);
@@ -370,4 +433,37 @@ async function maybeLancarReceita(anuncio: typeof anuncios.$inferSelect, tx: DbO
     origemId: anuncio.id,
     tx,
   });
+}
+
+/** Zona + template atuais de um anúncio — usado no PATCH p/ checar compat e
+ * validar `conteudo` contra o template efetivo (novo ou o já persistido). */
+export async function getZonaTemplateDoAnuncio(id: string): Promise<{ zona: string; template: string } | null> {
+  const [row] = await db.select({ zona: anuncios.zona, template: anuncios.template }).from(anuncios).where(eq(anuncios.id, id)).limit(1);
+  return row ?? null;
+}
+
+// ─── Master toggle (J24, Opção B) ────────────────────────────────────────────
+/**
+ * Lê a visibilidade de uma seção/zona. Fail-open: na ausência de registro ou em
+ * erro de DB retorna `true` — uma falha nunca esconde anúncio pago.
+ */
+export async function getConfigVisivel(chave: string): Promise<boolean> {
+  try {
+    const [row] = await db.select({ visivel: anuncioConfig.visivel }).from(anuncioConfig).where(eq(anuncioConfig.chave, chave)).limit(1);
+    return row ? row.visivel : true;
+  } catch {
+    return true;
+  }
+}
+
+export async function listConfig(): Promise<(typeof anuncioConfig.$inferSelect)[]> {
+  return db.select().from(anuncioConfig).orderBy(anuncioConfig.chave);
+}
+
+/** Upsert idempotente por `chave`. */
+export async function setConfigVisivel(chave: string, visivel: boolean): Promise<void> {
+  await db
+    .insert(anuncioConfig)
+    .values({ chave, visivel })
+    .onConflictDoUpdate({ target: anuncioConfig.chave, set: { visivel, atualizadoEm: new Date() } });
 }

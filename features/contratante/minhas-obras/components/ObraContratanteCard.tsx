@@ -1,9 +1,13 @@
 'use client';
 
 import { ObraCard } from '@features/shared/components/ObraCard';
+import type { HealthStatus } from '@features/shared/health';
 import type { ObraContratanteCardProps } from '../types';
 
-export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
+export function ObraContratanteCard({
+  obra,
+  healthStatus,
+}: ObraContratanteCardProps & { healthStatus?: HealthStatus }) {
   const extra = obra as typeof obra & {
     visibilidade?: 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
     statusModeracao?: 'pendente' | 'aprovada' | 'rejeitada' | null;
@@ -29,6 +33,7 @@ export function ObraContratanteCard({ obra }: ObraContratanteCardProps) {
       visibilidade={extra.visibilidade}
       statusModeracao={extra.statusModeracao ?? null}
       motivoModeracao={extra.motivoModeracao ?? null}
+      healthStatus={healthStatus}
     />
   );
 }

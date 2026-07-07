@@ -25,6 +25,7 @@ import {
   useUpdatePerfilContratante,
 } from '@features/perfil/hooks/use-perfil';
 import { usePreferencias, useUpdatePreferencias, usePlano } from '@features/perfil/hooks/use-preferencias';
+import { useCancelarAssinatura } from '@features/planos/ui/use-planos';
 import { useUpload } from '@features/shared/hooks/use-uploads';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -57,6 +58,8 @@ import { Card, CardContent, CardHeader } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { CepInput } from '@features/perfil/components/CepInput';
+import { ContaSection } from '@features/perfil/components/ContaSection';
+import { TwoFactorSection } from '@features/auth/components/TwoFactorSection';
 import { Switch } from '@shared/components/ui/switch';
 import { Label } from '@shared/components/ui/label';
 import { Badge } from '@shared/components/ui/badge';
@@ -689,7 +692,7 @@ function SecaoNotificacoes() {
 ───────────────────────────────────────────── */
 function SecaoPrivacidade() {
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   const {
     termosAceitosEm,
@@ -1005,6 +1008,10 @@ function SecaoPrivacidade() {
           {savingPriv ? 'Salvando...' : 'Salvar privacidade'}
         </Button>
       </div>
+
+      <TwoFactorSection />
+
+      <ContaSection emailAtual={user?.email} />
     </div>
   );
 }
@@ -1024,6 +1031,19 @@ function SecaoPlano() {
   const router = useRouter();
   const { toast } = useToast();
   const { data: plano, isLoading, isError, refetch } = usePlano();
+  const cancelar = useCancelarAssinatura();
+
+  function handleCancelar() {
+    cancelar.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: 'Assinatura cancelada', description: 'Você voltou para o plano gratuito.' });
+        void refetch();
+      },
+      onError: () => {
+        toast({ title: 'Erro', description: 'Não foi possível cancelar agora. Tente novamente.', variant: 'destructive' });
+      },
+    });
+  }
 
   if (isLoading) {
     return (
@@ -1086,15 +1106,34 @@ function SecaoPlano() {
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                onClick={() => toast({ title: 'Em breve', description: 'A gestão de assinatura estará disponível em breve.' })}
-                data-testid="button-gerenciar-assinatura"
-              >
-                Gerenciar assinatura
-              </Button>
+              {plano.plano !== 'free' && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      disabled={cancelar.isPending}
+                      data-testid="button-cancelar-assinatura"
+                    >
+                      {cancelar.isPending ? 'Cancelando…' : 'Cancelar assinatura'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Você voltará para o plano gratuito imediatamente. Obras em andamento são preservadas, mas
+                        os limites do plano gratuito passam a valer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Voltar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleCancelar}>Confirmar cancelamento</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
               <Button variant="ghost" size="sm" className="text-xs" onClick={() => router.push('/contratante/planos')}>
                 Ver outros planos
                 <RiExternalLinkLine className="w-3.5 h-3.5 ml-1.5" />

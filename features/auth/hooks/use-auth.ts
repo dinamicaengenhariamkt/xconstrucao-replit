@@ -40,7 +40,8 @@ export interface AuthContextType {
     password: string,
     rememberMe?: boolean,
     options?: { expectedRole?: string; antiBot?: { website: string; mountedAt: number } }
-  ) => Promise<void>;
+  ) => Promise<{ twoFactorRequired: boolean; challengeToken?: string }>;
+  verifyTwoFactor: (challengeToken: string, codigo: string) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
   logout: () => Promise<LogoutResult>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
@@ -56,6 +57,7 @@ export function useAuth(): AuthContextType {
   const user = useAuthStore((state) => state.user);
   const isLoading = useAuthStore((state) => state.isLoading);
   const login = useAuthStore((state) => state.login);
+  const verifyTwoFactor = useAuthStore((state) => state.verifyTwoFactor);
   const logout = useAuthStore((state) => state.logout);
   const register = useAuthStore((state) => state.register);
   const refreshToken = useAuthStore((state) => state.refreshToken);
@@ -65,6 +67,7 @@ export function useAuth(): AuthContextType {
     user,
     isLoading,
     login,
+    verifyTwoFactor,
     logout,
     register,
     refreshToken,
