@@ -29,3 +29,6 @@ next-env.d.ts
 test-results/
 playwright-report/
 .next-prod
+
+# Turbopack incremental build cache (never commit — can reach several GiB)
+.next-sweep

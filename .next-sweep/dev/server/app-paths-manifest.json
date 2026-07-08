@@ -1,6 +1,0 @@
-{
-  "/api/test/login-as/route": "app/api/test/login-as/route.js",
-  "/cadastro/page": "app/cadastro/page.js",
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js"
-}
