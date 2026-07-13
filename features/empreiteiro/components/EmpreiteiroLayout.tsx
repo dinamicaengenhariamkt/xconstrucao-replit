@@ -3,6 +3,7 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar';
 import { EmpreiteiroSidebar } from './EmpreiteiroSidebar';
 import { EmpreiteiroTopbar } from './EmpreiteiroTopbar';
+import { ImpersonationBanner } from '@features/admin/components/ImpersonationBanner';
 import type { EmpreiteiroLayoutProps } from '../types';
 
 export function EmpreiteiroLayout({ children }: EmpreiteiroLayoutProps) {
@@ -16,6 +17,7 @@ export function EmpreiteiroLayout({ children }: EmpreiteiroLayoutProps) {
       <div className="flex h-screen w-full">
         <EmpreiteiroSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
+          <ImpersonationBanner />
           <EmpreiteiroTopbar />
           <main className="flex-1 min-h-0 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}

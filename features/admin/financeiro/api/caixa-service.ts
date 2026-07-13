@@ -62,6 +62,59 @@ function condsPeriodo(intervalo: Intervalo) {
   return conds;
 }
 
+/**
+ * Retorna o intervalo equivalente ao período ANTERIOR (para cálculo de crescimento%).
+ * Retorna null quando não há período anterior bem-definido (ex: null, personalizado).
+ */
+function resolverIntervaloPrevio(periodo: string | null | undefined, agoraMs: number): Intervalo | null {
+  if (!periodo) return null;
+  const hoje = new Date(agoraMs);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const desde = (dias: number) => iso(new Date(agoraMs - dias * DIA_MS));
+  switch (periodo) {
+    case "7dias":
+      return { inicio: desde(14), fim: desde(7) };
+    case "30dias":
+      return { inicio: desde(60), fim: desde(30) };
+    case "90dias":
+    case "3meses":
+      return { inicio: desde(180), fim: desde(90) };
+    case "12meses":
+      return { inicio: desde(730), fim: desde(365) };
+    case "anoAtual": {
+      const prevYear = hoje.getUTCFullYear() - 1;
+      return { inicio: `${prevYear}-01-01`, fim: `${prevYear}-12-31` };
+    }
+    default:
+      return null;
+  }
+}
+
+/** Computa crescimentoPercent comparando total atual com total do período anterior. */
+async function computeCrescimento(
+  tipo: "entrada" | "saida",
+  totalAtual: number,
+  periodo: string | null,
+  agoraMs: number,
+): Promise<number> {
+  const prevIntervalo = resolverIntervaloPrevio(periodo, agoraMs);
+  if (!prevIntervalo) return 0;
+  const prevConds = [
+    sql`${financeiro.tipo} = ${tipo}`,
+    sql`${financeiro.status} = 'pago'`,
+    ...condsPeriodo(prevIntervalo),
+  ];
+  const [prevRow] = await db
+    .select({
+      total: sql<string>`COALESCE(SUM(${financeiro.valor}), 0)`,
+    })
+    .from(financeiro)
+    .where(and(...prevConds));
+  const prevTotal = Number(prevRow?.total ?? 0);
+  if (prevTotal <= 0) return totalAtual > 0 ? 100 : 0;
+  return Math.round(((totalAtual - prevTotal) / prevTotal) * 100);
+}
+
 // ─── Resumo / KPIs do caixa ─────────────────────────────────────────────────
 export interface CaixaResumo {
   saldoAtual: number;
@@ -358,7 +411,15 @@ export interface EntradaKpi {
 }
 
 export async function getEntradaKpi(periodo: string | null, agoraMs: number): Promise<EntradaKpi> {
-  const entradas = await getEntradas(periodo, agoraMs);
+  const [entradas, crescimentoPercent] = await Promise.all([
+    getEntradas(periodo, agoraMs),
+    (async () => {
+      const intervalo = resolverIntervalo(periodo, agoraMs);
+      const conds = [sql`${financeiro.tipo} = 'entrada'`, sql`${financeiro.status} = 'pago'`, ...condsPeriodo(intervalo)];
+      const [row] = await db.select({ total: sql<string>`COALESCE(SUM(${financeiro.valor}), 0)` }).from(financeiro).where(and(...conds));
+      return computeCrescimento("entrada", Number(row?.total ?? 0), periodo, agoraMs);
+    })(),
+  ]);
   const total = entradas.reduce((s, e) => s + e.valor, 0);
   const grupo = (t: Entrada["tipoReceita"]) => entradas.filter((e) => e.tipoReceita === t).reduce((s, e) => s + e.valor, 0);
   const taxas = grupo("taxa_medicao");
@@ -368,7 +429,7 @@ export async function getEntradaKpi(periodo: string | null, agoraMs: number): Pr
   const clientesUnicos = new Set(entradas.map((e) => e.clienteEmpreiteira)).size || 1;
   return {
     totalEntradas: total,
-    crescimentoPercent: 0,
+    crescimentoPercent,
     taxasMedicoes: taxas,
     taxasMedicoesPercent: pct(taxas),
     assinaturas: assin,
@@ -395,7 +456,15 @@ export interface SaidaKpi {
 }
 
 export async function getSaidaKpi(periodo: string | null, agoraMs: number): Promise<SaidaKpi> {
-  const saidas = await getSaidas(periodo, agoraMs);
+  const [saidas, crescimentoPercent] = await Promise.all([
+    getSaidas(periodo, agoraMs),
+    (async () => {
+      const intervalo = resolverIntervalo(periodo, agoraMs);
+      const conds = [sql`${financeiro.tipo} = 'saida'`, sql`${financeiro.status} = 'pago'`, ...condsPeriodo(intervalo)];
+      const [row] = await db.select({ total: sql<string>`COALESCE(SUM(${financeiro.valor}), 0)` }).from(financeiro).where(and(...conds));
+      return computeCrescimento("saida", Number(row?.total ?? 0), periodo, agoraMs);
+    })(),
+  ]);
   const total = saidas.reduce((s, e) => s + e.valor, 0);
   const grupo = (t: Saida["tipoSaida"]) => saidas.filter((e) => e.tipoSaida === t).reduce((s, e) => s + e.valor, 0);
   const pag = grupo("pagamento_medicao");
@@ -406,7 +475,7 @@ export async function getSaidaKpi(periodo: string | null, agoraMs: number): Prom
   const maior = saidas.reduce<Saida | null>((m, s) => (!m || s.valor > m.valor ? s : m), null);
   return {
     totalSaidas: total,
-    crescimentoPercent: 0,
+    crescimentoPercent,
     pagamentosEmpreiteiras: pag,
     pagamentosEmpreiteirasPercent: pct(pag),
     reembolsos: reemb,

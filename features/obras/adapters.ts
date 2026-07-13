@@ -236,7 +236,18 @@ export function dbToObraContratanteDetalhe(
 } {
   const base = dbToObraContratante(o);
   const orcamento = base.orcamento;
-  const valorPago = toNumber(o.valorPago);
+
+  // Computa valorPago a partir da soma das medições aprovadas (status='aprovada').
+  // obras.valorPago no DB NÃO é atualizado quando medições são aprovadas — apenas
+  // `progresso` é recalculado. Por isso, somamos direto das medições retornadas
+  // pela API. Se não houver medições aprovadas, usa o campo DB como fallback.
+  const valorPagoFromMedicoes = (o.medicoes ?? [])
+    .filter((m) => m.status === 'aprovada')
+    .reduce((s, m) => s + toNumber(m.valor), 0);
+  const valorPago = valorPagoFromMedicoes > 0
+    ? valorPagoFromMedicoes
+    : toNumber(o.valorPago);
+
   const valorRestante = Math.max(0, orcamento - valorPago);
   const documentos = anexos.map((a) => ({
     id: a.id,

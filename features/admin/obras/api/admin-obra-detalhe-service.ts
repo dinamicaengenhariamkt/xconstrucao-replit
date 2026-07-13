@@ -115,13 +115,24 @@ function formatDate(iso: string): string {
 /**
  * Mapeia payload do `/api/admin/obras/[id]` (+ lista de medições opcional) para `AdminObraDetalhe`.
  * Item 16 J40: valorPago e medicoes agora vêm de dados reais.
+ * valorPago é computado a partir da soma de medições aprovadas (status='aprovada'),
+ * já que obras.valorPago no banco pode não estar atualizado após aprovação de medições.
  */
 export function adaptAdminObraDetalhe(
   payload: AdminObraApiResponse,
   medicoesApi: Record<string, unknown>[] = [],
 ): AdminObraDetalhe {
   const valorTotal = Number(payload.valorTotal ?? 0) || 0;
-  const valorPago = Number(payload.valorPago ?? 0) || 0;
+
+  // Soma as medições aprovadas para obter valorPago real.
+  const valorPagoFromMedicoes = medicoesApi
+    .filter((m) => String(m.status ?? '') === 'aprovada')
+    .reduce((s, m) => s + (Number(m.valor ?? 0) || 0), 0);
+  // Prefere o valor computado das medições; cai para obras.valorPago como fallback.
+  const valorPago = valorPagoFromMedicoes > 0
+    ? valorPagoFromMedicoes
+    : (Number(payload.valorPago ?? 0) || 0);
+
   const percentConcluido =
     typeof payload.percentConcluido === 'number'
       ? payload.percentConcluido

@@ -3,6 +3,7 @@
 import { SidebarProvider } from '@shared/components/ui/sidebar';
 import { ContratanteSidebar } from './ContratanteSidebar';
 import { ContratanteTopbar } from './ContratanteTopbar';
+import { ImpersonationBanner } from '@features/admin/components/ImpersonationBanner';
 import type { ContratanteLayoutProps } from '../types';
 
 export function ContratanteLayout({ children }: ContratanteLayoutProps) {
@@ -19,6 +20,7 @@ export function ContratanteLayout({ children }: ContratanteLayoutProps) {
       <div className="flex h-svh w-full overflow-hidden">
         <ContratanteSidebar />
         <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+          <ImpersonationBanner />
           <ContratanteTopbar />
           <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}
