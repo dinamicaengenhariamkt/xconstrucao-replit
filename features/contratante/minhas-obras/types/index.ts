@@ -25,6 +25,8 @@ export interface ObraContratante {
   };
   tipo: string;
   candidaturas?: number;
+  /** true quando a obra já tem empreiteira vinculada (substitui o teste por nome). */
+  empreiteiroVinculado?: boolean;
 }
 
 export type ObraVisibilidade = 'rascunho' | 'publicada' | 'pausada' | 'arquivada';

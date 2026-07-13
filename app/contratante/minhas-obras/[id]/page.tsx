@@ -8,6 +8,11 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
 import { useObraContratanteDetalhe } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
+import {
+  useObraChecklists,
+  useObraEquipe,
+  useObraTarefasResumo,
+} from '@features/contratante/minhas-obras/hooks/use-obra-detalhe-extra';
 import { STATUS_LABELS, STATUS_BADGE_VARIANTS, PROGRESS_COLORS } from '@shared/constants/status';
 import { TabVisaoGeral } from '@features/contratante/minhas-obras/components/TabVisaoGeral';
 import { TabEtapas } from '@features/contratante/minhas-obras/components/TabEtapas';
@@ -87,6 +92,10 @@ export default function ObraDetalhePage() {
   const id = params.id as string;
   const { data: obra, isLoading } = useObraContratanteDetalhe(id);
   const { data: obraHealth } = useObraHealth(id);
+  // Entidades com rota própria (J40 Item 10): antes vinham [] / 0 do adapter.
+  const { data: checklists } = useObraChecklists(id);
+  const { data: equipe } = useObraEquipe(id);
+  const { data: tarefasResumo } = useObraTarefasResumo(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('visao-geral');
 
   // ── Botão "Trocar capa" (Item 13 J40) ────────────────────────────────────
@@ -104,7 +113,7 @@ export default function ObraDetalhePage() {
           method: 'PATCH',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fotoCapaFileId: result.fileId }),
+          body: JSON.stringify({ fotoCapaFileId: result.id }),
         });
         await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', id] });
       } catch {
@@ -141,7 +150,9 @@ export default function ObraDetalhePage() {
     );
   }
 
-  const semEmpreiteiro = obra.empreiteiro.nome === 'Aguardando';
+  const semEmpreiteiro = !obra.empreiteiroVinculado;
+  const tarefasTotal = tarefasResumo?.total ?? obra.tarefasTotal;
+  const tarefasConcluidas = tarefasResumo?.concluidas ?? obra.tarefasConcluidas;
   const badgeVariant = (STATUS_BADGE_VARIANTS[obra.status] || 'neutral') as 'success' | 'warning' | 'error' | 'info' | 'primary' | 'neutral';
   const progressColor = (PROGRESS_COLORS[obra.status] || 'primary') as ProgressColor;
   const progressBarColor = PROGRESS_BAR_COLORS[progressColor] || 'bg-primary';
@@ -408,13 +419,13 @@ export default function ObraDetalhePage() {
                 <div className="p-2.5 bg-info/10 text-info rounded-lg">
                   <RiCheckboxCircleLine className="w-5 h-5" />
                 </div>
-                <span className="text-info text-xs font-bold bg-info/10 px-2 py-1 rounded-full">{obra.tarefasTotal} total</span>
+                <span className="text-info text-xs font-bold bg-info/10 px-2 py-1 rounded-full">{tarefasTotal} total</span>
               </div>
               <div>
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tarefas</p>
-                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.tarefasConcluidas}/{obra.tarefasTotal}</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{tarefasConcluidas}/{tarefasTotal}</p>
               </div>
-              <p className="text-xs text-gray-500">{obra.tarefasTotal - obra.tarefasConcluidas} pendentes</p>
+              <p className="text-xs text-gray-500">{tarefasTotal - tarefasConcluidas} pendentes</p>
             </div>
 
             {/* Dias Restantes */}
@@ -498,8 +509,8 @@ export default function ObraDetalhePage() {
                 />
               )}
               {activeTab === 'documentos' && <TabDocumentos documentos={obra.documentos} />}
-              {activeTab === 'checklists' && <TabChecklists checklists={obra.checklists} />}
-              {activeTab === 'equipe' && <TabEquipe obra={obra} />}
+              {activeTab === 'checklists' && <TabChecklists checklists={checklists ?? obra.checklists} />}
+              {activeTab === 'equipe' && <TabEquipe equipe={equipe ?? obra.equipe} />}
               {activeTab === 'fotos' && <TabFotos obra={obra} />}
             </motion.div>
           </AnimatePresence>

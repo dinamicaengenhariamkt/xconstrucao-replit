@@ -192,6 +192,7 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
   visibilidade: DbObra['visibilidade'];
   statusModeracao?: DbObra['statusModeracao'];
   motivoModeracao?: string | null;
+  empreiteiroVinculado: boolean;
 } {
   const semEmpreiteira = !o.empreiteiraId;
   const empNome = !semEmpreiteira && o.empreiteiraInfo?.nome
@@ -222,6 +223,8 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
     visibilidade: o.visibilidade,
     statusModeracao: o.statusModeracao ?? null,
     motivoModeracao: o.motivoModeracao ?? null,
+    // Flag real (substitui o antigo teste `empreiteiro.nome === 'Aguardando'`).
+    empreiteiroVinculado: !semEmpreiteira,
   };
 }
 
@@ -321,7 +324,11 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     id: o.id,
     titulo: o.nome,
     endereco: fullEndereco(o),
-    imagemUrl: DEFAULT_IMG,
+    // Usa a capa real quando a origem a fornece (`fotoCapaUrl`); DEFAULT_IMG é
+    // só placeholder de imagem (não é dado de negócio mockado). O grid de
+    // browse do empreiteiro (`/api/obras`) hoje não resolve a capa por linha
+    // para não onerar a rota paginada — cai no placeholder, sem number falso.
+    imagemUrl: o.fotoCapaUrl ?? DEFAULT_IMG,
     tipo: o.tipo ?? 'Geral',
     complexidade: mapComplexidade(o),
     status: 'recebendo_propostas',
@@ -332,7 +339,10 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     destaque: false,
     applicationStatus: 'nao_aplicado',
     dataPublicacao: formatRelative(o.createdAt ?? null),
-    candidaturas: 0,
+    // Grid de browse do empreiteiro não expõe contagem de propostas de
+    // concorrentes (por design) — usa `candidaturasCount` só quando a origem
+    // fornece, senão 0. Não é o mesmo "0 falso" do hero do contratante (J40 #10).
+    candidaturas: o.candidaturasCount ?? 0,
     materiaisPor: o.materiaisPor ?? undefined,
     modalidade: o.modalidade ?? undefined,
     anexosCount: typeof o.anexosCount === 'number' ? o.anexosCount : 0,

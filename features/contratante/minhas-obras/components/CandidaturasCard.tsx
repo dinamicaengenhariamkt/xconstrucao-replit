@@ -121,8 +121,11 @@ function parseAtividades(raw: string | null): CandidaturaUI['atividades'] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return undefined;
     return parsed
-      .map((a: any) => ({
-        id: String(a?.id ?? crypto.randomUUID?.() ?? String(Math.random())),
+      .map((a: any, i: number) => ({
+        // Id estável: usa o id salvo ou, na falta, o índice do item (as
+        // atividades são um array ordenado da candidatura). Evita key instável
+        // (Math.random gerava key nova a cada render).
+        id: String(a?.id ?? `atividade-${i}`),
         descricao: String(a?.descricao ?? ''),
         valor: parseBrMoney(a?.valor),
         observacoes: a?.observacoes || undefined,
