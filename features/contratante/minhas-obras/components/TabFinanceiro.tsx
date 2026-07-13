@@ -53,9 +53,9 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 rounded-xl border-l-4 border-blue-500 border border-blue-100 dark:border-blue-900/30">
+        <div className="p-5 bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 rounded-xl border-l-4 border-blue-500 border border-blue-100 dark:border-blue-900/30" data-testid="kpi-card-valor-contratado">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Valor Contratado</p>
-          <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-2">{formatCurrency(financeiro.valorContratado)}</p>
+          <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-2" data-testid="kpi-value-valor-contratado">{formatCurrency(financeiro.valorContratado)}</p>
           {financeiro.aditivos > 0 && (
             <p className="text-xs text-blue-500 font-medium mt-1">
               + {formatCurrency(financeiro.aditivos)} em aditivos
@@ -63,9 +63,9 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
           )}
         </div>
 
-        <div className="p-5 bg-gradient-to-br from-success/10 to-white dark:from-success/20 dark:to-gray-900 rounded-xl border-l-4 border-success border border-success/20">
+        <div className="p-5 bg-gradient-to-br from-success/10 to-white dark:from-success/20 dark:to-gray-900 rounded-xl border-l-4 border-success border border-success/20" data-testid="kpi-card-total-pago">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Pago</p>
-          <p className="text-2xl font-extrabold text-success mt-2">{formatCurrency(financeiro.valorPago)}</p>
+          <p className="text-2xl font-extrabold text-success mt-2" data-testid="kpi-value-total-pago">{formatCurrency(financeiro.valorPago)}</p>
           {financeiro.valorTotal > 0 && (
             <p className="text-xs text-gray-500 mt-1">
               {Math.round((financeiro.valorPago / financeiro.valorTotal) * 100)}% do total
@@ -73,9 +73,9 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
           )}
         </div>
 
-        <div className="p-5 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-gray-900 rounded-xl border-l-4 border-amber-500 border border-amber-100 dark:border-amber-900/30">
+        <div className="p-5 bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-gray-900 rounded-xl border-l-4 border-amber-500 border border-amber-100 dark:border-amber-900/30" data-testid="kpi-card-a-liberar">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">A Liberar</p>
-          <p className="text-2xl font-extrabold text-amber-600 mt-2">{formatCurrency(aLiberar)}</p>
+          <p className="text-2xl font-extrabold text-amber-600 mt-2" data-testid="kpi-value-a-liberar">{formatCurrency(aLiberar)}</p>
           <p className="text-xs text-gray-500 mt-1">valor restante</p>
         </div>
 

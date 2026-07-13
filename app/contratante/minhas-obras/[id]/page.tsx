@@ -380,7 +380,7 @@ export default function ObraDetalhePage() {
               </div>
               <div>
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Valor Pago</p>
-                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{formatCurrency(obra.valorPago)}</p>
+                <p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1" data-testid="text-valor-pago">{formatCurrency(obra.valorPago)}</p>
               </div>
               <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
                 <div className="h-full bg-success rounded-full" style={{ width: `${pagoPct}%` }} />
