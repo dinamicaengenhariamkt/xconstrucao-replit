@@ -20,6 +20,17 @@ export interface KeyBuilderArgs {
   extras?: { tipoDocumento?: string };
 }
 
+/**
+ * Prefixo de namespace para separar uploads de dev/prod no mesmo bucket.
+ * Defina R2_KEY_PREFIX=dev em .env.local para desenvolvimento.
+ * Em produção, deixe vazio ou não defina (sem prefixo).
+ */
+function getKeyPrefix(): string {
+  const prefix =
+    typeof process !== "undefined" ? process.env.R2_KEY_PREFIX ?? "" : "";
+  return prefix.trim().replace(/\/+$/, "");
+}
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -85,7 +96,15 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
   if (!/^[a-z0-9-]{8,64}$/i.test(userId)) {
     return { ok: false, reason: "userId inválido" };
   }
-  const segments = key.split("/");
+
+  // Strip do prefixo de dev/prod antes de checar a shape canônica.
+  const prefix = getKeyPrefix();
+  let effectiveKey = key;
+  if (prefix && key.startsWith(prefix + "/")) {
+    effectiveKey = key.slice(prefix.length + 1);
+  }
+
+  const segments = effectiveKey.split("/");
   // Segmento final precisa ter timestamp+slug com extensão segura
   const last = segments[segments.length - 1];
   if (!/^[a-zA-Z0-9._-]{3,160}$/.test(last)) {
@@ -225,31 +244,30 @@ export function buildKey(args: KeyBuilderArgs): string {
   const ts = timestampStamp();
   const safeExt = ext ? `.${slugify(ext)}` : "";
 
+  let base: string;
   if (kind === "avatar") {
-    return `${visibility}/avatars/${role}/${userId}/${ts}-avatar${safeExt}`;
+    base = `${visibility}/avatars/${role}/${userId}/${ts}-avatar${safeExt}`;
+  } else if (kind === "portfolio_imagem") {
+    base = `public/empreiteiro/${userId}/portfolio/${ts}-${slug}${safeExt}`;
+  } else if (kind === "portfolio_doc") {
+    base = `public/empreiteiro/${userId}/portfolio-docs/${ts}-${slug}${safeExt}`;
+  } else if (kind === "obra_anexo") {
+    base = `public/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
+  } else if (kind === "comprovante_pagamento") {
+    base = `private/contratante/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
+  } else if (kind === "candidatura_anexo") {
+    base = `private/empreiteiro/${userId}/candidatura-anexos/${ts}-${slug}${safeExt}`;
+  } else if (kind === "obra_foto") {
+    base = `public/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
+  } else if (kind === "anuncio_criativo") {
+    base = `public/anuncios/${userId}/criativos/${ts}-${slug}${safeExt}`;
+  } else {
+    // empreiteiro_documento
+    const tipo = slugify(extras?.tipoDocumento || "outro");
+    base = `private/empreiteiro/${userId}/documentos/${tipo}/${ts}-${slug}${safeExt}`;
   }
-  if (kind === "portfolio_imagem") {
-    return `public/empreiteiro/${userId}/portfolio/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "portfolio_doc") {
-    return `public/empreiteiro/${userId}/portfolio-docs/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "obra_anexo") {
-    return `public/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "comprovante_pagamento") {
-    return `private/contratante/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "candidatura_anexo") {
-    return `private/empreiteiro/${userId}/candidatura-anexos/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "obra_foto") {
-    return `public/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
-  }
-  if (kind === "anuncio_criativo") {
-    return `public/anuncios/${userId}/criativos/${ts}-${slug}${safeExt}`;
-  }
-  // empreiteiro_documento
-  const tipo = slugify(extras?.tipoDocumento || "outro");
-  return `private/empreiteiro/${userId}/documentos/${tipo}/${ts}-${slug}${safeExt}`;
+
+  // Prefixo de namespace dev/prod (ex.: "dev" → "dev/public/avatars/...").
+  const prefix = getKeyPrefix();
+  return prefix ? `${prefix}/${base}` : base;
 }

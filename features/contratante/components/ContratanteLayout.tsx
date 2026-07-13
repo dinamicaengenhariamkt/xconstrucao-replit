@@ -12,10 +12,13 @@ export function ContratanteLayout({ children }: ContratanteLayoutProps) {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
+    <SidebarProvider
+      style={style as React.CSSProperties}
+      className="h-svh min-h-0 overflow-hidden"
+    >
       <div className="flex h-svh w-full overflow-hidden">
         <ContratanteSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           <ContratanteTopbar />
           <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}

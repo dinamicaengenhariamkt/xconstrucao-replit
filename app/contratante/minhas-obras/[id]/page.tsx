@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUpload } from '@features/shared/hooks/use-uploads';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@shared/lib/utils';
@@ -38,6 +40,7 @@ import {
   RiHeartPulseLine,
   RiFolderLine,
   RiFileList3Line,
+  RiCameraLine,
 } from 'react-icons/ri';
 import { HealthDetailPanel, useObraHealth } from '@features/shared/health';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
@@ -85,6 +88,33 @@ export default function ObraDetalhePage() {
   const { data: obra, isLoading } = useObraContratanteDetalhe(id);
   const { data: obraHealth } = useObraHealth(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('visao-geral');
+
+  // ── Botão "Trocar capa" (Item 13 J40) ────────────────────────────────────
+  const queryClient = useQueryClient();
+  const { upload, pending: uploadingCapa } = useUpload();
+  const capaInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCapaUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !obra) return;
+      try {
+        const result = await upload({ kind: 'obra_foto', file });
+        await fetch(`/api/obras/${id}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fotoCapaFileId: result.fileId }),
+        });
+        await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', id] });
+      } catch {
+        /* uploadError já está disponível no hook, UI pode exibi-lo externamente */
+      } finally {
+        if (capaInputRef.current) capaInputRef.current.value = '';
+      }
+    },
+    [id, obra, upload, queryClient],
+  );
 
   if (isLoading) {
     return (
@@ -163,6 +193,28 @@ export default function ObraDetalhePage() {
             style={{ backgroundImage: `url('${obra.imagemUrl}')` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+          {/* Botão trocar foto de capa — visível ao contratante */}
+          <div className="absolute top-4 right-4">
+            <label
+              className={cn(
+                'cursor-pointer flex items-center gap-1.5 bg-black/50 hover:bg-black/70 text-white text-xs font-medium px-3 py-1.5 rounded-xl backdrop-blur-sm transition-colors',
+                uploadingCapa && 'opacity-60 pointer-events-none',
+              )}
+              data-testid="btn-trocar-capa"
+            >
+              <RiCameraLine className="w-3.5 h-3.5" />
+              {uploadingCapa ? 'Enviando…' : 'Trocar capa'}
+              <input
+                ref={capaInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCapaUpload}
+                data-testid="input-capa-upload"
+              />
+            </label>
+          </div>
 
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

@@ -53,6 +53,12 @@ export function getR2Client(): { client: S3Client; config: R2Config } {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
       },
+      // R2 rejeita os headers de checksum que o SDK v3 ≥ 3.1045 injeta por
+      // padrão (x-amz-checksum-crc32 / x-amz-sdk-checksum-algorithm).
+      // "WHEN_REQUIRED" desativa o envio automático sem quebrar objetos que
+      // realmente exijam checksum.
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
   }
   return { client: cachedClient, config };

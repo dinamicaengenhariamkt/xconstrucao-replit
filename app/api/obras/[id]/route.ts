@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
   clientes,
   empreiteiras,
+  medicoes,
   obras,
   obraAnexos,
+  users,
   userFiles,
 } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -100,12 +102,107 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     }),
   );
 
+  const isContratante = guard.user.role === "contratante";
+  const isAdmin = isAdminLike(guard.user.role);
+
+  // Queries em paralelo: candidaturas, medições, empreiteira, foto capa.
+  const [
+    candidaturasCountResult,
+    medicoesRows,
+    empreiteiraRow,
+    fotoCapa,
+  ] = await Promise.all([
+    // Contagem de candidaturas pendentes (só útil ao contratante/admin).
+    isContratante || isAdmin
+      ? db
+          .select({ c: count() })
+          .from(candidaturas)
+          .where(and(eq(candidaturas.obraId, id), eq(candidaturas.status, "pendente")))
+      : Promise.resolve([{ c: 0 }]),
+
+    // Medições (contratante + admin veem todas).
+    isContratante || isAdmin
+      ? db
+          .select({
+            id: medicoes.id,
+            numero: medicoes.numero,
+            etapa: medicoes.etapa,
+            descricao: medicoes.descricao,
+            percentual: medicoes.percentual,
+            valor: medicoes.valor,
+            status: medicoes.status,
+            motivoContestacao: medicoes.motivoContestacao,
+            createdAt: medicoes.createdAt,
+            decidedAt: medicoes.decidedAt,
+          })
+          .from(medicoes)
+          .where(eq(medicoes.obraId, id))
+      : Promise.resolve([]),
+
+    // Dados da empreiteira vinculada (nome, contato).
+    access.obra.empreiteiraId
+      ? db
+          .select({
+            id: empreiteiras.id,
+            nome: empreiteiras.nome,
+            responsavel: empreiteiras.responsavel,
+            telefone: empreiteiras.telefone,
+            email: users.email,
+          })
+          .from(empreiteiras)
+          .innerJoin(users, eq(users.id, empreiteiras.userId))
+          .where(eq(empreiteiras.id, access.obra.empreiteiraId))
+          .limit(1)
+      : Promise.resolve([]),
+
+    // URL da foto de capa (pública ou signed).
+    access.obra.fotoCapaFileId
+      ? db
+          .select({
+            bucketKey: userFiles.bucketKey,
+            publicUrl: userFiles.publicUrl,
+            visibility: userFiles.visibility,
+          })
+          .from(userFiles)
+          .where(and(eq(userFiles.id, access.obra.fotoCapaFileId), isNull(userFiles.deletedAt)))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
+
+  const candidaturasCount = Number((candidaturasCountResult[0] as { c: number | string } | undefined)?.c ?? 0);
+
+  // Resolve URL da foto de capa.
+  let fotoCapaUrl: string | null = null;
+  if (fotoCapa[0]) {
+    const f = fotoCapa[0] as { bucketKey: string; publicUrl: string | null; visibility: string };
+    fotoCapaUrl = f.visibility === "public"
+      ? (f.publicUrl ?? publicUrlForKey(f.bucketKey))
+      : await createSignedReadUrl({ key: f.bucketKey }).catch(() => null);
+  }
+
+  // Dias restantes até dataPrevisao.
+  let diasRestantes = 0;
+  if (access.obra.dataPrevisao) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const previsao = new Date(access.obra.dataPrevisao);
+    diasRestantes = Math.max(0, Math.ceil((previsao.getTime() - hoje.getTime()) / 86_400_000));
+  }
+
   // Empreiteiro: sanitizar PII do contratante.
   const obraOut = guard.user.role === "empreiteiro"
     ? (() => { const { clienteId, ...rest } = access.obra; return rest; })()
     : access.obra;
 
-  const r = NextResponse.json({ ...obraOut, anexos });
+  const r = NextResponse.json({
+    ...obraOut,
+    anexos,
+    candidaturasCount,
+    medicoes: medicoesRows,
+    empreiteiraInfo: empreiteiraRow[0] ?? null,
+    fotoCapaUrl,
+    diasRestantes,
+  });
   setNoCacheHeaders(r);
   return r;
 }

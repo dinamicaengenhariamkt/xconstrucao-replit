@@ -318,6 +318,28 @@ export async function quitarLancamento(args: {
     .where(eq(financeiro.id, args.id))
     .returning();
   if (!updated) return null;
+
+  // Item 15 J40 — Recomputa obras.valorPago a partir da tabela financeiro (fonte de verdade).
+  // Nunca usa incremento avulso para evitar divergência em reprocessamento.
+  if (updated.obraId) {
+    try {
+      await db.execute(
+        sql`UPDATE obras
+            SET valor_pago = (
+              SELECT COALESCE(SUM(valor::numeric), 0)
+              FROM financeiro
+              WHERE obra_id = ${updated.obraId}
+                AND status  = 'pago'
+                AND tipo    = 'saida'
+            )
+            WHERE id = ${updated.obraId}`,
+      );
+    } catch (err) {
+      // Falha não-crítica: o valor será recomputado na próxima quitação.
+      console.error("[quitarLancamento] falha ao recomputar valorPago da obra:", err);
+    }
+  }
+
   return getLancamento(updated.id);
 }
 

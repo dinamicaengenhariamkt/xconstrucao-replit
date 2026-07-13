@@ -24,6 +24,20 @@ import type {
 const DEFAULT_IMG =
   'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1200';
 
+/** Linha de medição retornada por GET /api/obras/[id] (campos básicos). */
+export type DbMedicao = {
+  id: string;
+  numero: number;
+  etapa: string;
+  descricao?: string | null;
+  percentual?: string | null;
+  valor?: string | null;
+  status: 'pendente' | 'aprovada' | 'contestada';
+  motivoContestacao?: string | null;
+  createdAt?: string | Date | null;
+  decidedAt?: string | Date | null;
+};
+
 export type DbObra = {
   id: string;
   nome: string;
@@ -54,6 +68,23 @@ export type DbObra = {
   anexosCount?: number | null;
   /** Computado server-side em GET /api/obras (role=empreiteiro): intersecção da UF/cidade da obra com zona de atuação. */
   naMinhaZona?: boolean | null;
+  // ── Campos agregados por GET /api/obras/[id] ──────────────────────────────
+  /** Contagem de candidaturas com status 'pendente'. */
+  candidaturasCount?: number | null;
+  /** Medições da obra (contratante / admin). */
+  medicoes?: DbMedicao[] | null;
+  /** Dados básicos da empreiteira vinculada. */
+  empreiteiraInfo?: {
+    id?: string;
+    nome?: string;
+    responsavel?: string | null;
+    telefone?: string | null;
+    email?: string | null;
+  } | null;
+  /** URL pública (ou signed) da foto de capa. */
+  fotoCapaUrl?: string | null;
+  /** Dias restantes até dataPrevisao (calculado server-side). */
+  diasRestantes?: number | null;
 };
 
 export type DbObraAnexo = {
@@ -111,6 +142,26 @@ export const VISIBILIDADE_BADGE_CLASSES: Record<string, string> = {
   arquivada: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+/** Gera iniciais (até 2 letras) a partir de um nome. */
+function iniciaisFromNome(nome: string): string {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
+/** DB status de medição → status usado pela UI do contratante. */
+function mapDbMedicaoStatus(
+  s: DbMedicao['status'],
+): 'aguardando_aprovacao' | 'aprovada' | 'rejeitada' {
+  if (s === 'pendente') return 'aguardando_aprovacao';
+  if (s === 'contestada') return 'rejeitada';
+  return 'aprovada';
+}
+
 function toNumber(v: string | null | undefined, fallback = 0): number {
   if (v === null || v === undefined || v === '') return fallback;
   const n = Number(v);
@@ -143,11 +194,15 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
   motivoModeracao?: string | null;
 } {
   const semEmpreiteira = !o.empreiteiraId;
+  const empNome = !semEmpreiteira && o.empreiteiraInfo?.nome
+    ? o.empreiteiraInfo.nome
+    : semEmpreiteira ? 'Aguardando' : 'Empreiteira vinculada';
+  const empIniciais = semEmpreiteira ? 'AG' : iniciaisFromNome(empNome) || 'EC';
   return {
     id: o.id,
     titulo: o.nome,
     endereco: fullEndereco(o),
-    imagemUrl: DEFAULT_IMG,
+    imagemUrl: o.fotoCapaUrl ?? DEFAULT_IMG,
     status: mapDbStatusToContratante(o.status),
     progresso: o.progresso ?? 0,
     orcamento: toNumber(o.valorTotal),
@@ -155,9 +210,15 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
     dataPrevisaoFim: o.dataPrevisao ?? '—',
     empreiteiro: semEmpreiteira
       ? { nome: 'Aguardando', iniciais: 'AG', cor: 'bg-gray-400' }
-      : { nome: 'Empreiteira contratada', iniciais: 'EC', cor: 'bg-primary' },
+      : {
+          nome: empNome,
+          iniciais: empIniciais,
+          cor: 'bg-primary',
+          telefone: o.empreiteiraInfo?.telefone ?? undefined,
+          email: o.empreiteiraInfo?.email ?? undefined,
+        },
     tipo: o.tipo ?? '—',
-    candidaturas: 0,
+    candidaturas: o.candidaturasCount ?? 0,
     visibilidade: o.visibilidade,
     statusModeracao: o.statusModeracao ?? null,
     motivoModeracao: o.motivoModeracao ?? null,
@@ -187,12 +248,27 @@ export function dbToObraContratanteDetalhe(
     observacoes: a.observacao ?? undefined,
   }));
 
+  // Mapeamento DB medições → ObraMedicaoContratante
+  const medicoesUi = (o.medicoes ?? []).map((m) => ({
+    id: m.id,
+    numero: m.numero,
+    periodo: m.etapa, // etapa é o descritor de período mais próximo do schema atual
+    dataEnvio: m.createdAt
+      ? new Date(m.createdAt).toLocaleDateString('pt-BR')
+      : '—',
+    valor: Math.max(0, toNumber(m.valor)),
+    status: mapDbMedicaoStatus(m.status),
+    descricao: m.descricao ?? undefined,
+  }));
+
   return {
     ...base,
+    imagemUrl: o.fotoCapaUrl ?? DEFAULT_IMG,  // sobrescreve o DEFAULT_IMG do base
+    candidaturas: o.candidaturasCount ?? base.candidaturas,
     descricao: o.descricao ?? '',
     valorPago,
     valorRestante,
-    diasRestantes: 0,
+    diasRestantes: o.diasRestantes ?? 0,
     tarefasConcluidas: 0,
     tarefasTotal: 0,
     etapas: [],
@@ -205,7 +281,7 @@ export function dbToObraContratanteDetalhe(
       aditivos: 0,
       valorTotal: orcamento,
       valorPago,
-      medicoes: [],
+      medicoes: medicoesUi,
     },
     fotos: [],
     documentos,

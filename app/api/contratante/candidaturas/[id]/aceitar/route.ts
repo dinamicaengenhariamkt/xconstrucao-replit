@@ -104,10 +104,20 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
       const now = new Date();
 
-      // 1) Vincular obra.
+      // 1) Vincular obra + propagar valorTotal da proposta aceita (Item 14 J40).
+      // valorProposta é a fonte de verdade do valor contratado; o lock
+      // OBRA_LOCKED_AFTER_BIND (obras/[id]/route.ts) protege o campo após o vínculo.
+      const obraAceiteSet: Record<string, unknown> = {
+        empreiteiraId: emp.id,
+        status: "em_andamento",
+        updatedAt: now,
+      };
+      if (cand.valorProposta !== null && cand.valorProposta !== undefined) {
+        obraAceiteSet.valorTotal = cand.valorProposta;
+      }
       await tx
         .update(obras)
-        .set({ empreiteiraId: emp.id, status: "em_andamento", updatedAt: now })
+        .set(obraAceiteSet)
         .where(eq(obras.id, cand.obraId));
 
       // 1.5) Resolver contratanteUserId pra criação pós-commit da thread de chat (J13).

@@ -100,6 +100,21 @@ function formatDateBR(iso: string | null): string {
   return d.toLocaleDateString('pt-BR');
 }
 
+/** Converte valor monetário BR (ex.: "R$ 1.500,00" ou "1500.50") para number. */
+function parseBrMoney(v: unknown): number {
+  if (typeof v === 'number') return v;
+  if (typeof v !== 'string') return 0;
+  const stripped = v.replace(/[^\d,.]/g, '');
+  if (!stripped) return 0;
+  // Formato PT-BR: ponto = milhar, vírgula = decimal.
+  // Se houver vírgula, remover todos os pontos (milhar) e trocar a vírgula por ponto.
+  if (stripped.includes(',')) {
+    return Number(stripped.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  // Formato numérico direto ("1500" ou "1500.50").
+  return Number(stripped) || 0;
+}
+
 function parseAtividades(raw: string | null): CandidaturaUI['atividades'] {
   if (!raw) return undefined;
   try {
@@ -107,10 +122,9 @@ function parseAtividades(raw: string | null): CandidaturaUI['atividades'] {
     if (!Array.isArray(parsed)) return undefined;
     return parsed
       .map((a: any) => ({
-        id: String(a?.id ?? Math.random()),
+        id: String(a?.id ?? crypto.randomUUID?.() ?? String(Math.random())),
         descricao: String(a?.descricao ?? ''),
-        valor: typeof a?.valor === 'number' ? a.valor :
-               typeof a?.valor === 'string' ? Number(a.valor.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0,
+        valor: parseBrMoney(a?.valor),
         observacoes: a?.observacoes || undefined,
       }))
       .filter((a) => a.descricao);

@@ -1,4 +1,4 @@
-import type { AdminObraDetalhe } from '../types';
+import type { AdminObraDetalhe, AdminObraMedicao, ObraMedicaoStatus } from '../types';
 
 export interface AdminObraApiResponse {
   id: string;
@@ -10,6 +10,7 @@ export interface AdminObraApiResponse {
   status: string;
   visibilidade: string;
   valorTotal: string | null;
+  valorPago: string | null;
   percentConcluido?: number | string | null;
   dataInicio: string | null;
   dataPrevisao: string | null;
@@ -43,7 +44,6 @@ const VISIBILIDADE_LABEL: Record<string, string> = {
   arquivada: 'Arquivada',
 };
 
-// Map DB status → status suportado pela UI admin (que só conhece em_andamento|concluida|pausada|cancelada).
 function mapStatus(s: string): AdminObraDetalhe['status'] {
   switch (s) {
     case 'em_andamento':
@@ -53,27 +53,53 @@ function mapStatus(s: string): AdminObraDetalhe['status'] {
       return s;
     case 'planejamento':
     default:
-      // Pré-execução / desconhecido → tratamos como pausada (mais próximo no STATUS_CONFIG da UI).
       return 'pausada';
   }
 }
 
+function mapMedicaoStatusAdmin(s: string): ObraMedicaoStatus {
+  switch (s) {
+    case 'aprovada': return 'aprovada_contratante';
+    case 'contestada': return 'rejeitada_contratante';
+    case 'pendente':
+    default: return 'em_analise';
+  }
+}
+
+function mapApiMedicaoToAdmin(m: Record<string, unknown>): AdminObraMedicao {
+  const valorMedicao = Number(m.valor ?? 0) || 0;
+  const status = String(m.status ?? '');
+  const isPago = status === 'aprovada';
+  const decidedAtRaw = m.decidedAt as string | null | undefined;
+  const createdAtRaw = m.createdAt as string | null | undefined;
+  const decidedAtStr = decidedAtRaw ? new Date(decidedAtRaw).toISOString().slice(0, 10) : undefined;
+  return {
+    id: String(m.id ?? ''),
+    numero: Number(m.numero ?? 0),
+    periodo: String(m.periodo || m.etapa || '—'),
+    valorMedicao,
+    valorPago: isPago ? valorMedicao : 0,
+    status: mapMedicaoStatusAdmin(status),
+    dataVencimento: m.dataEnvio
+      ? String(m.dataEnvio).slice(0, 10)
+      : (createdAtRaw ? new Date(createdAtRaw).toISOString().slice(0, 10) : '—'),
+    dataPagamento: isPago ? decidedAtStr : undefined,
+    dataAprovacao: isPago ? decidedAtStr : undefined,
+    dataRejeicao: status === 'contestada' ? decidedAtStr : undefined,
+    motivoRejeicao: (m.motivoRejeicao || m.motivoContestacao) as string | undefined,
+  };
+}
+
 function actionToTitulo(action: string): string {
   switch (action) {
-    case 'obras.create':
-      return 'Obra criada';
-    case 'obras.update':
-      return 'Obra atualizada';
-    case 'obras.delete':
-      return 'Obra excluída';
+    case 'obras.create': return 'Obra criada';
+    case 'obras.update': return 'Obra atualizada';
+    case 'obras.delete': return 'Obra excluída';
     case 'obras.anexo.add':
-    case 'uploads.commit.obra_anexo':
-      return 'Anexo adicionado';
+    case 'uploads.commit.obra_anexo': return 'Anexo adicionado';
     case 'obras.anexo.delete':
-    case 'uploads.delete.obra_anexo':
-      return 'Anexo removido';
-    default:
-      return action;
+    case 'uploads.delete.obra_anexo': return 'Anexo removido';
+    default: return action;
   }
 }
 
@@ -87,15 +113,21 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Mapeia payload do `/api/admin/obras/[id]` para `AdminObraDetalhe`.
- * Campos que dependem de J06/J07/J08 (medicoes, valorPago, etc.) ficam zerados/[].
+ * Mapeia payload do `/api/admin/obras/[id]` (+ lista de medições opcional) para `AdminObraDetalhe`.
+ * Item 16 J40: valorPago e medicoes agora vêm de dados reais.
  */
-export function adaptAdminObraDetalhe(payload: AdminObraApiResponse): AdminObraDetalhe {
+export function adaptAdminObraDetalhe(
+  payload: AdminObraApiResponse,
+  medicoesApi: Record<string, unknown>[] = [],
+): AdminObraDetalhe {
   const valorTotal = Number(payload.valorTotal ?? 0) || 0;
+  const valorPago = Number(payload.valorPago ?? 0) || 0;
   const percentConcluido =
     typeof payload.percentConcluido === 'number'
       ? payload.percentConcluido
       : Number(payload.percentConcluido ?? 0) || 0;
+
+  const medicoes: AdminObraMedicao[] = medicoesApi.map(mapApiMedicaoToAdmin);
 
   return {
     id: payload.id,
@@ -111,10 +143,10 @@ export function adaptAdminObraDetalhe(payload: AdminObraApiResponse): AdminObraD
     cliente: payload.cliente?.nome ?? '—',
     tipo: payload.tipo ?? '—',
     endereco: payload.endereco ?? '—',
-    valorPago: 0,
+    valorPago,
     aditivos: 0,
     valorTotal,
-    medicoes: [],
+    medicoes,
     historico: payload.history.map((h) => ({
       id: h.id,
       tipo: 'nota',
@@ -137,11 +169,31 @@ export async function getAdminObraDetalhe(id: string): Promise<{
   visibilidade: string;
   anexos: AdminObraApiResponse['anexos'];
 }> {
-  const res = await fetch(`/api/admin/obras/${id}`, { credentials: 'include' });
-  if (!res.ok) throw new Error(`Erro ao buscar obra (${res.status})`);
-  const payload = (await res.json()) as AdminObraApiResponse;
+  // Busca dados da obra e medições em paralelo (Item 16 J40).
+  const [obraRes, medicoesRes] = await Promise.all([
+    fetch(`/api/admin/obras/${id}`, { credentials: 'include' }),
+    fetch(`/api/admin/obras/${id}/medicoes`, { credentials: 'include' }).catch(() => null),
+  ]);
+
+  if (!obraRes.ok) throw new Error(`Erro ao buscar obra (${obraRes.status})`);
+  const payload = (await obraRes.json()) as AdminObraApiResponse;
+
+  let medicoesApi: Record<string, unknown>[] = [];
+  if (medicoesRes?.ok) {
+    try {
+      const medicoesData = await medicoesRes.json();
+      if (Array.isArray(medicoesData)) {
+        medicoesApi = medicoesData as Record<string, unknown>[];
+      } else if (Array.isArray(medicoesData?.rows)) {
+        medicoesApi = medicoesData.rows as Record<string, unknown>[];
+      }
+    } catch {
+      // Falha silenciosa: medições ficam []
+    }
+  }
+
   return {
-    detalhe: adaptAdminObraDetalhe(payload),
+    detalhe: adaptAdminObraDetalhe(payload, medicoesApi),
     visibilidade: payload.visibilidade,
     anexos: payload.anexos ?? [],
   };

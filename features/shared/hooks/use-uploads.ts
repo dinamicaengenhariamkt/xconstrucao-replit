@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useAuthStore } from '@features/auth/store/auth-store';
 
 export type UploadKind = 'avatar' | 'portfolio_imagem' | 'portfolio_doc' | 'empreiteiro_documento' | 'obra_anexo' | 'comprovante_pagamento' | 'candidatura_anexo' | 'obra_foto' | 'anuncio_criativo';
@@ -59,10 +59,17 @@ function putWithProgress(url: string, file: File, mime: string, onProgress?: (p:
       }
     };
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Falha no upload (${xhr.status})`));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        console.error('[upload] PUT retornou status inesperado', { status: xhr.status, url });
+        reject(new Error(`Não foi possível enviar o arquivo (${xhr.status}). Tente novamente.`));
+      }
     };
-    xhr.onerror = () => reject(new Error('Falha de rede no upload.'));
+    xhr.onerror = () => {
+      console.error('[upload] erro de rede ao enviar arquivo via PUT', { url, fileName: file.name, size: file.size });
+      reject(new Error('Não foi possível enviar o arquivo. Verifique sua conexão e tente novamente.'));
+    };
     xhr.send(file);
   });
 }
@@ -70,8 +77,12 @@ function putWithProgress(url: string, file: File, mime: string, onProgress?: (p:
 export function useUpload() {
   const [progress, setProgress] = useState<number>(0);
   const [pending, setPending] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const lastOptsRef = useRef<UploadOptions | null>(null);
 
   const upload = useCallback(async (opts: UploadOptions): Promise<CommitResponse> => {
+    lastOptsRef.current = opts;
+    setUploadError(null);
     setPending(true);
     setProgress(0);
     try {
@@ -106,12 +117,22 @@ export function useUpload() {
         }
       }
       return commit;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Falha ao enviar arquivo.';
+      setUploadError(msg);
+      throw err;
     } finally {
       setPending(false);
     }
   }, []);
 
-  return { upload, pending, progress };
+  /** Tenta novamente o último upload com as mesmas opções. */
+  const retry = useCallback((): Promise<CommitResponse> => {
+    if (!lastOptsRef.current) return Promise.reject(new Error('Nada para tentar novamente.'));
+    return upload(lastOptsRef.current);
+  }, [upload]);
+
+  return { upload, pending, progress, uploadError, retry };
 }
 
 export async function deleteUpload(id: string): Promise<void> {
