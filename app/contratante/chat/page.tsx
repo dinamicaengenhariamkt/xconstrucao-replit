@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ConversationList } from '@features/contratante/xchat/components/ConversationList';
 import { ChatHeader } from '@features/contratante/xchat/components/ChatHeader';
 import { MessageArea } from '@features/contratante/xchat/components/MessageArea';
@@ -21,6 +22,7 @@ import type {
 import { cn } from '@shared/lib/utils';
 
 export default function ContratanteChatPage() {
+  const searchParams = useSearchParams();
   const { data: conversations, isLoading: convLoading } = useContratanteConversations();
   const {
     selectedConversationId,
@@ -36,6 +38,18 @@ export default function ContratanteChatPage() {
   const marcarLidaMutation = useContratanteMarcarLida();
   const { data: obrasPayload } = useObrasContratante({ pageSize: 100 });
   const obrasData = obrasPayload?.rows;
+
+  // Auto-select the thread from ?thread= URL param once conversations load.
+  const threadParam = searchParams.get('thread');
+  const didAutoSelectRef = useRef(false);
+  useEffect(() => {
+    if (!threadParam || convLoading || didAutoSelectRef.current) return;
+    const found = conversations?.find((c) => c.id === threadParam);
+    if (found) {
+      didAutoSelectRef.current = true;
+      setSelectedConversation(threadParam);
+    }
+  }, [threadParam, conversations, convLoading, setSelectedConversation]);
 
   const selectedConversation =
     conversations?.find((c) => c.id === selectedConversationId) ?? null;
