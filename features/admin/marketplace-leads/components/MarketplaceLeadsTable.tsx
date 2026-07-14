@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@shared/components/ui/select";
 import { useToast } from "@shared/hooks/use-toast";
+import { formatDateTime } from "@shared/lib/formatters";
 import { LeadStatusBadge } from "./LeadStatusBadge";
 import { useUpdateLeadStatus } from "../hooks/use-marketplace-leads";
 import {
@@ -27,14 +28,7 @@ import {
 } from "../types";
 
 function formatData(iso: string): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return iso ? formatDateTime(iso) : "—";
 }
 
 export function MarketplaceLeadsTable({ rows }: { rows: MarketplaceLead[] }) {

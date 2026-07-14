@@ -114,7 +114,9 @@ test.describe("Jornada 03 — Nova obra aparece imediatamente em Minhas Obras", 
       "Construção residencial padrão médio com três dormitórios e garagem dupla para família."
     );
 
-    await fillInput(page, "input-endereco", "Avenida Paulista, 1000");
+    await fillInput(page, "input-endereco", "Avenida Paulista");
+    // Número é obrigatório para publicar (J40 #18).
+    await fillInput(page, "input-numero", "1000");
     await fillInput(page, "input-cidade", "São Paulo");
 
     await selectOption(page, "select-uf", "SP");

@@ -1,0 +1,20 @@
+✅ Feito e verificado (npm run check limpo em cada etapa)
+1. Item 9 (upload) — fechado no PRD como validado junto ao Replit.
+
+2. Máscara de data DD/MM/AAAA — reusei formatDate de @shared/lib/formatters (já pt-BR, trata fuso de YYYY-MM-DD):
+
+Na fonte (features/obras/adapters.ts) → conserta grid, Visão Geral, detalhe, Financeiro, Documentos de uma vez.
+Varredura do contratante + empreiteiro/admin (10 arquivos, subagente) — consolidando os formatDate duplicados. Preservei campos prazo de texto livre, inputs de data e datas de query/ordenação.
+3. Endereço + Google Maps — colunas numero/complemento (aplicadas no banco via SQL idempotente); campos no form (número obrigatório ao publicar, opcional no rascunho); Maps monta a query com o número → pino preciso.
+
+4. Cards de Minhas Obras — realce luminous (linha primary no topo + gradiente no hover) grafado no ObraCard, alinhado ao dashboard.
+
+5. Capa opcional no cadastro — validação de dimensão mín. 1200×675 (~16:9); novo kind R2 obra_capa gravando organizado em public/obras/{userId}/capa/{ts}-capa.{ext} — irmão de anexos/, nome legível (não o genérico -upload), conforme você pediu.
+
+6. Segurança — a revisão achou um IDOR médio (pré-existente do Item 13): o PATCH gravava fotoCapaFileId sem checar posse do arquivo, permitindo apontar a capa para arquivo privado de outro usuário e lê-lo via signed URL. Corrigido — valida posse do arquivo (ou admin) → 422.
+
+7. PRD J40 atualizado: Itens 17-20, critérios de aceite 17-20, changelog datado.
+
+⚠️ Notas sobre a verificação
+DB: o npm run db:push completo falhou por um drift pré-existente e não relacionado no banco de dev (app_errors_id_seq already exists). Apliquei só as duas colunas necessárias, direto e verificado. Ao aplicar no Replit, use o mesmo cuidado — o db:push pode tentar recriar objetos existentes.
+E2E: não passaram por limitação do ambiente, não pelo código — o Chromium não sobe neste sandbox (libpthread.so.0: GLIBC_PRIVATE not found) e o setup do j40 bateu no 402 de cota do plano free (não é erro de validação; um 400 é que indicaria o campo número). Atualizei o spec j03 para preencher input-numero. Recomendo rodar os E2E no ambiente do Replit, onde o browser e a cota funcionam.

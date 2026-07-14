@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RiAttachment2, RiCloseLine, RiSaveLine, RiSendPlaneLine } from 'react-icons/ri';
+import { RiAttachment2, RiCloseLine, RiImageLine, RiSaveLine, RiSendPlaneLine } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
@@ -75,6 +75,30 @@ type TipoAnexo = (typeof TIPOS_ANEXO)[number]['value'];
 // O servidor continua sendo a fonte de verdade; aqui é só feedback imediato.
 const TIPOS_MIME_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
+// Imagem de capa (kind obra_capa): só imagem, até 8 MB (espelha KIND_RULES.obra_capa).
+const CAPA_MIME_PERMITIDOS = ['image/png', 'image/jpeg', 'image/webp'];
+const CAPA_MAX_BYTES = 8_000_000;
+// Dimensão mínima ~16:9 do hero do detalhe — evita capa pixelada/pequena.
+const CAPA_MIN_WIDTH = 1200;
+const CAPA_MIN_HEIGHT = 675;
+
+/** Lê largura/altura de uma imagem (client-side) para validar dimensão mínima. */
+function readImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Não foi possível ler a imagem.'));
+    };
+    img.src = url;
+  });
+}
+
 // Cliente: forma "permissiva" para permitir salvar rascunho com poucos campos.
 // O servidor reaplica insertObraSchemaStrict (com superRefine condicional).
 const formSchema = z.object({
@@ -86,6 +110,8 @@ const formSchema = z.object({
     'CEP deve ter 8 dígitos',
   ),
   endereco: z.string().trim().min(3, 'Endereço obrigatório').max(240),
+  numero: z.string().optional(),
+  complemento: z.string().optional(),
   cidade: z.string().optional(),
   uf: z.string().optional(),
   modalidade: z.enum(['administracao', 'empreitada_global', 'empreitada_etapa']).optional().or(z.literal('')),
@@ -166,6 +192,8 @@ function cleanPayload(values: FormValues, visibilidade: 'rascunho' | 'publicada'
   return {
     nome: values.nome.trim(),
     endereco: values.endereco.trim(),
+    numero: toNullable(values.numero),
+    complemento: toNullable(values.complemento),
     tipo: toNullable(values.tipo),
     descricao: toNullable(values.descricao),
     cep: values.cep && values.cep.trim() !== '' ? formatCep(values.cep) : null,
@@ -191,6 +219,9 @@ export default function NovaObraPage() {
   const [submitting, setSubmitting] = useState<'rascunho' | 'publicada' | null>(null);
   const [staged, setStaged] = useState<StagedAnexo[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Imagem de capa opcional (obra_capa). Guardamos o File + preview local.
+  const [capa, setCapa] = useState<{ file: File; previewUrl: string } | null>(null);
+  const capaInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -200,6 +231,8 @@ export default function NovaObraPage() {
       descricao: '',
       cep: '',
       endereco: '',
+      numero: '',
+      complemento: '',
       cidade: '',
       uf: '',
       modalidade: '',
@@ -299,6 +332,58 @@ export default function NovaObraPage() {
     setStaged((s) => s.filter((it) => it.id !== id));
   }
 
+  // ----- Capa handlers -----
+  async function onPickCapa(files: FileList | null) {
+    const f = files?.[0];
+    if (!f) return;
+    if (!CAPA_MIME_PERMITIDOS.includes(f.type)) {
+      toast({
+        title: 'Formato de capa não permitido',
+        description: 'Envie uma imagem PNG, JPG ou WEBP.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (f.size > CAPA_MAX_BYTES) {
+      toast({
+        title: 'Imagem muito grande',
+        description: `A capa deve ter no máximo ${(CAPA_MAX_BYTES / 1_000_000).toFixed(0)} MB.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      const { width, height } = await readImageDimensions(f);
+      if (width < CAPA_MIN_WIDTH || height < CAPA_MIN_HEIGHT) {
+        toast({
+          title: 'Imagem muito pequena',
+          description: `Para não ficar pixelada, use ao menos ${CAPA_MIN_WIDTH}×${CAPA_MIN_HEIGHT}px (proporção ~16:9). Você enviou ${width}×${height}px.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    } catch {
+      toast({
+        title: 'Não foi possível ler a imagem',
+        description: 'Tente outro arquivo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setCapa((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl);
+      return { file: f, previewUrl: URL.createObjectURL(f) };
+    });
+    if (capaInputRef.current) capaInputRef.current.value = '';
+  }
+
+  function removeCapa() {
+    setCapa((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl);
+      return null;
+    });
+  }
+
   // ----- Submit -----
   async function submit(visibilidade: 'rascunho' | 'publicada') {
     if (visibilidade === 'rascunho') {
@@ -377,6 +462,31 @@ export default function NovaObraPage() {
               variant: 'destructive',
             });
           }
+        }
+      }
+
+      // Upload da imagem de capa (opcional) + bind em obras.fotoCapaFileId.
+      // Se falhar, a obra segue criada (placeholder + troca posterior no detalhe).
+      if (capa) {
+        try {
+          const commit = await upload({ file: capa.file, kind: 'obra_capa' });
+          const capaRes = await fetch(`/api/obras/${obraId}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fotoCapaFileId: commit.id }),
+          });
+          if (!capaRes.ok) {
+            const j = await capaRes.json().catch(() => ({}));
+            throw new Error(j?.message ?? 'Falha ao definir a capa');
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Falha ao enviar a capa';
+          toast({
+            title: 'Capa não foi definida',
+            description: `${msg} Você pode enviá-la depois na tela da obra.`,
+            variant: 'destructive',
+          });
         }
       }
 
@@ -513,10 +623,36 @@ export default function NovaObraPage() {
                 control={form.control}
                 name="endereco"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-6">
-                    <FormLabel>Endereço *</FormLabel>
+                  <FormItem className="md:col-span-4">
+                    <FormLabel>Logradouro (rua/avenida) *</FormLabel>
                     <FormControl>
-                      <Input placeholder="Rua, número, complemento" data-testid="input-endereco" {...field} />
+                      <Input placeholder="Ex.: Rua das Palmeiras" data-testid="input-endereco" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="numero"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Número *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex.: 123 ou S/N" data-testid="input-numero" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="complemento"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-6">
+                    <FormLabel>Complemento</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Apto, bloco, ponto de referência (opcional)" data-testid="input-complemento" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -702,7 +838,76 @@ export default function NovaObraPage() {
             </CardContent>
           </Card>
 
-          {/* 5. Anexos */}
+          {/* 5. Imagem de capa (opcional) */}
+          <Card data-testid="card-capa">
+            <CardHeader>
+              <CardTitle>Imagem de capa</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <input
+                ref={capaInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+                data-testid="input-file-capa"
+                onChange={(e) => onPickCapa(e.target.files)}
+              />
+              {capa ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div
+                    className="aspect-[16/9] w-full max-w-xs overflow-hidden rounded-xl border bg-cover bg-center"
+                    style={{ backgroundImage: `url('${capa.previewUrl}')` }}
+                    data-testid="preview-capa"
+                  />
+                  <div className="flex flex-col gap-2">
+                    <p className="truncate text-sm font-medium">{capa.file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(capa.file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => capaInputRef.current?.click()}
+                        data-testid="button-trocar-capa"
+                      >
+                        Trocar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeCapa}
+                        data-testid="button-remove-capa"
+                      >
+                        <RiCloseLine className="mr-1 h-4 w-4" />
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => capaInputRef.current?.click()}
+                    data-testid="button-add-capa"
+                  >
+                    <RiImageLine className="mr-2 h-4 w-4" />
+                    Escolher imagem de capa
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Opcional. PNG, JPG ou WEBP, mín. {CAPA_MIN_WIDTH}×{CAPA_MIN_HEIGHT}px (~16:9), até 8MB.
+                    Se não enviar, usamos uma capa padrão que você pode trocar depois.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 6. Anexos */}
           <Card data-testid="card-anexos">
             <CardHeader>
               <CardTitle>Anexos</CardTitle>

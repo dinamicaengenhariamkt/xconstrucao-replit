@@ -382,10 +382,12 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">
                     {addressLocked ? 'Localização Geral' : 'Endereço Completo'}
                   </p>
-                  {/* rua — blurred when locked */}
+                  {/* rua + número — blurred when locked */}
                   {obra.localizacao.rua && (
                     <p className={cn('text-sm font-semibold text-gray-900 dark:text-white', addressLocked && 'blur-sm opacity-30 select-none pointer-events-none')}>
-                      {obra.localizacao.rua}
+                      {obra.localizacao.numero
+                        ? `${obra.localizacao.rua}, ${obra.localizacao.numero}`
+                        : obra.localizacao.rua}
                     </p>
                   )}
                   {/* bairro + cidade+estado — always visible */}
@@ -413,7 +415,12 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
             ) : (
               <button
                 onClick={() => {
-                  const q = encodeURIComponent(`${obra.localizacao.rua ?? ''} ${obra.localizacao.bairro} ${obra.localizacao.cidade} ${obra.localizacao.estado}`);
+                  const ruaComNumero = obra.localizacao.numero
+                    ? [obra.localizacao.rua, obra.localizacao.numero].filter(Boolean).join(', ')
+                    : (obra.localizacao.rua ?? '');
+                  const partes = [ruaComNumero, obra.localizacao.bairro, obra.localizacao.cidade, obra.localizacao.estado, obra.localizacao.cep]
+                    .filter(Boolean);
+                  const q = encodeURIComponent(partes.join(', '));
                   window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
                 }}
                 className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"

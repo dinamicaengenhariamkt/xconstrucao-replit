@@ -19,7 +19,7 @@ import {
   RiArrowRightSLine,
 } from 'react-icons/ri';
 import type { AdminEmpreiteiraObra } from '../types';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, formatDate } from '@shared/lib/formatters';
 
 type ObraStatus = AdminEmpreiteiraObra['status'];
 
@@ -66,8 +66,6 @@ const STATUS_OPTIONS = (Object.keys(OBRA_STATUS_CONFIG) as ObraStatus[]).map((s)
 }));
 
 const PAGE_SIZE = 10;
-
-const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR');
 
 interface EmpreiteiraObrasSectionProps {
   obras: AdminEmpreiteiraObra[];

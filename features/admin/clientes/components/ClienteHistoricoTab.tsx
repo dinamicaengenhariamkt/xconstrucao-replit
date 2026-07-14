@@ -13,6 +13,7 @@ import {
   RiStickyNoteLine,
   RiArrowDownSLine,
 } from 'react-icons/ri';
+import { formatDate } from '@shared/lib/formatters';
 import type { ClienteAtividade, AtividadeTipo } from '../types';
 
 const INITIAL_VISIBLE = 5;
@@ -60,7 +61,7 @@ function formatDataHora(isoString: string): string {
 
   if (diffDays === 0) return `Hoje, ${timeStr}`;
   if (diffDays === 1) return `Ontem, ${timeStr}`;
-  return `${date.toLocaleDateString('pt-BR')}, ${timeStr}`;
+  return `${formatDate(isoString)}, ${timeStr}`;
 }
 
 interface ClienteHistoricoTabProps {

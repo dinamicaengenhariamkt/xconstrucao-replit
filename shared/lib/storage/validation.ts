@@ -36,6 +36,13 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
     mimes: [...IMAGE_MIMES, ...DOC_MIMES],
     roles: ["contratante", "superadmin"],
   },
+  // Imagem de capa da obra (J40 #20). Só imagem, até 8 MB. Grava em
+  // public/obras/{obraId}/capa/. A dimensão mínima é validada no cliente.
+  obra_capa: {
+    maxBytes: 8_000_000,
+    mimes: IMAGE_MIMES,
+    roles: ["contratante", "superadmin"],
+  },
   comprovante_pagamento: {
     maxBytes: 8_000_000,
     mimes: [...IMAGE_MIMES, ...DOC_MIMES],

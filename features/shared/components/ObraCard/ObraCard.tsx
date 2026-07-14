@@ -66,12 +66,22 @@ export function ObraCard({
         whileHover={{ y: -8, boxShadow: '0 20px 50px rgba(0,0,0,0.10)' }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         className={cn(
-          'group bg-white dark:bg-gray-900 rounded-3xl',
+          'group relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden',
           'shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-gray-50 dark:border-gray-800',
           'border-l-4',
           borderColor,
         )}
       >
+        {/* Realce luminous no hover — alinhado ao padrão dos cards do dashboard
+            (LuminousHoverCard): linha primary fina no topo + gradiente sutil. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[3]"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
+        />
         <div className="relative aspect-[16/9] overflow-hidden rounded-t-3xl">
           <div
             className="w-full h-full bg-cover bg-center grayscale contrast-[1.1] group-hover:grayscale-0 group-hover:contrast-100 transition-[filter] duration-300"

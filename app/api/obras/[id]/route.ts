@@ -274,6 +274,27 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   }
 
+  // Anti-IDOR: `fotoCapaFileId` referencia um userFiles.id. Só o dono do arquivo
+  // (ou um admin) pode vinculá-lo como capa — senão um contratante poderia apontar
+  // a capa da própria obra para o arquivo PRIVADO de outro usuário e lê-lo via a
+  // signed URL que o GET resolve. Espelha a checagem `invalid_capa` do admin/J25.
+  if ("fotoCapaFileId" in safeBody && safeBody.fotoCapaFileId != null) {
+    const fileId = String(safeBody.fotoCapaFileId);
+    const ownerFilter = isAdminLike(guard.user.role)
+      ? undefined
+      : eq(userFiles.ownerUserId, guard.user.id);
+    const [f] = await db
+      .select({ id: userFiles.id })
+      .from(userFiles)
+      .where(and(eq(userFiles.id, fileId), isNull(userFiles.deletedAt), ownerFilter))
+      .limit(1);
+    if (!f) {
+      const r = NextResponse.json({ message: "Capa inválida." }, { status: 422 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+  }
+
   // Aplica apenas os campos enviados (não sobrescreve com merged completo).
   const updateData: Record<string, unknown> = {};
   for (const k of Object.keys(safeBody)) {

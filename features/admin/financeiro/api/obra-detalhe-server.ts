@@ -1,5 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
 import { db } from '@shared/db/db';
+import { formatDate } from '@shared/lib/formatters';
 import { clientes, empreiteiras, financeiro, medicoes, obras } from '@shared/db/schema';
 import type {
   AdminHistoricoItem,
@@ -17,9 +18,9 @@ import type {
 
 function fmtBr(input: string | Date | null | undefined): string {
   if (!input) return '—';
-  const d = typeof input === 'string' ? new Date(input) : input;
-  if (Number.isNaN(d.getTime())) return typeof input === 'string' ? input : '—';
-  return d.toLocaleDateString('pt-BR');
+  if (typeof input === 'string') return formatDate(input) || input;
+  if (Number.isNaN(input.getTime())) return '—';
+  return formatDate(input.toISOString());
 }
 
 function mapMedicaoStatus(status: string): MedicaoStatus {

@@ -42,6 +42,8 @@ export interface MinhaObraDetalhe extends MinhaObra {
     estado: string;
     bairro: string;
     rua: string;
+    numero?: string;
+    complemento?: string;
     cep: string;
   };
 }

@@ -46,6 +46,8 @@ export const insertObraSchemaStrict = insertObraSchema
     cidade: z.preprocess(emptyToUndef, z.string().trim().min(2, "Cidade inválida").max(120).optional().nullable()),
     tipo: z.preprocess(emptyToUndef, z.string().trim().max(80).optional().nullable()),
     endereco: z.string().trim().min(3, "Endereço inválido").max(240),
+    numero: z.preprocess(emptyToUndef, z.string().trim().max(20, "Número muito longo").optional().nullable()),
+    complemento: z.preprocess(emptyToUndef, z.string().trim().max(120, "Complemento muito longo").optional().nullable()),
     visibilidade: z.enum(["rascunho", "publicada", "pausada", "arquivada"]).default("rascunho"),
     modalidade: z.preprocess(
       emptyToUndef,
@@ -72,6 +74,7 @@ export const insertObraSchemaStrict = insertObraSchema
     requireField("tipo", "Tipo de obra", (v) => typeof v === "string" && v.trim().length >= 2);
     requireField("descricao", "Descrição (mín. 20 caracteres)", (v) => typeof v === "string" && v.trim().length >= 20);
     requireField("cep", "CEP", (v) => typeof v === "string" && CEP_REGEX.test(v));
+    requireField("numero", "Número do endereço", (v) => typeof v === "string" && v.trim().length >= 1);
     requireField("cidade", "Cidade", (v) => typeof v === "string" && v.trim().length >= 2);
     requireField("uf", "UF", (v) => typeof v === "string" && UF_REGEX.test(v));
     requireField("modalidade", "Modalidade", (v) => typeof v === "string" && v.length > 0);

@@ -23,6 +23,7 @@ import {
 } from '@shared/components/ui/select';
 import { useToast } from '@shared/hooks/use-toast';
 import { cn } from '@shared/lib/utils';
+import { formatDateTime } from '@shared/lib/formatters';
 import {
   useObraDisputas,
   useDisputaDetalhe,
@@ -68,7 +69,7 @@ const CATEGORIA_OPTIONS: { value: DisputaObraView['categoria']; label: string }[
 ];
 
 function fmtData(iso: string): string {
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
+  return formatDateTime(iso);
 }
 
 interface Props {

@@ -13,7 +13,7 @@ import {
 import { Button } from '@shared/components/ui/button';
 import { Textarea } from '@shared/components/ui/textarea';
 import { toast } from '@shared/hooks/use-toast';
-import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
+import { formatCurrencyRounded as formatCurrency, formatDate } from '@shared/lib/formatters';
 import {
   IconPhone, IconClose, IconCheck, IconCheckCircle,
   IconCancel, IconGroups, IconInfo, IconStar,
@@ -93,11 +93,10 @@ function mapStatus(s: CandidaturaApiRow['status']): UiStatus {
   return 'rejeitado';
 }
 
+/** Formata ISO → DD/MM/AAAA reusando o formatter compartilhado (trata YYYY-MM-DD). */
 function formatDateBR(iso: string | null): string {
   if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('pt-BR');
+  return formatDate(iso);
 }
 
 /** Converte valor monetário BR (ex.: "R$ 1.500,00" ou "1500.50") para number. */
@@ -157,8 +156,8 @@ function mapApiRowToUi(row: CandidaturaApiRow): CandidaturaUI {
     atividades: parseAtividades(row.atividades),
     observacoesPrazo: row.observacoesPrazo || undefined,
     observacoesFinanceiras: row.observacoesFinanceiras || undefined,
-    dataInicio: row.dataInicio || undefined,
-    dataTermino: row.dataTermino || undefined,
+    dataInicio: row.dataInicio ? formatDateBR(row.dataInicio) : undefined,
+    dataTermino: row.dataTermino ? formatDateBR(row.dataTermino) : undefined,
     motivoRejeicao: row.motivoRejeicao || undefined,
     canceladaPeloEmpreiteiro: row.canceladaPeloEmpreiteiro,
     anexos: row.anexos?.map((a) => ({ id: a.id, originalName: a.originalName, mime: a.mime, sizeBytes: a.sizeBytes, url: a.url })) ?? [],

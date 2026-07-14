@@ -20,6 +20,7 @@ import type {
   ObraStatus,
   ObraComplexidade,
 } from '@features/shared/types';
+import { formatDate } from '@shared/lib/formatters';
 
 const DEFAULT_IMG =
   'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1200';
@@ -52,6 +53,8 @@ export type DbObra = {
   tipo?: string | null;
   descricao?: string | null;
   cep?: string | null;
+  numero?: string | null;
+  complemento?: string | null;
   cidade?: string | null;
   uf?: string | null;
   modalidade?: 'administracao' | 'empreitada_global' | 'empreitada_etapa' | null;
@@ -183,7 +186,12 @@ function formatRelative(date: string | Date | null | undefined): string {
 }
 
 function fullEndereco(o: DbObra): string {
-  const partes = [o.endereco, o.cidade, o.uf].filter(Boolean);
+  // Junta rua + número (ex.: "Rua X, 123") antes de cidade/UF, para exibir
+  // e geocodar o endereço com a maior precisão disponível.
+  const ruaComNumero = o.numero
+    ? [o.endereco, o.numero].filter(Boolean).join(', ')
+    : o.endereco;
+  const partes = [ruaComNumero, o.complemento, o.cidade, o.uf].filter(Boolean);
   return partes.join(' - ') || o.endereco || '—';
 }
 
@@ -207,8 +215,8 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
     status: mapDbStatusToContratante(o.status),
     progresso: o.progresso ?? 0,
     orcamento: toNumber(o.valorTotal),
-    dataInicio: o.dataInicio ?? '—',
-    dataPrevisaoFim: o.dataPrevisao ?? '—',
+    dataInicio: o.dataInicio ? formatDate(o.dataInicio) : '—',
+    dataPrevisaoFim: o.dataPrevisao ? formatDate(o.dataPrevisao) : '—',
     empreiteiro: semEmpreiteira
       ? { nome: 'Aguardando', iniciais: 'AG', cor: 'bg-gray-400' }
       : {
@@ -257,7 +265,7 @@ export function dbToObraContratanteDetalhe(
     nome: a.originalName || a.tipo,
     categoria: mapAnexoTipoToCategoria(a.tipo),
     tamanho: a.sizeBytes ? `${(a.sizeBytes / 1024 / 1024).toFixed(1)} MB` : undefined,
-    data: a.createdAt ? new Date(a.createdAt).toLocaleDateString('pt-BR') : '—',
+    data: a.createdAt ? formatDate(String(a.createdAt)) : '—',
     url: a.url ?? undefined,
     observacoes: a.observacao ?? undefined,
   }));
@@ -267,9 +275,7 @@ export function dbToObraContratanteDetalhe(
     id: m.id,
     numero: m.numero,
     periodo: m.etapa, // etapa é o descritor de período mais próximo do schema atual
-    dataEnvio: m.createdAt
-      ? new Date(m.createdAt).toLocaleDateString('pt-BR')
-      : '—',
+    dataEnvio: m.createdAt ? formatDate(String(m.createdAt)) : '—',
     valor: Math.max(0, toNumber(m.valor)),
     status: mapDbMedicaoStatus(m.status),
     descricao: m.descricao ?? undefined,
@@ -305,6 +311,8 @@ export function dbToObraContratanteDetalhe(
       estado: o.uf ?? '',
       bairro: '',
       rua: o.endereco ?? '',
+      numero: o.numero ?? undefined,
+      complemento: o.complemento ?? undefined,
       cep: o.cep ?? '',
     },
     candidaturasLista: [],
@@ -333,7 +341,7 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     complexidade: mapComplexidade(o),
     status: 'recebendo_propostas',
     orcamento: toNumber(o.valorTotal),
-    prazo: o.dataPrevisao ?? '—',
+    prazo: o.dataPrevisao ? formatDate(o.dataPrevisao) : '—',
     descricao: o.descricao ?? '',
     contratante: { nome: 'Contratante', iniciais: 'CT', cor: 'bg-primary' },
     destaque: false,
@@ -368,7 +376,7 @@ export function dbToObraDetalheEmpreiteiro(
     ...base,
     areaTotal: area,
     tipoObra: o.tipo ?? '—',
-    inicioPrevisto: o.dataInicio ?? undefined,
+    inicioPrevisto: o.dataInicio ? formatDate(o.dataInicio) : undefined,
     situacaoProjeto: undefined,
     observacoes: o.descricao ?? undefined,
     localizacao: {
@@ -376,6 +384,8 @@ export function dbToObraDetalheEmpreiteiro(
       estado: o.uf ?? '—',
       bairro: '',
       rua: o.endereco ?? undefined,
+      numero: o.numero ?? undefined,
+      complemento: o.complemento ?? undefined,
       cep: o.cep ?? undefined,
     },
     etapas: [],

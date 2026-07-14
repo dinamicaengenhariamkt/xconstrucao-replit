@@ -202,6 +202,11 @@ export const obras = pgTable("obras", {
   tipo: text("tipo"),
   descricao: text("descricao"),
   cep: text("cep"),
+  // Endereço detalhado: número (obrigatório ao publicar — validado no schema
+  // Zod) e complemento (opcional). Separados de `endereco` (logradouro) para
+  // permitir montar a query do Google Maps com precisão. J40 #18.
+  numero: text("numero"),
+  complemento: text("complemento"),
   cidade: text("cidade"),
   uf: varchar("uf", { length: 2 }),
   lat: numeric("lat", { precision: 10, scale: 7 }),

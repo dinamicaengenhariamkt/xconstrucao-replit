@@ -14,6 +14,7 @@ import {
 } from '@shared/components/ui/table';
 import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '@features/admin/financeiro/utils';
+import { formatDate } from '@shared/lib/formatters';
 import { AdvancedFiltersPopover } from '@features/shared/components/filters/AdvancedFiltersPopover';
 import { ActiveFilterChip } from '@features/shared/components/filters/ActiveFilterChip';
 import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSelectDropdown';
@@ -55,11 +56,6 @@ const TIPO_OPTIONS: { value: Movimentacao['tipo']; label: string }[] = [
 ];
 
 const PAGE_SIZE = 10;
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
 
 function MovimentacaoRow({ mov }: { mov: Movimentacao }) {
   const isEntrada = mov.tipo === 'entrada';

@@ -1,3 +1,4 @@
+import { formatDate } from '@shared/lib/formatters';
 import type { AdminObraDetalhe, AdminObraMedicao, ObraMedicaoStatus } from '../types';
 
 export interface AdminObraApiResponse {
@@ -100,15 +101,6 @@ function actionToTitulo(action: string): string {
     case 'obras.anexo.delete':
     case 'uploads.delete.obra_anexo': return 'Anexo removido';
     default: return action;
-  }
-}
-
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-  } catch {
-    return iso;
   }
 }
 

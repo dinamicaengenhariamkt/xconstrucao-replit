@@ -20,7 +20,7 @@ import {
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import type { ClienteFinanceiro, ClientePagamento, PagamentoStatus } from '../types';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, formatDate } from '@shared/lib/formatters';
 
 const PAGAMENTO_STATUS_CONFIG: Record<PagamentoStatus, { label: string; className: string }> = {
   pago: {
@@ -43,9 +43,6 @@ const STATUS_OPTIONS = (Object.keys(PAGAMENTO_STATUS_CONFIG) as PagamentoStatus[
 }));
 
 const PAGE_SIZE = 10;
-
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('pt-BR');
 
 function buildChartData(pagamentos: ClientePagamento[]) {
   const map: Record<string, { mes: string; recebido: number; aReceber: number }> = {};

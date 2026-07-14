@@ -19,7 +19,7 @@ import {
   RiArrowRightSLine,
 } from 'react-icons/ri';
 import type { AdminClienteObra } from '../types';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, formatDate } from '@shared/lib/formatters';
 
 type ObraStatus = AdminClienteObra['status'];
 
@@ -56,8 +56,6 @@ const STATUS_OPTIONS = (Object.keys(STATUS_CONFIG) as ObraStatus[]).map((s) => (
 }));
 
 const PAGE_SIZE = 10;
-
-const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR');
 
 interface ClienteObrasTabProps {
   obras: AdminClienteObra[];

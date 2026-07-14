@@ -22,6 +22,7 @@ import {
   RiDeleteBinLine,
   RiFolderOpenLine,
 } from 'react-icons/ri';
+import { formatDate } from '@shared/lib/formatters';
 import type { ClienteDocumento, DocumentoTipo } from '../types';
 
 const TIPO_CONFIG: Record<DocumentoTipo, { icon: React.ElementType; iconBg: string; iconColor: string }> = {
@@ -41,9 +42,6 @@ const TIPO_CONFIG: Record<DocumentoTipo, { icon: React.ElementType; iconBg: stri
     iconColor: 'text-gray-500 dark:text-gray-400',
   },
 };
-
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('pt-BR');
 
 interface ClienteDocumentosTabProps {
   documentos: ClienteDocumento[];

@@ -9,7 +9,7 @@
  *   private/empreiteiro/{userId}/documentos/{tipo}/{ts}-{slug}.{ext}
  */
 
-export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto" | "anuncio_criativo";
+export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "obra_capa" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto" | "anuncio_criativo";
 export type UploadVisibility = "public" | "private";
 
 export interface KeyBuilderArgs {
@@ -165,6 +165,23 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: true };
   }
 
+  if (kind === "obra_capa") {
+    // public/obras/{userId}/capa/<file> — mesma raiz de obra_anexo (keyed pelo
+    // usuário que envia). Sub-pasta `capa/` separa da `anexos/`; o arquivo é
+    // vinculado à obra específica via obras.fotoCapaFileId no commit.
+    if (segments.length !== 5) return { ok: false, reason: "shape obra-capa" };
+    if (
+      segments[0] !== "public" ||
+      segments[1] !== "obras" ||
+      segments[3] !== "capa"
+    ) {
+      return { ok: false, reason: "prefixo obra-capa" };
+    }
+    if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
+    if (role !== "contratante" && role !== "superadmin") return { ok: false, reason: "role" };
+    return { ok: true };
+  }
+
   if (kind === "comprovante_pagamento") {
     // private/contratante/{userId}/comprovantes/<file>
     if (segments.length !== 5) return { ok: false, reason: "shape comprovante" };
@@ -253,6 +270,10 @@ export function buildKey(args: KeyBuilderArgs): string {
     base = `public/empreiteiro/${userId}/portfolio-docs/${ts}-${slug}${safeExt}`;
   } else if (kind === "obra_anexo") {
     base = `public/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
+  } else if (kind === "obra_capa") {
+    // Nome fixo `capa` (não depende do originalName) para ficar legível ao
+    // navegar no bucket: public/obras/{userId}/capa/{ts}-capa.{ext}
+    base = `public/obras/${userId}/capa/${ts}-capa${safeExt}`;
   } else if (kind === "comprovante_pagamento") {
     base = `private/contratante/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
   } else if (kind === "candidatura_anexo") {

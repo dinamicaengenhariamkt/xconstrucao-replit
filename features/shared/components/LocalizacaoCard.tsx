@@ -8,6 +8,8 @@ interface Localizacao {
   estado: string;
   bairro: string;
   rua: string;
+  numero?: string;
+  complemento?: string;
   cep: string;
 }
 
@@ -17,8 +19,17 @@ interface LocalizacaoCardProps {
 }
 
 export function LocalizacaoCard({ localizacao, luminous = false }: LocalizacaoCardProps) {
+  // Rua + número (ex.: "Rua X, 123") dá ao Google Maps o ponto mais preciso.
+  const ruaComNumero = localizacao.numero
+    ? [localizacao.rua, localizacao.numero].filter(Boolean).join(', ')
+    : localizacao.rua;
+
   const handleOpenMaps = () => {
-    const q = encodeURIComponent(`${localizacao.rua} ${localizacao.bairro} ${localizacao.cidade} ${localizacao.estado}`);
+    // Preferimos CEP + rua/número quando disponíveis — geocodifica melhor que
+    // texto solto. Ordem: rua+número, bairro, cidade, estado, CEP.
+    const partes = [ruaComNumero, localizacao.bairro, localizacao.cidade, localizacao.estado, localizacao.cep]
+      .filter(Boolean);
+    const q = encodeURIComponent(partes.join(', '));
     window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
   };
 
@@ -62,7 +73,10 @@ export function LocalizacaoCard({ localizacao, luminous = false }: LocalizacaoCa
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Endereço Completo</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{localizacao.rua}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{ruaComNumero}</p>
+                  {localizacao.complemento && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.complemento}</p>
+                  )}
                   <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.bairro}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.cidade} - {localizacao.estado}</p>
                   {localizacao.cep && (

@@ -18,6 +18,7 @@ import {
   users,
 } from "@shared/db/schema";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
+import { formatDate } from "@shared/lib/formatters";
 import type {
   MembroEquipe,
   MinhaObra,
@@ -56,9 +57,9 @@ function colorFor(seed: string): string {
 function fmtBrDate(input: string | Date | null | undefined): string {
   if (!input) return "—";
   try {
-    const d = typeof input === "string" ? new Date(input) : input;
-    if (Number.isNaN(d.getTime())) return typeof input === "string" ? input : "—";
-    return d.toLocaleDateString("pt-BR");
+    if (typeof input === "string") return formatDate(input) || input;
+    if (Number.isNaN(input.getTime())) return "—";
+    return formatDate(input.toISOString());
   } catch {
     return typeof input === "string" ? input : "—";
   }
@@ -97,7 +98,7 @@ function timelineRelativa(d: Date): string {
   if (diff <= 0) return `Hoje, ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   if (diff === 1) return `Ontem, ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
   if (diff < 7) return `Há ${diff} dias`;
-  return d.toLocaleDateString("pt-BR");
+  return formatDate(d.toISOString());
 }
 
 /** Lista obras vinculadas a um empreiteiro (via empreiteiras.userId). */
@@ -633,6 +634,8 @@ export async function buildMinhaObraDetalheReal(
             estado: obra.uf ?? "",
             bairro: "",
             rua: obra.endereco,
+            numero: obra.numero ?? undefined,
+            complemento: obra.complemento ?? undefined,
             cep: obra.cep ?? "",
           }
         : undefined,

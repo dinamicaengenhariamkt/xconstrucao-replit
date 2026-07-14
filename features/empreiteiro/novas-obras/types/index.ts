@@ -123,6 +123,8 @@ export interface ObraDetalhe extends NovaObra {
     estado: string;
     bairro: string;
     rua?: string;
+    numero?: string;
+    complemento?: string;
     cep?: string;
   };
   sinapi?: SinapiData;

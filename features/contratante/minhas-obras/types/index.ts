@@ -55,6 +55,8 @@ export interface ObraContratanteDetalhe extends ObraContratante {
     estado: string;
     bairro: string;
     rua: string;
+    numero?: string;
+    complemento?: string;
     cep: string;
   };
   candidaturasLista?: CandidaturaRecebida[];

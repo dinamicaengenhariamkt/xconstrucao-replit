@@ -2,12 +2,8 @@
 
 import { cn } from '@shared/lib/utils';
 import { RiLockLine, RiLockUnlockLine } from 'react-icons/ri';
+import { formatDate } from '@shared/lib/formatters';
 import type { HistoricoBloqueio } from '../types/historico-bloqueio';
-
-function formatDateBR(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
-}
 
 interface HistoricoBloqueiosTimelineProps {
   historico?: HistoricoBloqueio[];
@@ -63,7 +59,7 @@ export function HistoricoBloqueiosTimeline({
                   {isBloqueio ? 'Conta bloqueada' : 'Conta desbloqueada'}
                 </h4>
                 <span className="text-[11px] font-semibold text-gray-400 tabular-nums">
-                  {formatDateBR(item.data)}
+                  {formatDate(item.data)}
                 </span>
               </div>
               {item.motivo && (
