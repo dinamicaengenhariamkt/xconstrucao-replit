@@ -5,6 +5,8 @@ export interface AdminObraApiResponse {
   id: string;
   nome: string;
   endereco: string | null;
+  numero: string | null;
+  complemento: string | null;
   cidade: string | null;
   uf: string | null;
   tipo: string | null;
@@ -146,6 +148,8 @@ export function adaptAdminObraDetalhe(
     cliente: payload.cliente?.nome ?? '—',
     tipo: payload.tipo ?? '—',
     endereco: payload.endereco ?? '—',
+    numero: payload.numero ?? undefined,
+    complemento: payload.complemento ?? undefined,
     valorPago,
     aditivos: 0,
     valorTotal,

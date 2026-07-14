@@ -750,7 +750,12 @@ export default function AdminObraDetalhePage() {
               <RiMapPinLine className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide font-bold">Endereço</p>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">{obra.endereco}</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                  {obra.numero ? `${obra.endereco}, ${obra.numero}` : obra.endereco}
+                </p>
+                {obra.complemento && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{obra.complemento}</p>
+                )}
               </div>
             </div>
           </div>
@@ -877,7 +882,8 @@ export default function AdminObraDetalhePage() {
                   { label: 'Início', value: safeDate(obra.dataInicio) },
                   { label: 'Previsão de término', value: safeDate(obra.previsaoFim) },
                   { label: 'Localização', value: obra.localizacao ?? '—' },
-                  { label: 'Endereço', value: obra.endereco },
+                  { label: 'Endereço', value: obra.numero ? `${obra.endereco}, ${obra.numero}` : obra.endereco },
+                  ...(obra.complemento ? [{ label: 'Complemento', value: obra.complemento }] : []),
                 ].map((row) => (
                   <div key={row.label} className="flex justify-between items-start gap-4">
                     <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{row.label}</span>

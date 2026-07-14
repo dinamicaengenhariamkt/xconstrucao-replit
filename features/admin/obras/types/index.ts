@@ -4,6 +4,8 @@ export interface AdminObraDetalhe extends AdminClienteObra {
   cliente: string;
   tipo: string;
   endereco: string;
+  numero?: string;
+  complemento?: string;
   valorPago: number;
   aditivos: number;
   valorTotal: number;
