@@ -612,7 +612,6 @@ export default function NovaObraPage() {
                         onChange={field.onChange}
                         onAutofill={onCepAutofill}
                         data-testid="input-cep"
-                        className="max-w-[10rem]"
                       />
                     </FormControl>
                     <FormMessage />
@@ -649,7 +648,7 @@ export default function NovaObraPage() {
                 control={form.control}
                 name="complemento"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-6">
+                  <FormItem className="md:col-span-4">
                     <FormLabel>Complemento</FormLabel>
                     <FormControl>
                       <Input placeholder="Apto, bloco, ponto de referência (opcional)" data-testid="input-complemento" {...field} />

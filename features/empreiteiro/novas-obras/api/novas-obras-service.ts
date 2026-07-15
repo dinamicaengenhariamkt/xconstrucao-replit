@@ -53,10 +53,18 @@ export async function getNovasObras(
   const response = await fetch(url);
   if (!response.ok) throw new Error('Erro ao buscar novas obras');
   const payload: PaginatedResponse<DbObra> = await response.json();
-  return {
-    ...payload,
-    rows: (payload.rows ?? []).map(dbToNovaObra),
-  };
+  // Mapeamento resiliente: uma row malformada não pode zerar a lista inteira.
+  // Descarta só a row que falha (com log) em vez de deixar o .map() lançar e o
+  // react-query devolver lista vazia sem sinal (J40 #22).
+  const rows: NovaObra[] = [];
+  for (const raw of payload.rows ?? []) {
+    try {
+      rows.push(dbToNovaObra(raw));
+    } catch (err) {
+      console.error('[novas-obras] falha ao mapear obra — row ignorada', { id: (raw as { id?: string })?.id, err });
+    }
+  }
+  return { ...payload, rows };
 }
 
 export async function getPerfilStatus(): Promise<PerfilStatus> {

@@ -73,6 +73,8 @@ export default function NovasObrasPage() {
   const {
     data: obrasPayload,
     isLoading: obrasLoading,
+    isError: obrasError,
+    refetch: refetchObras,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -414,7 +416,32 @@ export default function NovasObrasPage() {
       </div>
 
       <div className={cn(isBlocked && 'opacity-40 pointer-events-none')}>
-        {naMinhaZonaOnly && !zonaConfigurada ? (
+        {obrasError && rows.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-red-300 dark:border-red-800/50 bg-white dark:bg-gray-900 px-6 py-12 text-center"
+            data-testid="error-state-novas-obras"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400">
+              <RiSearchLine className="h-6 w-6" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                Não foi possível carregar as obras
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                Ocorreu um erro ao buscar as obras disponíveis. Verifique sua conexão e tente novamente.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refetchObras()}
+              data-testid="button-retry-novas-obras"
+            >
+              Tentar novamente
+            </Button>
+          </div>
+        ) : naMinhaZonaOnly && !zonaConfigurada ? (
           <div
             className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-6 py-12 text-center"
             data-testid="empty-state-zona-nao-configurada"
