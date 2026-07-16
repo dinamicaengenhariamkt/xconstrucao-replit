@@ -35,24 +35,24 @@ async function postMensagem(args: SendArgs): Promise<SendResponse> {
 export function useContratanteSendMessage() {
   const queryClient = useQueryClient();
   const sendOptimistic = useContratanteChatStore((s) => s.sendMessage);
-  const clearLocal = useContratanteChatStore((s) => s.clearLocalMessages);
+  const clearLocalMessage = useContratanteChatStore((s) => s.clearLocalMessage);
 
   return useMutation({
     mutationFn: postMensagem,
     onMutate: ({ conversationId, content, attachment }) => {
-      sendOptimistic(conversationId, content, attachment);
+      const localId = sendOptimistic(conversationId, content, attachment);
+      return { localId };
     },
-    onSuccess: async (_data, { conversationId }) => {
-      // Limpa optimistic ANTES do refetch trazer a real, pra não piscar duplicado.
-      clearLocal(conversationId);
+    onSuccess: async (_data, { conversationId }, context) => {
+      if (context?.localId) clearLocalMessage(conversationId, context.localId);
       await queryClient.invalidateQueries({
         queryKey: ['contratante', 'chat', 'messages', conversationId],
       });
       void queryClient.invalidateQueries({ queryKey: ['contratante', 'chat', 'conversations'] });
     },
-    onError: (err, { conversationId }) => {
+    onError: (err, { conversationId }, context) => {
       console.error('[useContratanteSendMessage] falha:', err);
-      clearLocal(conversationId);
+      if (context?.localId) clearLocalMessage(conversationId, context.localId);
     },
   });
 }

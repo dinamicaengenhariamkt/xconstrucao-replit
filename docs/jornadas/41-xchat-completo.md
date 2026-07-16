@@ -121,6 +121,11 @@ SELECT href FROM notificacoes WHERE thread_id = :t ORDER BY created_at DESC LIMI
 - Relacionada: J21 (chat admin read-only / observabilidade), J02 (avatar do perfil).
 - Dono primário: UI/UX de mensagens do chat (J13 mantém schema e disparo de notificação).
 
+### Item 11 — Correções de race condition e UX de upload (múltiplos arquivos)
+- [x] `features/shared/xchat/store/chat-store.ts`: `sendMessage` agora retorna o `localId` gerado; adicionado `clearLocalMessage(convId, localId)` que remove apenas a mensagem específica (evita race condition ao enviar A, B, C em rápida sequência). _(Task #149)_
+- [x] `features/{empreiteiro,contratante}/xchat/hooks/use-send-message.ts`: `onMutate` captura o `localId` retornado pelo `sendMessage` e o repassa no contexto; `onSuccess`/`onError` chamam `clearLocalMessage(convId, localId)` em vez de `clearLocalMessages(convId)`. _(Task #149)_
+- [x] `features/shared/xchat/components/ChatInput.tsx`: suporte a até 3 arquivos por envio — `pendingFiles: PendingFile[]`; cada arquivo tem card individual com thumbnail/ícone + barra de progresso + texto "Enviando arquivo, aguarde…" + "Pronto para enviar ✓"; botão × individual; texto do envio separado dos arquivos (texto vai numa request, cada arquivo em outra); tooltip do botão paperclip exibe os limites de tamanho (imagens 8 MB, docs 10 MB). _(Task #149)_
+
 ### Item 10 — Envio de arquivos e imagens no chat
 - [x] `server/bootstrap-chat.ts`: ADD COLUMN IF NOT EXISTS `arquivo_url`, `arquivo_nome`, `arquivo_mime` em `chat_mensagens` (idempotente). _(Task #145)_
 - [x] `shared/db/schema.ts`: 3 colunas nullable adicionadas ao `chatMensagens` pgTable. _(Task #145)_

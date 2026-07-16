@@ -19,7 +19,11 @@ interface ChatStore {
   setSelectedConversation: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
   setFilterTab: (tab: 'all' | 'unread') => void;
-  sendMessage: (conversationId: string, content: string, attachment?: MessageAttachment) => void;
+  /** Adiciona uma mensagem optimista e retorna o localId gerado. */
+  sendMessage: (conversationId: string, content: string, attachment?: MessageAttachment) => string;
+  /** Remove apenas a mensagem com o localId especificado (evita race condition ao enviar em sequência). */
+  clearLocalMessage: (conversationId: string, localId: string) => void;
+  /** Remove todas as mensagens locais da conversa (mantido para compatibilidade). */
   clearLocalMessages: (conversationId: string) => void;
   addEphemeralConversation: (conv: Conversation) => void;
   markAsRead: (conversationId: string) => void;
@@ -39,7 +43,6 @@ export function createChatStore() {
       setSelectedConversation: (id) =>
         set((state) => ({
           selectedConversationId: id,
-          // ao abrir uma conversa, marca como lida automaticamente
           readConversationIds:
             id && !state.readConversationIds.includes(id)
               ? [...state.readConversationIds, id]
@@ -66,15 +69,16 @@ export function createChatStore() {
         })),
 
       /**
-       * Adiciona uma mensagem local imediata. Usado para:
+       * Adiciona uma mensagem local imediata e retorna o localId gerado.
+       * Usado para:
        *  1) Conversas efêmeras (sem thread real ainda) — fluxo "Iniciar conversa"
-       *  2) Optimistic update enquanto o POST real não confirma — limpado por `clearLocalMessages`
-       * Não dispara timers nem auto-reply.
+       *  2) Optimistic update enquanto o POST real não confirma — limpado por `clearLocalMessage`
        */
       sendMessage: (conversationId, content, attachment) => {
+        const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const now = new Date();
         const newMessage: Message = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          id: localId,
           senderId: 'me',
           senderName: 'Você',
           content,
@@ -91,7 +95,23 @@ export function createChatStore() {
             [conversationId]: [...(state.localMessages[conversationId] ?? []), newMessage],
           },
         }));
+
+        return localId;
       },
+
+      /** Remove apenas a mensagem com o localId especificado. */
+      clearLocalMessage: (conversationId, localId) =>
+        set((state) => {
+          const msgs = state.localMessages[conversationId];
+          if (!msgs) return state;
+          const filtered = msgs.filter((m) => m.id !== localId);
+          if (filtered.length === msgs.length) return state;
+          if (filtered.length === 0) {
+            const { [conversationId]: _removed, ...rest } = state.localMessages;
+            return { localMessages: rest };
+          }
+          return { localMessages: { ...state.localMessages, [conversationId]: filtered } };
+        }),
 
       clearLocalMessages: (conversationId) =>
         set((state) => {
