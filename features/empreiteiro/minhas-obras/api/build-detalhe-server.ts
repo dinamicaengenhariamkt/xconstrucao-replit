@@ -199,15 +199,17 @@ export async function buildMinhaObraDetalheReal(
   let contratanteNome = "Contratante";
   let contratanteEmail: string | undefined;
   let contratanteTelefone: string | undefined;
+  let contratanteAvatarUrl: string | undefined;
   if (obra.clienteId) {
     const [cli] = await db
-      .select({ name: users.name, email: users.email, telefone: clientes.telefone })
+      .select({ name: users.name, email: users.email, telefone: clientes.telefone, userImage: users.image, clienteAvatarUrl: clientes.avatarUrl })
       .from(clientes)
       .leftJoin(users, eq(users.id, clientes.userId))
       .where(eq(clientes.id, obra.clienteId));
     if (cli?.name) contratanteNome = cli.name;
     if (cli?.email) contratanteEmail = cli.email;
     if (cli?.telefone) contratanteTelefone = cli.telefone ?? undefined;
+    if (cli) contratanteAvatarUrl = cli.userImage ?? cli.clienteAvatarUrl ?? undefined;
   }
 
   // Empreiteira atribuída (pra equipe + responsável).
@@ -608,6 +610,7 @@ export async function buildMinhaObraDetalheReal(
       iniciais: initialsOf(contratanteNome),
       cor: colorFor(contratanteNome),
       email: contratanteEmail,
+      avatarUrl: contratanteAvatarUrl,
     },
     tipo: obra.tipo ?? "Obra",
     valorPago: valorPagoNum,

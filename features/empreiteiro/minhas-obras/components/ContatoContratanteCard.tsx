@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { cn } from '@shared/lib/utils';
 import { IconPerson, IconMail, IconChat } from '@shared/components/icons';
+import { ChatAvatar } from '@features/shared/xchat/components/ChatAvatar';
 
 interface ContatoContratanteCardProps {
   contratante: {
@@ -11,6 +11,7 @@ interface ContatoContratanteCardProps {
     iniciais: string;
     cor: string;
     email?: string;
+    avatarUrl?: string;
   };
   obraId: string;
   obraTitulo: string;
@@ -58,9 +59,13 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
       <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex items-center gap-4 flex-shrink-0">
-            <div className={cn('w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold', contratante.cor)}>
-              {contratante.iniciais}
-            </div>
+            <ChatAvatar
+              avatarUrl={contratante.avatarUrl}
+              initials={contratante.iniciais}
+              color={contratante.cor}
+              name={contratante.nome}
+              className="w-16 h-16 text-2xl"
+            />
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{contratante.nome}</p>
               <p className="text-sm text-gray-500">Contratante</p>

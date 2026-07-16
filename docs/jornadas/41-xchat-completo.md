@@ -1,6 +1,6 @@
 # Jornada — XChat Completo
 
-> Status: em andamento | Prioridade: alta | Wave: 8
+> Status: pronto | Prioridade: alta | Wave: 8
 > Última atualização: 2026-07-16
 
 ## 1. Contexto & Objetivo
@@ -52,44 +52,44 @@ flowchart LR
 ## 9. Checklist de implementação
 
 ### Item 1 — Padronizar link da notificação em `?thread=`
-- [ ] [features/notificacoes/nova-mensagem-chat-dispatcher.ts](../../features/notificacoes/nova-mensagem-chat-dispatcher.ts):69: `?conversationId=` → `?thread=`. É o único produtor do `href`; `?thread=` é o contrato já consumido pelas páginas.
+- [x] [features/notificacoes/nova-mensagem-chat-dispatcher.ts](../../features/notificacoes/nova-mensagem-chat-dispatcher.ts):69: `?conversationId=` → `?thread=`. É o único produtor do `href`; `?thread=` é o contrato já consumido pelas páginas.
 
 ### Item 2 — Extrair resolução de participantes no service
-- [ ] [features/chat/service.ts](../../features/chat/service.ts): novo `resolverParticipantesDaObra(obraId)` (JOIN `obras→clientes.userId` e `obras→empreiteiras.userId`; retorna participantes ou erro `NOT_FOUND | SEM_EMPREITEIRA | EMPREITEIRO_SEM_USER`).
-- [ ] [app/api/contratante/chat/garantir-thread/route.ts](../../app/api/contratante/chat/garantir-thread/route.ts): substituir a resolução inline (linhas 49-114) pela chamada ao helper, mantendo o guard de role/ownership. Reusa `garantirChatThread`.
+- [x] [features/chat/service.ts](../../features/chat/service.ts): novo `resolverParticipantesDaObra(obraId)` (JOIN `obras→clientes.userId` e `obras→empreiteiras.userId`; retorna participantes ou erro `NOT_FOUND | SEM_EMPREITEIRA | EMPREITEIRO_SEM_USER`).
+- [x] [app/api/contratante/chat/garantir-thread/route.ts](../../app/api/contratante/chat/garantir-thread/route.ts): substituir a resolução inline (linhas 49-114) pela chamada ao helper, mantendo o guard de role/ownership. Reusa `garantirChatThread`.
 
 ### Item 3 — Auto-seleção por `?thread=` no empreiteiro
-- [ ] [app/empreiteiro/chat/page.tsx](../../app/empreiteiro/chat/page.tsx): `useSearchParams` + `didAutoSelectRef` + `useEffect` de auto-seleção (espelhar [app/contratante/chat/page.tsx](../../app/contratante/chat/page.tsx):42-52). Envolver em `<Suspense>` se o build Next 16 exigir.
+- [x] [app/empreiteiro/chat/page.tsx](../../app/empreiteiro/chat/page.tsx): `useSearchParams` + `didAutoSelectRef` + `useEffect` de auto-seleção (espelhar [app/contratante/chat/page.tsx](../../app/contratante/chat/page.tsx):42-52). Envolver em `<Suspense>` se o build Next 16 exigir.
 
 ### Item 4 — Rota garantir-thread do empreiteiro
-- [ ] [app/api/empreiteiro/chat/garantir-thread/route.ts](../../app/api/empreiteiro/chat/garantir-thread/route.ts) (novo): guard `role === 'empreiteiro'` (ou admin); resolve `empreiteiras.userId == user.id`; valida `obra.empreiteiraId === empreiteira.id` senão **422 `NAO_VINCULADO`**; chama o helper do Item 2 + `garantirChatThread`. Retorna `{ threadId }`.
+- [x] [app/api/empreiteiro/chat/garantir-thread/route.ts](../../app/api/empreiteiro/chat/garantir-thread/route.ts) (novo): guard `role === 'empreiteiro'` (ou admin); resolve `empreiteiras.userId == user.id`; valida `obra.empreiteiraId === empreiteira.id` senão **422 `NAO_VINCULADO`**; chama o helper do Item 2 + `garantirChatThread`. Retorna `{ threadId }`.
 
 ### Item 5 — Empreiteiro inicia conversa REAL
-- [ ] [features/empreiteiro/minhas-obras/components/ContatoContratanteCard.tsx](../../features/empreiteiro/minhas-obras/components/ContatoContratanteCard.tsx):24-40: remover fluxo efêmero; replicar handler do contratante → `POST /api/empreiteiro/chat/garantir-thread` → `router.push('/empreiteiro/chat?thread=${threadId}')`; estados `loading/erro`; `data-testid="btn-enviar-mensagem"`.
-- [ ] [features/empreiteiro/novas-obras/components/ObraDetalheContent.tsx](../../features/empreiteiro/novas-obras/components/ObraDetalheContent.tsx):62-78: mesmo handler; no `422 NAO_VINCULADO` exibir "Chat disponível após a empreiteira ser contratada para esta obra" e **não** navegar. Reusar a lógica de `addressLocked` para desabilitar o botão quando não vinculado.
+- [x] [features/empreiteiro/minhas-obras/components/ContatoContratanteCard.tsx](../../features/empreiteiro/minhas-obras/components/ContatoContratanteCard.tsx): remover fluxo efêmero; replicar handler do contratante → `POST /api/empreiteiro/chat/garantir-thread` → `router.push('/empreiteiro/chat?thread=${threadId}')`; estados `loading/erro`; `data-testid="btn-enviar-mensagem"`.
+- [x] [features/empreiteiro/novas-obras/components/ObraDetalheContent.tsx](../../features/empreiteiro/novas-obras/components/ObraDetalheContent.tsx): mesmo handler; no `422 NAO_VINCULADO` exibir "Chat disponível após a empreiteira ser contratada para esta obra" e **não** navegar.
 
 ### Item 6 — Avatar real no chat (backend)
 Cadeia de fallback: `users.image` → `{empreiteiras|clientes}.avatarUrl` → `users.avatarUrl` → `user_files.publicUrl` → iniciais+cor.
-- [ ] [features/chat/service.ts](../../features/chat/service.ts) `listarConversasPorUsuario`: LEFT JOIN `clientes`/`empreiteiras` (por `userId` do counterpart) + `user_files` (por `avatar_file_id`); `counterpart_avatar_url = COALESCE(cu.image, cli.avatar_url, emp.avatar_url, cu.avatar_url, uf.public_url)`. Campo `counterpartAvatarUrl` em `ConversaRow`.
-- [ ] [features/chat/service.ts](../../features/chat/service.ts) `listarMensagensDaThread`: `autor_avatar_url` análogo. Campo `autorAvatarUrl`.
-- [ ] [features/chat/dto.ts](../../features/chat/dto.ts): `toConversationDTO.avatarUrl`, `toMessageDTO.senderAvatarUrl` — mantendo `participantInitials`/`participantColor` como fallback.
+- [x] [features/chat/service.ts](../../features/chat/service.ts) `listarConversasPorUsuario`: LEFT JOIN `clientes`/`empreiteiras` (por `userId` do counterpart) + `user_files` (por `avatar_file_id`); `counterpart_avatar_url = COALESCE(cu.image, cli.avatar_url, emp.avatar_url, cu.avatar_url, uf.public_url)`. Campo `counterpartAvatarUrl` em `ConversaRow`.
+- [x] [features/chat/service.ts](../../features/chat/service.ts) `listarMensagensDaThread`: `autor_avatar_url` análogo. Campo `autorAvatarUrl`.
+- [x] [features/chat/dto.ts](../../features/chat/dto.ts): `toConversationDTO.avatarUrl`, `toMessageDTO.senderAvatarUrl` — mantendo `participantInitials`/`participantColor` como fallback.
 
 ### Item 7 — Avatar real no chat (tipos + componentes)
-- [ ] [features/shared/xchat/types/](../../features/shared/xchat/types/) (+ tipos per-persona): `Conversation.avatarUrl?`, `Message.senderAvatarUrl?`.
-- [ ] [features/shared/xchat/components/](../../features/shared/xchat/components/) `ChatHeader` e `ConversationList`: renderizar `<Avatar>`/`<AvatarImage>` de `@shared/components/ui/avatar` com `AvatarFallback` = círculo colorido + iniciais.
-- [ ] `MessageBubble` (opcional): mini-avatar da contraparte.
+- [x] [features/shared/xchat/types/](../../features/shared/xchat/types/) (+ tipos per-persona): `Conversation.avatarUrl?`, `Message.senderAvatarUrl?`.
+- [x] [features/shared/xchat/components/](../../features/shared/xchat/components/) `ChatHeader` e `ConversationList`: renderizam `<ChatAvatar>` com `AvatarFallback` = círculo colorido + iniciais.
+- [x] `MessageBubble` (opcional): mini-avatar da contraparte.
 
 ### Item 6b — Avatar nos Cards de contato (opcional, cosmético)
-- [ ] [app/api/obras/[id]/route.ts](../../app/api/obras/[id]/route.ts):142-156: adicionar `avatarUrl` (COALESCE) no bloco da empreiteira e do contratante; propagar ao payload/tipo `ObraDetalhe` e aos Cards. Sem isso os Cards seguem com iniciais (fallback aceitável).
+- [x] [app/api/obras/[id]/route.ts](../../app/api/obras/[id]/route.ts): adicionado `userImage`/`empreiteiraAvatarUrl` no select; `avatarUrl = userImage || empreiteiraAvatarUrl` no payload. `ContatoEmpreiteiroCard` e `ContatoContratanteCard` agora usam `<ChatAvatar>` com foto real + fallback iniciais+cor. _(Task #139)_
 
 ### Item 8 — Endpoint de contagem agregada de não-lidas
-- [ ] [features/chat/service.ts](../../features/chat/service.ts) `contarNaoLidasTotais(userId)`: `COUNT(*)` das mensagens do outro autor com `lida_em IS NULL` nas threads do usuário.
-- [ ] `app/api/{contratante,empreiteiro}/chat/unread-count/route.ts` (novos): guard + `{ total }` + `setNoCacheHeaders`.
+- [x] [features/chat/service.ts](../../features/chat/service.ts) `contarNaoLidasTotais(userId)`: `COUNT(*)` das mensagens do outro autor com `lida_em IS NULL` nas threads do usuário.
+- [x] `app/api/{contratante,empreiteiro}/chat/unread-count/route.ts` (novos): guard + `{ total }` + `setNoCacheHeaders`.
 
 ### Item 9 — Badge global de não-lidas na sidebar
-- [ ] `features/{persona}/xchat/hooks/use-unread-count.ts` (novos): `useQuery` com `refetchInterval` do `QUERY_CONFIG` + `refetchOnWindowFocus`.
-- [ ] `features/{persona}/components/{Persona}Sidebar.tsx`: no item de url `/{persona}/chat`, badge vermelho (estilo Topbar, `>9 ? '9+'`) quando `total > 0`.
-- [ ] `features/{persona}/xchat/hooks/use-marcar-lida.ts`: adicionar invalidação de `['{persona}','chat','unread-count']` no `onSuccess`.
+- [x] `features/{persona}/xchat/hooks/use-unread-count.ts` (novos): `useQuery` com `refetchInterval` do `QUERY_CONFIG` + `refetchOnWindowFocus`.
+- [x] `features/{persona}/components/{Persona}Sidebar.tsx`: no item de url `/{persona}/chat`, badge vermelho (estilo Topbar, `>9 ? '9+'`) quando `total > 0`.
+- [x] `features/{persona}/xchat/hooks/use-marcar-lida.ts`: adiciona invalidação de `['{persona}','chat','unread-count']` no `onSuccess`.
 
 ## 10. Critérios de aceite
 1. Empreiteiro em Minhas Obras (obra vinculada) → "Enviar Mensagem" → vai para `/empreiteiro/chat?thread=<id>`, thread selecionada, foto+nome do contratante no header, input pronto. Refresh mantém a conversa.

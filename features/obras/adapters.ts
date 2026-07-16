@@ -83,6 +83,7 @@ export type DbObra = {
     responsavel?: string | null;
     telefone?: string | null;
     email?: string | null;
+    avatarUrl?: string | null;
   } | null;
   /** URL pública (ou signed) da foto de capa. */
   fotoCapaUrl?: string | null;
@@ -225,6 +226,7 @@ export function dbToObraContratante(o: DbObra): ObraContratante & {
           cor: 'bg-primary',
           telefone: o.empreiteiraInfo?.telefone ?? undefined,
           email: o.empreiteiraInfo?.email ?? undefined,
+          avatarUrl: o.empreiteiraInfo?.avatarUrl ?? undefined,
         },
     tipo: o.tipo ?? '—',
     candidaturas: o.candidaturasCount ?? 0,

@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { cn } from '@shared/lib/utils';
 import { IconMail, IconPhone, IconChat, IconEngineering } from '@shared/components/icons';
+import { ChatAvatar } from '@features/shared/xchat/components/ChatAvatar';
 
 interface ContatoEmpreiteiroCardProps {
   empreiteiro: {
@@ -12,6 +12,7 @@ interface ContatoEmpreiteiroCardProps {
     cor: string;
     email?: string;
     telefone?: string;
+    avatarUrl?: string;
   };
   obraId: string;
   obraTitulo: string;
@@ -59,9 +60,13 @@ export function ContatoEmpreiteiroCard({ empreiteiro, obraId, obraTitulo }: Cont
       <div className="p-6">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex items-center gap-4 flex-shrink-0">
-            <div className={cn('w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold', empreiteiro.cor)}>
-              {empreiteiro.iniciais}
-            </div>
+            <ChatAvatar
+              avatarUrl={empreiteiro.avatarUrl}
+              initials={empreiteiro.iniciais}
+              color={empreiteiro.cor}
+              name={empreiteiro.nome}
+              className="w-16 h-16 text-2xl"
+            />
             <div>
               <p className="text-lg font-bold text-gray-900 dark:text-white">{empreiteiro.nome}</p>
               <p className="text-sm text-gray-500">Empreiteiro</p>

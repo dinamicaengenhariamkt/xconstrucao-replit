@@ -148,6 +148,8 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
             responsavel: empreiteiras.responsavel,
             telefone: empreiteiras.telefone,
             email: users.email,
+            userImage: users.image,
+            empreiteiraAvatarUrl: empreiteiras.avatarUrl,
           })
           .from(empreiteiras)
           .innerJoin(users, eq(users.id, empreiteiras.userId))
@@ -199,7 +201,12 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     anexos,
     candidaturasCount,
     medicoes: medicoesRows,
-    empreiteiraInfo: empreiteiraRow[0] ?? null,
+    empreiteiraInfo: empreiteiraRow[0]
+    ? {
+        ...empreiteiraRow[0],
+        avatarUrl: empreiteiraRow[0].userImage || empreiteiraRow[0].empreiteiraAvatarUrl || null,
+      }
+    : null,
     fotoCapaUrl,
     diasRestantes,
   });

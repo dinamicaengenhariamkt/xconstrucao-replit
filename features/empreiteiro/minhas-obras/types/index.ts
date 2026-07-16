@@ -15,6 +15,7 @@ export interface MinhaObra {
     iniciais: string;
     cor: string;
     email?: string;
+    avatarUrl?: string;
   };
   tipo: string;
 }

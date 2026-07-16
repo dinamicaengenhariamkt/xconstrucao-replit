@@ -22,6 +22,7 @@ export interface ObraContratante {
     cor: string;
     email?: string;
     telefone?: string;
+    avatarUrl?: string;
   };
   tipo: string;
   candidaturas?: number;
