@@ -316,7 +316,7 @@ export async function listarMensagensDaThread(
   const maisAntiga = pageDesc[pageDesc.length - 1];
   const nextCursor =
     temMaisAntigas && maisAntiga
-      ? { criadaEm: maisAntiga.criada_em, id: maisAntiga.id }
+      ? { criadaEm: new Date(maisAntiga.criada_em as unknown as string), id: maisAntiga.id }
       : null;
 
   // Inverte para ASC (ordem cronológica esperada pela UI).

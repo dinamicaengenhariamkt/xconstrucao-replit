@@ -141,7 +141,7 @@ export function MessageBubble({ message, basePath }: MessageBubbleProps) {
           <span className="text-[10px]">{timestamp}</span>
           {message.isOwn && message.status && (
             message.status === 'read' ? (
-              <IconDoneAll className="text-[13px] leading-none" />
+              <IconDoneAll className="text-[13px] leading-none text-blue-400" />
             ) : (
               <IconDone className="text-[13px] leading-none" />
             )

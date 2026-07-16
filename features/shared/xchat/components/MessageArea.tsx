@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useEffect, Fragment } from 'react';
+import { useRef, useEffect, Fragment, useState, useMemo } from 'react';
+import { RiSearchLine, RiCloseLine } from 'react-icons/ri';
 import { MessageBubble } from './MessageBubble';
 import type { Message } from '../types';
 
@@ -71,12 +72,29 @@ function DateSeparator({ label }: { label: string }) {
 
 export function MessageArea({ messages, isLoading, basePath, isTyping }: MessageAreaProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      searchInputRef.current?.focus();
+    } else {
+      setSearchQuery('');
+    }
+  }, [searchOpen]);
+
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages;
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => m.content?.toLowerCase().includes(q));
+  }, [messages, searchQuery]);
 
   if (isLoading) {
     return (
@@ -90,27 +108,76 @@ export function MessageArea({ messages, isLoading, basePath, isTyping }: Message
     );
   }
 
-  if (messages.length === 0 && !isTyping) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center">
-        <p className="text-sm text-gray-400">Nenhuma mensagem ainda. Diga olá!</p>
-      </div>
-    );
-  }
-
-  const groups = groupByDate(messages);
+  const isEmpty = filteredMessages.length === 0 && !isTyping;
 
   return (
-    <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col gap-2">
-      {groups.map((group) => (
-        <Fragment key={group.label}>
-          <DateSeparator label={group.label} />
-          {group.messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} basePath={basePath} />
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* Search bar */}
+      <div className="flex-shrink-0 px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
+        {searchOpen ? (
+          <>
+            <RiSearchLine className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar nessa conversa…"
+              data-testid="chat-search-input"
+              className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-400"
+            />
+            {searchQuery && (
+              <span className="text-[11px] text-gray-400 flex-shrink-0">
+                {filteredMessages.length} resultado{filteredMessages.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(false)}
+              aria-label="Fechar busca"
+              data-testid="chat-search-close"
+              className="flex-shrink-0 p-1 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            >
+              <RiCloseLine className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              aria-label="Buscar na conversa"
+              data-testid="chat-search-toggle"
+              className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            >
+              <RiSearchLine className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Messages */}
+      {isEmpty ? (
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p className="text-sm text-gray-400" data-testid="chat-empty-state">
+            {searchQuery.trim()
+              ? 'Nenhuma mensagem encontrada.'
+              : 'Nenhuma mensagem ainda. Diga olá!'}
+          </p>
+        </div>
+      ) : (
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col gap-2">
+          {groupByDate(filteredMessages).map((group) => (
+            <Fragment key={group.label}>
+              <DateSeparator label={group.label} />
+              {group.messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} basePath={basePath} />
+              ))}
+            </Fragment>
           ))}
-        </Fragment>
-      ))}
-      {isTyping && <TypingIndicator />}
+          {isTyping && !searchQuery && <TypingIndicator />}
+        </div>
+      )}
     </div>
   );
 }
