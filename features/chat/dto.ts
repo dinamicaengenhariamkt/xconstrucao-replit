@@ -52,7 +52,10 @@ function formatRelativeShort(date: Date, now = new Date()): string {
 
 export function toConversationDTO(row: ConversaRow): Conversation {
   const fallbackName = row.counterpartName?.trim() || "Participante";
-  const lastMessageDate = row.ultimaMensagemCriadaEm ?? row.ultimaMensagemEm;
+  // db.execute() com raw SQL retorna timestamps como strings ISO, não Date.
+  // Coagir explicitamente para evitar "getFullYear is not a function".
+  const rawDate = row.ultimaMensagemCriadaEm ?? row.ultimaMensagemEm;
+  const lastMessageDate = rawDate ? new Date(rawDate as unknown as string) : null;
   return {
     id: row.threadId,
     participantName: fallbackName,
@@ -62,8 +65,8 @@ export function toConversationDTO(row: ConversaRow): Conversation {
     obraNome: row.obraNome,
     obraId: row.obraId,
     lastMessage: row.ultimaMensagemTexto ?? "",
-    lastMessageTime: formatRelativeShort(lastMessageDate),
-    unreadCount: row.naoLidas,
+    lastMessageTime: lastMessageDate ? formatRelativeShort(lastMessageDate) : "",
+    unreadCount: Number(row.naoLidas ?? 0),
     isActive: false,
   };
 }
@@ -81,13 +84,15 @@ export function toMessageDTO(row: MensagemRow, viewerUserId: string): Message {
         }
       : undefined;
 
+  // db.execute() com raw SQL retorna timestamps como strings ISO, não Date.
+  const criadaEmDate = new Date(row.criadaEm as unknown as string);
   return {
     id: row.id,
     senderId: row.autorUserId,
     senderName: row.autorName?.trim() || "Participante",
     ...(row.autorAvatarUrl ? { senderAvatarUrl: row.autorAvatarUrl } : {}),
     content: row.texto,
-    timestamp: row.criadaEm.toISOString(),
+    timestamp: criadaEmDate.toISOString(),
     isOwn: row.autorUserId === viewerUserId,
     type: "text",
     status: row.lidaEm ? "read" : "delivered",
