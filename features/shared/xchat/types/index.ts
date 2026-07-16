@@ -9,7 +9,14 @@ export interface ObraRefAttachment {
   endereco: string;
 }
 
-export type MessageAttachment = ObraRefAttachment;
+export interface FileAttachment {
+  type: 'file';
+  url: string;
+  nome: string;
+  mime: string;
+}
+
+export type MessageAttachment = ObraRefAttachment | FileAttachment;
 
 export interface Conversation {
   id: string;
@@ -37,6 +44,8 @@ export interface Message {
   isOwn: boolean;
   type: 'text' | 'file' | 'image';
   fileName?: string;
+  fileUrl?: string;
+  fileMime?: string;
   status?: 'sent' | 'delivered' | 'read';
   attachment?: MessageAttachment;
 }
@@ -53,6 +62,8 @@ export interface ChatInputProps {
   onSend: (content: string, attachment?: MessageAttachment) => void;
   disabled?: boolean;
   obras?: ObraPickerItem[];
+  /** ID da thread atual; necessário para habilitar upload de arquivos. */
+  threadId?: string;
 }
 
 export interface ChatHeaderProps {

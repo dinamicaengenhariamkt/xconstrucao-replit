@@ -164,7 +164,7 @@ export default function ChatPage() {
                 onBack={() => setSelectedConversation(null)}
               />
               <MessageArea messages={allMessages} isLoading={msgLoading} isTyping={isTyping} />
-              <ChatInput onSend={handleSend} obras={obras ?? []} />
+              <ChatInput onSend={handleSend} obras={obras ?? []} threadId={selectedConversationId ?? undefined} />
             </>
           ) : (
             <EmptyChat />

@@ -406,6 +406,9 @@ export const chatMensagens = pgTable("chat_mensagens", {
   anexoObraId: varchar("anexo_obra_id").references(() => obras.id, { onDelete: "set null" }),
   lidaEm: timestamp("lida_em"),
   criadaEm: timestamp("criada_em").defaultNow().notNull(),
+  arquivoUrl: text("arquivo_url"),
+  arquivoNome: text("arquivo_nome"),
+  arquivoMime: text("arquivo_mime"),
 });
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;

@@ -86,6 +86,13 @@ export function toMessageDTO(row: MensagemRow, viewerUserId: string): Message {
 
   // db.execute() com raw SQL retorna timestamps como strings ISO, não Date.
   const criadaEmDate = new Date(row.criadaEm as unknown as string);
+
+  // Determinar tipo da mensagem baseado no mime do arquivo.
+  let msgType: Message["type"] = "text";
+  if (row.arquivoUrl) {
+    msgType = row.arquivoMime?.startsWith("image/") ? "image" : "file";
+  }
+
   return {
     id: row.id,
     senderId: row.autorUserId,
@@ -94,8 +101,11 @@ export function toMessageDTO(row: MensagemRow, viewerUserId: string): Message {
     content: row.texto,
     timestamp: criadaEmDate.toISOString(),
     isOwn: row.autorUserId === viewerUserId,
-    type: "text",
+    type: msgType,
     status: row.lidaEm ? "read" : "delivered",
     ...(attachment ? { attachment } : {}),
+    ...(row.arquivoUrl ? { fileUrl: row.arquivoUrl } : {}),
+    ...(row.arquivoNome ? { fileName: row.arquivoNome } : {}),
+    ...(row.arquivoMime ? { fileMime: row.arquivoMime } : {}),
   };
 }

@@ -45,6 +45,12 @@ export async function bootstrapChatSchema(): Promise<void> {
     // na comparação de tupla de `listarMensagensDaThread`.
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_thread_keyset ON chat_mensagens(thread_id, criada_em DESC, id DESC)`);
 
+    // J41 Task #145 — colunas de arquivo no chat (idempotente).
+    // texto permanece NOT NULL no schema; file-only envia texto=''.
+    await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_url TEXT`);
+    await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_nome TEXT`);
+    await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_mime TEXT`);
+
     // FK cross-table: notificacoes.thread_id → chat_threads.id (ON DELETE SET NULL).
     // Garante que notificações ficam órfãs nulas quando a thread some (ex: cascade da obra).
     // Adicionada aqui porque bootstrap-notificacoes roda antes — quando criou a coluna,

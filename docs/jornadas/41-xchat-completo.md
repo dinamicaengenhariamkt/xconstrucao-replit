@@ -121,8 +121,24 @@ SELECT href FROM notificacoes WHERE thread_id = :t ORDER BY created_at DESC LIMI
 - Relacionada: J21 (chat admin read-only / observabilidade), J02 (avatar do perfil).
 - Dono primário: UI/UX de mensagens do chat (J13 mantém schema e disparo de notificação).
 
+### Item 10 — Envio de arquivos e imagens no chat
+- [x] `server/bootstrap-chat.ts`: ADD COLUMN IF NOT EXISTS `arquivo_url`, `arquivo_nome`, `arquivo_mime` em `chat_mensagens` (idempotente). _(Task #145)_
+- [x] `shared/db/schema.ts`: 3 colunas nullable adicionadas ao `chatMensagens` pgTable. _(Task #145)_
+- [x] `features/chat/service.ts`: `MensagemRow` + SQL SELECT + `CriarMensagemArgs` + INSERT incluem os campos de arquivo. _(Task #145)_
+- [x] `features/chat/dto.ts`: `toMessageDTO` determina `type='image'|'file'` pelo mime e propaga `fileUrl`, `fileName`, `fileMime`. _(Task #145)_
+- [x] `features/shared/xchat/types/index.ts`: `Message` ganha `fileUrl?`, `fileMime?`; `FileAttachment` adicionada ao union `MessageAttachment`; `ChatInputProps` ganha `threadId?`. _(Task #145)_
+- [x] `app/api/chat/[threadId]/upload/presign/route.ts` (novo): presign dedicado ao chat — verifica participação na thread via `podeAcessarThread`, valida mime/size (imagem 8MB, outros 10MB), gera key `public/chat/{threadId}/{ts}-{slug}.{ext}`, retorna `{ uploadUrl, key, publicUrl }`. _(Task #145)_
+- [x] `app/api/empreiteiro/chat/[conversationId]/messages/route.ts` + `app/api/contratante/chat/messages/[conversationId]/route.ts`: schema atualizado (texto opcional quando arquivo presente + refine), aceita `arquivoUrl/Nome/Mime`, anti-tamper pathname, notificação com emoji 📎 quando texto vazio. _(Task #145)_
+- [x] `features/shared/xchat/components/ChatInput.tsx`: clipe paperclip abre `<input type="file" hidden>`, XHR PUT com barra de progresso, preview card com ícone/nome, error inline. Botão habilitado somente quando `threadId` presente. _(Task #145)_
+- [x] `features/shared/xchat/components/MessageBubble.tsx`: imagens renderizadas inline com lightbox (overlay fullscreen); PDFs/docs renderizados como card de download. _(Task #145)_
+- [x] `app/empreiteiro/chat/page.tsx` + `app/contratante/chat/page.tsx`: `threadId={selectedConversationId}` passado para `<ChatInput>`. _(Task #145)_
+- [x] `features/{empreiteiro,contratante}/xchat/hooks/use-send-message.ts`: `FileAttachment` propagada como `arquivoUrl/Nome/Mime` no POST body. _(Task #145)_
+
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- 2026-07-16 (Task #145): Arquivos de chat em `public/chat/{threadId}/` — sem `user_files` row nem `audit_log` (diferente dos outros uploads). Deleção de arquivo no chat (limpeza do R2) fora de escopo. Se necessário no futuro, montar GC de objetos R2 órfãos.
+- 2026-07-16 (Task #145): Download de imagens via URL pública do R2 sem TTL. Para conteúdo sensível futuro, migrar para `private/chat/` + signed URLs com TTL curto.
 
 - 2026-07-16: Fluxo efêmero (`addEphemeralConversation` + `sendMessage` local) fica sem produtor de conversa nova após o Item 5. Mantido no store por ora (baixo risco; `EmptyChat`/otimista ainda usam) — remover em jornada de limpeza futura.
 - 2026-07-16: Ao rodar o E2E de regressão, 2 testes da [J21](21-observabilidade-comunicacao-admin.md) falhavam com **403 `PASSWORD_CHANGE_REQUIRED`** (não relacionado à J41 — confirmado rodando na `main` limpa). Causa: admin seed com `must_change_password=true` (gate J22/J30) travando toda rota autenticada; o helper de teste `/api/test/login-as` não neutralizava esse gate. Corrigido no helper (só sob `E2E_TEST_AUTH=1`). Nenhuma mudança na lógica de produção. Detalhe na seção 13 da J21.

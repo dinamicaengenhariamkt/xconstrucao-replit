@@ -228,6 +228,9 @@ export interface MensagemRow {
   anexoObraEndereco: string | null;
   lidaEm: Date | null;
   criadaEm: Date;
+  arquivoUrl: string | null;
+  arquivoNome: string | null;
+  arquivoMime: string | null;
 }
 
 export interface ListarMensagensOpts {
@@ -279,6 +282,9 @@ export async function listarMensagensDaThread(
     anexo_obra_endereco: string | null;
     lida_em: Date | null;
     criada_em: Date;
+    arquivo_url: string | null;
+    arquivo_nome: string | null;
+    arquivo_mime: string | null;
   }>(sql`
     SELECT
       m.id,
@@ -294,7 +300,10 @@ export async function listarMensagensDaThread(
       ao.progresso AS anexo_obra_progresso,
       ao.endereco AS anexo_obra_endereco,
       m.lida_em,
-      m.criada_em
+      m.criada_em,
+      m.arquivo_url,
+      m.arquivo_nome,
+      m.arquivo_mime
     FROM chat_mensagens m
     LEFT JOIN users u ON u.id = m.autor_user_id
     LEFT JOIN clientes cli ON cli.user_id = u.id
@@ -337,6 +346,9 @@ export async function listarMensagensDaThread(
       anexoObraEndereco: row.anexo_obra_endereco,
       lidaEm: row.lida_em,
       criadaEm: row.criada_em,
+      arquivoUrl: row.arquivo_url ?? null,
+      arquivoNome: row.arquivo_nome ?? null,
+      arquivoMime: row.arquivo_mime ?? null,
     }));
 
   return { messages, nextCursor };
@@ -361,6 +373,9 @@ export interface CriarMensagemArgs {
   autorUserId: string;
   texto: string;
   anexoObraId?: string | null;
+  arquivoUrl?: string | null;
+  arquivoNome?: string | null;
+  arquivoMime?: string | null;
 }
 
 export interface CriarMensagemResult {
@@ -398,6 +413,9 @@ export async function criarMensagem(args: CriarMensagemArgs): Promise<CriarMensa
         autorUserId: args.autorUserId,
         texto: args.texto,
         anexoObraId: args.anexoObraId ?? null,
+        arquivoUrl: args.arquivoUrl ?? null,
+        arquivoNome: args.arquivoNome ?? null,
+        arquivoMime: args.arquivoMime ?? null,
       })
       .returning();
 
