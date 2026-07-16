@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { RiArrowLeftLine } from 'react-icons/ri';
-import { cn } from '@shared/lib/utils';
 import type { ChatHeaderProps } from '../types';
 import { IconHomeWork } from '@shared/components/icons';
+import { ChatAvatar } from './ChatAvatar';
 
 export function ChatHeader({ conversation, basePath, onBack, isTyping }: ChatHeaderProps) {
   if (!conversation) return null;
@@ -24,14 +24,12 @@ export function ChatHeader({ conversation, basePath, onBack, isTyping }: ChatHea
       )}
 
       <div className="relative flex-shrink-0">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold',
-            conversation.participantColor,
-          )}
-        >
-          {conversation.participantInitials}
-        </div>
+        <ChatAvatar
+          avatarUrl={conversation.avatarUrl}
+          initials={conversation.participantInitials}
+          color={conversation.participantColor}
+          name={conversation.participantName}
+        />
         {conversation.isActive && (
           <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />
         )}

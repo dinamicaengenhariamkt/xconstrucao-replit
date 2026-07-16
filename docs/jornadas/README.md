@@ -50,6 +50,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | revisão | média |
 | 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
 | 40 | [Ajustes Finos de UX: Nova Obra (Contratante)](40-ajustes-finos-nova-obra-contratante.md) | contratante | 8 | pronto | média |
+| 41 | [XChat Completo](41-xchat-completo.md) | contratante, empreiteiro, admin | 8 | em andamento | alta |
 
 ---
 

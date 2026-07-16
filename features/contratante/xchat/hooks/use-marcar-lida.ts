@@ -16,6 +16,7 @@ export function useContratanteMarcarLida() {
     onSuccess: (data) => {
       if (data.marcadas > 0) {
         void queryClient.invalidateQueries({ queryKey: ['contratante', 'chat', 'conversations'] });
+        void queryClient.invalidateQueries({ queryKey: ['contratante', 'chat', 'unread-count'] });
         void queryClient.invalidateQueries({ queryKey: ['notificacoes'] });
       }
     },

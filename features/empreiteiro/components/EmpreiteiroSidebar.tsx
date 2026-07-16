@@ -23,6 +23,7 @@ import Image from 'next/image';
 import { RiMegaphoneLine } from 'react-icons/ri';
 import { useHasRole } from '@features/auth/store/auth-store';
 import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
+import { useEmpreiteiroUnreadCount } from '@features/empreiteiro/xchat/hooks/use-unread-count';
 import {
   EMPREITEIRO_NAV_ITEMS,
   EMPREITEIRO_BOTTOM_NAV_ITEMS,
@@ -32,6 +33,7 @@ export function EmpreiteiroSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  const { data: unreadCount = 0 } = useEmpreiteiroUnreadCount();
   // J23/D6 — "Meus Anúncios" embutido quando o empreiteiro tem o papel anunciante.
   const isAnunciante = useHasRole('anunciante');
   const navItems = isAnunciante
@@ -84,6 +86,15 @@ export function EmpreiteiroSidebar() {
                     <Link href={item.url}>
                       <item.icon className="w-5 h-5" />
                       <span className="text-sm">{item.title}</span>
+                      {item.url === '/empreiteiro/chat' && unreadCount > 0 && (
+                        <span
+                          className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none"
+                          data-testid="sidebar-unread-badge"
+                          aria-label={`${unreadCount} mensagens não lidas`}
+                        >
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -3,12 +3,84 @@ import { db } from "@shared/db/db";
 import {
   chatMensagens,
   chatThreads,
+  clientes,
+  empreiteiras,
+  obras,
   type ChatMensagem,
   type ChatThread,
 } from "@shared/db/schema";
 import type { ChatCursor } from "./cursor";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export type ResolverParticipantesErro =
+  | "NOT_FOUND"
+  | "SEM_EMPREITEIRA"
+  | "EMPREITEIRO_SEM_USER";
+
+export interface ParticipantesDaObra {
+  obraId: string;
+  clienteId: string | null;
+  empreiteiraId: string;
+  contratanteUserId: string | null;
+  empreiteiroUserId: string;
+}
+
+export type ResolverParticipantesResult =
+  | { ok: true; participantes: ParticipantesDaObra }
+  | { ok: false; erro: ResolverParticipantesErro };
+
+/**
+ * Resolve os participantes (userIds de contratante e empreiteiro) de uma obra
+ * a partir do seu `obraId`, num único JOIN. Fonte de verdade compartilhada
+ * pelas rotas `garantir-thread` de ambas as personas (J41 Item 2) — evita
+ * duplicar a resolução de `clientes.userId` / `empreiteiras.userId`.
+ *
+ * O `contratanteUserId` pode vir `null` se o cliente não tiver `userId`
+ * vinculado (caso raro/legado); a rota decide como tratar. O empreiteiro é
+ * obrigatório: sem `empreiteiraId` retorna `SEM_EMPREITEIRA`; com empreiteira
+ * mas sem `userId`, `EMPREITEIRO_SEM_USER`.
+ */
+export async function resolverParticipantesDaObra(
+  obraId: string,
+): Promise<ResolverParticipantesResult> {
+  const [row] = await db
+    .select({
+      obraId: obras.id,
+      clienteId: obras.clienteId,
+      empreiteiraId: obras.empreiteiraId,
+      contratanteUserId: clientes.userId,
+      empreiteiroUserId: empreiteiras.userId,
+    })
+    .from(obras)
+    .leftJoin(clientes, eq(clientes.id, obras.clienteId))
+    .leftJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+    .where(eq(obras.id, obraId))
+    .limit(1);
+
+  if (!row) {
+    return { ok: false, erro: "NOT_FOUND" };
+  }
+
+  if (!row.empreiteiraId) {
+    return { ok: false, erro: "SEM_EMPREITEIRA" };
+  }
+
+  if (!row.empreiteiroUserId) {
+    return { ok: false, erro: "EMPREITEIRO_SEM_USER" };
+  }
+
+  return {
+    ok: true,
+    participantes: {
+      obraId: row.obraId,
+      clienteId: row.clienteId,
+      empreiteiraId: row.empreiteiraId,
+      contratanteUserId: row.contratanteUserId,
+      empreiteiroUserId: row.empreiteiroUserId,
+    },
+  };
+}
 
 export interface GarantirChatThreadArgs {
   obraId: string;
@@ -62,6 +134,7 @@ export interface ConversaRow {
   empreiteiroUserId: string;
   counterpartUserId: string;
   counterpartName: string | null;
+  counterpartAvatarUrl: string | null;
   ultimaMensagemEm: Date;
   ultimaMensagemTexto: string | null;
   ultimaMensagemCriadaEm: Date | null;
@@ -78,6 +151,7 @@ export async function listarConversasPorUsuario(userId: string): Promise<Convers
     empreiteiro_user_id: string;
     counterpart_user_id: string;
     counterpart_name: string | null;
+    counterpart_avatar_url: string | null;
     ultima_mensagem_em: Date;
     ultima_mensagem_texto: string | null;
     ultima_mensagem_criada_em: Date | null;
@@ -92,6 +166,9 @@ export async function listarConversasPorUsuario(userId: string): Promise<Convers
       t.empreiteiro_user_id,
       CASE WHEN t.contratante_user_id = ${userId} THEN t.empreiteiro_user_id ELSE t.contratante_user_id END AS counterpart_user_id,
       cu.name AS counterpart_name,
+      -- Avatar do counterpart com fallback: image do user → avatar do perfil de
+      -- domínio (cliente/empreiteira) → avatar_url do user → arquivo público. (J41)
+      COALESCE(cu.image, cli.avatar_url, emp.avatar_url, cu.avatar_url, uf.public_url) AS counterpart_avatar_url,
       t.ultima_mensagem_em,
       lm.texto AS ultima_mensagem_texto,
       lm.criada_em AS ultima_mensagem_criada_em,
@@ -99,6 +176,9 @@ export async function listarConversasPorUsuario(userId: string): Promise<Convers
     FROM chat_threads t
     INNER JOIN obras o ON o.id = t.obra_id
     LEFT JOIN users cu ON cu.id = CASE WHEN t.contratante_user_id = ${userId} THEN t.empreiteiro_user_id ELSE t.contratante_user_id END
+    LEFT JOIN clientes cli ON cli.user_id = cu.id
+    LEFT JOIN empreiteiras emp ON emp.user_id = cu.id
+    LEFT JOIN user_files uf ON uf.id = cu.avatar_file_id
     LEFT JOIN LATERAL (
       SELECT m.texto, m.criada_em
       FROM chat_mensagens m
@@ -126,6 +206,7 @@ export async function listarConversasPorUsuario(userId: string): Promise<Convers
     empreiteiroUserId: row.empreiteiro_user_id,
     counterpartUserId: row.counterpart_user_id,
     counterpartName: row.counterpart_name,
+    counterpartAvatarUrl: row.counterpart_avatar_url,
     ultimaMensagemEm: row.ultima_mensagem_em,
     ultimaMensagemTexto: row.ultima_mensagem_texto,
     ultimaMensagemCriadaEm: row.ultima_mensagem_criada_em,
@@ -138,6 +219,7 @@ export interface MensagemRow {
   threadId: string;
   autorUserId: string;
   autorName: string | null;
+  autorAvatarUrl: string | null;
   texto: string;
   anexoObraId: string | null;
   anexoObraNome: string | null;
@@ -188,6 +270,7 @@ export async function listarMensagensDaThread(
     thread_id: string;
     autor_user_id: string;
     autor_name: string | null;
+    autor_avatar_url: string | null;
     texto: string;
     anexo_obra_id: string | null;
     anexo_obra_nome: string | null;
@@ -202,6 +285,8 @@ export async function listarMensagensDaThread(
       m.thread_id,
       m.autor_user_id,
       u.name AS autor_name,
+      -- Avatar do autor com o mesmo fallback das conversas. (J41)
+      COALESCE(u.image, cli.avatar_url, emp.avatar_url, u.avatar_url, uf.public_url) AS autor_avatar_url,
       m.texto,
       m.anexo_obra_id,
       ao.nome AS anexo_obra_nome,
@@ -212,6 +297,9 @@ export async function listarMensagensDaThread(
       m.criada_em
     FROM chat_mensagens m
     LEFT JOIN users u ON u.id = m.autor_user_id
+    LEFT JOIN clientes cli ON cli.user_id = u.id
+    LEFT JOIN empreiteiras emp ON emp.user_id = u.id
+    LEFT JOIN user_files uf ON uf.id = u.avatar_file_id
     LEFT JOIN obras ao ON ao.id = m.anexo_obra_id
     WHERE m.thread_id = ${threadId}
     ${beforeFilter}
@@ -240,6 +328,7 @@ export async function listarMensagensDaThread(
       threadId: row.thread_id,
       autorUserId: row.autor_user_id,
       autorName: row.autor_name,
+      autorAvatarUrl: row.autor_avatar_url,
       texto: row.texto,
       anexoObraId: row.anexo_obra_id,
       anexoObraNome: row.anexo_obra_nome,
@@ -343,4 +432,28 @@ export async function marcarThreadComoLida(userId: string, threadId: string): Pr
     )
     .returning({ id: chatMensagens.id });
   return result.length;
+}
+
+/**
+ * Conta o total de mensagens não-lidas do usuário agregando todas as suas
+ * threads (mensagens do outro autor com `lida_em IS NULL`). Fonte de verdade
+ * do badge global na sidebar (J41 Item 8). Query barata: um JOIN + COUNT,
+ * coberta pelo índice `(thread_id, lida_em, autor_user_id)`.
+ */
+export async function contarNaoLidasTotais(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`COUNT(*)::int` })
+    .from(chatMensagens)
+    .innerJoin(chatThreads, eq(chatThreads.id, chatMensagens.threadId))
+    .where(
+      and(
+        or(
+          eq(chatThreads.contratanteUserId, userId),
+          eq(chatThreads.empreiteiroUserId, userId),
+        ),
+        ne(chatMensagens.autorUserId, userId),
+        isNull(chatMensagens.lidaEm),
+      ),
+    );
+  return row?.total ?? 0;
 }

@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
-import { useChatStore } from '@features/empreiteiro/xchat/store/chat-store';
 import type { ObraDetalhe } from '../types';
 import type { ComponentType } from 'react';
 import { IconHome, IconSquareFoot, IconWorkspacePremium, IconDescription, IconCalendarMonth, IconSchedule, IconPayments, IconVerified, IconAnalytics, IconExpandMore, IconInfo, IconDownload, IconCheckCircle, IconMail, IconChat, IconMap, IconLock, IconLocationOn, IconOpenInNew, IconTrendingUp, IconWarning, IconConstruction, IconPictureAsPdf, IconTableChart, IconComment, IconFolder, IconChecklist, IconPerson } from '@shared/components/icons';
@@ -57,27 +56,39 @@ function SectionCard({ title, subtitle, Icon, children }: { title: string; subti
 
 export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
   const router = useRouter();
-  const { addEphemeralConversation, sendMessage } = useChatStore();
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatErro, setChatErro] = useState<string | null>(null);
 
-  const handleEnviarMensagem = useCallback(() => {
-    const newConv = {
-      id: `conv-nova-${obra.id}-${Date.now()}`,
-      participantName: obra.contratante.nome,
-      participantInitials: obra.contratante.iniciais,
-      participantColor: obra.contratante.cor,
-      obraNome: obra.titulo,
-      obraId: obra.id,
-      lastMessage: `Olá! Vi a obra "${obra.titulo}" e gostaria de obter mais informações.`,
-      lastMessageTime: 'agora',
-      unreadCount: 0,
-      isActive: true,
-    };
-    addEphemeralConversation(newConv);
-    sendMessage(newConv.id, `Olá! Vi a obra "${obra.titulo}" e gostaria de obter mais informações.`);
-    router.push('/empreiteiro/chat');
-  }, [obra, addEphemeralConversation, sendMessage, router]);
-
+  // Obra do marketplace: o chat 1:1 só existe após o vínculo firmado (aceite J05).
+  // Enquanto o empreiteiro não é a empreiteira contratada desta obra, não há thread
+  // (o mesmo estado que trava o endereço completo).
   const addressLocked = !['aprovado', 'em_execucao'].includes(obra.applicationStatus ?? '');
+
+  const handleEnviarMensagem = useCallback(async () => {
+    if (addressLocked) {
+      setChatErro('Chat disponível após a empreiteira ser contratada para esta obra.');
+      return;
+    }
+    setChatLoading(true);
+    setChatErro(null);
+    try {
+      const res = await fetch('/api/empreiteiro/chat/garantir-thread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ obraId: obra.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any)?.message ?? 'Erro ao abrir conversa.');
+      }
+      const { threadId } = (await res.json()) as { threadId: string };
+      router.push(`/empreiteiro/chat?thread=${threadId}`);
+    } catch (err: any) {
+      setChatErro(err?.message ?? 'Não foi possível abrir o chat. Tente novamente.');
+    } finally {
+      setChatLoading(false);
+    }
+  }, [obra.id, addressLocked, router]);
 
   const acabamento = obra.complexidade === 'alta' ? 'Alto Padrão' : obra.complexidade === 'media' ? 'Médio Padrão' : 'Padrão';
 
@@ -341,13 +352,24 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
 
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <button
+              data-testid="btn-enviar-mensagem"
               onClick={handleEnviarMensagem}
-              className="px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary/90 transition-colors"
+              disabled={chatLoading || addressLocked}
+              title={addressLocked ? 'Chat disponível após a contratação' : undefined}
+              className="px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <IconChat />
-              Enviar Mensagem
+              {chatLoading ? 'Abrindo…' : 'Enviar Mensagem'}
             </button>
             <span className="text-[10px] text-gray-400 font-medium">via xchat</span>
+            {addressLocked && (
+              <p className="text-[11px] text-gray-400 mt-1 text-center max-w-[180px]">
+                Chat disponível após a contratação
+              </p>
+            )}
+            {chatErro && !addressLocked && (
+              <p className="text-[11px] text-red-500 mt-1 text-center max-w-[180px]">{chatErro}</p>
+            )}
           </div>
         </div>
       </SectionCard>

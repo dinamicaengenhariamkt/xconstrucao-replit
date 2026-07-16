@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, obras } from "@shared/db/schema";
+import { clientes } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { garantirChatThread } from "@features/chat/service";
+import { garantirChatThread, resolverParticipantesDaObra } from "@features/chat/service";
 
 const bodySchema = z.object({
   obraId: z.string().min(1),
@@ -46,30 +46,32 @@ export async function POST(request: NextRequest) {
 
   const { obraId } = parsed.data;
 
-  const [obra] = await db
-    .select({
-      id: obras.id,
-      clienteId: obras.clienteId,
-      empreiteiraId: obras.empreiteiraId,
-    })
-    .from(obras)
-    .where(eq(obras.id, obraId))
-    .limit(1);
+  const resolved = await resolverParticipantesDaObra(obraId);
 
-  if (!obra) {
-    const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-    setNoCacheHeaders(r);
-    return r;
-  }
-
-  if (!obra.empreiteiraId) {
+  if (!resolved.ok) {
+    if (resolved.erro === "NOT_FOUND") {
+      const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    if (resolved.erro === "SEM_EMPREITEIRA") {
+      const r = NextResponse.json(
+        { error: "SEM_EMPREITEIRA", message: "Esta obra ainda não tem empreiteira contratada." },
+        { status: 422 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
+    // EMPREITEIRO_SEM_USER
     const r = NextResponse.json(
-      { error: "SEM_EMPREITEIRA", message: "Esta obra ainda não tem empreiteira contratada." },
+      { error: "EMPREITEIRO_SEM_USER", message: "Empreiteira não possui usuário vinculado." },
       { status: 422 },
     );
     setNoCacheHeaders(r);
     return r;
   }
+
+  const { participantes } = resolved;
 
   // Verificar ownership para contratante (admin pula).
   if (!isAdminLike(guard.user.role)) {
@@ -79,44 +81,24 @@ export async function POST(request: NextRequest) {
       .where(eq(clientes.userId, guard.user.id))
       .limit(1);
 
-    if (!cli || obra.clienteId !== cli.id) {
+    if (!cli || participantes.clienteId !== cli.id) {
       const r = NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
       setNoCacheHeaders(r);
       return r;
     }
   }
 
-  // Resolver userId da empreiteira.
-  const [emp] = await db
-    .select({ userId: empreiteiras.userId })
-    .from(empreiteiras)
-    .where(eq(empreiteiras.id, obra.empreiteiraId))
-    .limit(1);
-
-  if (!emp?.userId) {
-    const r = NextResponse.json(
-      { error: "EMPREITEIRO_SEM_USER", message: "Empreiteira não possui usuário vinculado." },
-      { status: 422 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
-
-  // Resolver userId do contratante.
-  let contratanteUserId = guard.user.id;
-  if (isAdminLike(guard.user.role) && obra.clienteId) {
-    const [cli] = await db
-      .select({ userId: clientes.userId })
-      .from(clientes)
-      .where(eq(clientes.id, obra.clienteId))
-      .limit(1);
-    if (cli?.userId) contratanteUserId = cli.userId;
-  }
+  // Contratante da thread: para o próprio contratante é ele mesmo; para admin,
+  // o dono da obra (resolvido pelo helper). Fallback para o user logado se o
+  // cliente não tiver userId vinculado (caso legado).
+  const contratanteUserId = isAdminLike(guard.user.role)
+    ? (participantes.contratanteUserId ?? guard.user.id)
+    : guard.user.id;
 
   const { threadId } = await garantirChatThread({
     obraId,
     contratanteUserId,
-    empreiteiroUserId: emp.userId,
+    empreiteiroUserId: participantes.empreiteiroUserId,
   });
 
   const r = NextResponse.json({ threadId });

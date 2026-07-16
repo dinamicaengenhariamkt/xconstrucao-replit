@@ -3,6 +3,7 @@
 import { cn } from '@shared/lib/utils';
 import type { ConversationListProps } from '../types';
 import { IconSearch } from '@shared/components/icons';
+import { ChatAvatar } from './ChatAvatar';
 
 export function ConversationList({
   conversations,
@@ -93,14 +94,12 @@ export function ConversationList({
               data-testid={`conversation-${conv.id}`}
             >
               <div className="relative flex-shrink-0">
-                <div
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold',
-                    conv.participantColor,
-                  )}
-                >
-                  {conv.participantInitials}
-                </div>
+                <ChatAvatar
+                  avatarUrl={conv.avatarUrl}
+                  initials={conv.participantInitials}
+                  color={conv.participantColor}
+                  name={conv.participantName}
+                />
                 {conv.isActive && (
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-gray-900" />
                 )}

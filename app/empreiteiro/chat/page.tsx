@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ConversationList } from '@features/empreiteiro/xchat/components/ConversationList';
 import { ChatHeader } from '@features/empreiteiro/xchat/components/ChatHeader';
 import { MessageArea } from '@features/empreiteiro/xchat/components/MessageArea';
@@ -15,6 +16,7 @@ import type { MessageAttachment } from '@features/empreiteiro/xchat/types';
 import { cn } from '@shared/lib/utils';
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
   const { data: conversations, isLoading: convLoading } = useConversations();
   const { data: obras } = useMinhasObras();
   const {
@@ -27,6 +29,19 @@ export default function ChatPage() {
   const { data: serverMessages, isLoading: msgLoading } = useMessages(selectedConversationId);
   const sendMutation = useEmpreiteiroSendMessage();
   const marcarLidaMutation = useEmpreiteiroMarcarLida();
+
+  // Auto-select the thread from ?thread= URL param once conversations load.
+  // Espelha o comportamento do contratante (app/contratante/chat/page.tsx).
+  const threadParam = searchParams.get('thread');
+  const didAutoSelectRef = useRef(false);
+  useEffect(() => {
+    if (!threadParam || convLoading || didAutoSelectRef.current) return;
+    const found = conversations?.find((c) => c.id === threadParam);
+    if (found) {
+      didAutoSelectRef.current = true;
+      setSelectedConversation(threadParam);
+    }
+  }, [threadParam, conversations, convLoading, setSelectedConversation]);
 
   const selectedConversation =
     conversations?.find((c) => c.id === selectedConversationId) ?? null;

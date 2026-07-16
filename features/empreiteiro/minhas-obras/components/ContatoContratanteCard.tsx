@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@shared/lib/utils';
-import { useChatStore } from '@features/empreiteiro/xchat/store/chat-store';
 import { IconPerson, IconMail, IconChat } from '@shared/components/icons';
 
 interface ContatoContratanteCardProps {
@@ -19,25 +18,30 @@ interface ContatoContratanteCardProps {
 
 export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: ContatoContratanteCardProps) {
   const router = useRouter();
-  const { addEphemeralConversation, sendMessage } = useChatStore();
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  const handleEnviarMensagem = useCallback(() => {
-    const newConv = {
-      id: `conv-obra-${obraId}-${Date.now()}`,
-      participantName: contratante.nome,
-      participantInitials: contratante.iniciais,
-      participantColor: contratante.cor,
-      obraNome: obraTitulo,
-      obraId,
-      lastMessage: `Olá! Tenho uma dúvida sobre a obra "${obraTitulo}".`,
-      lastMessageTime: 'agora',
-      unreadCount: 0,
-      isActive: true,
-    };
-    addEphemeralConversation(newConv);
-    sendMessage(newConv.id, `Olá! Tenho uma dúvida sobre a obra "${obraTitulo}".`);
-    router.push('/empreiteiro/chat');
-  }, [contratante, obraId, obraTitulo, addEphemeralConversation, sendMessage, router]);
+  const handleEnviarMensagem = useCallback(async () => {
+    setLoading(true);
+    setErro(null);
+    try {
+      const res = await fetch('/api/empreiteiro/chat/garantir-thread', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ obraId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any)?.message ?? 'Erro ao abrir conversa.');
+      }
+      const { threadId } = (await res.json()) as { threadId: string };
+      router.push(`/empreiteiro/chat?thread=${threadId}`);
+    } catch (err: any) {
+      setErro(err?.message ?? 'Não foi possível abrir o chat. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, [obraId, router]);
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -77,13 +81,18 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
 
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <button
+              data-testid="btn-enviar-mensagem"
               onClick={handleEnviarMensagem}
-              className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors cursor-pointer"
+              disabled={loading}
+              className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <IconChat />
-              Enviar Mensagem
+              {loading ? 'Abrindo…' : 'Enviar Mensagem'}
             </button>
             <span className="text-[10px] text-gray-400 font-medium">via xchat</span>
+            {erro && (
+              <p className="text-[11px] text-red-500 mt-1 text-center max-w-[160px]">{erro}</p>
+            )}
           </div>
         </div>
       </div>

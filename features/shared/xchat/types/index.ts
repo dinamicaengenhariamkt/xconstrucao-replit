@@ -16,6 +16,8 @@ export interface Conversation {
   participantName: string;
   participantInitials: string;
   participantColor: string;
+  /** Foto real da contraparte; quando ausente, usa iniciais+cor como fallback. */
+  avatarUrl?: string;
   obraNome: string;
   obraId?: string;
   lastMessage: string;
@@ -28,6 +30,8 @@ export interface Message {
   id: string;
   senderId: string;
   senderName: string;
+  /** Foto real do autor; quando ausente, usa iniciais como fallback. */
+  senderAvatarUrl?: string;
   content: string;
   timestamp: string;
   isOwn: boolean;

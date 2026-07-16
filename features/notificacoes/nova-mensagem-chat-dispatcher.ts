@@ -66,7 +66,9 @@ export async function notificarNovaMensagem(args: NotificarNovaMensagemArgs): Pr
       return;
     }
 
-    const href = `${basePath}?conversationId=${args.threadId}`;
+    // Padronizado em `?thread=` — contrato consumido pelas páginas de chat
+    // (contratante e empreiteiro). Ver J41 Item 1.
+    const href = `${basePath}?thread=${args.threadId}`;
 
     // Coalescing por thread_id (mais robusto que href, que pode ganhar query params no futuro).
     const cutoff = new Date(Date.now() - COALESCING_WINDOW_MINUTES * 60 * 1000);

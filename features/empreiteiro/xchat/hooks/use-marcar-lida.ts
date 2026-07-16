@@ -16,6 +16,7 @@ export function useEmpreiteiroMarcarLida() {
     onSuccess: (data) => {
       if (data.marcadas > 0) {
         void queryClient.invalidateQueries({ queryKey: ['empreiteiro', 'chat', 'conversations'] });
+        void queryClient.invalidateQueries({ queryKey: ['empreiteiro', 'chat', 'unread-count'] });
         void queryClient.invalidateQueries({ queryKey: ['notificacoes'] });
       }
     },
