@@ -86,9 +86,9 @@ export async function POST(
   const ext = dotIdx > 0 ? filename.slice(dotIdx + 1).toLowerCase() : "";
   const name = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
   const slug = slugify(name);
-  const ts = timestampStamp();
   const safeExt = ext ? `.${slugify(ext)}` : "";
-  const key = `public/chat/${threadId}/${ts}-${slug}${safeExt}`;
+  const uuid = crypto.randomUUID();
+  const key = `public/chat/${threadId}/${uuid}/${slug}${safeExt}`;
 
   try {
     const uploadUrl = await createSignedUploadUrl({ key, mime });

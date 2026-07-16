@@ -19,6 +19,7 @@ interface PendingFile {
   nome: string;
   mime: string;
   progress: number;
+  previewUrl?: string;
 }
 
 function formatBytes(bytes: number): string {
@@ -61,7 +62,10 @@ export function ChatInput({ onSend, disabled, obras = [], threadId }: ChatInputP
     onSend(message.trim(), attachment);
     setMessage('');
     setPendingAttachment(null);
-    setPendingFile(null);
+    setPendingFile((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+      return null;
+    });
     setUploadError(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -92,8 +96,9 @@ export function ChatInput({ onSend, disabled, obras = [], threadId }: ChatInputP
       return;
     }
 
+    const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
     setIsUploading(true);
-    setPendingFile({ publicUrl: '', nome: file.name, mime: file.type, progress: 0 });
+    setPendingFile({ publicUrl: '', nome: file.name, mime: file.type, progress: 0, previewUrl });
 
     try {
       const presignRes = await fetch(`/api/chat/${threadId}/upload/presign`, {
@@ -126,11 +131,14 @@ export function ChatInput({ onSend, disabled, obras = [], threadId }: ChatInputP
         xhr.send(file);
       });
 
-      setPendingFile({ publicUrl, nome: file.name, mime: file.type, progress: 100 });
+      setPendingFile((prev) => ({ publicUrl, nome: file.name, mime: file.type, progress: 100, previewUrl: prev?.previewUrl }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Falha no upload';
       setUploadError(msg);
-      setPendingFile(null);
+      setPendingFile((prev) => {
+        if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+        return null;
+      });
     } finally {
       setIsUploading(false);
     }
@@ -160,7 +168,16 @@ export function ChatInput({ onSend, disabled, obras = [], threadId }: ChatInputP
 
       {(pendingFile !== null || isUploading) && (
         <div className="mx-4 mt-3 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-2">
-          <span className="text-base leading-none flex-shrink-0">{pendingFile ? fileIcon(pendingFile.mime) : '📎'}</span>
+          {pendingFile?.previewUrl ? (
+            <img
+              src={pendingFile.previewUrl}
+              alt={pendingFile.nome}
+              className="w-10 h-10 object-cover rounded-md flex-shrink-0"
+              data-testid="pending-file-thumbnail"
+            />
+          ) : (
+            <span className="text-base leading-none flex-shrink-0">{pendingFile ? fileIcon(pendingFile.mime) : '📎'}</span>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">
               {pendingFile?.nome ?? 'Enviando…'}
@@ -179,7 +196,13 @@ export function ChatInput({ onSend, disabled, obras = [], threadId }: ChatInputP
           </div>
           {!isUploading && (
             <button
-              onClick={() => { setPendingFile(null); setUploadError(null); }}
+              onClick={() => {
+                setPendingFile((prev) => {
+                  if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+                  return null;
+                });
+                setUploadError(null);
+              }}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
               aria-label="Remover arquivo"
             >
