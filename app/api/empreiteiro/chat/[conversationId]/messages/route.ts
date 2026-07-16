@@ -10,6 +10,7 @@ import {
 import { toMessageDTO } from "@features/chat/dto";
 import { clampLimit, decodeCursor, encodeCursor } from "@features/chat/cursor";
 import { notificarNovaMensagem } from "@features/notificacoes/nova-mensagem-chat-dispatcher";
+import { validateChatAttachment } from "@features/chat/attachment-validation";
 
 const enviarSchema = z
   .object({
@@ -98,15 +99,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ conver
     return r;
   }
 
-  // Anti-tamper: arquivoUrl deve estar no path public/chat/{threadId}/ do R2
-  if (parsed.data.arquivoUrl) {
-    const allowed = `public/chat/${conversationId}/`;
-    const urlObj = new URL(parsed.data.arquivoUrl);
-    if (!urlObj.pathname.includes(allowed)) {
-      const r = NextResponse.json({ error: "ARQUIVO_URL_INVALID" }, { status: 400 });
-      setNoCacheHeaders(r);
-      return r;
-    }
+  // Anti-tamper: valida host R2, path prefix estrito e MIME allowlist
+  const attachmentCheck = validateChatAttachment(parsed.data, conversationId);
+  if (!attachmentCheck.ok) {
+    const r = NextResponse.json({ error: "ARQUIVO_URL_INVALID", message: attachmentCheck.reason }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
   }
 
   try {
