@@ -35,6 +35,7 @@ async function postMensagem(args: SendArgs): Promise<SendResponse> {
 export function useContratanteSendMessage() {
   const queryClient = useQueryClient();
   const sendOptimistic = useContratanteChatStore((s) => s.sendMessage);
+  const confirmLocalMessage = useContratanteChatStore((s) => s.confirmLocalMessage);
   const clearLocalMessage = useContratanteChatStore((s) => s.clearLocalMessage);
 
   return useMutation({
@@ -43,9 +44,11 @@ export function useContratanteSendMessage() {
       const localId = sendOptimistic(conversationId, content, attachment);
       return { localId };
     },
-    onSuccess: async (_data, { conversationId }, context) => {
-      if (context?.localId) clearLocalMessage(conversationId, context.localId);
-      await queryClient.invalidateQueries({
+    onSuccess: (data, { conversationId }, context) => {
+      // Não remove a otimista: confirma com o id real. O merge por serverId
+      // a descarta quando o refetch trouxer a versão do servidor (sem flicker).
+      if (context?.localId) confirmLocalMessage(conversationId, context.localId, data.id);
+      void queryClient.invalidateQueries({
         queryKey: ['contratante', 'chat', 'messages', conversationId],
       });
       void queryClient.invalidateQueries({ queryKey: ['contratante', 'chat', 'conversations'] });

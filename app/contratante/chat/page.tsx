@@ -14,6 +14,7 @@ import {
 import { useContratanteSendMessage } from '@features/contratante/xchat/hooks/use-send-message';
 import { useContratanteMarcarLida } from '@features/contratante/xchat/hooks/use-marcar-lida';
 import { useContratanteChatStore } from '@features/contratante/xchat/store/chat-store';
+import { sortMessagesCanonical } from '@features/shared/xchat/lib/sort-messages';
 import { useObrasContratante } from '@features/contratante/minhas-obras/hooks/use-minhas-obras';
 import type {
   ContratanteMessageAttachment,
@@ -101,11 +102,20 @@ export default function ContratanteChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversationId, isServerConversation]);
 
-  // Merge server messages with locally sent messages
+  // Merge server messages with locally sent messages.
+  // 1) Dedupe por serverId: quando a versão do servidor da otimista já chegou,
+  //    descarta a local (evita duplicata e faz a otimista sumir sem "gap").
+  // 2) Sort canônico por `seq` (fonte de verdade da ordem); otimistas sem seq
+  //    ficam no fim até o refetch — ordem cronológica estável, nada pula.
   const allMessages = useMemo(() => {
     const server = serverMessages ?? [];
-    const local = selectedConversationId ? (localMessages[selectedConversationId] ?? []) : [];
-    return [...server, ...local];
+    const serverIds = new Set(server.map((m) => m.id));
+    const local = selectedConversationId
+      ? (localMessages[selectedConversationId] ?? []).filter(
+          (m) => !(m.serverId && serverIds.has(m.serverId)),
+        )
+      : [];
+    return sortMessagesCanonical([...server, ...local]);
   }, [serverMessages, localMessages, selectedConversationId]);
 
   const obras: ContratanteObraPickerItem[] = useMemo(

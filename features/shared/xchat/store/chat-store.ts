@@ -21,7 +21,14 @@ interface ChatStore {
   setFilterTab: (tab: 'all' | 'unread') => void;
   /** Adiciona uma mensagem optimista e retorna o localId gerado. */
   sendMessage: (conversationId: string, content: string, attachment?: MessageAttachment) => string;
-  /** Remove apenas a mensagem com o localId especificado (evita race condition ao enviar em sequência). */
+  /**
+   * Confirma uma mensagem otimista com o id real do backend (não a remove).
+   * A otimista permanece visível até o refetch trazer a versão do servidor,
+   * quando o merge por `serverId` a descarta sem flicker. Isso evita o race
+   * em que remover a otimista no sucesso a fazia sumir até o refetch chegar.
+   */
+  confirmLocalMessage: (conversationId: string, localId: string, serverId: string) => void;
+  /** Remove apenas a mensagem com o localId especificado (rollback no erro). */
   clearLocalMessage: (conversationId: string, localId: string) => void;
   /** Remove todas as mensagens locais da conversa (mantido para compatibilidade). */
   clearLocalMessages: (conversationId: string) => void;
@@ -98,6 +105,17 @@ export function createChatStore() {
 
         return localId;
       },
+
+      confirmLocalMessage: (conversationId, localId, serverId) =>
+        set((state) => {
+          const msgs = state.localMessages[conversationId];
+          if (!msgs) return state;
+          const idx = msgs.findIndex((m) => m.id === localId);
+          if (idx === -1) return state;
+          const updated = [...msgs];
+          updated[idx] = { ...updated[idx], serverId, status: 'delivered' };
+          return { localMessages: { ...state.localMessages, [conversationId]: updated } };
+        }),
 
       /** Remove apenas a mensagem com o localId especificado. */
       clearLocalMessage: (conversationId, localId) =>

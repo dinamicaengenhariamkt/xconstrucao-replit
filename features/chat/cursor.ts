@@ -1,21 +1,20 @@
 /**
  * Cursor keyset (seek) para paginação de mensagens de chat (J13 — Camada A).
  *
- * O cursor aponta para a mensagem mais antiga já carregada: o par
- * `(criada_em, id)`. O `id` é tiebreaker para timestamps iguais, garantindo
- * paginação estável (sem pular/repetir mensagens no mesmo instante).
+ * O cursor aponta para a mensagem mais antiga já carregada, via `seq` — a
+ * sequência monotônica de chegada de `chat_mensagens` (J41 #149). `seq` é
+ * único e crescente, então dá paginação estável sem pular/repetir mensagens
+ * (substitui o antigo par `(criada_em, id)`, que desempatava por UUID aleatório).
  *
- * Formato opaco para o client: base64("<criada_em_iso>|<id>").
+ * Formato opaco para o client: base64("<seq>").
  */
 
 export interface ChatCursor {
-  criadaEm: Date;
-  id: string;
+  seq: number;
 }
 
 export function encodeCursor(cursor: ChatCursor): string {
-  const raw = `${cursor.criadaEm.toISOString()}|${cursor.id}`;
-  return Buffer.from(raw, "utf8").toString("base64");
+  return Buffer.from(String(cursor.seq), "utf8").toString("base64");
 }
 
 /**
@@ -25,15 +24,11 @@ export function encodeCursor(cursor: ChatCursor): string {
 export function decodeCursor(value: string | null | undefined): ChatCursor | null {
   if (!value) return null;
   try {
-    const raw = Buffer.from(value, "base64").toString("utf8");
-    const sep = raw.indexOf("|");
-    if (sep <= 0) return null;
-    const iso = raw.slice(0, sep);
-    const id = raw.slice(sep + 1);
-    if (!id) return null;
-    const criadaEm = new Date(iso);
-    if (Number.isNaN(criadaEm.getTime())) return null;
-    return { criadaEm, id };
+    const raw = Buffer.from(value, "base64").toString("utf8").trim();
+    if (!raw) return null;
+    const seq = Number(raw);
+    if (!Number.isInteger(seq) || seq < 0) return null;
+    return { seq };
   } catch {
     return null;
   }

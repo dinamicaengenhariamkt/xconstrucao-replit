@@ -35,6 +35,7 @@ async function postMensagem(args: SendArgs): Promise<SendResponse> {
 export function useEmpreiteiroSendMessage() {
   const queryClient = useQueryClient();
   const sendOptimistic = useChatStore((s) => s.sendMessage);
+  const confirmLocalMessage = useChatStore((s) => s.confirmLocalMessage);
   const clearLocalMessage = useChatStore((s) => s.clearLocalMessage);
 
   return useMutation({
@@ -43,9 +44,11 @@ export function useEmpreiteiroSendMessage() {
       const localId = sendOptimistic(conversationId, content, attachment);
       return { localId };
     },
-    onSuccess: async (_data, { conversationId }, context) => {
-      if (context?.localId) clearLocalMessage(conversationId, context.localId);
-      await queryClient.invalidateQueries({
+    onSuccess: (data, { conversationId }, context) => {
+      // Não remove a otimista: confirma com o id real. O merge por serverId
+      // a descarta quando o refetch trouxer a versão do servidor (sem flicker).
+      if (context?.localId) confirmLocalMessage(conversationId, context.localId, data.id);
+      void queryClient.invalidateQueries({
         queryKey: ['empreiteiro', 'chat', 'messages', conversationId],
       });
       void queryClient.invalidateQueries({ queryKey: ['empreiteiro', 'chat', 'conversations'] });

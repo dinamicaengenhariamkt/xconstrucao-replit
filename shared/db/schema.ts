@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, bigint, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -409,6 +409,8 @@ export const chatMensagens = pgTable("chat_mensagens", {
   arquivoUrl: text("arquivo_url"),
   arquivoNome: text("arquivo_nome"),
   arquivoMime: text("arquivo_mime"),
+  // Sequência monotônica de chegada (J41 #149) — fonte de verdade da ordem.
+  seq: bigint("seq", { mode: "number" }).generatedAlwaysAsIdentity(),
 });
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;
