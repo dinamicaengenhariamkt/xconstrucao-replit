@@ -25,6 +25,7 @@ export async function criarNotificacao(args: CriarNotificacaoArgs): Promise<Noti
         href: args.href ?? null,
         threadId: args.threadId ?? null,
       })
+      .onConflictDoNothing()
       .returning();
     return row ?? null;
   } catch (err) {

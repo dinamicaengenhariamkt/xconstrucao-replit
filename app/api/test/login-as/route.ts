@@ -154,6 +154,19 @@ export async function POST(request: NextRequest) {
       emailVerified: user.emailVerified,
     },
   });
-  createAuthCookies(response, accessToken, refreshToken, false);
+  response.cookies.set("access_token", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 15 * 60,
+  });
+  response.cookies.set("refresh_token", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
   return response;
 }
