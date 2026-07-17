@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { ConversationList } from '@features/empreiteiro/xchat/components/ConversationList';
 import { ChatHeader } from '@features/empreiteiro/xchat/components/ChatHeader';
 import { MessageArea } from '@features/empreiteiro/xchat/components/MessageArea';
@@ -17,6 +17,8 @@ import type { MessageAttachment } from '@features/empreiteiro/xchat/types';
 import { cn } from '@shared/lib/utils';
 
 export default function ChatPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: conversations, isLoading: convLoading } = useConversations();
   const { data: obras } = useMinhasObras();
@@ -43,6 +45,24 @@ export default function ChatPage() {
       setSelectedConversation(threadParam);
     }
   }, [threadParam, conversations, convLoading, setSelectedConversation]);
+
+  // Sync selected conversation → URL so F5 restores the open thread.
+  useEffect(() => {
+    if (!selectedConversationId) return;
+    router.replace(`${pathname}?thread=${selectedConversationId}`, { scroll: false });
+  }, [selectedConversationId, router, pathname]);
+
+  // Auto-select the most recent conversation on desktop when nothing is selected
+  // and there is no ?thread= param (first visit / after logout).
+  const didAutoSelectFirstRef = useRef(false);
+  useEffect(() => {
+    if (threadParam || didAutoSelectFirstRef.current) return;
+    if (!conversations || conversations.length === 0 || convLoading) return;
+    if (selectedConversationId) return;
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return;
+    didAutoSelectFirstRef.current = true;
+    setSelectedConversation(conversations[0].id);
+  }, [conversations, convLoading, selectedConversationId, threadParam, setSelectedConversation]);
 
   const selectedConversation =
     conversations?.find((c) => c.id === selectedConversationId) ?? null;
@@ -171,7 +191,10 @@ export default function ChatPage() {
               <ChatHeader
                 conversation={selectedConversation}
                 isTyping={isTyping}
-                onBack={() => setSelectedConversation(null)}
+                onBack={() => {
+                  setSelectedConversation(null);
+                  router.replace(pathname, { scroll: false });
+                }}
               />
               <MessageArea messages={allMessages} isLoading={msgLoading} isTyping={isTyping} />
               <ChatInput onSend={handleSend} obras={obras ?? []} threadId={selectedConversationId ?? undefined} />
