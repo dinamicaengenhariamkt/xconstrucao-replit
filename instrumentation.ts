@@ -168,6 +168,49 @@ export async function register() {
         startedAt: new Date(backfillStart),
       }).catch(() => {});
     }
+
+    // ----------------------------------------------------------------
+    // Post-bootstrap schema health check
+    // Issues lightweight SELECT probes against critical tables/columns.
+    // The DB itself throws "column does not exist" if any column is absent,
+    // catching mismatches BEFORE the server starts serving requests.
+    // ----------------------------------------------------------------
+    try {
+      const { runSchemaHealthCheck, CRITICAL_PROBES } = await import("./server/lib/schema-health");
+      const failures = await runSchemaHealthCheck(CRITICAL_PROBES);
+      if (failures.length > 0) {
+        const summary = failures
+          .map((f) => `  • ${f.probe.label ?? f.probe.table}: ${f.error.message}`)
+          .join("\n");
+        const message =
+          `[instrumentation] SCHEMA HEALTH CHECK FAILED — ${failures.length} probe(s) detected missing columns.\n` +
+          `This means one or more ALTER TABLE ADD COLUMN operations silently failed.\n` +
+          `Requests that touch these columns will crash with 500 errors.\n\n` +
+          `Failed probes:\n${summary}\n\n` +
+          `Resolution: check Neon Postgres plan limits, ALTER TABLE permissions, and re-deploy.`;
+        console.error(message);
+        await logError("error", "[instrumentation] schema health check failed", {
+          route: "bootstrap.schema-health",
+          meta: { failures: failures.map((f) => ({ table: f.probe.table, label: f.probe.label, error: f.error.message })) },
+        }).catch(() => {});
+        await logJobRun("bootstrap.schema-health", "error", {
+          error: `${failures.length} probe(s) failed`,
+          startedAt: new Date(),
+        }).catch(() => {});
+        // Exit so the platform surfaces the error immediately rather than serving broken requests.
+        process.exit(1);
+      } else {
+        console.info(`[instrumentation] schema health check passed (${CRITICAL_PROBES.length} probes)`);
+        await logJobRun("bootstrap.schema-health", "ok", { startedAt: new Date() }).catch(() => {});
+      }
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error("[instrumentation] schema health check threw unexpectedly:", error.message);
+      await logError("error", "[instrumentation] schema health check threw", {
+        stack: error.stack,
+        route: "bootstrap.schema-health",
+      }).catch(() => {});
+    }
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {

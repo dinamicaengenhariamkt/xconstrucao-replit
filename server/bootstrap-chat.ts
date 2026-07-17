@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
+import { assertColumns } from "./lib/schema-health";
 
 /**
  * Bootstrap idempotente das tabelas de chat (J13).
@@ -50,6 +51,11 @@ export async function bootstrapChatSchema(): Promise<void> {
     await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_url TEXT`);
     await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_nome TEXT`);
     await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_mime TEXT`);
+
+    // Verify the columns actually exist — ADD COLUMN IF NOT EXISTS can silently
+    // fail on Neon Postgres. Throws SchemaHealthError if any are missing so
+    // runBootstrap() in instrumentation.ts catches it and logs the failure loudly.
+    await assertColumns("chat_mensagens", ["arquivo_url", "arquivo_nome", "arquivo_mime"]);
 
     // FK cross-table: notificacoes.thread_id → chat_threads.id (ON DELETE SET NULL).
     // Garante que notificações ficam órfãs nulas quando a thread some (ex: cascade da obra).
