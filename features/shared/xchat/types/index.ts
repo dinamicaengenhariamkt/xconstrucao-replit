@@ -41,12 +41,6 @@ export interface Message {
    * chega com esse mesmo id, a otimista é descartada do merge sem flicker.
    */
   serverId?: string;
-  /**
-   * Sequência monotônica de chegada vinda do backend (J41 #149) — fonte de
-   * verdade da ordem cronológica. Otimistas locais ainda não têm `seq`
-   * (undefined) e são ordenadas depois das mensagens do servidor até o refetch.
-   */
-  seq?: number;
   senderId: string;
   senderName: string;
   /** Foto real do autor; quando ausente, usa iniciais como fallback. */

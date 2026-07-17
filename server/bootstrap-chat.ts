@@ -51,14 +51,6 @@ export async function bootstrapChatSchema(): Promise<void> {
     await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_nome TEXT`);
     await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS arquivo_mime TEXT`);
 
-    // J41 Task #149 — sequência monotônica de chegada (fonte de verdade da ordem).
-    // `id` é UUID aleatório e não reflete ordem de inserção; `criada_em` (timestamp)
-    // pode colidir em envios no mesmo instante. `seq` (identity) dá ordem total,
-    // determinística e estável — usada para ordenar/paginar mensagens em vez do keyset
-    // (criada_em, id) que desempatava por UUID aleatório. Idempotente.
-    await db.execute(sql`ALTER TABLE chat_mensagens ADD COLUMN IF NOT EXISTS seq BIGINT GENERATED ALWAYS AS IDENTITY`);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_chat_mensagens_thread_seq ON chat_mensagens(thread_id, seq)`);
-
     // FK cross-table: notificacoes.thread_id → chat_threads.id (ON DELETE SET NULL).
     // Garante que notificações ficam órfãs nulas quando a thread some (ex: cascade da obra).
     // Adicionada aqui porque bootstrap-notificacoes roda antes — quando criou a coluna,

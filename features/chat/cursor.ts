@@ -1,20 +1,21 @@
 /**
  * Cursor keyset (seek) para paginação de mensagens de chat (J13 — Camada A).
  *
- * O cursor aponta para a mensagem mais antiga já carregada, via `seq` — a
- * sequência monotônica de chegada de `chat_mensagens` (J41 #149). `seq` é
- * único e crescente, então dá paginação estável sem pular/repetir mensagens
- * (substitui o antigo par `(criada_em, id)`, que desempatava por UUID aleatório).
+ * O cursor aponta para a mensagem mais antiga já carregada, identificada pelo
+ * par `(criadaEm, id)`. `criadaEm` é o timestamp de criação (string ISO 8601)
+ * e `id` é o UUID que desempata mensagens criadas no mesmo instante.
+ * Ordenação interna: `criada_em DESC, id DESC` (mais recente primeiro).
  *
- * Formato opaco para o client: base64("<seq>").
+ * Formato opaco para o client: base64(JSON).
  */
 
 export interface ChatCursor {
-  seq: number;
+  criadaEm: string;
+  id: string;
 }
 
 export function encodeCursor(cursor: ChatCursor): string {
-  return Buffer.from(String(cursor.seq), "utf8").toString("base64");
+  return Buffer.from(JSON.stringify({ criadaEm: cursor.criadaEm, id: cursor.id }), "utf8").toString("base64");
 }
 
 /**
@@ -26,9 +27,18 @@ export function decodeCursor(value: string | null | undefined): ChatCursor | nul
   try {
     const raw = Buffer.from(value, "base64").toString("utf8").trim();
     if (!raw) return null;
-    const seq = Number(raw);
-    if (!Number.isInteger(seq) || seq < 0) return null;
-    return { seq };
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).criadaEm !== "string" ||
+      typeof (parsed as Record<string, unknown>).id !== "string"
+    ) {
+      return null;
+    }
+    const { criadaEm, id } = parsed as { criadaEm: string; id: string };
+    if (!criadaEm || !id) return null;
+    return { criadaEm, id };
   } catch {
     return null;
   }

@@ -231,14 +231,12 @@ export interface MensagemRow {
   arquivoUrl: string | null;
   arquivoNome: string | null;
   arquivoMime: string | null;
-  /** Sequência monotônica de chegada — fonte de verdade da ordem (J41 #149). */
-  seq: number;
 }
 
 export interface ListarMensagensOpts {
   /** Tamanho da página (default 50). */
   limit?: number;
-  /** Cursor keyset: traz mensagens ANTERIORES a este cursor (por `seq`). */
+  /** Cursor keyset: traz mensagens ANTERIORES a este cursor (por `criadaEm, id`). */
   before?: ChatCursor | null;
 }
 
@@ -266,7 +264,9 @@ export async function listarMensagensDaThread(
 ): Promise<ListarMensagensResult> {
   const limit = opts.limit ?? 50;
   const before = opts.before ?? null;
-  const beforeFilter = before ? sql`AND m.seq < ${before.seq}` : sql``;
+  const beforeFilter = before
+    ? sql`AND (m.criada_em, m.id) < (${before.criadaEm}::timestamptz, ${before.id})`
+    : sql``;
 
   const result = await db.execute<{
     id: string;
@@ -285,11 +285,9 @@ export async function listarMensagensDaThread(
     arquivo_url: string | null;
     arquivo_nome: string | null;
     arquivo_mime: string | null;
-    seq: number;
   }>(sql`
     SELECT
       m.id,
-      m.seq,
       m.thread_id,
       m.autor_user_id,
       u.name AS autor_name,
@@ -314,7 +312,7 @@ export async function listarMensagensDaThread(
     LEFT JOIN obras ao ON ao.id = m.anexo_obra_id
     WHERE m.thread_id = ${threadId}
     ${beforeFilter}
-    ORDER BY m.seq DESC
+    ORDER BY m.criada_em DESC, m.id DESC
     LIMIT ${limit + 1}
   `);
 
@@ -323,10 +321,15 @@ export async function listarMensagensDaThread(
   const pageDesc = temMaisAntigas ? result.rows.slice(0, limit) : result.rows;
 
   // pageDesc está em DESC (mais recente → mais antiga). O cursor para "mais
-  // antigas" é a última linha desta página (a mais antiga retornada), por `seq`.
+  // antigas" é a última linha desta página (a mais antiga retornada), por (criadaEm, id).
   const maisAntiga = pageDesc[pageDesc.length - 1];
   const nextCursor =
-    temMaisAntigas && maisAntiga ? { seq: Number(maisAntiga.seq) } : null;
+    temMaisAntigas && maisAntiga
+      ? {
+          criadaEm: new Date(maisAntiga.criada_em as unknown as string).toISOString(),
+          id: maisAntiga.id,
+        }
+      : null;
 
   // Inverte para ASC (ordem cronológica esperada pela UI).
   const messages = pageDesc
@@ -334,7 +337,6 @@ export async function listarMensagensDaThread(
     .reverse()
     .map((row) => ({
       id: row.id,
-      seq: Number(row.seq),
       threadId: row.thread_id,
       autorUserId: row.autor_user_id,
       autorName: row.autor_name,

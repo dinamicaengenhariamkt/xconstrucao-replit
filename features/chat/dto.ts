@@ -95,7 +95,6 @@ export function toMessageDTO(row: MensagemRow, viewerUserId: string): Message {
 
   return {
     id: row.id,
-    seq: row.seq,
     senderId: row.autorUserId,
     senderName: row.autorName?.trim() || "Participante",
     ...(row.autorAvatarUrl ? { senderAvatarUrl: row.autorAvatarUrl } : {}),

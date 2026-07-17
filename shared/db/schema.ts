@@ -409,8 +409,6 @@ export const chatMensagens = pgTable("chat_mensagens", {
   arquivoUrl: text("arquivo_url"),
   arquivoNome: text("arquivo_nome"),
   arquivoMime: text("arquivo_mime"),
-  // Sequência monotônica de chegada (J41 #149) — fonte de verdade da ordem.
-  seq: bigint("seq", { mode: "number" }).generatedAlwaysAsIdentity(),
 });
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;
