@@ -17,6 +17,11 @@ export interface CheckoutInput {
   /** URLs de retorno (usadas por gateways com checkout hospedado). */
   successUrl?: string;
   cancelUrl?: string;
+  /** Dados do usuário — necessários para criar/encontrar o customer no gateway. */
+  userEmail?: string;
+  userName?: string;
+  /** CPF ou CNPJ do usuário (opcional; pode ser vazio em sandbox). */
+  userCpfCnpj?: string;
 }
 
 export type CheckoutResult =
@@ -32,6 +37,14 @@ export interface NormalizedWebhookEvent {
   type: "subscription_activated" | "payment_succeeded" | "payment_failed" | "subscription_canceled" | "ignored";
   gatewaySubscriptionId?: string;
   gatewayCustomerId?: string;
+  /**
+   * Referência externa definida no momento do checkout — usado pelo AsaasGateway
+   * para reconectar o evento ao userId/planoId/ciclo quando nenhuma assinatura
+   * pré-existe no banco (primeiro pagamento via redirect).
+   */
+  externalReference?: string;
+  /** Valor pago (em BRL) — usado para criar o lançamento no caixa. */
+  valor?: number;
   raw: Record<string, unknown>;
 }
 

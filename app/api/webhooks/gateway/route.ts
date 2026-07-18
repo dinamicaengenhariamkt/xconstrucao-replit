@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
       eventId: evt.eventId,
       type: evt.type,
       gatewaySubscriptionId: evt.gatewaySubscriptionId,
+      externalReference: evt.externalReference,
+      valor: evt.valor,
     });
     return NextResponse.json({ received: true, processed: result.processed });
   } catch (err) {

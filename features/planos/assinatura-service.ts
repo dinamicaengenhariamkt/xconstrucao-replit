@@ -93,6 +93,14 @@ export async function iniciarCheckout(args: {
   const valor = ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal);
   const gateway = getPaymentGateway();
 
+  // Busca nome/email do usuário para gateways externos (ex: ASAS) que precisam
+  // criar/encontrar um customer. Falha silenciosa: campos opcionais no adapter.
+  const [userRow] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, args.userId))
+    .limit(1);
+
   const result = await gateway.createCheckout({
     userId: args.userId,
     planoId: plano.id,
@@ -100,6 +108,8 @@ export async function iniciarCheckout(args: {
     ciclo,
     valor,
     successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/perfil` : undefined,
+    userEmail: userRow?.email ?? undefined,
+    userName: userRow?.name ?? undefined,
   });
 
   if (result.kind === "redirect") {
@@ -193,11 +203,16 @@ export async function cancelarAssinatura(userId: string): Promise<{ ok: boolean 
  * Aplica um evento de webhook do gateway de forma IDEMPOTENTE. O evento é
  * deduplicado por `gatewayEventId` (índice único). Reprocessar o mesmo evento
  * não duplica lançamento nem reativa em duplicidade.
+ *
+ * Suporta o fluxo redirect (ex: ASAS): na ausência de assinatura pré-existente,
+ * `payment_succeeded` com `externalReference` cria a assinatura e ativa o usuário.
  */
 export async function aplicarEventoWebhook(evt: {
   eventId: string;
   type: string;
   gatewaySubscriptionId?: string;
+  externalReference?: string;
+  valor?: number;
 }): Promise<{ processed: boolean }> {
   return db.transaction(async (tx) => {
     // Dedup: se o evento já foi registrado, ignora.
@@ -227,6 +242,69 @@ export async function aplicarEventoWebhook(evt: {
       }
     }
 
+    // Fluxo redirect (ex: ASAS): primeiro pagamento confirmado sem assinatura pré-existente.
+    // O externalReference "xconstrucao|userId|planoId|ciclo" permite criar a assinatura agora.
+    if (!assinaturaId && (evt.type === "payment_succeeded" || evt.type === "subscription_activated") && evt.externalReference) {
+      const parsed = parseExternalRef(evt.externalReference);
+      if (parsed) {
+        const { userId, planoId, ciclo } = parsed;
+        const [plano] = await tx.select().from(planos).where(eq(planos.id, planoId)).limit(1);
+        if (plano && plano.ativo) {
+          // Cancela assinatura ativa anterior (troca de plano).
+          await tx
+            .update(assinaturas)
+            .set({ status: "cancelada", canceladaEm: new Date() })
+            .where(and(eq(assinaturas.userId, userId), eq(assinaturas.status, "ativa")));
+
+          const renova = new Date();
+          if (ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
+          else renova.setMonth(renova.getMonth() + 1);
+
+          const gateway = getPaymentGateway();
+          const [nova] = await tx
+            .insert(assinaturas)
+            .values({
+              userId,
+              planoId: plano.id,
+              status: "ativa",
+              ciclo: (ciclo as "mensal" | "anual") ?? "mensal",
+              renovaEm: renova,
+              gatewayProvider: gateway.provider,
+              gatewayCustomerId: evt.gatewaySubscriptionId ?? null,
+              gatewaySubscriptionId: evt.gatewaySubscriptionId ?? evt.externalReference ?? null,
+            })
+            .returning({ id: assinaturas.id });
+
+          assinaturaId = nova.id;
+
+          // Atualiza tier do usuário.
+          await tx
+            .update(users)
+            .set({ plano: plano.tier, planoStartedAt: new Date() })
+            .where(eq(users.id, userId));
+
+          // Lançamento no caixa (J09).
+          const valorFinal = evt.valor ?? (ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal));
+          if (valorFinal > 0) {
+            await criarLancamentoPlataforma({
+              tipo: "entrada",
+              descricao: `Assinatura ${plano.nome} (${ciclo}) — ASAS`,
+              valor: valorFinal,
+              categoria: "assinatura",
+              status: "pago",
+              origemTipo: "assinatura",
+              origemId: nova.id,
+              recebedorUserId: null,
+              pagadorUserId: userId,
+              tx,
+            });
+          }
+
+          console.info(`[asaas] assinatura criada via webhook: userId=${userId} plano=${plano.nome} assinaturaId=${nova.id}`);
+        }
+      }
+    }
+
     await tx.insert(assinaturaEventos).values({
       assinaturaId,
       tipo: evt.type,
@@ -235,6 +313,13 @@ export async function aplicarEventoWebhook(evt: {
     });
     return { processed: true };
   });
+}
+
+/** Importado do adapter ASAS para parsear externalReference no webhook. */
+function parseExternalRef(ref: string): { userId: string; planoId: string; ciclo: string } | null {
+  const parts = ref.split("|");
+  if (parts.length !== 4 || parts[0] !== "xconstrucao") return null;
+  return { userId: parts[1], planoId: parts[2], ciclo: parts[3] };
 }
 
 // ─── Visões admin (mapeadas ao contrato de UI existente) ────────────────────
