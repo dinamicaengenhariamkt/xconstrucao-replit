@@ -228,7 +228,7 @@ export async function aplicarEventoWebhook(evt: {
     let assinaturaId: string | null = null;
     if (evt.gatewaySubscriptionId) {
       const [a] = await tx
-        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status, ciclo: assinaturas.ciclo })
+        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status, ciclo: assinaturas.ciclo, renovaEm: assinaturas.renovaEm })
         .from(assinaturas)
         .where(eq(assinaturas.gatewaySubscriptionId, evt.gatewaySubscriptionId))
         .limit(1);
@@ -238,7 +238,17 @@ export async function aplicarEventoWebhook(evt: {
           // Pagamento confirmado (ex: cliente pagou boleto/pix em atraso).
           // Reativa a assinatura se estava inadimplente e atualiza o tier do usuário.
           if (a.status === "inadimplente") {
-            const renova = new Date();
+            // Preserve the original billing anchor: if the existing renovaEm is
+            // within 30 days in the past (short overdue window), bump it by one
+            // cycle from that date rather than from today. This prevents annual
+            // subscribers from silently losing up to 11 months when they pay late.
+            const now = new Date();
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const base =
+              a.renovaEm && a.renovaEm.getTime() >= now.getTime() - THIRTY_DAYS_MS
+                ? new Date(a.renovaEm)
+                : now;
+            const renova = new Date(base);
             if (a.ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
             else renova.setMonth(renova.getMonth() + 1);
             await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
