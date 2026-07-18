@@ -1,6 +1,6 @@
 # Jornada — Testes de Integração (API + banco)
 
-> Status: em andamento — 4 fases concluídas, expansão para 100% | Prioridade: alta | Wave: 9
+> Status: em andamento — 4 fases + G1/G2 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
 > Última atualização: 2026-07-18
 >
 > Parte do trio de testes (J35 unitários · **J36 integração** · J37 E2E). É o **meio
@@ -86,7 +86,7 @@ negócio. Marcar `[x]` conforme o spec do grupo entra verde. Progresso medido pe
 do número "sem cobertura" no radar.
 
 - [x] **G1 · auth-links / tokens** — verify-email, forgot/reset-password, resend-verification, definir-senha-inicial (validações). → `auth-links.integration.spec.ts` (13 testes). *(confirmar-novo-email/trocar-email ficam p/ um refino do G1 — ver §10.)*
-- [ ] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,verificar,desativar,status}, exportar-dados.
+- [x] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,desativar,status}, exportar-dados. → `auth-conta.integration.spec.ts` (22 testes). *(2fa/verificar fica no fluxo de login, não no G2 — ver §10.)*
 - [ ] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes.
 - [ ] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password.
 - [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
@@ -200,6 +200,25 @@ do número "sem cobertura" no radar.
   o fluxo feliz + reuso→400 (single-use real) encadeia com o **G4** (resets admin emitem o
   setup token) — deixado para quando o G4 for implementado. **Refino futuro do G1:**
   `confirmar-novo-email` + `trocar-email` (fluxo de troca de email por token) ainda não cobertos.
+- 2026-07-18: **G2 (auth-conta & 2FA) concluído** — `tests/e2e/integration/auth-conta.integration.spec.ts`
+  (22 testes, todos passando). Suíte total: **62 passed, 3 skipped, 0 falhas** (2 rodadas
+  seguidas, isolamento ok); `tsc` limpo. Radar caiu de **145 → 136** endpoints sem cobertura
+  (saíram change-password, change-password-forced, 2fa/{setup,confirmar,status,desativar},
+  register, refresh, desativar-conta, exportar-dados). Descobertas: (a) **2FA testável de ponta
+  a ponta** — o projeto usa `otplib` v13 (`features/auth/api/totp.ts`) e `/2fa/setup` retorna o
+  `secret` base32 em claro; `generateSync({ secret })` do próprio otplib gera um TOTP válido no
+  teste, então o ciclo setup→confirmar→status→desativar roda inteiro (código inválido "000000"
+  → 400 INVALID_CODE; ativo → status.enabled=true; setup repetido → 409 ALREADY_ENABLED). (b) os
+  fluxos felizes (change-password, desativar-conta, refresh, 2FA) exigem **usuário verificado**,
+  não só logado — `login-as` só neutraliza `mustChangePassword`, não `emailVerified`; o helper
+  `usuarioVerificadoLogado` registra → extrai o link de `/api/test/emails` → GET verify-email →
+  login-as, tudo com conta descartável `@xconstrucao-e2e.test` (nunca toca seed). (c) **efeito real
+  assertado por login**: após change-password, `POST /login` com senha antiga → 401 e nova → 200;
+  após desativar-conta, `POST /login` → 403 ACCOUNT_DISABLED (prova `users.ativo=false`). (d)
+  `change-password-forced`: só o guard de pré-condição (`mustChangePassword` ausente → 400) — o
+  fluxo feliz depende de emitir a flag, que sai dos **resets do G4**; deixado para lá. (e)
+  **`2fa/verificar` NÃO entra no G2**: é o 2º passo do login (público, exige `challengeToken` do
+  1º passo), pertence ao fluxo de login — segue no radar como pendência desse fluxo, não deste grupo.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
@@ -216,10 +235,10 @@ do número "sem cobertura" no radar.
 - `POST /api/auth/resend-verification`: inexistente→`{success:true}`; já verificado→`{alreadyVerified:true}`; rate-limit 4/h.
 - `GET /api/auth/confirmar-novo-email` + `POST /api/auth/trocar-email`: fluxo de troca de email (token) — mapear detalhes ao implementar.
 
-**G2 · auth-conta & 2FA** → `auth-conta.integration.spec.ts`
+**G2 · auth-conta & 2FA** → `auth-conta.integration.spec.ts` *(concluído — ver §10, 2026-07-18)*
 - `change-password` / `change-password-forced`: senha atual errada→4xx; nova fraca→400; feliz→200 + hash muda no banco.
-- `2fa/{setup,confirmar,verificar,desativar,status}`: setup gera segredo; código inválido→4xx; desativar exige verificação; status reflete estado.
-- `register` (payload inválido→400, duplicado→409), `refresh` (token inválido→401), `desativar-conta`, `exportar-dados` (authz + shape).
+- `2fa/{setup,confirmar,desativar,status}`: setup gera segredo; código inválido→4xx; desativar exige verificação; status reflete estado. *(`2fa/verificar` = 2º passo do login, coberto no fluxo de login, não aqui.)*
+- `register` (payload inválido→400, duplicado→409), `refresh` (sem cookie→401, feliz→200), `desativar-conta`, `exportar-dados` (authz + shape).
 
 **G3 · moderação de obras (admin)** → `moderacao-obras.integration.spec.ts`
 - `POST admin/obras/[id]/aprovar`: não-admin→403; feliz→`statusModeracao='aprovada'` + moderadoEm/Por; já aprovada→409; inexistente→404; **assert: obra aparece no marketplace público após aprovar**.
