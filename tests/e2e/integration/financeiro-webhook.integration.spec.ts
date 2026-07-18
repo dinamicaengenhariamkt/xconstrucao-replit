@@ -99,6 +99,93 @@ test.describe("Integração — Webhook de gateway (idempotência + ignored)", (
   });
 });
 
+test.describe("Integração — Webhook reativação de assinatura inadimplente", () => {
+  const CONTRATANTE_EMAIL = "joao@construtora.com";
+
+  /**
+   * Monta um payload no formato ASAS (o gateway ativo neste ambiente).
+   * O ASAS adapter lê body.event, body.payment.id e body.payment.subscription
+   * para montar eventId e gatewaySubscriptionId.
+   */
+  function asaasPaymentConfirmedPayload(paymentId: string, subscriptionId: string) {
+    return {
+      event: "PAYMENT_CONFIRMED",
+      payment: {
+        id: paymentId,
+        subscription: subscriptionId,
+        value: 99.9,
+      },
+    };
+  }
+
+  test("ciclo anual: PAYMENT_CONFIRMED reativa com renovaEm +12 meses (não +1)", async ({ request }) => {
+    const gSubId = `E2E-sub-anual-${Date.now().toString(36)}`;
+    const payId = `E2E-pay-anual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // 1. Cria assinatura inadimplente com ciclo=anual.
+    const setup = await request.post("/api/test/sub-setup", {
+      data: { email: CONTRATANTE_EMAIL, ciclo: "anual", gatewaySubscriptionId: gSubId },
+    });
+    expect(setup.ok(), `sub-setup deve responder ok (status ${setup.status()})`).toBeTruthy();
+
+    // 2. Dispara PAYMENT_CONFIRMED no formato ASAS.
+    const wh = await request.post("/api/webhooks/gateway", {
+      data: asaasPaymentConfirmedPayload(payId, gSubId),
+    });
+    expect(wh.status(), "webhook deve responder 200").toBe(200);
+    const whBody = (await wh.json()) as { processed?: boolean };
+    expect(whBody.processed, "evento deve ser processado").toBe(true);
+
+    // 3. Verifica que renovaEm foi estendida ~12 meses (não ~1 mês).
+    const state = await request.get(`/api/test/sub-setup?gatewaySubscriptionId=${encodeURIComponent(gSubId)}`);
+    expect(state.ok(), `leitura do estado deve responder ok (status ${state.status()})`).toBeTruthy();
+    const sub = (await state.json()) as { status?: string; ciclo?: string; renovaEm?: string };
+
+    expect(sub.status, "assinatura deve estar ativa após pagamento").toBe("ativa");
+    expect(sub.ciclo, "ciclo deve ser anual").toBe("anual");
+
+    // renovaEm deve ser ~12 meses à frente (tolerância: entre 11 e 13 meses).
+    const renovaEm = new Date(sub.renovaEm!);
+    const now = new Date();
+    const diffMs = renovaEm.getTime() - now.getTime();
+    const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30.44);
+    expect(
+      diffMonths >= 11 && diffMonths <= 13,
+      `renovaEm deve ser ~12 meses à frente para ciclo anual (recebeu ${diffMonths.toFixed(1)} meses)`,
+    ).toBeTruthy();
+  });
+
+  test("ciclo mensal: PAYMENT_CONFIRMED reativa com renovaEm +1 mês", async ({ request }) => {
+    const gSubId = `E2E-sub-mensal-${Date.now().toString(36)}`;
+    const payId = `E2E-pay-mensal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const setup = await request.post("/api/test/sub-setup", {
+      data: { email: CONTRATANTE_EMAIL, ciclo: "mensal", gatewaySubscriptionId: gSubId },
+    });
+    expect(setup.ok(), `sub-setup deve responder ok (status ${setup.status()})`).toBeTruthy();
+
+    const wh = await request.post("/api/webhooks/gateway", {
+      data: asaasPaymentConfirmedPayload(payId, gSubId),
+    });
+    expect(wh.status(), "webhook deve responder 200").toBe(200);
+    const whBody = (await wh.json()) as { processed?: boolean };
+    expect(whBody.processed, "evento deve ser processado").toBe(true);
+
+    const state = await request.get(`/api/test/sub-setup?gatewaySubscriptionId=${encodeURIComponent(gSubId)}`);
+    expect(state.ok(), `leitura do estado deve responder ok (status ${state.status()})`).toBeTruthy();
+    const sub = (await state.json()) as { status?: string; ciclo?: string; renovaEm?: string };
+
+    expect(sub.status, "assinatura deve estar ativa após pagamento").toBe("ativa");
+    const renovaEm = new Date(sub.renovaEm!);
+    const now = new Date();
+    const diffMonths = (renovaEm.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+    expect(
+      diffMonths >= 0.5 && diffMonths <= 1.5,
+      `renovaEm deve ser ~1 mês à frente para ciclo mensal (recebeu ${diffMonths.toFixed(1)} meses)`,
+    ).toBeTruthy();
+  });
+});
+
 test.describe("Integração — Medições: guards de autorização/estado", () => {
   test("empreiteiro não aprova medição (rota é do contratante → 4xx)", async ({ request }) => {
     await loginAs(request, EMPREITEIRO_EMAIL);

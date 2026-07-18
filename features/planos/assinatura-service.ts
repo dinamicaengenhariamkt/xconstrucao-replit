@@ -228,7 +228,7 @@ export async function aplicarEventoWebhook(evt: {
     let assinaturaId: string | null = null;
     if (evt.gatewaySubscriptionId) {
       const [a] = await tx
-        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status })
+        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status, ciclo: assinaturas.ciclo })
         .from(assinaturas)
         .where(eq(assinaturas.gatewaySubscriptionId, evt.gatewaySubscriptionId))
         .limit(1);
@@ -239,7 +239,8 @@ export async function aplicarEventoWebhook(evt: {
           // Reativa a assinatura se estava inadimplente e atualiza o tier do usuário.
           if (a.status === "inadimplente") {
             const renova = new Date();
-            renova.setMonth(renova.getMonth() + 1);
+            if (a.ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
+            else renova.setMonth(renova.getMonth() + 1);
             await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
             const [plano] = await tx.select({ tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
             if (plano) {
