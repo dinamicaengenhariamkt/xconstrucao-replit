@@ -945,6 +945,11 @@ export const assinaturas = pgTable(
     gatewayProvider: text("gateway_provider").notNull().default("manual"),
     gatewayCustomerId: text("gateway_customer_id"),
     gatewaySubscriptionId: text("gateway_subscription_id"),
+    // Contador de execuções consecutivas do job de carência em que o gateway
+    // devolveu "unknown" (inalcançável). Zerado ao sair de pendente_reativacao
+    // (para ativa ou expirada). Quando atinge PENDENTE_REATIVACAO_MAX_RETRIES,
+    // a assinatura é expirada com evento "gateway_unreachable_too_long".
+    gatewayRetryCount: integer("gateway_retry_count").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({

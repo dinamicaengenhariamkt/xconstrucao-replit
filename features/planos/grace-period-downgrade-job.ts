@@ -21,11 +21,34 @@ const DEFAULT_GRACE_DAYS = 7;
  */
 const DEFAULT_BUFFER_HOURS = 48;
 
+/**
+ * Número máximo de execuções consecutivas do job em que o gateway pode retornar
+ * "unknown" (inalcançável) antes de a assinatura ser forçadamente expirada com
+ * o evento `gateway_unreachable_too_long`. Protege contra partições de rede
+ * prolongadas sem acumular assinaturas em `pendente_reativacao` indefinidamente.
+ * Configurável via `PENDENTE_REATIVACAO_MAX_RETRIES`.
+ *
+ * Exemplo: com MAX_RETRIES=3, uma assinatura permanece protegida nas três
+ * primeiras execuções sem resposta do gateway; na quarta, é expirada e a
+ * equipe de operações é notificada pelo audit log.
+ *
+ * Contraste com `INADIMPLENTE_DOWNGRADE_BUFFER_HOURS` (que protege contra
+ * falhas transitórias curtas de gateway antes da segunda verificação): este
+ * limiar protege contra indisponibilidade prolongada do gateway durante a
+ * segunda verificação em si.
+ */
+const DEFAULT_MAX_RETRIES = 3;
+
 export interface DowngradeInadimplentesResult {
   ok: boolean;
   downgraded: number;
   /** Assinaturas promovidas de volta a `ativa` após consulta proativa ao gateway. */
   reactivated: number;
+  /**
+   * Assinaturas expiradas com evento `gateway_unreachable_too_long` por terem
+   * atingido o limite de retentativas com gateway inacessível.
+   */
+  expiredUnreachable: number;
   runAt: string;
   error?: string;
 }
@@ -68,6 +91,17 @@ function parseBufferHours(value: unknown): number {
 }
 
 /**
+ * Parseia e valida o número máximo de retentativas com gateway inacessível.
+ * Retorna o valor padrão se a entrada for inválida.
+ * Deve ser um inteiro positivo (mínimo 1).
+ */
+function parseMaxRetries(value: unknown): number {
+  const n = Number(value);
+  if (Number.isFinite(n) && n >= 1 && Number.isInteger(n)) return n;
+  return DEFAULT_MAX_RETRIES;
+}
+
+/**
  * Calcula o instante de corte (cutoff) para revogação de inadimplentes:
  * `now - graceDays - bufferHours`.
  *
@@ -104,9 +138,15 @@ export function computeDowngradeCutoff(
  * gateway diretamente:
  *
  *   • "paid"    → move para `ativa`, restaura `users.plano`, grava evento
- *                 `gateway_confirmed_reactivation`.
- *   • "unpaid" / "unknown" → move para `expirada`, rebaixa `users.plano` para
- *                 `free`, grava evento `grace_period_expired`.
+ *                 `gateway_confirmed_reactivation`, zera `gatewayRetryCount`.
+ *   • "unpaid"  → move para `expirada`, rebaixa `users.plano` para `free`,
+ *                 grava evento `grace_period_expired`.
+ *   • "unknown" → incrementa `gatewayRetryCount`. Se o contador ainda está
+ *                 abaixo do limiar (`PENDENTE_REATIVACAO_MAX_RETRIES`, default
+ *                 3): mantém em `pendente_reativacao` e aguarda a próxima
+ *                 execução. Quando o contador ATINGE o limiar: expira com evento
+ *                 `gateway_unreachable_too_long` para que a equipe de operações
+ *                 investigue — sem acumular assinaturas indefinidamente.
  *
  * Proteção contra race condition (webhook vs job):
  *   O UPDATE de assinaturas inclui `AND status = '...'` no WHERE.
@@ -121,7 +161,8 @@ export function computeDowngradeCutoff(
  *
  * A janela de carência é configurável via `INADIMPLENTE_GRACE_DAYS` (default
  * 7 dias) e o buffer adicional via `INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`
- * (default 48 horas).
+ * (default 48 horas). O limite de retentativas com gateway inacessível é
+ * configurável via `PENDENTE_REATIVACAO_MAX_RETRIES` (default 3).
  *
  * Pensado para rodar diariamente via Replit Scheduled Deployment
  * (`scripts/downgrade-inadimplente.ts`). Pode ser chamado manualmente ou
@@ -140,6 +181,10 @@ export async function downgradeInadimplentes(
 
   const buffer = parseBufferHours(
     bufferHours ?? process.env.INADIMPLENTE_DOWNGRADE_BUFFER_HOURS ?? DEFAULT_BUFFER_HOURS,
+  );
+
+  const maxRetries = parseMaxRetries(
+    process.env.PENDENTE_REATIVACAO_MAX_RETRIES ?? DEFAULT_MAX_RETRIES,
   );
 
   try {
@@ -194,22 +239,25 @@ export async function downgradeInadimplentes(
         id: assinaturas.id,
         userId: assinaturas.userId,
         gatewaySubscriptionId: assinaturas.gatewaySubscriptionId,
+        gatewayRetryCount: assinaturas.gatewayRetryCount,
       })
       .from(assinaturas)
       .where(eq(assinaturas.status, "pendente_reativacao"));
 
     if (phase2Candidates.length === 0 && phase1Candidates.length === 0) {
       console.info(
-        `[downgrade-inadimplente] runAt=${runAt} downgraded=0 reactivated=0 graceDays=${days} bufferHours=${buffer}`,
+        `[downgrade-inadimplente] runAt=${runAt} downgraded=0 reactivated=0 expiredUnreachable=0 graceDays=${days} bufferHours=${buffer} maxRetries=${maxRetries}`,
       );
-      return { ok: true, downgraded: 0, reactivated: 0, runAt };
+      return { ok: true, downgraded: 0, reactivated: 0, expiredUnreachable: 0, runAt };
     }
 
     const gateway = getPaymentGateway();
     let downgraded = 0;
     let reactivated = 0;
+    let expiredUnreachable = 0;
     const downgradedIds: string[] = [];
     const reactivatedIds: string[] = [];
+    const expiredUnreachableIds: string[] = [];
 
     for (const row of phase2Candidates) {
       try {
@@ -226,11 +274,11 @@ export async function downgradeInadimplentes(
         }
 
         if (paymentStatus === "paid") {
-          // Gateway confirma pagamento — reativa a assinatura.
+          // Gateway confirma pagamento — reativa a assinatura e zera o contador.
           await db.transaction(async (tx) => {
             const updated = await tx
               .update(assinaturas)
-              .set({ status: "ativa" })
+              .set({ status: "ativa", gatewayRetryCount: 0 })
               .where(
                 and(
                   eq(assinaturas.id, row.id),
@@ -290,12 +338,12 @@ export async function downgradeInadimplentes(
               `[downgrade-inadimplente] reativada assinaturaId=${row.id} userId=${row.userId} (gateway=paid)`,
             );
           });
-        } else {
-          // "unpaid" ou "unknown" — comportamento conservador: expira a assinatura.
+        } else if (paymentStatus === "unpaid") {
+          // Gateway confirma inadimplência — expira imediatamente.
           await db.transaction(async (tx) => {
             const updated = await tx
               .update(assinaturas)
-              .set({ status: "expirada" })
+              .set({ status: "expirada", gatewayRetryCount: 0 })
               .where(
                 and(
                   eq(assinaturas.id, row.id),
@@ -343,6 +391,89 @@ export async function downgradeInadimplentes(
               `[downgrade-inadimplente] expirada assinaturaId=${row.id} userId=${row.userId} graceDays=${days} bufferHours=${buffer} gateway=${paymentStatus}`,
             );
           });
+        } else {
+          // "unknown" — gateway inacessível: incrementa o contador de retentativas.
+          // Se ainda abaixo do limiar: mantém em pendente_reativacao e aguarda
+          // a próxima execução (o assinante conserva os recursos pagos).
+          // Quando o limiar é atingido: expira com evento distinto para que
+          // a equipe de operações possa investigar a falha prolongada do gateway.
+          const newCount = (row.gatewayRetryCount ?? 0) + 1;
+
+          if (newCount >= maxRetries) {
+            // Limiar atingido — expira a assinatura com evento especial.
+            await db.transaction(async (tx) => {
+              const updated = await tx
+                .update(assinaturas)
+                .set({ status: "expirada", gatewayRetryCount: newCount })
+                .where(
+                  and(
+                    eq(assinaturas.id, row.id),
+                    eq(assinaturas.status, "pendente_reativacao"),
+                  ),
+                )
+                .returning({ id: assinaturas.id });
+
+              if (updated.length === 0) return; // Race: webhook reativou no intervalo
+
+              // Só rebaixa users.plano se o usuário não tem outra assinatura ativa.
+              const activeRow = await tx
+                .select({ id: assinaturas.id })
+                .from(assinaturas)
+                .where(
+                  and(
+                    eq(assinaturas.userId, row.userId),
+                    eq(assinaturas.status, "ativa"),
+                    ne(assinaturas.id, row.id),
+                  ),
+                )
+                .limit(1);
+
+              if (activeRow.length === 0) {
+                await tx
+                  .update(users)
+                  .set({ plano: "free" })
+                  .where(eq(users.id, row.userId));
+              } else {
+                console.info(
+                  `[downgrade-inadimplente] skipped users.plano for userId=${row.userId} — has active subscription assinaturaId=${activeRow[0].id}`,
+                );
+              }
+
+              await tx.insert(assinaturaEventos).values({
+                assinaturaId: row.id,
+                tipo: "gateway_unreachable_too_long",
+                gatewayEventId: null,
+                payloadJson: {
+                  graceDays: days,
+                  bufferHours: buffer,
+                  maxRetries,
+                  retryCount: newCount,
+                  expiredAt: runAt,
+                  gatewayStatus: paymentStatus,
+                },
+              });
+
+              expiredUnreachable++;
+              expiredUnreachableIds.push(row.id);
+              console.warn(
+                `[downgrade-inadimplente] gateway_unreachable_too_long assinaturaId=${row.id} userId=${row.userId} retryCount=${newCount} maxRetries=${maxRetries} — assinatura expirada por indisponibilidade prolongada do gateway`,
+              );
+            });
+          } else {
+            // Abaixo do limiar — incrementa o contador e aguarda próxima execução.
+            await db
+              .update(assinaturas)
+              .set({ gatewayRetryCount: newCount })
+              .where(
+                and(
+                  eq(assinaturas.id, row.id),
+                  eq(assinaturas.status, "pendente_reativacao"),
+                ),
+              );
+            console.warn(
+              `[downgrade-inadimplente] gateway=unknown assinaturaId=${row.id} retryCount=${newCount}/${maxRetries} — mantendo pendente_reativacao`,
+            );
+          }
         }
       } catch (rowErr) {
         console.error(
@@ -352,7 +483,7 @@ export async function downgradeInadimplentes(
       }
     }
 
-    if (downgraded > 0 || reactivated > 0) {
+    if (downgraded > 0 || reactivated > 0 || expiredUnreachable > 0) {
       try {
         await db.insert(auditLogs).values({
           actorId: null,
@@ -361,11 +492,14 @@ export async function downgradeInadimplentes(
           payload: {
             downgraded,
             reactivated,
+            expiredUnreachable,
             graceDays: days,
             bufferHours: buffer,
+            maxRetries,
             runAt,
             ids: downgradedIds,
             reactivatedIds,
+            expiredUnreachableIds,
           },
           ip: "cron",
           userAgent: "downgrade-inadimplente-job",
@@ -379,12 +513,12 @@ export async function downgradeInadimplentes(
     }
 
     console.info(
-      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} reactivated=${reactivated} graceDays=${days} bufferHours=${buffer}`,
+      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} reactivated=${reactivated} expiredUnreachable=${expiredUnreachable} graceDays=${days} bufferHours=${buffer} maxRetries=${maxRetries}`,
     );
-    return { ok: true, downgraded, reactivated, runAt };
+    return { ok: true, downgraded, reactivated, expiredUnreachable, runAt };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[downgrade-inadimplente] falha:", err);
-    return { ok: false, downgraded: 0, reactivated: 0, runAt, error: message };
+    return { ok: false, downgraded: 0, reactivated: 0, expiredUnreachable: 0, runAt, error: message };
   }
 }

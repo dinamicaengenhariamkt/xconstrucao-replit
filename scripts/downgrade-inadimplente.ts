@@ -31,7 +31,7 @@ async function main() {
   }
 
   console.info(
-    `[downgrade-inadimplente-cli] OK downgraded=${result.downgraded} runAt=${result.runAt}`,
+    `[downgrade-inadimplente-cli] OK downgraded=${result.downgraded} reactivated=${result.reactivated} expiredUnreachable=${result.expiredUnreachable} runAt=${result.runAt}`,
   );
   process.exit(0);
 }

@@ -68,6 +68,11 @@ export async function bootstrapPlanosSchema(): Promise<void> {
     // Idempotência do webhook: um evento por gateway_event_id (quando presente).
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_assinatura_eventos_gateway ON assinatura_eventos(gateway_event_id) WHERE gateway_event_id IS NOT NULL`);
 
+    // Migração idempotente: adiciona gateway_retry_count se ainda não existir.
+    // Rastreia quantas execuções consecutivas do job encontraram gateway "unknown"
+    // enquanto a assinatura está em pendente_reativacao.
+    await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS gateway_retry_count INTEGER NOT NULL DEFAULT 0`);
+
     // Seed do catálogo a partir do plans-catalog (idempotente por tier+persona).
     const personas: PlanoPersona[] = ["empreiteiro", "contratante"];
     const tiers: PlanoTier[] = ["free", "pro", "enterprise"];
