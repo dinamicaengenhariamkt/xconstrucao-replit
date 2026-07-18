@@ -228,13 +228,26 @@ export async function aplicarEventoWebhook(evt: {
     let assinaturaId: string | null = null;
     if (evt.gatewaySubscriptionId) {
       const [a] = await tx
-        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId })
+        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status })
         .from(assinaturas)
         .where(eq(assinaturas.gatewaySubscriptionId, evt.gatewaySubscriptionId))
         .limit(1);
       if (a) {
         assinaturaId = a.id;
-        if (evt.type === "payment_failed") {
+        if (evt.type === "payment_succeeded") {
+          // Pagamento confirmado (ex: cliente pagou boleto/pix em atraso).
+          // Reativa a assinatura se estava inadimplente e atualiza o tier do usuário.
+          if (a.status === "inadimplente") {
+            const renova = new Date();
+            renova.setMonth(renova.getMonth() + 1);
+            await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
+            const [plano] = await tx.select({ tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
+            if (plano) {
+              await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, a.userId));
+            }
+            console.info(`[asaas] assinatura reativada após pagamento: assinaturaId=${a.id} userId=${a.userId}`);
+          }
+        } else if (evt.type === "payment_failed") {
           await tx.update(assinaturas).set({ status: "inadimplente" }).where(eq(assinaturas.id, a.id));
         } else if (evt.type === "subscription_canceled") {
           await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, a.id));

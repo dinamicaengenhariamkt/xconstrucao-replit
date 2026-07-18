@@ -148,6 +148,7 @@ export class AsaasGateway implements PaymentGateway {
     }
     // ───────────────────────────────────────────────────────────────────────
 
+
     let body: Record<string, unknown> = {};
     try {
       body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
@@ -159,11 +160,16 @@ export class AsaasGateway implements PaymentGateway {
     const payment = (body.payment as Record<string, unknown>) ?? {};
     const subscription = (body.subscription as Record<string, unknown>) ?? {};
 
-    // ID do evento: preferir payment.id, depois subscription.id
+    // ID do evento: preferir payment.id, depois subscription.id.
+    // IMPORTANTE: o eventId DEVE incluir o tipo do evento para evitar falsa
+    // deduplicação entre eventos distintos no mesmo recurso. Ex: PAYMENT_OVERDUE
+    // e PAYMENT_CONFIRMED podem chegar para o mesmo payment.id — sem o prefixo
+    // do evento, o segundo seria silenciosamente descartado como duplicata.
     const paymentId = (payment.id as string) ?? "";
     const subscriptionId =
       (payment.subscription as string) ?? (subscription.id as string) ?? "";
-    const eventId = paymentId || subscriptionId || `asaas_${Date.now()}`;
+    const resourceId = paymentId || subscriptionId || `asaas_${Date.now()}`;
+    const eventId = `${event}:${resourceId}`;
 
     // externalReference: permite reconectar o evento ao usuário/plano
     const externalReference =
