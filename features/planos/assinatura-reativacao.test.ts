@@ -51,16 +51,19 @@ async function createTestAssinatura(
   planoId: string,
   status: "inadimplente" | "expirada",
   gatewaySubscriptionId: string,
+  options: { renovaEm?: Date; ciclo?: "mensal" | "anual" } = {},
 ): Promise<string> {
-  const renovaEm = new Date();
-  renovaEm.setDate(renovaEm.getDate() - 30); // 30 days overdue
+  const defaultRenovaEm = new Date();
+  defaultRenovaEm.setDate(defaultRenovaEm.getDate() - 30); // 30 days overdue
+  const renovaEm = options.renovaEm ?? defaultRenovaEm;
+  const ciclo = options.ciclo ?? "mensal";
   const [a] = await db
     .insert(assinaturas)
     .values({
       userId,
       planoId,
       status,
-      ciclo: "mensal",
+      ciclo,
       renovaEm,
       gatewayProvider: "test",
       gatewaySubscriptionId,
@@ -87,6 +90,24 @@ async function getUserPlano(id: string): Promise<string | null> {
     .where(eq(users.id, id))
     .limit(1);
   return row?.plano ?? null;
+}
+
+/** Fetch current assinatura renovaEm. */
+async function getAssinaturaRenovaEm(id: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ renovaEm: assinaturas.renovaEm })
+    .from(assinaturas)
+    .where(eq(assinaturas.id, id))
+    .limit(1);
+  return row?.renovaEm ?? null;
+}
+
+/**
+ * Returns true when two dates are within `toleranceMs` of each other.
+ * Used to avoid brittle exact-millisecond comparisons in date-arithmetic tests.
+ */
+function datesAreClose(a: Date, b: Date, toleranceMs = 2 * 60 * 1000): boolean {
+  return Math.abs(a.getTime() - b.getTime()) <= toleranceMs;
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +243,156 @@ describe("aplicarEventoWebhook — reactivation paths", () => {
       await getUserPlano(userId),
       testPlanoTier,
       "users.plano must be restored to the plan tier (was cleared by downgrade job)",
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // Billing anchor tests
+  // ---------------------------------------------------------------------------
+
+  it("billing anchor preserved: inadimplente 20 days overdue → renovaEm bumped from original date (not today)", async () => {
+    const gatewaySubId = `test-sub-${uid()}`;
+    const eventId = `test-evt-anchor-20d-${uid()}`;
+
+    const userId = await createTestUser(`anchor-20d-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+
+    // renovaEm = 20 days ago — within the 30-day anchor preservation window
+    const originalRenovaEm = new Date();
+    originalRenovaEm.setDate(originalRenovaEm.getDate() - 20);
+
+    const assinaturaId = await createTestAssinatura(userId, testPlanoId, "inadimplente", gatewaySubId, {
+      renovaEm: new Date(originalRenovaEm),
+      ciclo: "mensal",
+    });
+    createdAssinaturaIds.push(assinaturaId);
+    createdEventoGatewayIds.push(eventId);
+
+    await aplicarEventoWebhook({
+      eventId,
+      type: "payment_succeeded",
+      gatewaySubscriptionId: gatewaySubId,
+    });
+
+    const newRenovaEm = await getAssinaturaRenovaEm(assinaturaId);
+    assert.ok(newRenovaEm, "renovaEm must be set after reactivation");
+
+    // Expected: originalRenovaEm + 1 month (billing anchor preserved)
+    const expected = new Date(originalRenovaEm);
+    expected.setMonth(expected.getMonth() + 1);
+
+    assert.ok(
+      datesAreClose(newRenovaEm, expected),
+      `renovaEm should be ~${expected.toISOString()} (original + 1 month), got ${newRenovaEm.toISOString()}`,
+    );
+
+    // Confirm it is NOT anchored to today
+    const todayPlusMonth = new Date();
+    todayPlusMonth.setMonth(todayPlusMonth.getMonth() + 1);
+    // The gap between anchor-based and today-based results should be ~20 days;
+    // if they were equal (both "today"), the test would be meaningless.
+    const diffMs = Math.abs(newRenovaEm.getTime() - todayPlusMonth.getTime());
+    assert.ok(
+      diffMs > 18 * 24 * 60 * 60 * 1000, // more than 18 days apart
+      `renovaEm must be anchored to original date (${originalRenovaEm.toISOString()}), not today`,
+    );
+  });
+
+  it("billing anchor fallback: inadimplente 60 days overdue → renovaEm bumped from today (not original date)", async () => {
+    const gatewaySubId = `test-sub-${uid()}`;
+    const eventId = `test-evt-anchor-60d-${uid()}`;
+
+    const userId = await createTestUser(`anchor-60d-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+
+    // renovaEm = 60 days ago — outside the 30-day anchor preservation window
+    const originalRenovaEm = new Date();
+    originalRenovaEm.setDate(originalRenovaEm.getDate() - 60);
+
+    const assinaturaId = await createTestAssinatura(userId, testPlanoId, "inadimplente", gatewaySubId, {
+      renovaEm: new Date(originalRenovaEm),
+      ciclo: "mensal",
+    });
+    createdAssinaturaIds.push(assinaturaId);
+    createdEventoGatewayIds.push(eventId);
+
+    const beforeCall = new Date();
+
+    await aplicarEventoWebhook({
+      eventId,
+      type: "payment_succeeded",
+      gatewaySubscriptionId: gatewaySubId,
+    });
+
+    const newRenovaEm = await getAssinaturaRenovaEm(assinaturaId);
+    assert.ok(newRenovaEm, "renovaEm must be set after reactivation");
+
+    // Expected: today + 1 month (fallback because original is >30 days ago)
+    const expectedLow = new Date(beforeCall);
+    expectedLow.setMonth(expectedLow.getMonth() + 1);
+    const expectedHigh = new Date();
+    expectedHigh.setMonth(expectedHigh.getMonth() + 1);
+    // Allow 2 extra minutes tolerance
+    expectedHigh.setMinutes(expectedHigh.getMinutes() + 2);
+
+    assert.ok(
+      newRenovaEm.getTime() >= expectedLow.getTime() - 2 * 60 * 1000 &&
+        newRenovaEm.getTime() <= expectedHigh.getTime(),
+      `renovaEm should be ~today + 1 month, got ${newRenovaEm.toISOString()}`,
+    );
+
+    // Confirm it is NOT the original anchor (which was 60 days ago + 1 month = 30 days ago)
+    const anchorBasedExpected = new Date(originalRenovaEm);
+    anchorBasedExpected.setMonth(anchorBasedExpected.getMonth() + 1);
+    assert.ok(
+      !datesAreClose(newRenovaEm, anchorBasedExpected, 24 * 60 * 60 * 1000),
+      `renovaEm must NOT be anchored to old original date (${anchorBasedExpected.toISOString()}), got ${newRenovaEm.toISOString()}`,
+    );
+  });
+
+  it("billing anchor annual: inadimplente 20 days overdue, ciclo=anual → renovaEm bumped 1 year from original date", async () => {
+    const gatewaySubId = `test-sub-${uid()}`;
+    const eventId = `test-evt-anchor-anual-${uid()}`;
+
+    const userId = await createTestUser(`anchor-anual-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+
+    // renovaEm = 20 days ago — within the 30-day anchor preservation window
+    const originalRenovaEm = new Date();
+    originalRenovaEm.setDate(originalRenovaEm.getDate() - 20);
+
+    const assinaturaId = await createTestAssinatura(userId, testPlanoId, "inadimplente", gatewaySubId, {
+      renovaEm: new Date(originalRenovaEm),
+      ciclo: "anual",
+    });
+    createdAssinaturaIds.push(assinaturaId);
+    createdEventoGatewayIds.push(eventId);
+
+    await aplicarEventoWebhook({
+      eventId,
+      type: "payment_succeeded",
+      gatewaySubscriptionId: gatewaySubId,
+    });
+
+    const newRenovaEm = await getAssinaturaRenovaEm(assinaturaId);
+    assert.ok(newRenovaEm, "renovaEm must be set after reactivation");
+
+    // Expected: originalRenovaEm + 1 year (billing anchor preserved, annual cycle)
+    const expected = new Date(originalRenovaEm);
+    expected.setFullYear(expected.getFullYear() + 1);
+
+    assert.ok(
+      datesAreClose(newRenovaEm, expected),
+      `annual renovaEm should be ~${expected.toISOString()} (original + 1 year), got ${newRenovaEm.toISOString()}`,
+    );
+
+    // Confirm it is NOT today + 1 year
+    const todayPlusYear = new Date();
+    todayPlusYear.setFullYear(todayPlusYear.getFullYear() + 1);
+    const diffMs = Math.abs(newRenovaEm.getTime() - todayPlusYear.getTime());
+    assert.ok(
+      diffMs > 18 * 24 * 60 * 60 * 1000,
+      `annual renovaEm must be anchored to original date, not today`,
     );
   });
 
