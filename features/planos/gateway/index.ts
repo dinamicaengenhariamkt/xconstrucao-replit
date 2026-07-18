@@ -15,6 +15,18 @@ export type { PaymentGateway, CheckoutInput, CheckoutResult, NormalizedWebhookEv
  */
 let cached: PaymentGateway | null = null;
 
+/**
+ * Test-only seam — override the cached gateway singleton so integration tests
+ * can inject a mock without touching process.env or spawning a real gateway.
+ *
+ * Pass `null` to restore normal factory behaviour (next call re-resolves from env).
+ *
+ * Never call this in production code.
+ */
+export function _overrideGatewayForTest(gw: PaymentGateway | null): void {
+  cached = gw;
+}
+
 export function getPaymentGateway(): PaymentGateway {
   if (cached) return cached;
   const provider = (process.env.PAYMENT_GATEWAY ?? "manual").toLowerCase();
