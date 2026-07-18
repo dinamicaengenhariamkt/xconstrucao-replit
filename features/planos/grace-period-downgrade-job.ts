@@ -28,6 +28,22 @@ export interface DowngradeInadimplentesResult {
 }
 
 /**
+ * Optional hooks for testing only. Injected via the third argument of
+ * `downgradeInadimplentes`. Never used in production.
+ *
+ * `onCandidatesSelected` is called once after the SELECT phase but before any
+ * per-row UPDATE runs. Tests can use this window to simulate a concurrent
+ * `payment_succeeded` webhook that reactivates one of the candidates, making
+ * the job's UPDATE guard (`AND status='inadimplente'`) the only thing standing
+ * between the guard and an incorrect downgrade.
+ */
+export interface DowngradeTestHooks {
+  onCandidatesSelected?: (
+    candidates: ReadonlyArray<{ id: string; userId: string }>,
+  ) => Promise<void>;
+}
+
+/**
  * Parseia e valida o número de dias de carência.
  * Retorna o valor padrão se a entrada for inválida.
  */
@@ -111,6 +127,7 @@ export function computeDowngradeCutoff(
 export async function downgradeInadimplentes(
   graceDays?: number,
   bufferHours?: number,
+  _testHooks?: DowngradeTestHooks,
 ): Promise<DowngradeInadimplentesResult> {
   const runAt = new Date().toISOString();
 
@@ -141,6 +158,13 @@ export async function downgradeInadimplentes(
         `[downgrade-inadimplente] runAt=${runAt} downgraded=0 graceDays=${days} bufferHours=${buffer}`,
       );
       return { ok: true, downgraded: 0, runAt };
+    }
+
+    // Test seam: allow tests to inject a concurrent side-effect (e.g. a
+    // payment_succeeded webhook) between the SELECT and the per-row UPDATEs.
+    // Never called in production (no caller passes _testHooks).
+    if (_testHooks?.onCandidatesSelected) {
+      await _testHooks.onCandidatesSelected(candidates);
     }
 
     let downgraded = 0;
