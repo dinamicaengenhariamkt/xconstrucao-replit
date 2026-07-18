@@ -15,6 +15,7 @@ São muitas skills. Carregar todas em toda conversa estoura contexto. A soluçã
 
 **Sempre considerar** (em qualquer tarefa de código, mesmo sem o usuário pedir):
 - `12-factor-apps` — auditar código novo ou revisão contra os 12 fatores; usar como checklist mental antes de finalizar
+- **Testes de integração (J36):** ao criar/alterar um endpoint em `app/api/**`, rodar `npm run test:integration:gaps` — o radar aponta endpoints críticos/mutação sem cobertura. Escrever o spec em `tests/e2e/integration/` seguindo os padrões existentes (`login-as`, cleanup por nome "E2E", asserts de status **e** estado no banco). Rodar com `npm run test:integration` (ambiente dev; nunca produção — há guard em `tests/e2e/guards.ts`).
 
 **Frequente** (consultar quando o gatilho casar):
 - `backend-dev-guidelines` — **gatilho:** editar/criar código Node/TypeScript no backend

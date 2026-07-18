@@ -13,6 +13,9 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Guard anti-produção (J36 §8): aborta a suíte se DATABASE_URL parecer de
+  // produção, antes de qualquer teste tocar no banco. Ver tests/e2e/guards.ts.
+  globalSetup: "./tests/e2e/guards.ts",
   timeout: 300_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,

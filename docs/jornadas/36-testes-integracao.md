@@ -1,7 +1,7 @@
 # Jornada — Testes de Integração (API + banco)
 
-> Status: planejada | Prioridade: alta | Wave: 9
-> Última atualização: 2026-06-20
+> Status: em andamento — 4 fases concluídas, expansão para 100% | Prioridade: alta | Wave: 9
+> Última atualização: 2026-07-18
 >
 > Parte do trio de testes (J35 unitários · **J36 integração** · J37 E2E). É o **meio
 > da pirâmide**: testa vários pedaços juntos — tipicamente um endpoint de API
@@ -61,21 +61,42 @@ Sem novas tabelas de produção. Pode exigir infra de **seed/fixtures** de teste
 
 ## 6. Checklist de implementação
 **Fundação de integração:**
-- [ ] Definir estratégia de banco de teste (dedicado vs. transação vs. testcontainers).
-- [ ] Script `test:integration` (Vitest com setup de banco) separado do unit run.
-- [ ] Helper de setup/teardown (migrar schema, seed, limpeza entre testes).
-- [ ] Helper de autenticação de teste (criar sessão/usuário de cada role rapidamente).
+- [x] Definir estratégia de banco de teste (dedicado vs. transação vs. testcontainers). → **Decisão:** reusar a suíte Playwright existente contra o banco de DEV do Replit (banco único), com guard anti-produção + limpeza cirúrgica por nome "E2E" (não TRUNCATE). Ver `tests/e2e/guards.ts`.
+- [x] Script `test:integration` separado do unit/E2E-browser. → `npm run test:integration` roda `tests/e2e/integration/**` (Playwright). *(Vitest fica para a J35.)*
+- [x] Helper de setup/teardown (limpeza entre testes). → Reusa `/api/test/cleanup-obras` + `liberarCotaObras`; guard anti-produção via `globalSetup` em `playwright.config.ts`.
+- [x] Helper de autenticação de teste (criar sessão/usuário de cada role rapidamente). → Reusa `/api/test/login-as` (`E2E_TEST_AUTH=1`) — já existente.
 
 **Primeira leva (críticos):**
-- [ ] Auth: cadastro → verificação → login → rota protegida.
-- [ ] Obras: criar/listar/validar obrigatórios.
-- [ ] Candidatura → aceite → vínculo persistido.
-- [ ] Medição → pagamento (estado correto).
-- [ ] Autorização: admin-only barra não-admin; IDOR barrado em ao menos 1 recurso por role.
-- [ ] Validação: payload inválido → 4xx (não 500) em ao menos os cadastros principais.
+- [x] Auth: rota protegida barra email-não-verificado (403); login inválido → 400; credencial errada / email inexistente → 401 genérico. → `auth-authz.integration.spec.ts`. *(cadastro→verificação→login já coberto por `onboarding.spec.ts`.)*
+- [x] Obras: criar/listar/validar obrigatórios. → `obras-candidatura.integration.spec.ts` (POST grava de fato + GET confirma + aparece na listagem; nome curto/endereço ausente/publicar sem obrigatórios → 400).
+- [x] Candidatura → aceite → vínculo persistido. → mesmo spec: candidatura → aceite → obra vira `em_andamento` + thread de chat criada; 2º aceite e não-dono barrados (409/422, nunca 200).
+- [x] Medição → pagamento (estado correto). → caminho feliz (valorTotal/valorPago) em `j40-financeiro-totais.spec.ts`; guards de medição + **webhook de gateway (idempotência por gatewayEventId + ramo ignored + público)** em `financeiro-webhook.integration.spec.ts`.
+- [x] Autorização: admin-only barra não-admin (contratante/empreiteiro → 403, anônimo → 401, admin → 200); IDOR barrado — thread alheia (chat) e rota cross-persona (medicoes/garantir-thread). → `auth-authz.integration.spec.ts` + `chat.integration.spec.ts`.
+- [x] Validação: payload inválido → 4xx (não 500) — login (400), chat (anexo/arquivo → 400) e cadastro de obra (nome curto / endereço ausente / publicar sem obrigatórios → 400).
 
-**Expansão contínua (vivo):**
-- [ ] Cobrir cada novo endpoint crítico conforme criado.
+**Expansão contínua (vivo) — rumo a 100% dos críticos:**
+- [x] Radar de gaps: `npm run test:integration:gaps` (`scripts/integration-coverage-gaps.ts`)
+  cruza os endpoints de `app/api/**` com os specs e lista os críticos/mutação sem cobertura,
+  priorizados. Rodar ao criar endpoint novo para saber o próximo teste a escrever.
+- [ ] Cobrir cada novo endpoint crítico conforme criado (usar o radar acima como guia).
+
+**Grupos de expansão (mapa de rastreio — detalhe na §11):** 128 endpoints críticos
+mapeados em 2026-07-18 (`--json --all`), agrupados por tema e ordenados por risco de
+negócio. Marcar `[x]` conforme o spec do grupo entra verde. Progresso medido pela queda
+do número "sem cobertura" no radar.
+
+- [x] **G1 · auth-links / tokens** — verify-email, forgot/reset-password, resend-verification, definir-senha-inicial (validações). → `auth-links.integration.spec.ts` (13 testes). *(confirmar-novo-email/trocar-email ficam p/ um refino do G1 — ver §10.)*
+- [ ] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,verificar,desativar,status}, exportar-dados.
+- [ ] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes.
+- [ ] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password.
+- [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
+- [ ] **G6 · obras — sub-recursos** — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
+- [ ] **G7 · candidaturas & medições (personas)** — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
+- [ ] **G8 · usuários & config admin** — admin/usuarios(+[id]/ativo), admin/configuracoes, admin/legal, admin/faq/[id], admin/integracoes/api-key, admin/marketplace-leads/[id], admin/planos/[id], perfil/admin.
+- [ ] **G9 · anúncios admin** — admin/anuncios/{anunciantes,campanhas(+[id]),config,pedidos/[id]} + KPIs.
+- [ ] **G10 · financeiro admin (read-only shape+authz)** — admin/{financeiro,caixa,entradas,saidas}/** GETs (shape correto + admin-only).
+- [ ] **G11 · uploads & assinaturas** — uploads/{presign,commit,sign,[id]}, chat/[threadId]/upload/presign, assinaturas/{checkout,cancelar}.
+- [ ] **G12 · impersonate** — admin/impersonate/[id] + exit (fecha gap T2.4 da §10; exige helper test-only p/ montar cookie).
 
 ## 7. Critérios de aceite
 1. `npm run test:integration` sobe banco de teste isolado, roda e passa — **sem tocar dados de dev/produção**.
@@ -102,3 +123,134 @@ Sem novas tabelas de produção. Pode exigir infra de **seed/fixtures** de teste
   cobertura de integração. Já existe infra test-only (emails em memória, `E2E_TEST_AUTH`)
   reaproveitável. Desafio principal mapeado: banco de teste isolado no ambiente Replit
   (banco único) — definir estratégia na execução.
+- 2026-07-17: **Estratégia definida** — reusar a suíte Playwright existente (specs de
+  API contra o servidor real), NÃO montar Vitest+banco isolado. Motivo: banco único no
+  Replit + suíte E2E madura que já testa API contra Postgres real (login test-only,
+  cleanup por nome "E2E", cursor keyset). Menor risco de quebrar o projeto.
+- 2026-07-17: **Guard anti-produção implementado** (`tests/e2e/guards.ts`, ligado como
+  `globalSetup` nos dois configs Playwright). Inspeciona `DATABASE_URL`: permite hosts de
+  dev conhecidos (localhost, 127.0.0.1, helium/heliumdb), bloqueia marcadores de produção
+  (`prod`/`live`/…) e faz fail-closed em host desconhecido (liberável com `E2E_ALLOW_ANY_DB=1`).
+  Responde à dúvida do dono: os testes NÃO apagam dados em massa (só lixo "E2E"); o guard
+  garante que a suíte aborta ANTES de tocar no banco se a URL parecer de produção.
+- 2026-07-17: **Fase 1 (Chat) concluída** — `tests/e2e/integration/chat.integration.spec.ts`
+  (7 testes, todos passando). Cobre: IDOR de thread alheia → 403 em GET/POST/marcar-lida;
+  thread inexistente → 403 (não 500); anexoObraId de obra alheia → 400; arquivoUrl de host
+  não-R2 → 400; unread-count coerente + marcar-lida idempotente; marcar-lida não zera as
+  próprias mensagens; restaurar conversa após "F5" (Task #159). Descoberta: o par de seed
+  joão↔maria compartilha thread, então IDOR exige um 3º par (ramon↔ramon) — o spec descobre
+  a thread alheia dinamicamente e usa test.skip se o seed não tiver o par.
+- 2026-07-17: **Fase 2 (Auth & Autorização) concluída** — `auth-authz.integration.spec.ts`
+  (9 testes, todos passando). Descobertas: (a) `/api/contratante/minhas-obras` NÃO usa
+  `requireVerifiedUser` nem role-gate estrito (responde 200) — a rota que aplica os gates é
+  `/api/contratante/medicoes` (verifica email → depois role). (b) Guard admin (`requireAdmin`)
+  lê o role do JWT, não do DB, então `login-as` funciona para testar admin-only.
+  **Gap registrado:** T2.4 (impersonation read-only → 403 em mutação) não coberto — exige
+  um endpoint test-only para montar o cookie de impersonation, que só o fluxo de superadmin
+  emite. Item de expansão futura.
+- 2026-07-17: **Fase 3 (Obras + Candidatura/Aceite) concluída** — `obras-candidatura.integration.spec.ts`
+  (8 testes, todos passando, `describe.serial`). Descobertas: (a) o limite do plano free é
+  1 obra aberta → criar obra retorna **402** se a cota não for liberada; o helper conclui as
+  obras abertas do contratante via admin. (b) O PATCH de obra faz merge+revalidação com
+  `insertObraSchemaStrict`, então concluir uma obra publicada sem `numero` (resíduo do j40)
+  dava 400 — o helper envia `numero` junto. (c) Após o 1º aceite a obra fica com
+  `empreiteiraId != null`, então 2º aceite / não-dono retornam **409** (SELECT FOR UPDATE
+  detecta obra já vinculada antes do check de ownership) — nunca 200. **Refinamento futuro:**
+  testar não-dono com obra ainda pendente (exige 2ª obra no setup) para 403 puro.
+- 2026-07-17: **Fase 4 (Financeiro/Medições + Webhook) concluída** — `financeiro-webhook.integration.spec.ts`
+  (6 testes, todos passando). Descobertas: (a) o adapter de gateway em teste é o `manual`
+  (`PAYMENT_GATEWAY` indefinido) — ele NÃO valida assinatura e só mapeia `type` **ausente**
+  para "ignored" (type presente é repassado literalmente e É processado). Por isso o teste
+  "assinatura inválida → 400" só vale para adapter real (J14) — **gap registrado**. (b)
+  Idempotência confirmada: mesmo `gatewayEventId` 2x → 1ª `processed:true`, 2ª `false`.
+  Eventos de teste usam `gatewaySubscriptionId` inexistente → nenhum UPDATE em assinaturas
+  reais (efeito colateral nulo). **Gap:** aprovar/contestar medição de verdade exige setup
+  pesado (obra+candidatura+medição pendente); aqui cobrimos só os guards. O caminho feliz
+  financeiro segue no j40.
+- 2026-07-17: **Como rodar** — `npm run test:integration` (roda `tests/e2e/integration/`),
+  ou `make test-e2e SPEC=tests/e2e/integration/<spec>.spec.ts` para spec isolada sem
+  EADDRINUSE. Exige `E2E_TEST_AUTH=1` (injetado pelo `playwright.config.ts`) e ambiente
+  de **dev**. Contra o dev server 5000 já rodando:
+  `npx playwright test --config=playwright.e2e-dev.config.ts tests/e2e/integration`.
+- 2026-07-18: **4 fases encerradas + suíte re-verificada verde** — `npm run test:integration`
+  → **27 passed, 3 skipped, 0 falhas**. (Nota: rodar contra o dev server 5000 dá falso-negativo
+  porque ele sobe sem `E2E_TEST_AUTH=1` → `/api/test/*` responde 404; a via canônica sobe o Next
+  próprio na 3010 com as flags.) **Início da expansão por grupos rumo a 100%.** Radar mapeado
+  com `--json --all`: **128 endpoints críticos** (73 com mutação) organizados em 12 grupos —
+  ver §6 (checklist) e §11 (detalhe por grupo). Ritmo acordado: **um grupo por rodada, validando
+  cada um** (suíte verde → OK na §6 → linha aqui). Sem unitários (J35) até a J36 fechar 100%.
+- 2026-07-18: **Descoberta técnica p/ G1 (auth-links)** — verify-email e reset-password são
+  **JWT HMAC stateless** (`features/auth/api/auth-service.ts`, sem coluna no banco): assertável
+  expiração (24h / 15min) e assinatura, **não reuso** (verify reusado → `already_verified`;
+  reset reusado → redefine de novo, 200). O único token com **single-use real** é o de
+  `definir-senha-inicial`, persistido em `password_setup_tokens.usedAt` (`shared/db/schema.ts`).
+  Token de teste sai de `/api/test/emails?to=` via `meta.kind` (`verification`→`verificationUrl`,
+  `password-reset`→`resetUrl`, `password-setup`→`setupUrl`) — padrão já usado em `onboarding.spec.ts`.
+- 2026-07-18: **G1 (auth-links) concluído** — `tests/e2e/integration/auth-links.integration.spec.ts`
+  (13 testes, todos passando). Suíte total: **40 passed, 3 skipped, 0 falhas** (2 rodadas seguidas,
+  isolamento ok); `tsc` limpo. Radar caiu de **150 → 145** endpoints sem cobertura (saíram
+  verify-email, forgot-password, reset-password, resend-verification, definir-senha-inicial).
+  Descobertas: (a) as rotas públicas de auth (`forgot-password`, `register`) passam por
+  `validateAntiBot` — o teste precisa mandar `mountedAt` no passado (>1.5s) e sem honeypot
+  `website`, senão 400 antes da validação de negócio. (b) Fluxo feliz de verify-email e reset
+  usa um usuário **recém-registrado** (fica não-verificado) e extrai o token do
+  `/api/test/emails` — auto-contido, sem depender de conta de seed; `test.skip` se o cadastro
+  de contratante estiver desabilitado no ambiente. (c) `definir-senha-inicial`: cobrimos as
+  validações que não exigem token válido (senhas divergentes/schema/token inexistente → 400);
+  o fluxo feliz + reuso→400 (single-use real) encadeia com o **G4** (resets admin emitem o
+  setup token) — deixado para quando o G4 for implementado. **Refino futuro do G1:**
+  `confirmar-novo-email` + `trocar-email` (fluxo de troca de email por token) ainda não cobertos.
+
+## 11. Mapa de expansão — grupos e o que asserir
+> Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
+> **Guia, não contrato:** ao implementar cada grupo, esperar refinamentos (status codes,
+> setup) — registrar as descobertas na §10, como nas 4 fases. Um spec por grupo em
+> `tests/e2e/integration/`. Reusar sempre: `login-as`, helpers de email (`tests/e2e/helpers.ts`),
+> cleanup por nome/domínio "E2E", `test.skip` condicional a seed.
+
+**G1 · auth-links / tokens** → `auth-links.integration.spec.ts` *(1º)*
+- `GET /api/auth/verify-email?token=` (redirect 302): ausente→`error=token_missing`; adulterado→`error=token_invalid`; válido→`success=verified` + `users.emailVerified` setado; reuso→`already_verified`.
+- `POST /api/auth/forgot-password`: email inexistente→`{success:true}` 200 (anti-enumeração); rate-limit 3/h→429.
+- `POST /api/auth/reset-password` (token no body): senha<8→400; token inválido→400; senha fraca→400; feliz→200 + login com nova senha ok.
+- `POST /api/auth/definir-senha-inicial`: confirmação divergente→400; senha fraca→400 **sem queimar token**; feliz consome; **reuso→400** (único single-use real).
+- `POST /api/auth/resend-verification`: inexistente→`{success:true}`; já verificado→`{alreadyVerified:true}`; rate-limit 4/h.
+- `GET /api/auth/confirmar-novo-email` + `POST /api/auth/trocar-email`: fluxo de troca de email (token) — mapear detalhes ao implementar.
+
+**G2 · auth-conta & 2FA** → `auth-conta.integration.spec.ts`
+- `change-password` / `change-password-forced`: senha atual errada→4xx; nova fraca→400; feliz→200 + hash muda no banco.
+- `2fa/{setup,confirmar,verificar,desativar,status}`: setup gera segredo; código inválido→4xx; desativar exige verificação; status reflete estado.
+- `register` (payload inválido→400, duplicado→409), `refresh` (token inválido→401), `desativar-conta`, `exportar-dados` (authz + shape).
+
+**G3 · moderação de obras (admin)** → `moderacao-obras.integration.spec.ts`
+- `POST admin/obras/[id]/aprovar`: não-admin→403; feliz→`statusModeracao='aprovada'` + moderadoEm/Por; já aprovada→409; inexistente→404; **assert: obra aparece no marketplace público após aprovar**.
+- `POST admin/obras/[id]/rejeitar`: motivo ausente→400; grava `rejeitada`+`motivoModeracao`; estado inválido→409.
+- `PATCH admin/obras/[id]/destaque`, `GET admin/obras/[id]/medicoes`, `GET admin/obras/destaque`: authz + shape.
+
+**G4 · resets de acesso admin** → `reset-acesso-admin.integration.spec.ts`
+- `POST admin/clientes/[id]/reset-senha`, `admin/empreiteiras/[id]/reset-acesso`, `admin/usuarios/[id]/reset-password`: não-admin→403; feliz→emite setup token (`password_setup_tokens`) + `mustChangePassword`; alvo inexistente→404. Encadeia com G1 (definir-senha-inicial consome o token).
+
+**G5 · disputas** → `disputas.integration.spec.ts`
+- Persona: `GET/POST disputas`, `POST disputas/[id]/mensagens`, `GET disputas/[id]` — não-participante→403 (IDOR); criar sem obra válida→4xx.
+- Admin: `POST admin/disputas/[id]/{assumir,resolver,mensagens}` — não-admin→403; resolver sem assumir→transição inválida 4xx (não 500); + GETs (`admin/disputas`, `[id]`, `kpi`).
+
+**G6 · obras — sub-recursos** → `obras-subrecursos.integration.spec.ts` (pode dividir)
+- 8 famílias sob `obras/[id]/`: anexos, checklists, diario, equipe, etapas, fotos, ocorrencias, tarefas (todos GET/POST + PATCH/DELETE no filho). Padrão por família: não-membro da obra→403 (IDOR); POST grava e GET reflete; DELETE de item alheio→403/404; payload inválido→400. + `ocorrencias/[id]/resolver`, `obras/[id]/{health,disputas}` (GET authz).
+
+**G7 · candidaturas & medições (personas)** → `candidaturas-medicoes.integration.spec.ts`
+- `contratante/candidaturas/[id]/rejeitar`, `contratante/medicoes/[id]/contestar`, `empreiteiro/candidaturas/[id]/{anexos,cancelar}`, `empreiteiro/medicoes` (GET/POST): guards de persona/ownership + transição de estado. Complementa Fase 3/4.
+
+**G8 · usuários & config admin** → `admin-gestao.integration.spec.ts`
+- `admin/usuarios`(+`[id]`,`[id]/ativo`), `admin/configuracoes`, `admin/legal`, `admin/faq/[id]`, `admin/integracoes/api-key`, `admin/marketplace-leads/[id]`, `admin/planos/[id]`, `perfil/admin`: admin-only→403 p/ não-admin; mutação grava e GET reflete; payload inválido→400.
+
+**G9 · anúncios admin** → `admin-anuncios.integration.spec.ts`
+- `admin/anuncios/{anunciantes,campanhas,campanhas/[id],config,pedidos/[id]}` + KPIs (kpi,pedidos,zonas): admin-only; CRUD grava/reflete; validação→400.
+
+**G10 · financeiro admin (read-only)** → `admin-financeiro-shape.integration.spec.ts`
+- GETs de `admin/{financeiro,caixa,entradas,saidas}/**`: **admin-only→403** para não-admin e **shape correto** (campos esperados presentes, não 500). Baixo risco de mutação, alto valor de contrato.
+
+**G11 · uploads & assinaturas** → `uploads-assinaturas.integration.spec.ts`
+- `uploads/{presign,commit,sign,[id]}`, `chat/[threadId]/upload/presign`: authz + validação de host/tipo (reforça o que o chat já testa); DELETE de upload alheio→403.
+- `assinaturas/{checkout,cancelar}`: guards de persona + estado da assinatura.
+
+**G12 · impersonate** → `impersonate.integration.spec.ts` *(fecha gap T2.4)*
+- `POST admin/impersonate/[id]` + `exit`: só superadmin monta cookie read-only; **mutação sob impersonation→403**. Exige helper test-only para emitir o cookie (registrado como pendência na Fase 2). Deixar por último — maior custo de setup.

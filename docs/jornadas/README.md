@@ -45,7 +45,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | planejada | alta |
 | 34 | [Ajustes Finos de UX (Visão Admin)](34-ajustes-finos-ux-admin.md) | admin | 8 | pronto | média |
 | 35 | [Testes Unitários (fundação de qualidade)](35-testes-unitarios.md) | dev/sistema | 9 | planejada | alta |
-| 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | planejada | alta |
+| 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | em andamento (4 fases ok, expansão p/ 100%) | alta |
 | 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial | alta |
 | 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | revisão | média |
 | 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |

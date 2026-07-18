@@ -10,6 +10,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Guard anti-produção (J36 §8): ver tests/e2e/guards.ts.
+  globalSetup: "./tests/e2e/guards.ts",
   timeout: 90_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
