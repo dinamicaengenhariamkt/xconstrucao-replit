@@ -3,32 +3,52 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { RiCheckboxCircleFill, RiLoader4Line, RiTimeLine, RiArrowRightLine } from 'react-icons/ri';
+import { RiCheckboxCircleFill, RiLoader4Line, RiTimeLine, RiArrowRightLine, RiLockLine } from 'react-icons/ri';
 import type { PerfilPlano } from '@features/planos/ui/use-planos';
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 10000;
 
+class UnauthenticatedError extends Error {
+  constructor() {
+    super('UNAUTHENTICATED');
+    this.name = 'UnauthenticatedError';
+  }
+}
+
 async function fetchPerfilPlano(): Promise<PerfilPlano> {
   const res = await fetch('/api/perfil/plano', { cache: 'no-store' });
+  if (res.status === 401) throw new UnauthenticatedError();
   if (!res.ok) throw new Error('Erro ao verificar plano');
   return res.json();
 }
 
-type Status = 'polling' | 'activated' | 'timeout';
+type Status = 'polling' | 'activated' | 'timeout' | 'unauthenticated';
 
 export default function PlanosSucessoPage() {
   const startTimeRef = useRef<number>(Date.now());
   const [status, setStatus] = useState<Status>('polling');
   const [tierInicial, setTierInicial] = useState<string | null>(null);
 
-  const { data, isError } = useQuery<PerfilPlano, Error>({
+  const { data, isError, error } = useQuery<PerfilPlano, Error>({
     queryKey: ['planos', 'sucesso-poll'],
     queryFn: fetchPerfilPlano,
     refetchInterval: status === 'polling' ? POLL_INTERVAL_MS : false,
     staleTime: 0,
     gcTime: 0,
+    retry: (failureCount, err) => {
+      if (err instanceof UnauthenticatedError) return false;
+      return failureCount < 2;
+    },
   });
+
+  const isUnauthenticated = isError && error instanceof UnauthenticatedError;
+
+  useEffect(() => {
+    if (isUnauthenticated) {
+      setStatus('unauthenticated');
+    }
+  }, [isUnauthenticated]);
 
   useEffect(() => {
     if (!data) return;
@@ -158,7 +178,35 @@ export default function PlanosSucessoPage() {
             </>
           )}
 
-          {isError && (
+          {status === 'unauthenticated' && (
+            <>
+              <div className="flex justify-center">
+                <RiLockLine
+                  className="w-16 h-16 text-amber-500"
+                  data-testid="icon-unauthenticated"
+                />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                  Sessão expirada
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+                  Seu pagamento foi processado, mas sua sessão expirou durante o
+                  checkout. Faça login novamente para confirmar sua assinatura.
+                </p>
+              </div>
+              <Link
+                href="/login?redirect=/planos/sucesso"
+                className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors text-sm"
+                data-testid="link-fazer-login"
+              >
+                Fazer login
+                <RiArrowRightLine className="w-4 h-4" />
+              </Link>
+            </>
+          )}
+
+          {isError && !isUnauthenticated && (
             <>
               <div className="flex justify-center">
                 <RiTimeLine className="w-16 h-16 text-amber-500" />

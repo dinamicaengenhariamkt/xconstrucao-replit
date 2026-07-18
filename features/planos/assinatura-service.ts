@@ -107,7 +107,7 @@ export async function iniciarCheckout(args: {
     tier: plano.tier as PlanoTier,
     ciclo,
     valor,
-    successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/perfil` : undefined,
+    successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
   });
