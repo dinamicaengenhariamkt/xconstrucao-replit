@@ -236,8 +236,9 @@ export async function aplicarEventoWebhook(evt: {
         assinaturaId = a.id;
         if (evt.type === "payment_succeeded") {
           // Pagamento confirmado (ex: cliente pagou boleto/pix em atraso).
-          // Reativa a assinatura se estava inadimplente e atualiza o tier do usuário.
-          if (a.status === "inadimplente") {
+          // Reativa a assinatura se estava inadimplente OU expirada (pagou após
+          // o período de carência) e atualiza o tier do usuário.
+          if (a.status === "inadimplente" || a.status === "expirada") {
             // Preserve the original billing anchor: if the existing renovaEm is
             // within 30 days in the past (short overdue window), bump it by one
             // cycle from that date rather than from today. This prevents annual
