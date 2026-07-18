@@ -93,3 +93,4 @@ muda o COMPORTAMENTO (retorna `redirect` em vez de `activated`), não a rota.
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
 - 2026-06-01: Jornada criada como continuação natural de J11. Fundação (porta + adapter manual + idempotência) entregue em J11; esta jornada fica BLOQUEADA aguardando o usuário definir o gateway. Trocar = 1 adapter novo + env var, sem tocar service/rotas/schema.
+- 2026-07-18: `POST /api/webhooks/gateway` aceitava qualquer chamada sem verificar origem — qualquer agente podia disparar eventos de pagamento falsos. _Resolvido_: `AsaasGateway.parseWebhook` agora verifica o IP do chamador contra a env var `ASAAS_WEBHOOK_IPS` (lista separada por vírgula). Se não configurada, emite aviso mas não bloqueia (compatibilidade sandbox). Usa `TRUST_PROXY_HEADERS=1` para ler `X-Forwarded-For` atrás de proxy.

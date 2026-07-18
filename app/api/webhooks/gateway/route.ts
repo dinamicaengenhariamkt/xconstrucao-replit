@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
+import { getClientIp } from "@features/auth/api/rate-limit";
 
 /**
  * POST /api/webhooks/gateway — recebe eventos do gateway de pagamento (J11).
@@ -9,6 +10,10 @@ import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
  * `gateway.parseWebhook` (verificação de assinatura do payload no adapter real).
  * O processamento é IDEMPOTENTE: o mesmo eventId nunca é aplicado duas vezes
  * (índice único em assinatura_eventos.gateway_event_id).
+ *
+ * O IP do chamador é resolvido aqui (via `getClientIp`, que respeita
+ * TRUST_PROXY_HEADERS) e passado explicitamente para o adapter — garantindo
+ * que nenhum header arbitrário controlado pelo chamador sirva como identidade.
  */
 export async function POST(request: NextRequest) {
   const rawBody = await request.text().catch(() => "");
@@ -17,9 +22,11 @@ export async function POST(request: NextRequest) {
     headers[k] = v;
   });
 
+  const clientIp = getClientIp(request);
+
   let evt;
   try {
-    evt = await getPaymentGateway().parseWebhook(rawBody, headers);
+    evt = await getPaymentGateway().parseWebhook(rawBody, headers, clientIp);
   } catch (err) {
     console.error("[webhooks/gateway] assinatura inválida ou payload malformado:", err);
     return NextResponse.json({ error: "INVALID_SIGNATURE" }, { status: 400 });

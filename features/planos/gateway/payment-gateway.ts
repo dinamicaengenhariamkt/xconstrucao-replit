@@ -57,6 +57,10 @@ export interface PaymentGateway {
   /**
    * Valida e normaliza um webhook. `verifySignature` deve falhar (throw) se a
    * assinatura do payload for inválida no adapter real.
+   *
+   * `clientIp` deve ser resolvido pelo route handler (via `getClientIp`) antes
+   * de chamar este método — não confiamos em headers arbitrários da requisição
+   * para determinar a origem, pois podem ser forjados pelo chamador.
    */
-  parseWebhook(rawBody: string, headers: Record<string, string>): Promise<NormalizedWebhookEvent>;
+  parseWebhook(rawBody: string, headers: Record<string, string>, clientIp?: string): Promise<NormalizedWebhookEvent>;
 }

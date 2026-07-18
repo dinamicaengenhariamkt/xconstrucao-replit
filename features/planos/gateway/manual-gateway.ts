@@ -32,7 +32,7 @@ export class ManualGateway implements PaymentGateway {
     // No-op: não há assinatura remota para cancelar.
   }
 
-  async parseWebhook(rawBody: string): Promise<NormalizedWebhookEvent> {
+  async parseWebhook(rawBody: string, _headers: Record<string, string> = {}, _clientIp?: string): Promise<NormalizedWebhookEvent> {
     // O adapter manual aceita um webhook simulado (ex: para testes/demonstração).
     // Adapters reais validam assinatura do payload aqui e lançam se inválida.
     let parsed: Record<string, unknown> = {};

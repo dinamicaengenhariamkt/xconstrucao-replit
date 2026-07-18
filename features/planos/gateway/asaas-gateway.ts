@@ -9,9 +9,11 @@
  *   ASAAS_API_KEY        — chave de API (prefixo $aact_hmlg_ em sandbox)
  *   ASAAS_ENVIRONMENT    — "sandbox" | "production" (default: sandbox)
  *
- * Segurança: webhooks aceitos sem verificação de assinatura HMAC (ASAS não
- * inclui HMAC por default). Mitigar via IP whitelist ASAS no firewall/proxy.
- * Ver gap documentado em J14 §13.
+ * Segurança: webhooks verificados via IP whitelist configurável.
+ *   ASAAS_WEBHOOK_IPS    — lista de IPs autorizados separados por vírgula
+ *                          (ex: "54.94.97.128,18.228.149.104"). Se não
+ *                          configurada, apenas um aviso é emitido (sandbox).
+ *   TRUST_PROXY_HEADERS  — se "1", lê X-Forwarded-For para extrair o IP real.
  */
 
 import {
@@ -120,7 +122,32 @@ export class AsaasGateway implements PaymentGateway {
     }
   }
 
-  async parseWebhook(rawBody: string): Promise<NormalizedWebhookEvent> {
+  async parseWebhook(rawBody: string, _headers: Record<string, string> = {}, clientIp?: string): Promise<NormalizedWebhookEvent> {
+    // ── IP whitelist ────────────────────────────────────────────────────────
+    // `clientIp` é resolvido pelo route handler via `getClientIp(request)` que
+    // já aplica corretamente a política TRUST_PROXY_HEADERS. Não lemos headers
+    // de IP aqui — o chamador poderia forjar X-Real-IP ou X-Forwarded-For.
+    const allowedIps = (process.env.ASAAS_WEBHOOK_IPS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (allowedIps.length === 0) {
+      console.warn(
+        "[asaas] ASAAS_WEBHOOK_IPS não configurado — aceitando webhook sem verificação de IP (modo sandbox). " +
+          "Configure esta env var em produção com os IPs oficiais do ASAS."
+      );
+    } else {
+      const resolvedIp = clientIp ?? "unknown";
+
+      if (!allowedIps.includes(resolvedIp)) {
+        console.warn(`[asaas] webhook rejeitado: IP "${resolvedIp}" não está na whitelist`);
+        throw new Error(`[asaas] IP não autorizado: ${resolvedIp}`);
+      }
+      console.info(`[asaas] webhook aceito de IP autorizado: ${resolvedIp}`);
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     let body: Record<string, unknown> = {};
     try {
       body = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
