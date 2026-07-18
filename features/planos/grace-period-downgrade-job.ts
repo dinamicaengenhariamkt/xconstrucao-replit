@@ -8,6 +8,18 @@ import { assinaturaEventos, assinaturas, auditLogs, users } from "@shared/db/sch
  */
 const DEFAULT_GRACE_DAYS = 7;
 
+/**
+ * Buffer adicional (em horas) após o fim do período de carência antes de
+ * efetivamente revogar o acesso. Protege o assinante contra falhas transitórias
+ * do gateway que atrasem o webhook `payment_succeeded` além da janela de
+ * carência. Configurável via `INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`.
+ *
+ * Exemplo: com GRACE_DAYS=7 e BUFFER_HOURS=48, a revogação só ocorre após
+ * 7 dias + 48 horas de inadimplência — dando tempo suficiente para o gateway
+ * reprocessar o evento de pagamento.
+ */
+const DEFAULT_BUFFER_HOURS = 48;
+
 export interface DowngradeInadimplentesResult {
   ok: boolean;
   downgraded: number;
@@ -26,10 +38,49 @@ function parseGraceDays(value: unknown): number {
 }
 
 /**
- * Job idempotente que revoga o acesso de assinantes inadimplentes cujo período
- * de carência expirou.
+ * Parseia e valida o buffer adicional em horas.
+ * Retorna o valor padrão se a entrada for inválida.
+ * Aceita valores fracionários (ex: 0.5 = 30min) para facilitar testes.
+ */
+function parseBufferHours(value: unknown): number {
+  const n = Number(value);
+  if (Number.isFinite(n) && n >= 0) return n;
+  return DEFAULT_BUFFER_HOURS;
+}
+
+/**
+ * Calcula o instante de corte (cutoff) para revogação de inadimplentes:
+ * `now - graceDays - bufferHours`.
  *
- * Critério: `status = 'inadimplente'` AND `renovaEm < NOW() - graceDays`.
+ * Qualquer assinatura com `renovaEm < cutoff` é elegível para rebaixo.
+ * Esta função pura é exportada para facilitar testes unitários.
+ *
+ * @param graceDays  Dias de carência após `renovaEm`.
+ * @param bufferHours  Buffer adicional em horas após o fim da carência.
+ * @param now  Momento de referência (default: Date.now()).
+ */
+export function computeDowngradeCutoff(
+  graceDays: number,
+  bufferHours: number,
+  now: number = Date.now(),
+): Date {
+  const cutoffMs =
+    now - graceDays * 24 * 60 * 60 * 1000 - bufferHours * 60 * 60 * 1000;
+  return new Date(cutoffMs);
+}
+
+/**
+ * Job idempotente que revoga o acesso de assinantes inadimplentes cujo período
+ * de carência E buffer adicional expiraram.
+ *
+ * Critério: `status = 'inadimplente'` AND
+ *   `renovaEm < NOW() - graceDays - bufferHours`.
+ *
+ * O buffer adicional (`INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`, default 48h)
+ * garante que uma falha transitória do gateway que atrase o webhook
+ * `payment_succeeded` além da janela de carência não rebaixe o assinante
+ * indevidamente. Se o pagamento chegar dentro do buffer, o webhook ainda
+ * reativa a assinatura antes do próximo ciclo do job.
  *
  * Ações por assinatura elegível (dentro de uma transação atômica):
  *   1. `assinaturas.status` → `expirada`  (UPDATE condicional — guard de race)
@@ -49,8 +100,9 @@ function parseGraceDays(value: unknown): number {
  *   `ativa` (re-assinatura). Nesse caso o job expira a linha antiga mas NÃO
  *   toca `users.plano` (o usuário está pagando ativamente).
  *
- * A janela de carência é configurável via a variável de ambiente
- * `INADIMPLENTE_GRACE_DAYS` (default: 7 dias).
+ * A janela de carência é configurável via `INADIMPLENTE_GRACE_DAYS` (default
+ * 7 dias) e o buffer adicional via `INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`
+ * (default 48 horas).
  *
  * Pensado para rodar diariamente via Replit Scheduled Deployment
  * (`scripts/downgrade-inadimplente.ts`). Pode ser chamado manualmente ou
@@ -58,11 +110,16 @@ function parseGraceDays(value: unknown): number {
  */
 export async function downgradeInadimplentes(
   graceDays?: number,
+  bufferHours?: number,
 ): Promise<DowngradeInadimplentesResult> {
   const runAt = new Date().toISOString();
 
   const days = parseGraceDays(
     graceDays ?? process.env.INADIMPLENTE_GRACE_DAYS ?? DEFAULT_GRACE_DAYS,
+  );
+
+  const buffer = parseBufferHours(
+    bufferHours ?? process.env.INADIMPLENTE_DOWNGRADE_BUFFER_HOURS ?? DEFAULT_BUFFER_HOURS,
   );
 
   try {
@@ -74,13 +131,15 @@ export async function downgradeInadimplentes(
           eq(assinaturas.status, "inadimplente"),
           lt(
             assinaturas.renovaEm,
-            sql`NOW() - (${days} || ' days')::interval`,
+            sql`NOW() - (${days} || ' days')::interval - (${buffer} || ' hours')::interval`,
           ),
         ),
       );
 
     if (candidates.length === 0) {
-      console.info(`[downgrade-inadimplente] runAt=${runAt} downgraded=0`);
+      console.info(
+        `[downgrade-inadimplente] runAt=${runAt} downgraded=0 graceDays=${days} bufferHours=${buffer}`,
+      );
       return { ok: true, downgraded: 0, runAt };
     }
 
@@ -102,7 +161,7 @@ export async function downgradeInadimplentes(
                 eq(assinaturas.status, "inadimplente"),
                 lt(
                   assinaturas.renovaEm,
-                  sql`NOW() - (${days} || ' days')::interval`,
+                  sql`NOW() - (${days} || ' days')::interval - (${buffer} || ' hours')::interval`,
                 ),
               ),
             )
@@ -144,13 +203,13 @@ export async function downgradeInadimplentes(
             assinaturaId: row.id,
             tipo: "grace_period_expired",
             gatewayEventId: null,
-            payloadJson: { graceDays: days, downgradedAt: runAt },
+            payloadJson: { graceDays: days, bufferHours: buffer, downgradedAt: runAt },
           });
 
           downgraded++;
           downgradedIds.push(row.id);
           console.info(
-            `[downgrade-inadimplente] downgraded assinaturaId=${row.id} userId=${row.userId} graceDays=${days}`,
+            `[downgrade-inadimplente] downgraded assinaturaId=${row.id} userId=${row.userId} graceDays=${days} bufferHours=${buffer}`,
           );
         });
       } catch (rowErr) {
@@ -170,6 +229,7 @@ export async function downgradeInadimplentes(
           payload: {
             downgraded,
             graceDays: days,
+            bufferHours: buffer,
             runAt,
             ids: downgradedIds,
           },
@@ -185,7 +245,7 @@ export async function downgradeInadimplentes(
     }
 
     console.info(
-      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded}`,
+      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} graceDays=${days} bufferHours=${buffer}`,
     );
     return { ok: true, downgraded, runAt };
   } catch (err) {
