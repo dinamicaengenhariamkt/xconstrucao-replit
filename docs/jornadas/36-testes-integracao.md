@@ -1,6 +1,6 @@
 # Jornada — Testes de Integração (API + banco)
 
-> Status: em andamento — 4 fases + G1/G2/G3 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
+> Status: em andamento — 4 fases + G1–G4 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
 > Última atualização: 2026-07-18
 >
 > Parte do trio de testes (J35 unitários · **J36 integração** · J37 E2E). É o **meio
@@ -85,10 +85,10 @@ mapeados em 2026-07-18 (`--json --all`), agrupados por tema e ordenados por risc
 negócio. Marcar `[x]` conforme o spec do grupo entra verde. Progresso medido pela queda
 do número "sem cobertura" no radar.
 
-- [x] **G1 · auth-links / tokens** — verify-email, forgot/reset-password, resend-verification, definir-senha-inicial (validações). → `auth-links.integration.spec.ts` (13 testes). *(confirmar-novo-email/trocar-email ficam p/ um refino do G1 — ver §10.)*
+- [x] **G1 · auth-links / tokens** — verify-email, forgot/reset-password, resend-verification, definir-senha-inicial (validações). → `auth-links.integration.spec.ts` (13 testes). *(o fluxo feliz + reuso single-use de definir-senha-inicial foi coberto no **G4**, que emite o setup token; confirmar-novo-email/trocar-email ficam p/ um refino do G1 — ver §10.)*
 - [x] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,desativar,status}, exportar-dados. → `auth-conta.integration.spec.ts` (22 testes). *(2fa/verificar fica no fluxo de login, não no G2 — ver §10.)*
 - [x] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes. → `moderacao-obras.integration.spec.ts` (10 testes; assert de marketplace após aprovar/rejeitar).
-- [ ] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password.
+- [x] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password. → `reset-acesso-admin.integration.spec.ts` (11 testes; **fecha o G1**: definir-senha-inicial feliz + reuso single-use).
 - [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
 - [ ] **G6 · obras — sub-recursos** — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
 - [ ] **G7 · candidaturas & medições (personas)** — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
@@ -238,6 +238,25 @@ do número "sem cobertura" no radar.
   `CAPA_INVALIDA`) — o teste usa o **desligar** (`{destaque:false}` → 200 `{ok:true}`) para o caminho feliz
   sem precisar montar `fotoCapaFileId`. (f) guards mistos: aprovar/rejeitar/medições usam
   `requireVerifiedUser`+`isAdminLike`; destaque usa `requireAdmin` — ambos 401 anônimo / 403 não-admin.
+- 2026-07-18: **G4 (resets de acesso admin) concluído** — `tests/e2e/integration/reset-acesso-admin.integration.spec.ts`
+  (11 testes, todos passando). Suíte total: **83 passed, 3 skipped, 0 falhas** (2 rodadas seguidas,
+  isolamento ok); `tsc` limpo. Radar caiu de **131 → 126**. **Fecha a pendência do G1**: o fluxo feliz +
+  **reuso single-use** de `definir-senha-inicial` agora é coberto, porque quem emite o `password_setup_token`
+  é justamente um reset admin. Descobertas: (a) os 3 resets emitem um setup token real (`issueSetupToken`),
+  setam `mustChangePassword=true` e invalidam a senha atual; disparam email `kind='password-setup'` com
+  `meta.setupUrl` (token em claro só no email — a tabela guarda só o hash). (b) **`admin@xconstrucao.com` é
+  promovido a `superadmin` no boot** (`server/bootstrap-superadmin.ts`) — por isso passa em `hasUsersTabAccess`
+  e pode resetar qualquer role; o endpoint `usuarios/[id]/reset-password` ficou coberto por completo (authz +
+  modo `link`, que retorna `setupUrl` **no corpo**, dispensando o polling de email). Corrige a suposição do
+  plano de que o admin de seed seria role `admin` sem `canManageUsers`. (c) `clientes/reset-senha` e
+  `empreiteiras/reset-acesso` resolvem o id da linha `clientes`/`empreiteiras` (não `users.id`) via as
+  listagens admin (`GET /api/admin/{clientes,empreiteiras}` → array com `id`+`email`); só a linha do João/
+  Maria tem `user_id` vinculado. (d) **política de senha** bloqueia senha que contenha nome/username/email do
+  alvo — os fluxos felizes usam senhas neutras (sem "joao"/"maria"). (e) `definir-senha-inicial` valida a
+  política **antes** de consumir → senha fraca dá 400 **sem queimar o token** (asserido: fraca→400, depois
+  forte com o mesmo token→200, reuso→400). (f) **isolamento**: cada reset de João/Maria conclui com um
+  `definir-senha-inicial` bem-sucedido, restaurando `mustChangePassword=false`; os demais specs usam
+  `login-as` (ignora senha), então a troca de senha do seed não afeta nada.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
@@ -264,8 +283,8 @@ do número "sem cobertura" no radar.
 - `POST admin/obras/[id]/rejeitar`: motivo <5→400; grava `rejeitada`+`motivoModeracao`; não-publicada→409.
 - `PATCH admin/obras/[id]/destaque` (desligar, evita capa), `GET admin/obras/[id]/medicoes`, `GET admin/obras/destaque`: authz + shape.
 
-**G4 · resets de acesso admin** → `reset-acesso-admin.integration.spec.ts`
-- `POST admin/clientes/[id]/reset-senha`, `admin/empreiteiras/[id]/reset-acesso`, `admin/usuarios/[id]/reset-password`: não-admin→403; feliz→emite setup token (`password_setup_tokens`) + `mustChangePassword`; alvo inexistente→404. Encadeia com G1 (definir-senha-inicial consome o token).
+**G4 · resets de acesso admin** → `reset-acesso-admin.integration.spec.ts` *(concluído — ver §10, 2026-07-18)*
+- `POST admin/clientes/[id]/reset-senha`, `admin/empreiteiras/[id]/reset-acesso`, `admin/usuarios/[id]/reset-password`: não-admin→403; feliz→emite setup token (`password_setup_tokens`) + `mustChangePassword`; alvo inexistente→404. **Fecha o G1**: `definir-senha-inicial` consome o token (feliz→200, senha fraca não queima, reuso→400 single-use). O de `usuarios` (modo `link`) devolve `setupUrl` no corpo; `admin@xconstrucao.com` é superadmin no boot.
 
 **G5 · disputas** → `disputas.integration.spec.ts`
 - Persona: `GET/POST disputas`, `POST disputas/[id]/mensagens`, `GET disputas/[id]` — não-participante→403 (IDOR); criar sem obra válida→4xx.
