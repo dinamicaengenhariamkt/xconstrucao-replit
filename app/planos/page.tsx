@@ -1,9 +1,35 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { RiCloseCircleLine, RiArrowRightLine, RiArrowLeftLine } from 'react-icons/ri';
 
 export default function PlanosPage() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' })
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) { setChecking(false); return; }
+        const data = await res.json();
+        if (cancelled) return;
+        const role: string = data?.user?.role ?? data?.role ?? '';
+        if (role === 'contratante') {
+          router.replace('/contratante/planos');
+        } else if (role === 'empreiteiro') {
+          router.replace('/empreiteiro/planos');
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; };
+  }, [router]);
+
   return (
     <div
       className="min-h-screen bg-gray-50 dark:bg-[#1C1F22] flex items-center justify-center px-4"
@@ -49,6 +75,15 @@ export default function PlanosPage() {
               Ver planos para empreiteiro
             </Link>
           </div>
+
+          {checking && (
+            <p
+              className="text-xs text-gray-400 dark:text-gray-600"
+              data-testid="text-redirecting"
+            >
+              Verificando seu perfil…
+            </p>
+          )}
 
         </div>
 
