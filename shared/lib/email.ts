@@ -10,6 +10,9 @@ import CandidaturaDecididaEmail, {
 import NovaObraZonaEmail, {
   type NovaObraZonaEmailProps,
 } from '@features/notificacoes/emails/nova-obra-zona';
+import AvisoExpiracaoEmail, {
+  type AvisoExpiracaoEmailProps,
+} from '@features/notificacoes/emails/aviso-expiracao';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -197,6 +200,26 @@ export async function sendNovaObraZonaEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'nova-obra-zona' });
   } catch (error) {
     console.error('Erro ao enviar email de nova obra na zona:', error);
+    throw error;
+  }
+}
+
+export async function sendAvisoExpiracaoEmail(
+  to: string,
+  props: AvisoExpiracaoEmailProps,
+) {
+  const html = await render(AvisoExpiracaoEmail(props));
+  const subject = `XConstrução - Seu acesso expira em ${props.diasRestantes === 1 ? '1 dia' : `${props.diasRestantes} dias`}`;
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'aviso-expiracao', ...props } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'aviso-expiracao' });
+  } catch (error) {
+    console.error('Erro ao enviar email de aviso de expiração:', error);
     throw error;
   }
 }
