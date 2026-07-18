@@ -118,6 +118,9 @@ export async function register() {
     const { bootstrapKpiSnapshotsSchema } = await import("./server/bootstrap-kpi-snapshots");
     await runBootstrap("kpi-snapshots", bootstrapKpiSnapshotsSchema);
 
+    const { bootstrapWebhookDeliveryLogSchema } = await import("./server/bootstrap-webhook-delivery-log");
+    await runBootstrap("webhook-delivery-log", bootstrapWebhookDeliveryLogSchema);
+
     // ----------------------------------------------------------------
     // Jobs de negócio (periódicos — marcados como job_runs independentes)
     // ----------------------------------------------------------------
