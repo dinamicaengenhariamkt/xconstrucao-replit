@@ -2,6 +2,10 @@ import { and, eq, lt, ne, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { assinaturaEventos, assinaturas, auditLogs, planos, users } from "@shared/db/schema";
 import { getPaymentGateway } from "@features/planos/gateway";
+import {
+  dispararAlertePendenteReativacao,
+  parseAlertHours,
+} from "@features/notificacoes/pendente-reativacao-alert-dispatcher";
 
 /**
  * Número de dias de carência padrão após `renovaEm` antes de revogar o plano
@@ -213,7 +217,7 @@ export async function downgradeInadimplentes(
       try {
         await db
           .update(assinaturas)
-          .set({ status: "pendente_reativacao" })
+          .set({ status: "pendente_reativacao", pendenteReativacaoAt: new Date() })
           .where(
             and(
               eq(assinaturas.id, row.id),
@@ -511,6 +515,15 @@ export async function downgradeInadimplentes(
         );
       }
     }
+
+    // ─── Alerta: pendente_reativacao stuck rows ─────────────────────────────
+    // Verifica se alguma assinatura permanece presa em pendente_reativacao
+    // além do limiar configurável. Awaited para garantir que os logs e
+    // notificações sejam gravados antes de o processo encerrar (o script CLI
+    // chama process.exit(0) logo após este retorno). O dispatcher captura
+    // internamente todos os erros — nunca derruba o job.
+    const alertHours = parseAlertHours(process.env.PENDENTE_REATIVACAO_ALERT_HOURS ?? 72);
+    await dispararAlertePendenteReativacao(alertHours);
 
     console.info(
       `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} reactivated=${reactivated} expiredUnreachable=${expiredUnreachable} graceDays=${days} bufferHours=${buffer} maxRetries=${maxRetries}`,

@@ -941,6 +941,9 @@ export const assinaturas = pgTable(
     iniciadaEm: timestamp("iniciada_em").defaultNow().notNull(),
     renovaEm: timestamp("renova_em"),
     canceladaEm: timestamp("cancelada_em"),
+    // Registra quando a assinatura entrou no estado pendente_reativacao.
+    // Usado para detectar linhas presas no gateway-check limbo por muito tempo.
+    pendenteReativacaoAt: timestamp("pendente_reativacao_at"),
     // Campos agnósticos de gateway — preenchidos pelo adapter real (J14).
     gatewayProvider: text("gateway_provider").notNull().default("manual"),
     gatewayCustomerId: text("gateway_customer_id"),

@@ -73,6 +73,9 @@ export async function bootstrapPlanosSchema(): Promise<void> {
     // enquanto a assinatura está em pendente_reativacao.
     await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS gateway_retry_count INTEGER NOT NULL DEFAULT 0`);
 
+    // Migração idempotente: adiciona pendente_reativacao_at se ainda não existir.
+    await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS pendente_reativacao_at TIMESTAMP`);
+
     // Seed do catálogo a partir do plans-catalog (idempotente por tier+persona).
     const personas: PlanoPersona[] = ["empreiteiro", "contratante"];
     const tiers: PlanoTier[] = ["free", "pro", "enterprise"];
