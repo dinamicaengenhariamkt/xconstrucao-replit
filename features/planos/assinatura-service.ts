@@ -211,6 +211,7 @@ export async function aplicarEventoWebhook(evt: {
   eventId: string;
   type: string;
   gatewaySubscriptionId?: string;
+  gatewayCustomerId?: string;
   externalReference?: string;
   valor?: number;
 }): Promise<{ processed: boolean }> {

@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       eventId: evt.eventId,
       type: evt.type,
       gatewaySubscriptionId: evt.gatewaySubscriptionId,
+      gatewayCustomerId: evt.gatewayCustomerId,
       externalReference: evt.externalReference,
       valor: evt.valor,
     });
