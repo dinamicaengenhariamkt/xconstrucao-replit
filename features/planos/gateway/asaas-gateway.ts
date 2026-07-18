@@ -63,12 +63,16 @@ const CYCLE_MAP: Record<string, string> = {
 
 // ── Mapeamento de eventos ────────────────────────────────────────────────────
 
+// Apenas eventos explicitamente mapeados são processados — todos os outros
+// são tratados como "ignored" pelo fallback `?? "ignored"` em parseWebhook.
+// SUBSCRIPTION_CREATED NÃO está aqui: a ativação da assinatura ocorre SOMENTE
+// após confirmação de pagamento (PAYMENT_CONFIRMED/RECEIVED), nunca na criação
+// do contrato. Isso evita ativação prematura antes de cobrança confirmada.
 const EVENT_TYPE_MAP: Record<string, NormalizedWebhookEvent["type"]> = {
   PAYMENT_CONFIRMED: "payment_succeeded",
   PAYMENT_RECEIVED: "payment_succeeded",
   PAYMENT_OVERDUE: "payment_failed",
   PAYMENT_DELETED: "payment_failed",
-  SUBSCRIPTION_CREATED: "subscription_activated",
   SUBSCRIPTION_DELETED: "subscription_canceled",
 };
 

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "asaas": {
+      "command": "npx",
+      "args": ["-y", "@theyahia/asaas-mcp"],
+      "env": {
+        "ASAAS_API_KEY": "$ASAAS_API_KEY",
+        "ASAAS_ENVIRONMENT": "sandbox"
+      }
+    }
+  }
+}

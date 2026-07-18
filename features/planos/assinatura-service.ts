@@ -270,7 +270,7 @@ export async function aplicarEventoWebhook(evt: {
               ciclo: (ciclo as "mensal" | "anual") ?? "mensal",
               renovaEm: renova,
               gatewayProvider: gateway.provider,
-              gatewayCustomerId: evt.gatewaySubscriptionId ?? null,
+              gatewayCustomerId: evt.gatewayCustomerId ?? null,
               gatewaySubscriptionId: evt.gatewaySubscriptionId ?? evt.externalReference ?? null,
             })
             .returning({ id: assinaturas.id });
