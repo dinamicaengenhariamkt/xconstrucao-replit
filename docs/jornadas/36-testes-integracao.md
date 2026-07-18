@@ -1,6 +1,6 @@
 # Jornada — Testes de Integração (API + banco)
 
-> Status: em andamento — 4 fases + G1/G2 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
+> Status: em andamento — 4 fases + G1/G2/G3 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
 > Última atualização: 2026-07-18
 >
 > Parte do trio de testes (J35 unitários · **J36 integração** · J37 E2E). É o **meio
@@ -87,7 +87,7 @@ do número "sem cobertura" no radar.
 
 - [x] **G1 · auth-links / tokens** — verify-email, forgot/reset-password, resend-verification, definir-senha-inicial (validações). → `auth-links.integration.spec.ts` (13 testes). *(confirmar-novo-email/trocar-email ficam p/ um refino do G1 — ver §10.)*
 - [x] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,desativar,status}, exportar-dados. → `auth-conta.integration.spec.ts` (22 testes). *(2fa/verificar fica no fluxo de login, não no G2 — ver §10.)*
-- [ ] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes.
+- [x] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes. → `moderacao-obras.integration.spec.ts` (10 testes; assert de marketplace após aprovar/rejeitar).
 - [ ] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password.
 - [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
 - [ ] **G6 · obras — sub-recursos** — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
@@ -219,6 +219,25 @@ do número "sem cobertura" no radar.
   fluxo feliz depende de emitir a flag, que sai dos **resets do G4**; deixado para lá. (e)
   **`2fa/verificar` NÃO entra no G2**: é o 2º passo do login (público, exige `challengeToken` do
   1º passo), pertence ao fluxo de login — segue no radar como pendência desse fluxo, não deste grupo.
+- 2026-07-18: **G3 (moderação de obras — admin) concluído** — `tests/e2e/integration/moderacao-obras.integration.spec.ts`
+  (10 testes, todos passando). Suíte total: **72 passed, 3 skipped, 0 falhas** (2 rodadas seguidas,
+  isolamento ok); `tsc` limpo. Radar caiu de **136 → 131** (saíram admin/obras/[id]/{aprovar,rejeitar,
+  destaque,medicoes} e admin/obras/destaque — grupo admin/obras 100% coberto). Descobertas: (a)
+  **pré-condição de moderação**: aprovar/rejeitar exigem `visibilidade='publicada'` (senão 409
+  `OBRA_NAO_PUBLICADA`); obra recém-criada via POST é rascunho+pendente. A receita é criar rascunho →
+  `PATCH visibilidade:'publicada'`, e a **transição para publicada reseta a moderação para 'pendente'**
+  (`app/api/obras/[id]/route.ts:315-324`) — só então dá para aprovar/rejeitar. (b) **assert de marketplace
+  end-to-end**: não há rota `/marketplace`; é o próprio `GET /api/obras` como empreiteiro que filtra
+  `publicada AND statusModeracao='aprovada' AND empreiteiraId IS NULL`. O teste prova o efeito de negócio:
+  antes de aprovar (pendente) a obra NÃO aparece; depois de aprovar aparece; rejeitada não aparece. (c)
+  **cota do plano free = 1 obra aberta** → o spec cria a obra que cada teste precisa via `comObraPublicada`
+  e a conclui logo em seguida (`concluirObra` via admin), nunca 3 obras simultâneas; `liberarCotaObras`
+  antes de cada criação + `afterAll` de segurança mantêm cota e marketplace limpos. (d) aprovar é
+  **idempotente** (2ª vez → 200, sem re-atividade, via `SELECT FOR UPDATE` + WHERE condicional); rejeitar
+  exige `motivo` ≥ 5 chars (< 5 → 400). (e) `destaque` liga com exigência de capa válida (422
+  `CAPA_INVALIDA`) — o teste usa o **desligar** (`{destaque:false}` → 200 `{ok:true}`) para o caminho feliz
+  sem precisar montar `fotoCapaFileId`. (f) guards mistos: aprovar/rejeitar/medições usam
+  `requireVerifiedUser`+`isAdminLike`; destaque usa `requireAdmin` — ambos 401 anônimo / 403 não-admin.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
@@ -240,10 +259,10 @@ do número "sem cobertura" no radar.
 - `2fa/{setup,confirmar,desativar,status}`: setup gera segredo; código inválido→4xx; desativar exige verificação; status reflete estado. *(`2fa/verificar` = 2º passo do login, coberto no fluxo de login, não aqui.)*
 - `register` (payload inválido→400, duplicado→409), `refresh` (sem cookie→401, feliz→200), `desativar-conta`, `exportar-dados` (authz + shape).
 
-**G3 · moderação de obras (admin)** → `moderacao-obras.integration.spec.ts`
-- `POST admin/obras/[id]/aprovar`: não-admin→403; feliz→`statusModeracao='aprovada'` + moderadoEm/Por; já aprovada→409; inexistente→404; **assert: obra aparece no marketplace público após aprovar**.
-- `POST admin/obras/[id]/rejeitar`: motivo ausente→400; grava `rejeitada`+`motivoModeracao`; estado inválido→409.
-- `PATCH admin/obras/[id]/destaque`, `GET admin/obras/[id]/medicoes`, `GET admin/obras/destaque`: authz + shape.
+**G3 · moderação de obras (admin)** → `moderacao-obras.integration.spec.ts` *(concluído — ver §10, 2026-07-18)*
+- `POST admin/obras/[id]/aprovar`: não-admin→403; feliz→`statusModeracao='aprovada'` + moderadoEm/Por; **já aprovada→200 idempotente** (não 409); inexistente→404; não-publicada→409 `OBRA_NAO_PUBLICADA`; **assert: obra aparece no marketplace (`GET /api/obras` como empreiteiro) após aprovar, some quando rejeitada**.
+- `POST admin/obras/[id]/rejeitar`: motivo <5→400; grava `rejeitada`+`motivoModeracao`; não-publicada→409.
+- `PATCH admin/obras/[id]/destaque` (desligar, evita capa), `GET admin/obras/[id]/medicoes`, `GET admin/obras/destaque`: authz + shape.
 
 **G4 · resets de acesso admin** → `reset-acesso-admin.integration.spec.ts`
 - `POST admin/clientes/[id]/reset-senha`, `admin/empreiteiras/[id]/reset-acesso`, `admin/usuarios/[id]/reset-password`: não-admin→403; feliz→emite setup token (`password_setup_tokens`) + `mustChangePassword`; alvo inexistente→404. Encadeia com G1 (definir-senha-inicial consome o token).
