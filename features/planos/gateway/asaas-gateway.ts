@@ -21,10 +21,13 @@ import {
   type AsaasCheckout,
   type AsaasCustomer,
   type AsaasCustomerList,
+  type AsaasPayment,
+  type AsaasSubscription,
 } from "@shared/lib/asaas-client";
 import type {
   CheckoutInput,
   CheckoutResult,
+  GatewayPaymentStatus,
   NormalizedWebhookEvent,
   PaymentGateway,
 } from "./payment-gateway";
@@ -119,6 +122,31 @@ export class AsaasGateway implements PaymentGateway {
       // Ignora 404 (já cancelada no ASAS) mas propaga outros erros
       if (err instanceof Error && err.message.includes("HTTP 404")) return;
       throw err;
+    }
+  }
+
+  async checkPaymentStatus(gatewaySubscriptionId: string | null): Promise<GatewayPaymentStatus> {
+    if (!gatewaySubscriptionId) return "unknown";
+    try {
+      // Primeiro: verifica o status da assinatura no gateway.
+      const sub = await asaasRequest<AsaasSubscription>("GET", `/subscriptions/${gatewaySubscriptionId}`);
+      if (sub.status === "ACTIVE") return "paid";
+      if (sub.status === "EXPIRED" || sub.status === "INACTIVE") return "unpaid";
+
+      // Fallback: lista os últimos pagamentos e verifica se há algum confirmado.
+      const payments = await asaasRequest<{ data: AsaasPayment[]; totalCount: number }>(
+        "GET",
+        `/subscriptions/${gatewaySubscriptionId}/payments?limit=5`,
+      );
+      const hasPaid = payments.data?.some(
+        (p) => p.status === "CONFIRMED" || p.status === "RECEIVED",
+      );
+      if (hasPaid) return "paid";
+      if (payments.data && payments.data.length > 0) return "unpaid";
+      return "unknown";
+    } catch (err) {
+      console.warn("[asaas] checkPaymentStatus falhou — retornando unknown:", err);
+      return "unknown";
     }
   }
 

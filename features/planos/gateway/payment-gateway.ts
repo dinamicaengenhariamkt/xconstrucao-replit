@@ -48,6 +48,16 @@ export interface NormalizedWebhookEvent {
   raw: Record<string, unknown>;
 }
 
+/**
+ * Resultado da consulta proativa de status de pagamento.
+ *
+ *   "paid"    — gateway confirma pagamento recente; assinatura deve ser reativada.
+ *   "unpaid"  — gateway confirma ausência de pagamento; prosseguir com expiração.
+ *   "unknown" — gateway não retornou resposta definitiva (timeout, erro, indisponível,
+ *               ou adapter sem suporte real). Comportamento conservador: expira.
+ */
+export type GatewayPaymentStatus = "paid" | "unpaid" | "unknown";
+
 export interface PaymentGateway {
   readonly provider: string;
   /** Inicia o checkout de uma assinatura. */
@@ -63,4 +73,14 @@ export interface PaymentGateway {
    * para determinar a origem, pois podem ser forjados pelo chamador.
    */
   parseWebhook(rawBody: string, headers: Record<string, string>, clientIp?: string): Promise<NormalizedWebhookEvent>;
+  /**
+   * Consulta proativa ao gateway para verificar se a assinatura tem um pagamento
+   * bem-sucedido recente. Usado pelo job de downgrade como segunda linha de defesa
+   * contra interrupções prolongadas do gateway que impeçam a entrega de webhooks.
+   *
+   * Implementações devem retornar "unknown" em caso de erro ou indisponibilidade
+   * do gateway — nunca propagar exceções. O job trata "unknown" de forma
+   * conservadora, expirando a assinatura.
+   */
+  checkPaymentStatus(gatewaySubscriptionId: string | null): Promise<GatewayPaymentStatus>;
 }

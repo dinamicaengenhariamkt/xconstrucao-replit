@@ -906,7 +906,7 @@ export type InsertDisputaMensagem = typeof disputaMensagens.$inferInsert;
 // Schema criado idempotente em server/bootstrap-planos.ts.
 // ---------------------------------------------------------------------------
 export const planoPersonaEnum = pgEnum("plano_persona", ["contratante", "empreiteiro", "ambos"]);
-export const assinaturaStatusEnum = pgEnum("assinatura_status", ["ativa", "cancelada", "inadimplente", "expirada"]);
+export const assinaturaStatusEnum = pgEnum("assinatura_status", ["ativa", "cancelada", "inadimplente", "expirada", "pendente_reativacao"]);
 
 export const planos = pgTable(
   "planos",

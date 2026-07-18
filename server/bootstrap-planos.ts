@@ -15,6 +15,8 @@ export async function bootstrapPlanosSchema(): Promise<void> {
   try {
     await db.execute(sql`DO $$ BEGIN CREATE TYPE plano_persona AS ENUM ('contratante','empreiteiro','ambos'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
     await db.execute(sql`DO $$ BEGIN CREATE TYPE assinatura_status AS ENUM ('ativa','cancelada','inadimplente','expirada'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+    // Migração idempotente: adiciona 'pendente_reativacao' ao enum se ainda não existir.
+    await db.execute(sql`DO $$ BEGIN ALTER TYPE assinatura_status ADD VALUE IF NOT EXISTS 'pendente_reativacao'; EXCEPTION WHEN others THEN NULL; END $$;`);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS planos (

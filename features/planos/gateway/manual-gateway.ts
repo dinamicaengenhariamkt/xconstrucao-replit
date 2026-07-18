@@ -1,6 +1,7 @@
 import type {
   CheckoutInput,
   CheckoutResult,
+  GatewayPaymentStatus,
   NormalizedWebhookEvent,
   PaymentGateway,
 } from "./payment-gateway";
@@ -50,5 +51,11 @@ export class ManualGateway implements PaymentGateway {
       gatewayCustomerId: typeof parsed.gatewayCustomerId === "string" ? parsed.gatewayCustomerId : undefined,
       raw: parsed,
     };
+  }
+
+  async checkPaymentStatus(_gatewaySubscriptionId: string | null): Promise<GatewayPaymentStatus> {
+    // O adapter manual não tem gateway real para consultar. Retorna "unknown" para
+    // que o job de downgrade adote o comportamento conservador (expira a assinatura).
+    return "unknown";
   }
 }

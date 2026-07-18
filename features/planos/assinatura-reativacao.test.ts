@@ -49,7 +49,7 @@ async function createTestUser(email: string): Promise<string> {
 async function createTestAssinatura(
   userId: string,
   planoId: string,
-  status: "inadimplente" | "expirada",
+  status: "inadimplente" | "expirada" | "pendente_reativacao",
   gatewaySubscriptionId: string,
   options: { renovaEm?: Date; ciclo?: "mensal" | "anual" } = {},
 ): Promise<string> {
@@ -393,6 +393,46 @@ describe("aplicarEventoWebhook — reactivation paths", () => {
     assert.ok(
       diffMs > 18 * 24 * 60 * 60 * 1000,
       `annual renovaEm must be anchored to original date, not today`,
+    );
+  });
+
+  it("pendente_reativacao → ativa: payment_succeeded webhook during gateway-check limbo reactivates subscription", async () => {
+    const gatewaySubId = `test-sub-${uid()}`;
+    const eventId = `test-evt-pendente-${uid()}`;
+
+    const userId = await createTestUser(`pendente-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+
+    const assinaturaId = await createTestAssinatura(
+      userId,
+      testPlanoId,
+      "pendente_reativacao",
+      gatewaySubId,
+    );
+    createdAssinaturaIds.push(assinaturaId);
+    createdEventoGatewayIds.push(eventId);
+
+    // Precondition: simulates the state set by phase-1 of the downgrade job —
+    // status='pendente_reativacao' while the gateway is being queried.
+    assert.equal(await getUserPlano(userId), "free");
+    assert.equal(await getAssinaturaStatus(assinaturaId), "pendente_reativacao");
+
+    const result = await aplicarEventoWebhook({
+      eventId,
+      type: "payment_succeeded",
+      gatewaySubscriptionId: gatewaySubId,
+    });
+
+    assert.equal(result.processed, true, "should mark event as processed");
+    assert.equal(
+      await getAssinaturaStatus(assinaturaId),
+      "ativa",
+      "assinatura must be reactivated from pendente_reativacao to ativa via webhook",
+    );
+    assert.equal(
+      await getUserPlano(userId),
+      testPlanoTier,
+      "users.plano must be restored when webhook arrives during gateway-check limbo",
     );
   });
 

@@ -1,6 +1,7 @@
 import { and, eq, lt, ne, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { assinaturaEventos, assinaturas, auditLogs, users } from "@shared/db/schema";
+import { assinaturaEventos, assinaturas, auditLogs, planos, users } from "@shared/db/schema";
+import { getPaymentGateway } from "@features/planos/gateway";
 
 /**
  * Número de dias de carência padrão após `renovaEm` antes de revogar o plano
@@ -23,6 +24,8 @@ const DEFAULT_BUFFER_HOURS = 48;
 export interface DowngradeInadimplentesResult {
   ok: boolean;
   downgraded: number;
+  /** Assinaturas promovidas de volta a `ativa` após consulta proativa ao gateway. */
+  reactivated: number;
   runAt: string;
   error?: string;
 }
@@ -86,35 +89,35 @@ export function computeDowngradeCutoff(
 }
 
 /**
- * Job idempotente que revoga o acesso de assinantes inadimplentes cujo período
- * de carência E buffer adicional expiraram.
+ * Job idempotente de duas fases que protege assinantes contra interrupções
+ * prolongadas do gateway de pagamento.
  *
- * Critério: `status = 'inadimplente'` AND
- *   `renovaEm < NOW() - graceDays - bufferHours`.
+ * ─── Fase 1: inadimplente → pendente_reativacao ────────────────────────────
+ * Assinaturas com `status = 'inadimplente'` e `renovaEm < cutoff` são movidas
+ * para `pendente_reativacao` (estado protegido) em vez de diretamente para
+ * `expirada`. Isso garante que mesmo que um outage do gateway dure mais do que
+ * o buffer, o assinante não perde acesso imediatamente.
  *
- * O buffer adicional (`INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`, default 48h)
- * garante que uma falha transitória do gateway que atrase o webhook
- * `payment_succeeded` além da janela de carência não rebaixe o assinante
- * indevidamente. Se o pagamento chegar dentro do buffer, o webhook ainda
- * reativa a assinatura antes do próximo ciclo do job.
+ * ─── Fase 2: pendente_reativacao → ativa | expirada ────────────────────────
+ * Para CADA assinatura em `pendente_reativacao` (incluindo as de execuções
+ * anteriores do job, permitindo retry automático), o job consulta a API do
+ * gateway diretamente:
  *
- * Ações por assinatura elegível (dentro de uma transação atômica):
- *   1. `assinaturas.status` → `expirada`  (UPDATE condicional — guard de race)
- *   2. `users.plano` → `free`             (somente se o UPDATE acima afetou 1
- *      linha E o usuário não tem outra assinatura ativa paga)
- *   3. Evento `grace_period_expired` em `assinatura_eventos`
- *   4. Linha em `audit_logs` (actor=null, ip="cron")
+ *   • "paid"    → move para `ativa`, restaura `users.plano`, grava evento
+ *                 `gateway_confirmed_reactivation`.
+ *   • "unpaid" / "unknown" → move para `expirada`, rebaixa `users.plano` para
+ *                 `free`, grava evento `grace_period_expired`.
  *
  * Proteção contra race condition (webhook vs job):
- *   O UPDATE de assinaturas inclui `AND status = 'inadimplente'` no WHERE.
+ *   O UPDATE de assinaturas inclui `AND status = '...'` no WHERE.
  *   Se um `payment_succeeded` chegar entre o SELECT e o UPDATE e promover a
  *   assinatura para `ativa`, o UPDATE retornará 0 linhas e o job pula o
  *   rebaixo desse usuário — acesso não é removido indevidamente.
  *
  * Proteção contra falso-negativo em re-assinantes:
- *   Um usuário pode ter uma linha `inadimplente` antiga e uma nova linha
- *   `ativa` (re-assinatura). Nesse caso o job expira a linha antiga mas NÃO
- *   toca `users.plano` (o usuário está pagando ativamente).
+ *   Um usuário pode ter uma linha `inadimplente`/`pendente_reativacao` antiga e
+ *   uma nova linha `ativa` (re-assinatura). Nesse caso o job expira a linha
+ *   antiga mas NÃO toca `users.plano`.
  *
  * A janela de carência é configurável via `INADIMPLENTE_GRACE_DAYS` (default
  * 7 dias) e o buffer adicional via `INADIMPLENTE_DOWNGRADE_BUFFER_HOURS`
@@ -140,7 +143,8 @@ export async function downgradeInadimplentes(
   );
 
   try {
-    const candidates = await db
+    // ─── Fase 1: inadimplente → pendente_reativacao ────────────────────────
+    const phase1Candidates = await db
       .select({ id: assinaturas.id, userId: assinaturas.userId })
       .from(assinaturas)
       .where(
@@ -153,98 +157,202 @@ export async function downgradeInadimplentes(
         ),
       );
 
-    if (candidates.length === 0) {
-      console.info(
-        `[downgrade-inadimplente] runAt=${runAt} downgraded=0 graceDays=${days} bufferHours=${buffer}`,
-      );
-      return { ok: true, downgraded: 0, runAt };
-    }
-
     // Test seam: allow tests to inject a concurrent side-effect (e.g. a
     // payment_succeeded webhook) between the SELECT and the per-row UPDATEs.
     // Never called in production (no caller passes _testHooks).
     if (_testHooks?.onCandidatesSelected) {
-      await _testHooks.onCandidatesSelected(candidates);
+      await _testHooks.onCandidatesSelected(phase1Candidates);
     }
 
-    let downgraded = 0;
-    const downgradedIds: string[] = [];
-
-    for (const row of candidates) {
+    for (const row of phase1Candidates) {
       try {
-        await db.transaction(async (tx) => {
-          // Atomic conditional UPDATE: re-checks status='inadimplente' so that
-          // if a concurrent payment_succeeded webhook already reactivated this
-          // row, the UPDATE returns 0 rows and we skip all side-effects.
-          const updated = await tx
-            .update(assinaturas)
-            .set({ status: "expirada" })
-            .where(
-              and(
-                eq(assinaturas.id, row.id),
-                eq(assinaturas.status, "inadimplente"),
-                lt(
-                  assinaturas.renovaEm,
-                  sql`NOW() - (${days} || ' days')::interval - (${buffer} || ' hours')::interval`,
-                ),
+        await db
+          .update(assinaturas)
+          .set({ status: "pendente_reativacao" })
+          .where(
+            and(
+              eq(assinaturas.id, row.id),
+              eq(assinaturas.status, "inadimplente"),
+              lt(
+                assinaturas.renovaEm,
+                sql`NOW() - (${days} || ' days')::interval - (${buffer} || ' hours')::interval`,
               ),
-            )
-            .returning({ id: assinaturas.id });
-
-          if (updated.length === 0) {
-            // Row was concurrently reactivated or no longer meets criteria.
-            return;
-          }
-
-          // Only clear users.plano when the user has NO other active paid
-          // subscription. A user may have re-subscribed (new 'ativa' row)
-          // while this old row remained 'inadimplente'. In that case we expire
-          // the stale row but must NOT touch users.plano.
-          const activeRow = await tx
-            .select({ id: assinaturas.id })
-            .from(assinaturas)
-            .where(
-              and(
-                eq(assinaturas.userId, row.userId),
-                eq(assinaturas.status, "ativa"),
-                ne(assinaturas.id, row.id),
-              ),
-            )
-            .limit(1);
-
-          if (activeRow.length === 0) {
-            await tx
-              .update(users)
-              .set({ plano: "free" })
-              .where(eq(users.id, row.userId));
-          } else {
-            console.info(
-              `[downgrade-inadimplente] skipped users.plano for userId=${row.userId} — has active subscription assinaturaId=${activeRow[0].id}`,
-            );
-          }
-
-          await tx.insert(assinaturaEventos).values({
-            assinaturaId: row.id,
-            tipo: "grace_period_expired",
-            gatewayEventId: null,
-            payloadJson: { graceDays: days, bufferHours: buffer, downgradedAt: runAt },
-          });
-
-          downgraded++;
-          downgradedIds.push(row.id);
-          console.info(
-            `[downgrade-inadimplente] downgraded assinaturaId=${row.id} userId=${row.userId} graceDays=${days} bufferHours=${buffer}`,
+            ),
           );
-        });
       } catch (rowErr) {
         console.error(
-          `[downgrade-inadimplente] erro ao processar assinaturaId=${row.id}:`,
+          `[downgrade-inadimplente] fase1: erro ao mover assinaturaId=${row.id} para pendente_reativacao:`,
           rowErr,
         );
       }
     }
 
-    if (downgraded > 0) {
+    // ─── Fase 2: pendente_reativacao → ativa | expirada ───────────────────
+    // Busca TODOS os pendente_reativacao (inclui runs anteriores — retry automático).
+    const phase2Candidates = await db
+      .select({
+        id: assinaturas.id,
+        userId: assinaturas.userId,
+        gatewaySubscriptionId: assinaturas.gatewaySubscriptionId,
+      })
+      .from(assinaturas)
+      .where(eq(assinaturas.status, "pendente_reativacao"));
+
+    if (phase2Candidates.length === 0 && phase1Candidates.length === 0) {
+      console.info(
+        `[downgrade-inadimplente] runAt=${runAt} downgraded=0 reactivated=0 graceDays=${days} bufferHours=${buffer}`,
+      );
+      return { ok: true, downgraded: 0, reactivated: 0, runAt };
+    }
+
+    const gateway = getPaymentGateway();
+    let downgraded = 0;
+    let reactivated = 0;
+    const downgradedIds: string[] = [];
+    const reactivatedIds: string[] = [];
+
+    for (const row of phase2Candidates) {
+      try {
+        // Consulta proativa ao gateway — segunda linha de defesa contra outages.
+        let paymentStatus: "paid" | "unpaid" | "unknown" = "unknown";
+        try {
+          paymentStatus = await gateway.checkPaymentStatus(row.gatewaySubscriptionId);
+        } catch (gwErr) {
+          console.warn(
+            `[downgrade-inadimplente] fase2: checkPaymentStatus falhou para assinaturaId=${row.id}:`,
+            gwErr,
+          );
+          paymentStatus = "unknown";
+        }
+
+        if (paymentStatus === "paid") {
+          // Gateway confirma pagamento — reativa a assinatura.
+          await db.transaction(async (tx) => {
+            const updated = await tx
+              .update(assinaturas)
+              .set({ status: "ativa" })
+              .where(
+                and(
+                  eq(assinaturas.id, row.id),
+                  eq(assinaturas.status, "pendente_reativacao"),
+                ),
+              )
+              .returning({ id: assinaturas.id });
+
+            if (updated.length === 0) return; // Race: webhook já reativou
+
+            // Restaura users.plano se não há outra assinatura ativa.
+            const activeRow = await tx
+              .select({ id: assinaturas.id, planoId: assinaturas.planoId })
+              .from(assinaturas)
+              .where(
+                and(
+                  eq(assinaturas.userId, row.userId),
+                  eq(assinaturas.status, "ativa"),
+                  ne(assinaturas.id, row.id),
+                ),
+              )
+              .limit(1);
+
+            if (activeRow.length === 0) {
+              // Busca o tier do plano para restaurar users.plano.
+              const [assinaturaRow] = await tx
+                .select({ planoId: assinaturas.planoId })
+                .from(assinaturas)
+                .where(eq(assinaturas.id, row.id))
+                .limit(1);
+
+              if (assinaturaRow) {
+                const [planoRow] = await tx
+                  .select({ tier: planos.tier })
+                  .from(planos)
+                  .where(eq(planos.id, assinaturaRow.planoId))
+                  .limit(1);
+                if (planoRow) {
+                  await tx
+                    .update(users)
+                    .set({ plano: planoRow.tier, planoStartedAt: new Date() })
+                    .where(eq(users.id, row.userId));
+                }
+              }
+            }
+
+            await tx.insert(assinaturaEventos).values({
+              assinaturaId: row.id,
+              tipo: "gateway_confirmed_reactivation",
+              gatewayEventId: null,
+              payloadJson: { graceDays: days, bufferHours: buffer, runAt, gatewayStatus: paymentStatus },
+            });
+
+            reactivated++;
+            reactivatedIds.push(row.id);
+            console.info(
+              `[downgrade-inadimplente] reativada assinaturaId=${row.id} userId=${row.userId} (gateway=paid)`,
+            );
+          });
+        } else {
+          // "unpaid" ou "unknown" — comportamento conservador: expira a assinatura.
+          await db.transaction(async (tx) => {
+            const updated = await tx
+              .update(assinaturas)
+              .set({ status: "expirada" })
+              .where(
+                and(
+                  eq(assinaturas.id, row.id),
+                  eq(assinaturas.status, "pendente_reativacao"),
+                ),
+              )
+              .returning({ id: assinaturas.id });
+
+            if (updated.length === 0) return; // Race: webhook reativou no intervalo
+
+            // Só rebaixa users.plano se o usuário não tem outra assinatura ativa.
+            const activeRow = await tx
+              .select({ id: assinaturas.id })
+              .from(assinaturas)
+              .where(
+                and(
+                  eq(assinaturas.userId, row.userId),
+                  eq(assinaturas.status, "ativa"),
+                  ne(assinaturas.id, row.id),
+                ),
+              )
+              .limit(1);
+
+            if (activeRow.length === 0) {
+              await tx
+                .update(users)
+                .set({ plano: "free" })
+                .where(eq(users.id, row.userId));
+            } else {
+              console.info(
+                `[downgrade-inadimplente] skipped users.plano for userId=${row.userId} — has active subscription assinaturaId=${activeRow[0].id}`,
+              );
+            }
+
+            await tx.insert(assinaturaEventos).values({
+              assinaturaId: row.id,
+              tipo: "grace_period_expired",
+              gatewayEventId: null,
+              payloadJson: { graceDays: days, bufferHours: buffer, downgradedAt: runAt, gatewayStatus: paymentStatus },
+            });
+
+            downgraded++;
+            downgradedIds.push(row.id);
+            console.info(
+              `[downgrade-inadimplente] expirada assinaturaId=${row.id} userId=${row.userId} graceDays=${days} bufferHours=${buffer} gateway=${paymentStatus}`,
+            );
+          });
+        }
+      } catch (rowErr) {
+        console.error(
+          `[downgrade-inadimplente] fase2: erro ao processar assinaturaId=${row.id}:`,
+          rowErr,
+        );
+      }
+    }
+
+    if (downgraded > 0 || reactivated > 0) {
       try {
         await db.insert(auditLogs).values({
           actorId: null,
@@ -252,10 +360,12 @@ export async function downgradeInadimplentes(
           targetUserId: null,
           payload: {
             downgraded,
+            reactivated,
             graceDays: days,
             bufferHours: buffer,
             runAt,
             ids: downgradedIds,
+            reactivatedIds,
           },
           ip: "cron",
           userAgent: "downgrade-inadimplente-job",
@@ -269,12 +379,12 @@ export async function downgradeInadimplentes(
     }
 
     console.info(
-      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} graceDays=${days} bufferHours=${buffer}`,
+      `[downgrade-inadimplente] runAt=${runAt} downgraded=${downgraded} reactivated=${reactivated} graceDays=${days} bufferHours=${buffer}`,
     );
-    return { ok: true, downgraded, runAt };
+    return { ok: true, downgraded, reactivated, runAt };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[downgrade-inadimplente] falha:", err);
-    return { ok: false, downgraded: 0, runAt, error: message };
+    return { ok: false, downgraded: 0, reactivated: 0, runAt, error: message };
   }
 }
