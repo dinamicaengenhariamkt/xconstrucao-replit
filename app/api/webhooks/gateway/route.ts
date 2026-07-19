@@ -4,6 +4,7 @@ import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { db } from "@shared/db/db";
+import { retryPendingWebhookEvents } from "@features/planos/webhook-retry-job";
 
 /**
  * POST /api/webhooks/gateway — recebe eventos do gateway de pagamento (J11).
@@ -23,6 +24,8 @@ import { db } from "@shared/db/db";
  *   permite replay manual.
  * - A cada request, eventos com status "pending" ou "failed" (até 5 tentativas,
  *   criados há menos de 24h) são reprocessados de forma oportunística.
+ * - Um job agendado (`scripts/webhook-retry-pending.ts`) reprocessa
+ *   periodicamente sem depender da chegada de novos webhooks.
  */
 export async function POST(request: NextRequest) {
   const rawBody = await request.text().catch(() => "");
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
   // ── Reprocessamento oportunístico de eventos pendentes/falhos ───────────
   // Executa antes do evento principal para não atrasar a resposta de forma
   // perceptível (rápido: no máximo 5 eventos, timeout implícito do gateway).
-  await retryPendingEvents(logId).catch((err) => {
+  await retryPendingWebhookEvents(logId, 5).catch((err) => {
     console.warn("[webhooks/gateway] retry oportunístico falhou:", err);
   });
 
@@ -135,103 +138,5 @@ export async function POST(request: NextRequest) {
     `).catch(() => {});
 
     return NextResponse.json({ error: "PROCESSING_ERROR" }, { status: 500 });
-  }
-}
-
-/**
- * Reprocessa eventos pendentes/falhos com até MAX_RETRIES tentativas,
- * criados nas últimas 24 horas — excluindo o evento recém-chegado (excludeId).
- * Execução oportunística: falhas aqui são logadas mas não afetam a resposta.
- */
-const MAX_RETRIES = 5;
-const RETRY_WINDOW_HOURS = 24;
-
-async function retryPendingEvents(excludeId: string | null): Promise<void> {
-  const candidates = await db.execute<{
-    id: string;
-    gateway_event_id: string;
-    event_type: string;
-    retry_count: number;
-  }>(sql`
-    SELECT id, gateway_event_id, event_type, retry_count
-      FROM webhook_delivery_log
-     WHERE status IN ('pending', 'failed')
-       AND retry_count < ${MAX_RETRIES}
-       AND created_at > NOW() - (${RETRY_WINDOW_HOURS} || ' hours')::interval
-       AND (${excludeId} IS NULL OR id <> ${excludeId})
-     ORDER BY created_at ASC
-     LIMIT 5
-  `).then((r) => r.rows as { id: string; gateway_event_id: string; event_type: string; retry_count: number }[])
-    .catch(() => []);
-
-  for (const row of candidates) {
-    try {
-      // Recupera o payload original do raw_body para reconstruir o evento.
-      const [logRow] = await db.execute<{ raw_body: string; headers_json: string }>(sql`
-        SELECT raw_body, headers_json FROM webhook_delivery_log WHERE id = ${row.id}
-      `).then((r) => r.rows as { raw_body: string; headers_json: string }[]);
-
-      if (!logRow) continue;
-
-      // Re-parseia o evento do payload original para obter os campos normalizados.
-      const headers = typeof logRow.headers_json === "object"
-        ? (logRow.headers_json as Record<string, string>)
-        : (JSON.parse(logRow.headers_json) as Record<string, string>);
-      const clientIp = (headers["x-forwarded-for"] ?? headers["x-real-ip"] ?? "retry").split(",")[0].trim();
-
-      let retryEvt;
-      try {
-        retryEvt = await getPaymentGateway().parseWebhook(logRow.raw_body, headers, clientIp);
-      } catch {
-        // Payload inválido — marca como falha permanente (não vale tentar de novo).
-        await db.execute(sql`
-          UPDATE webhook_delivery_log
-             SET status = 'failed',
-                 retry_count = retry_count + 1,
-                 last_error = 'parseWebhook falhou no retry — payload inválido'
-           WHERE id = ${row.id}
-        `).catch(() => {});
-        continue;
-      }
-
-      if (retryEvt.type === "ignored") {
-        await db.execute(sql`
-          UPDATE webhook_delivery_log SET status = 'processed', processed_at = NOW() WHERE id = ${row.id}
-        `).catch(() => {});
-        continue;
-      }
-
-      await aplicarEventoWebhook({
-        eventId: retryEvt.eventId,
-        type: retryEvt.type,
-        gatewaySubscriptionId: retryEvt.gatewaySubscriptionId,
-        gatewayCustomerId: retryEvt.gatewayCustomerId,
-        externalReference: retryEvt.externalReference,
-        valor: retryEvt.valor,
-      });
-
-      await db.execute(sql`
-        UPDATE webhook_delivery_log
-           SET status = 'processed',
-               processed_at = NOW(),
-               last_error = NULL
-         WHERE id = ${row.id}
-      `).catch(() => {});
-
-      console.info(
-        `[webhooks/gateway] retry bem-sucedido: id=${row.id} eventId=${row.gateway_event_id} type=${row.event_type}`,
-      );
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      await db.execute(sql`
-        UPDATE webhook_delivery_log
-           SET retry_count = retry_count + 1,
-               last_error = ${errMsg}
-         WHERE id = ${row.id}
-      `).catch(() => {});
-      console.warn(
-        `[webhooks/gateway] retry falhou: id=${row.id} eventId=${row.gateway_event_id} erro=${errMsg}`,
-      );
-    }
   }
 }
