@@ -83,6 +83,8 @@ export async function iniciarCheckout(args: {
   userId: string;
   planoId: string;
   ciclo?: "mensal" | "anual";
+  /** Força o adapter a retornar redirect (pagamento pendente) em vez de ativar imediatamente. */
+  pendingMode?: boolean;
 }): Promise<CheckoutResult> {
   try {
     return await _iniciarCheckoutImpl(args);
@@ -96,6 +98,7 @@ async function _iniciarCheckoutImpl(args: {
   userId: string;
   planoId: string;
   ciclo?: "mensal" | "anual";
+  pendingMode?: boolean;
 }): Promise<CheckoutResult> {
   const [plano] = await db.select().from(planos).where(eq(planos.id, args.planoId)).limit(1);
   if (!plano || !plano.ativo) return { ok: false, code: "PLANO_INVALIDO" };
@@ -125,6 +128,7 @@ async function _iniciarCheckoutImpl(args: {
     successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
+    pendingMode: args.pendingMode,
   });
 
   if (result.kind === "redirect") {

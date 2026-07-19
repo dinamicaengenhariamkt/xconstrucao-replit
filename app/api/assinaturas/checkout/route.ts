@@ -31,10 +31,17 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
+  // Header opt-in para modo pendente: usado apenas em testes E2E (NODE_ENV !== production).
+  // Faz o ManualGateway retornar kind:"redirect" em vez de ativar imediatamente, permitindo
+  // exercitar o ciclo completo checkout → POST /api/webhooks/gateway → ativa.
+  const isNonProd = process.env.NODE_ENV !== "production";
+  const pendingMode = isNonProd && request.headers.get("x-manual-gateway-pending") === "1";
+
   const result = await iniciarCheckout({
     userId: guard.user.id,
     planoId: parsed.data.planoId,
     ciclo: parsed.data.ciclo,
+    pendingMode,
   });
 
   if (result.ok === false) {

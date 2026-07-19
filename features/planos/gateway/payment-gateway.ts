@@ -22,6 +22,13 @@ export interface CheckoutInput {
   userName?: string;
   /** CPF ou CNPJ do usuário (opcional; pode ser vazio em sandbox). */
   userCpfCnpj?: string;
+  /**
+   * Se `true`, força o adapter a retornar `kind:"redirect"` (pagamento pendente)
+   * em vez de ativar imediatamente. Usado em testes E2E que precisam exercitar
+   * o ciclo completo checkout → webhook → ativa. Ignorado por adapters reais
+   * (que sempre retornam redirect de qualquer forma).
+   */
+  pendingMode?: boolean;
 }
 
 export type CheckoutResult =
