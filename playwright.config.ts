@@ -9,7 +9,9 @@ import { defineConfig, devices } from "@playwright/test";
 // corretas use `make test-e2e` ou `make test-e2e-aprovacao` — esses alvos matam
 // qualquer processo legado na porta antes de chamar o Playwright.
 const PORT = Number(process.env.E2E_PORT ?? 3010);
-const BASE_URL = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
+// Usa 127.0.0.1 (IPv4 explícito) para evitar EAFNOSUPPORT em ambientes onde
+// "localhost" resolve para ::1 (IPv6) mas o servidor escuta apenas em IPv4.
+const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
