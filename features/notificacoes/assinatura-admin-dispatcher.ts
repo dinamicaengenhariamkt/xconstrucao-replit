@@ -56,7 +56,7 @@ export async function dispararNotificacaoAssinaturaAdmin(args: {
     for (const admin of admins) {
       await criarNotificacao({
         userId: admin.id,
-        tipo: args.tipo === "inadimplente" ? "alerta" : args.tipo === "cancelamento" ? "lembrete" : "sucesso",
+        tipo: "info",
         titulo,
         descricao,
         href: "/admin/financeiro",

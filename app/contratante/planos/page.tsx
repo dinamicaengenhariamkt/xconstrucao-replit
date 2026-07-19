@@ -134,6 +134,13 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 /* ─────────────────────────────────────────────
    Minha Assinatura Panel
 ───────────────────────────────────────────── */
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  ativa: { label: 'Ativa', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  inadimplente: { label: 'Inadimplente', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  cancelada: { label: 'Cancelada', className: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' },
+  pendente_reativacao: { label: 'Pendente', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+};
+
 function MinhaAssinaturaPainel() {
   const { data: perfilPlano, isLoading } = usePerfilPlano();
   const cancelar = useCancelarAssinatura();
@@ -146,8 +153,11 @@ function MinhaAssinaturaPainel() {
   const tierLabel =
     perfilPlano.plano === 'pro' ? 'Empresarial' : perfilPlano.plano === 'enterprise' ? 'Enterprise' : perfilPlano.plano;
 
-  const inicio = perfilPlano.planoStartedAt
-    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.planoStartedAt))
+  const status = perfilPlano.assinaturaStatus ?? 'ativa';
+  const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.ativa;
+
+  const renovaLabel = perfilPlano.renovaEm
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.renovaEm))
     : null;
 
   function handleCancelar() {
@@ -168,22 +178,23 @@ function MinhaAssinaturaPainel() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <RiVipCrownLine className="w-5 h-5 text-primary" />
         </div>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Minha Assinatura</p>
             <Badge className="bg-primary/10 text-primary border-0 text-xs" data-testid="badge-assinatura-tier">{tierLabel}</Badge>
+            <Badge className={`border-0 text-xs ${statusCfg.className}`} data-testid="badge-status-assinatura">{statusCfg.label}</Badge>
           </div>
-          {inicio && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <RiCalendarLine className="w-3.5 h-3.5" />
-              Ativo desde {inicio}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground">
             {perfilPlano.catalogo.precoMensal > 0
               ? `R$ ${perfilPlano.catalogo.precoMensal}/mês`
               : 'Gratuito'}
           </p>
+          {renovaLabel && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <RiCalendarLine className="w-3.5 h-3.5" />
+              {status === 'cancelada' ? 'Acesso até' : 'Próxima renovação:'} {renovaLabel}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -193,7 +204,7 @@ function MinhaAssinaturaPainel() {
               variant="outline"
               size="sm"
               className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-900/20"
-              disabled={cancelar.isPending}
+              disabled={cancelar.isPending || status === 'cancelada'}
               data-testid="button-cancelar-assinatura-planos"
             >
               {cancelar.isPending ? 'Cancelando…' : 'Cancelar assinatura'}
@@ -265,9 +276,17 @@ export default function ContratantePlanosPage() {
         },
         onError: (err) => {
           if (err.code === 'JA_ASSINANTE') return;
+          if (err.code === 'LIMITE_PLANO') {
+            toast({
+              title: 'Limite do plano atingido',
+              description: 'Você atingiu o limite do seu plano atual. Faça upgrade para continuar.',
+              variant: 'destructive',
+            });
+            return;
+          }
           toast({
-            title: 'Erro ao assinar',
-            description: err.message || 'Não foi possível processar a assinatura. Tente novamente.',
+            title: 'Não foi possível iniciar o pagamento',
+            description: 'Tente novamente em instantes ou entre em contato com o suporte.',
             variant: 'destructive',
           });
         },
@@ -276,7 +295,8 @@ export default function ContratantePlanosPage() {
   }
 
   function assinar(slot: PlanId) {
-    if (temAssinaturaPaga && slot !== PLANO_ATUAL && slot !== 'starter') {
+    // Mostrar dialog para QUALQUER troca de plano quando há assinatura ativa
+    if (temAssinaturaPaga && slot !== PLANO_ATUAL) {
       setPendingSlot(slot);
       return;
     }

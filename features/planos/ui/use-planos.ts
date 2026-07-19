@@ -24,6 +24,10 @@ export interface PerfilPlano {
   persona: PlanoPersona;
   plano: PlanoTier;
   planoStartedAt: string | null;
+  /** Status da assinatura: "ativa" | "inadimplente" | "cancelada" | null (free) */
+  assinaturaStatus: string | null;
+  /** Data ISO da próxima renovação (null se free ou sem assinatura) */
+  renovaEm: string | null;
   catalogo: {
     nome: string;
     precoMensal: number;

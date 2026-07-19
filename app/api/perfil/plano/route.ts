@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { users, empreiteiras, clientes, obras, candidaturas } from "@shared/db/schema";
+import { users, empreiteiras, clientes, obras, candidaturas, assinaturas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import {
   getPlanCatalog,
@@ -111,10 +111,38 @@ export async function GET(request: NextRequest) {
     max,
   }));
 
+  // Busca status e data de renovação da assinatura ativa, se houver.
+  let assinaturaStatus: string | null = null;
+  let renovaEm: string | null = null;
+  if (tier !== "free") {
+    const [ass] = await db
+      .select({ status: assinaturas.status, renovaEm: assinaturas.renovaEm })
+      .from(assinaturas)
+      .where(and(eq(assinaturas.userId, user.id), eq(assinaturas.status, "ativa")))
+      .limit(1);
+    if (ass) {
+      assinaturaStatus = ass.status;
+      renovaEm = ass.renovaEm?.toISOString() ?? null;
+    } else {
+      // Pode estar inadimplente ou cancelada
+      const [assAny] = await db
+        .select({ status: assinaturas.status, renovaEm: assinaturas.renovaEm })
+        .from(assinaturas)
+        .where(eq(assinaturas.userId, user.id))
+        .limit(1);
+      if (assAny) {
+        assinaturaStatus = assAny.status;
+        renovaEm = assAny.renovaEm?.toISOString() ?? null;
+      }
+    }
+  }
+
   const response = NextResponse.json({
     persona,
     plano: tier,
     planoStartedAt: user.planoStartedAt,
+    assinaturaStatus,
+    renovaEm,
     catalogo,
     uso,
   });
