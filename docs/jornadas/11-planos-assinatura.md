@@ -1,12 +1,15 @@
 # Jornada — Planos & Assinatura
 
 > Status: pronto | Prioridade: média | Wave: 3
-> Última atualização: 2026-06-01
+> Última atualização: 2026-07-19
 >
-> Observação: ecossistema completo e funcional via **adapter de gateway "manual"**
-> (ativa sem cobrança real). A integração com gateway real (Stripe/PayPal/
-> MercadoPago/Asaas) está documentada e **bloqueada** na Jornada 14, aguardando
-> decisão do gateway — basta plugar o adapter, nada mais muda.
+> Observação: ecossistema completo e funcional. O adapter de gateway **"manual"**
+> (ativa sem cobrança real) é o default de dev/E2E e é **bloqueado em produção**.
+> **O adapter ASAAS real já existe e faz chamadas HTTP verdadeiras** à API do Asaas
+> (`shared/lib/asaas-client.ts` + `features/planos/gateway/asaas-gateway.ts`) — a
+> Jornada 14 **não está mais bloqueada** na prática: o gateway está escrito. Ir para
+> produção é configuração de env vars (ver seção 9) + fechar os itens de hardening
+> abaixo (o bloqueante é **enviar CPF/CNPJ ao Asaas**, hoje nunca populado).
 
 ## 1. Contexto & Objetivo
 Monetização da plataforma via assinatura. Admin define planos com preço e limites (nº de obras ativas, candidaturas/mês, recursos premium); contratante e empreiteiro escolhem e pagam; status de assinatura gateia features nas demais jornadas.
@@ -59,7 +62,12 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - [x] Gating aplicado: obras abertas (J03) e propostas/mês (J05) → HTTP 402 `LIMITE_PLANO`
 - [x] Lançamento de entrada em J09 ao ativar (escopo plataforma, categoria `assinatura`, idempotente)
 - [x] Cancelar (`POST /api/assinaturas/cancelar`) → rebaixa para free
-- [ ] Decidir e plugar gateway REAL (Stripe/PayPal/MercadoPago/Asaas) → **Jornada 14 (bloqueada)**
+- [x] **Gateway REAL (Asaas) escrito e registrado na factory** (`features/planos/gateway/asaas-gateway.ts`) — checkout hospedado RECURRENT (PIX/Boleto/Cartão), cancelamento, checkPaymentStatus, parseWebhook. _(descoberto na auditoria 2026-07-19; a J14 não estava mais bloqueada)_
+- [ ] **[BLOQUEANTE PRODUÇÃO] Enviar CPF/CNPJ ao Asaas** — `CheckoutInput.userCpfCnpj` existe mas `iniciarCheckout` (`assinatura-service.ts`) nunca o popula; Asaas exige para cobrança real → **Jornada 44**
+- [ ] Criar página `app/planos/aguardando/page.tsx` (referenciada pelo modo pendente do adapter manual; Asaas real usa `/planos/sucesso`, que existe)
+- [ ] Configurar env vars de produção: `PAYMENT_GATEWAY=asaas`, `ASAAS_API_KEY`, `ASAAS_ENVIRONMENT=production`, `ASAAS_WEBHOOK_IPS` (IPs oficiais do Asaas — sem isso o webhook aceita sem verificação de IP), `TRUST_PROXY_HEADERS=1`, `NEXT_PUBLIC_BASE_URL`
+- [ ] Apontar o webhook do Asaas para `POST /api/webhooks/gateway`
+- [ ] Refund/estorno ativo (hoje só reação passiva a `PAYMENT_DELETED`) — baixa prioridade
 - [x] Tela "minha assinatura" persona-facing consumindo os endpoints _(Task #206)_
 - [x] Item "Planos" no nav lateral de empreiteiro e contratante _(Task #206)_
 - [x] CTA upgrade destacado na aba "Plano & Uso" das Configurações (banner free-only) _(Task #206)_
@@ -95,4 +103,5 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - **2026-06-01** — Item de backlog `userTemAssinaturaAtiva` (precondição estratégica) materializado de verdade nesta fase.
 - **2026-07-19 (Task #206)** — UI persona-facing completa: nav item "Planos" (empreiteiro + contratante), painel "Minha Assinatura" com badge de status/data/valor, dialog de confirmação na troca de plano, cancelamento direto na página de planos, banner de upgrade nas Configurações para free. `alert()` substituído por toast. Dispatcher `assinatura-admin-dispatcher.ts` integrado no `assinatura-service.ts` (fire-and-forget pós-commit para checkout, cancelamento, inadimplente, reativação).
 - **2026-07-19 (Task #207)** — Dialog de upsell contextual (`features/planos/ui/PlanoUpsellDialog.tsx`) exibido quando backend retorna 402 `LIMITE_PLANO` em J03 (nova-obra) e J05 (aplicar/candidatura). Job `aviso-expiracao-job.ts` agora dispara notificação in-app `tipo: "alerta"` para admin/superadmin por inadimplente com mensagem "[Nome] está inadimplente no [Plano] há X dias. Renova em [data]." via `dispararNotificacaoAssinaturaAdmin` com `descricaoOverride` + `tipoNotificacao: "alerta"`. Dispatcher estendido com params opcionais `descricaoOverride` e `tipoNotificacao`.
+- **2026-07-19 (auditoria de método de pagamento)** — Auditoria exaustiva revelou que o **adapter Asaas real já existe e faz `fetch` verdadeiro** (`shared/lib/asaas-client.ts` + `features/planos/gateway/asaas-gateway.ts`), registrado na factory por `PAYMENT_GATEWAY`. A J14 estava marcada "bloqueada" mas o gateway estava escrito — header e checklist corrigidos. Gaps para produção: (1) **CPF/CNPJ nunca enviado ao Asaas** (bloqueante → J44); (2) página `/planos/aguardando` inexistente (só afeta modo pendente do manual/E2E); (3) env vars de produção a configurar; (4) proration e refund ativo não implementados (baixa prioridade). Além disso, mapeou-se que **não existe o papel de recebedor** (empreiteiro receber pela obra e sacar) — nova frente documentada em J42–J50 (marketplace com split real via Asaas). Ver `_backlog-paralelo.md` e as jornadas 42–50.
 - **2026-07-19 (Task #208)** — Testes E2E ponta-a-ponta em `tests/e2e/integration/planos-assinatura.integration.spec.ts`. 5 fluxos: (1) empreiteiro E2E fresh assina Pro → 201 activated → `GET /api/perfil/plano` tier=pro; (2) contratante cria 1ª obra e tenta 2ª → 402 LIMITE_PLANO; (3) downgrade: assina Pro + cancela → tier volta a free; (4) guards de cancelamento: sem assinatura ativa → 409, anônimo → 401, admin → 403; (5) admin: `GET /api/admin/planos`, kpi, assinantes retornam shape correto + authz (403 persona, 401 anônimo). Validação registrada como `e2e-planos`. Isolamento: fluxos 1–3 usam usuários E2E criados via `/api/auth/register` + `/api/test/login-as` (nunca tocam em maria/joao seed para não quebrar outros specs).

@@ -23,7 +23,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 11 | [Planos & Assinatura](11-planos-assinatura.md) | contratante, empreiteiro, admin | 3 | pronto | média |
 | 12 | [Anúncios](12-anuncios.md) | admin + visualizadores | 2 | pronto | média |
 | 13 | [Chat & Notificações](13-chat-notificacoes.md) | contratante, empreiteiro | 2 | pronto | média |
-| 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | bloqueada | média |
+| 14 | [Integração de Gateway de Pagamento](14-integracao-gateway-pagamento.md) | contratante, empreiteiro, admin | 3 | pronto (adapter Asaas real escrito) | média |
 | 15 | [UI de Assinatura (persona)](15-ui-assinatura.md) | contratante, empreiteiro | 3 | pronto | média |
 | 16 | [Exibição de Anúncios (BannerSlot)](16-exibicao-anuncios.md) | público, contratante, empreiteiro | 2 | pronto | média |
 | 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pronto | alta |
@@ -51,6 +51,15 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
 | 40 | [Ajustes Finos de UX: Nova Obra (Contratante)](40-ajustes-finos-nova-obra-contratante.md) | contratante | 8 | pronto | média |
 | 41 | [XChat Completo](41-xchat-completo.md) | contratante, empreiteiro, admin | 8 | em andamento | alta |
+| 42 | [Fundação de Dados: Marketplace Split & Recebimento](42-fundacao-dados-marketplace-split.md) | dev/sistema | 10 | planejada | alta |
+| 43 | [Extensão asaas-client: Subcontas, Split, Saldo & Transfer](43-asaas-client-subcontas-split.md) | dev/sistema | 10 | planejada | alta |
+| 44 | [Cadastro: CPF/CNPJ + Customer Asaas Proativo](44-cadastro-cpf-customer-asaas.md) | contratante, empreiteiro, anunciante | 10 | planejada | alta |
+| 45 | [Onboarding de Subconta do Empreiteiro (Recebimento)](45-onboarding-subconta-empreiteiro.md) | empreiteiro | 10 | planejada | alta |
+| 46 | [Webhooks de Status de Subconta (KYC)](46-webhooks-status-subconta-kyc.md) | empreiteiro, sistema | 10 | planejada | média |
+| 47 | [Checkout de Obra com Split (Iniciação)](47-checkout-obra-split.md) | contratante, empreiteiro | 10 | planejada | alta |
+| 48 | [Confirmação de Pagamento de Obra via Webhook](48-confirmacao-pagamento-obra-webhook.md) | contratante, empreiteiro, sistema | 10 | planejada | alta |
+| 49 | [Saldo e Saque do Empreiteiro (Transferência)](49-saldo-saque-empreiteiro.md) | empreiteiro | 10 | planejada | média |
+| 50 | [Reconciliação & Rollout do Split](50-reconciliacao-rollout-split.md) | admin, sistema | 10 | planejada | média |
 
 ---
 
@@ -73,13 +82,15 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 ### Waves
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
-- **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; 14 documentada e bloqueada aguardando escolha de gateway.)
+- **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; **14: adapter Asaas real escrito — desbloqueada; auditoria 2026-07-19 confirmou que a integração existe. Hardening de produção e recebimento/split ficam na Wave 10**.)
 - **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20 (bloqueada). *(23 movida p/ Wave 6 após reestruturação.)*
 - **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads), 24 (templates + home dinâmica de anúncios) — entregues 2026-06-05/06**. Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14). A J24 é pré-requisito da J23 (reuso de templates/preview).
 - **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio); **23 (self-service de anúncios — reestruturada e planejada 2026-06-07**: multi-role + visão anunciante + pedido multi-slot + checkout-protótipo; cobrança real extraída p/ a J31).
 - **Wave 7 — Monetização do marketplace de mídia**: **31 (pagamento real de anúncios — bloqueada)**: liga o gateway real ao checkout da J23. Em série atrás de 23 (precisa existir) e 14 (precisa do provedor de pagamento).
 - **Wave 8 — Observabilidade técnica (pré-produção)**: **33 (saúde da plataforma + captura de erros — planejada 2026-06-08; decisão fechada 2026-06-20: híbrido Sentry free + Pino + `app_errors` próprio)**: camada técnica antes do uso real por clientes — captura proativa de erros + painel de saúde no admin, com meta de independência do Sentry. Complementa a auditoria funcional (J21) e os KPIs (J29). **34 (ajustes finos de UX da visão admin — pronto 2026-06-20)**: jornada agrupadora de refinamentos de consistência (hover de cards, arquitetura de filtros do financeiro, NaN%, top bar, active da sidebar). **38 (ajustes finos de UX empreiteiro & contratante — em revisão 2026-06-20)**: irmã da J34 nas demais visões (anúncio dinâmico na sidebar, FAQ sem cards vazios, margem da Nova Obra, acesso a "Meus rascunhos") — em sua maioria religação de UI a serviços/persistência já existentes. **40 (ajustes finos de UX: Nova Obra do contratante — pronto 2026-07-06)**: novo lote focado na tela Nova Obra (altura do select de UF, máscara de CEP reusando `CepInput`, duplo scroll do layout, extensões/validação de anexos, selects opcionais limpáveis, feedback do "Salvar rascunho") — guarda-chuva dos próximos refinamentos das telas do contratante. Inclui correção do E2E `j03-nova-obra` (porta de cleanup) descoberta na verificação.
 - **Wave 9 — Qualidade & robustez (rede de segurança automatizada)**: trio de testes criado 2026-06-20 para dar robustez pré-produção, complementando a observabilidade (J33). **35 (testes unitários — planejada)**: base da pirâmide + fundação (Vitest, ESLint, hook de auto-validação local — CI no GitHub Actions fora de escopo por ora, deploy é direto no Replit). **36 (testes de integração — planejada)**: API + banco isolado. **37 (testes E2E — parcial)**: base Playwright já existe; expandir cobertura dos fluxos críticos. Princípio: muitos unitários (baratos) → alguns de integração → poucos E2E (caros). Teste automatizado **protege contra regressão**; não substitui o teste manual exploratório (que descobre o que falta).
+
+- **Wave 10 — Método de pagamento real & marketplace com split** (documentada 2026-07-19, pós-auditoria da J11/Asaas): leva o pagamento de "controle interno" para **movimentação financeira real via Asaas**. Duas frentes: (a) **hardening da cobrança de assinatura** para produção — fechar o gap bloqueante de CPF/CNPJ (J44) e as env vars/webhook (checklist da J11); (b) **novo papel de recebedor** — o empreiteiro recebe pela obra e saca para o banco dele, via subconta Asaas com split real. Sequência: **42 (schema) + 43 (asaas-client) paralelos → 44 (cadastro/CPF) → 45 (subconta) → (46 KYC, 47 checkout-split paralelos) → 48 (confirmação webhook) → 49 (saldo/saque) / 50 (reconciliação/rollout)**. Tudo atrás da flag `MARKETPLACE_SPLIT` (default off); o `quitarLancamento` manual permanece como fallback para não quebrar o fluxo atual. Descoberta-chave da auditoria: o **adapter Asaas real já existia** (a J14 não estava de fato bloqueada). Riscos concentrados em KYC/compliance (a plataforma vira intermediária financeira), idempotência de split e regressão no roteamento do webhook único.
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 

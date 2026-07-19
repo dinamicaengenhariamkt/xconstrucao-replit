@@ -1,0 +1,83 @@
+# Jornada — Checkout de Obra com Split (Iniciação)
+
+> Status: planejada | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-19
+>
+> Observação: **o pivô** — o dinheiro da obra passa a trafegar pela plataforma.
+> Tudo atrás da flag `MARKETPLACE_SPLIT` (default off). O fluxo manual
+> (`quitarLancamento`) permanece intacto como fallback.
+
+## 1. Contexto & Objetivo
+Hoje o pagamento de obra é registro manual: o contratante paga por fora e marca "pago" (`quitarLancamento`). Esta jornada adiciona a opção **"Pagar via plataforma"**: o contratante paga via checkout Asaas com `split` configurado (% plataforma + % empreiteiro), e o Asaas credita a subconta do empreiteiro. Esta jornada cobre a **iniciação** (criar o checkout + registro `pendente`); a confirmação via webhook é a J48.
+
+## 2. Personas
+- **Contratante**: escolhe pagar a medição via plataforma (checkout hospedado).
+- **Empreiteiro**: recebe o repasse na subconta (efetivado em J48).
+- **Plataforma**: retém a comissão via split.
+
+## 3. Fluxo ponta-a-ponta
+1. Medição aprovada (J06) gera lançamento `financeiro` (`pagadorUserId`/`recebedorUserId`).
+2. Contratante, na tela de pagamentos, vê "Pagar via plataforma" (só se `MARKETPLACE_SPLIT` on e empreiteiro com subconta `aprovada`).
+3. `POST /api/contratante/pagamentos/[id]/checkout-split`: valida ownership + sem disputa, resolve subconta do recebedor, calcula split, cria `pagamentos_split` (`pendente`), chama `createPaymentWithSplit`/checkout com `split:[{walletId, percentualValue}]` e externalReference `xconstrucao-obra|financeiroId|obraId|splitId`.
+4. Retorna URL de redirect (checkout hospedado). Confirmação → J48.
+
+```mermaid
+flowchart LR
+  A[Medição aprovada → financeiro pendente] --> B[Contratante: Pagar via plataforma]
+  B --> C{empreiteiro subconta aprovada?}
+  C -- não --> D[fallback manual quitarLancamento]
+  C -- sim --> E[checkout-split + pagamentos_split pendente]
+  E --> F[redirect Asaas → J48 confirma]
+```
+
+## 4. Telas envolvidas
+- [app/contratante/pagamentos/page.tsx](../../app/contratante/pagamentos/page.tsx) — CTA condicional "Pagar via plataforma" (coexiste com "quitar manual").
+
+## 5. Componentes-chave
+- `features/marketplace/split-gateway.ts` — **a criar**: monta o payload de split, calcula valores.
+- `app/api/contratante/pagamentos/[id]/checkout-split/route.ts` — **a criar**.
+- Reusar validações existentes: `isContratanteOwnerOfLancamento` e `temDisputaAtivaNoAlvo` ([features/financeiro/lancamentos-service.ts](../../features/financeiro/lancamentos-service.ts)).
+- [shared/lib/asaas-client.ts](../../shared/lib/asaas-client.ts) — `createPaymentWithSplit` (J43).
+- Config de comissão: `platform_settings` (percentual da plataforma) — reusar infra de config (J26).
+
+## 6. Schema (Drizzle)
+Reusa `pagamentos_split` (J42). Insere registro `pendente` com snapshot de `percentual_plataforma`, `valor_*`, `wallet_id_empreiteiro`, `asaas_checkout_id`. `financeiro` **não** muda de status aqui (só em J48).
+
+## 7. Endpoints
+- `POST /api/contratante/pagamentos/[id]/checkout-split` — inicia o checkout com split (guard contratante dono; 402/erro amigável se empreiteiro sem subconta aprovada; 409 se já pago/disputa).
+
+## 8. Mocks a remover
+- Nenhum mock removido nesta jornada — o manual é **fallback legítimo**, não mock. `MARKETPLACE_SPLIT` off = comportamento atual preservado.
+
+## 9. Checklist de implementação
+- [ ] Flag `MARKETPLACE_SPLIT` (env + `platform_settings`), default off
+- [ ] `features/marketplace/split-gateway.ts` (cálculo de split + payload)
+- [ ] `POST /api/contratante/pagamentos/[id]/checkout-split` (valida ownership/disputa/subconta)
+- [ ] Config de `percentual_plataforma` (comissão) em `platform_settings`
+- [ ] Insert `pagamentos_split` status `pendente` com snapshots
+- [ ] externalReference `xconstrucao-obra|financeiroId|obraId|splitId`
+- [ ] UI condicional na tela de pagamentos do contratante
+- [ ] Bloqueio amigável quando empreiteiro sem subconta `aprovada`
+- [ ] Teste de integração (`tests/e2e/integration/`): inicia checkout-split, assert `pagamentos_split` pendente + redirect; bloqueio sem subconta
+
+## 10. Critérios de aceite
+1. Contratante inicia checkout-split de medição aprovada (empreiteiro aprovado) → `pagamentos_split` `pendente` + URL de redirect.
+2. Empreiteiro sem subconta aprovada → CTA some/erro amigável; fallback manual disponível.
+3. `MARKETPLACE_SPLIT` off → tela idêntica à atual (só manual).
+4. Query: `SELECT status, valor_plataforma, valor_empreiteiro FROM pagamentos_split WHERE financeiro_id='<id>';` retorna `pendente` com valores coerentes.
+
+## 11. Riscos / Pontos de atenção
+- **Guard duro de subconta aprovada**: sem isso o Asaas rejeita o split e o pagamento falha para o contratante.
+- **Taxa do Asaas / impostos**: decidir se sai da parte da plataforma ou do empreiteiro; explicitar na tela do contratante; snapshot em `percentual_plataforma`.
+- Não confundir com o gateway de assinatura — split de obra é `MarketplaceGateway`, domínio separado (compartilha só o `asaas-client`).
+- Disputa ativa deve bloquear o checkout (reusar `temDisputaAtivaNoAlvo`).
+
+## 12. Links cruzados
+- Depende de: J43 (`createPaymentWithSplit`), J45 (subconta aprovada).
+- Bloqueia: J48 (confirmação).
+- Relacionada: J06 (medição gera lançamento), J08 (fluxo manual coexistente), J10 (disputas).
+
+## 13. Gaps descobertos durante execução
+> Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- _(sem entradas ainda — jornada não iniciada)_
