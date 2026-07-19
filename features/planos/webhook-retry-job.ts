@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
+import { markAndNotifyDeadWebhooks } from "@features/planos/webhook-dead-notifier";
 
 export const MAX_RETRIES = 5;
 export const RETRY_WINDOW_HOURS = 24;
@@ -171,6 +172,14 @@ export async function retryPendingWebhookEvents(
     console.info(
       `[webhook-retry-job] runAt=${runAt} retried=${retried} succeeded=${succeeded} failed=${failed}`,
     );
+
+    // After retrying, mark any exhausted/expired rows as dead-letter and alert admins.
+    // Errors are captured inside markAndNotifyDeadWebhooks; we await so the marking
+    // is deterministic even in short-lived request contexts.
+    const { marked } = await markAndNotifyDeadWebhooks();
+    if (marked > 0) {
+      console.warn(`[webhook-retry-job] ${marked} evento(s) promovidos a dead-letter após retry.`);
+    }
 
     return { ok: true, retried, succeeded, failed, runAt };
   } catch (err) {

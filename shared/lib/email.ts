@@ -13,6 +13,9 @@ import NovaObraZonaEmail, {
 import AvisoExpiracaoEmail, {
   type AvisoExpiracaoEmailProps,
 } from '@features/notificacoes/emails/aviso-expiracao';
+import WebhookDeadAlertEmail, {
+  type WebhookDeadAlertEmailProps,
+} from '@features/notificacoes/emails/webhook-dead';
 import { captureTestEmail, isEmailTestMode } from '@shared/lib/test-email-store';
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
@@ -220,6 +223,29 @@ export async function sendAvisoExpiracaoEmail(
     return await sendViaBrevo({ to, subject, html, tag: 'aviso-expiracao' });
   } catch (error) {
     console.error('Erro ao enviar email de aviso de expiração:', error);
+    throw error;
+  }
+}
+
+export async function sendWebhookDeadAlertEmail(
+  to: string,
+  props: WebhookDeadAlertEmailProps,
+) {
+  const html = await render(WebhookDeadAlertEmail(props));
+  const subject =
+    props.count === 1
+      ? `XConstrução - Alerta: webhook de pagamento não processado`
+      : `XConstrução - Alerta: ${props.count} webhooks de pagamento não processados`;
+
+  if (isEmailTestMode()) {
+    captureTestEmail({ to, subject, html, meta: { kind: 'webhook-dead-alert', ...props } });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  try {
+    return await sendViaBrevo({ to, subject, html, tag: 'webhook-dead-alert' });
+  } catch (error) {
+    console.error('Erro ao enviar email de alerta de webhook dead-letter:', error);
     throw error;
   }
 }

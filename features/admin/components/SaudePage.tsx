@@ -13,6 +13,8 @@ import {
   RiArrowRightLine,
   RiHistoryLine,
   RiExternalLinkFill,
+  RiWebhookLine,
+  RiSkullLine,
 } from 'react-icons/ri';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
@@ -43,6 +45,16 @@ interface TopRota {
   count: number;
 }
 
+interface DeadLetterRow {
+  id: string;
+  gatewayEventId: string;
+  eventType: string;
+  retryCount: number;
+  lastError: string | null;
+  markedDeadAt: string | null;
+  createdAt: string;
+}
+
 interface SaudeData {
   erros: {
     total24h: number;
@@ -62,6 +74,13 @@ interface SaudeData {
     tendenciaErros: 'melhora' | 'piora' | 'estavel';
     errosHoje: number;
     errosOntem: number;
+  };
+  webhooks?: {
+    pending: number;
+    failed: number;
+    processed: number;
+    dead: number;
+    deadLetters: DeadLetterRow[];
   };
 }
 
@@ -478,6 +497,112 @@ export function SaudePage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Webhooks Dead-Letter */}
+          {(data.webhooks?.dead ?? 0) > 0 && (
+            <Card
+              data-testid="card-webhooks-dead"
+              className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10"
+            >
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2 text-red-700 dark:text-red-400">
+                  <RiSkullLine className="w-4 h-4" />
+                  Webhooks Dead-Letter
+                  <span
+                    data-testid="badge-webhooks-dead-count"
+                    className="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full"
+                  >
+                    {data.webhooks!.dead}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+                  {data.webhooks!.dead === 1
+                    ? '1 evento de webhook esgotou todas as tentativas e não foi processado. Revisão manual necessária.'
+                    : `${data.webhooks!.dead} eventos de webhook esgotaram todas as tentativas e não foram processados. Revisão manual necessária.`}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="table-webhooks-dead">
+                    <thead>
+                      <tr className="border-b text-red-500/70 dark:text-red-400/70 text-xs uppercase tracking-wide">
+                        <th className="py-2 pr-3 text-left font-medium">Tipo</th>
+                        <th className="py-2 pr-3 text-left font-medium hidden md:table-cell">ID Gateway</th>
+                        <th className="py-2 pr-3 text-right font-medium">Tentativas</th>
+                        <th className="py-2 text-right font-medium">Quando</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-red-100 dark:divide-red-900/30">
+                      {data.webhooks!.deadLetters.map((row) => (
+                        <tr key={row.id} data-testid={`row-dead-webhook-${row.id}`} className="hover:bg-red-100/40 dark:hover:bg-red-900/20">
+                          <td className="py-2 pr-3">
+                            <span className="font-mono text-xs text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded">
+                              {row.eventType}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3 hidden md:table-cell font-mono text-xs text-gray-500 max-w-[180px]">
+                            <span className="truncate block">{row.gatewayEventId}</span>
+                          </td>
+                          <td className="py-2 pr-3 text-right text-gray-600 dark:text-gray-400 font-semibold text-xs">
+                            {row.retryCount}
+                          </td>
+                          <td className="py-2 text-right text-gray-400 text-xs whitespace-nowrap">
+                            {formatRelative(row.markedDeadAt ?? row.createdAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <Button
+                    data-testid="btn-retry-dead-webhooks"
+                    variant="outline"
+                    size="sm"
+                    className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400"
+                    onClick={async () => {
+                      await fetch('/api/admin/webhooks/retry-pending', { method: 'POST' });
+                      refetch();
+                    }}
+                  >
+                    <RiRefreshLine className="w-3.5 h-3.5 mr-1" />
+                    Re-tentar manualmente
+                  </Button>
+                  {(data.webhooks!.pending > 0 || data.webhooks!.failed > 0) && (
+                    <span className="text-xs text-gray-500">
+                      Também há {data.webhooks!.pending + data.webhooks!.failed} evento(s) ainda em fila
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Webhook status summary (only when no dead, but there are pending/failed) */}
+          {(data.webhooks?.dead ?? 0) === 0 && ((data.webhooks?.pending ?? 0) + (data.webhooks?.failed ?? 0)) > 0 && (
+            <div
+              data-testid="banner-webhooks-pending"
+              className="flex items-center gap-3 rounded-xl border border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10 px-5 py-3"
+            >
+              <RiWebhookLine className="w-5 h-5 text-yellow-600 shrink-0" />
+              <span className="text-sm text-yellow-700 dark:text-yellow-400">
+                {(data.webhooks!.pending + data.webhooks!.failed)} webhook(s) de pagamento pendente(s) de processamento.
+              </span>
+              <Button
+                data-testid="btn-retry-pending-webhooks"
+                variant="ghost"
+                size="sm"
+                className="ml-auto text-yellow-700 dark:text-yellow-400"
+                onClick={async () => {
+                  await fetch('/api/admin/webhooks/retry-pending', { method: 'POST' });
+                  refetch();
+                }}
+              >
+                <RiRefreshLine className="w-3.5 h-3.5 mr-1" />
+                Reprocessar
+              </Button>
+            </div>
+          )}
 
           {/* Top Rotas + Auditoria */}
           <div className="grid lg:grid-cols-2 gap-6">

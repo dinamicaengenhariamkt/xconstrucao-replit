@@ -44,4 +44,22 @@ export async function bootstrapWebhookDeliveryLogSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_webhook_delivery_log_status
       ON webhook_delivery_log(status, created_at)
   `);
+
+  // Idempotent: add marked_dead_at column (supports dead-letter state)
+  await db.execute(sql`
+    ALTER TABLE webhook_delivery_log
+      ADD COLUMN IF NOT EXISTS marked_dead_at TIMESTAMP
+  `);
+
+  // Idempotent: add dead_notified_at column (prevents duplicate admin alerts)
+  await db.execute(sql`
+    ALTER TABLE webhook_delivery_log
+      ADD COLUMN IF NOT EXISTS dead_notified_at TIMESTAMP
+  `);
+
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS idx_webhook_delivery_log_dead
+      ON webhook_delivery_log(status, marked_dead_at)
+      WHERE status = 'dead'
+  `);
 }

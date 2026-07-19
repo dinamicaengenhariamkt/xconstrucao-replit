@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
       usuarios,
       jobs,
       auditoria,
+      webhookStats,
+      webhookDead,
     ] = await Promise.all([
       // Total erros 24h
       pool.query<{ count: string }>(
@@ -92,6 +94,38 @@ export async function GET(request: NextRequest) {
       pool.query<{ action: string; actor_id: string | null; created_at: string }>(
         `SELECT action, actor_id, created_at FROM audit_logs ORDER BY created_at DESC LIMIT 10`
       ),
+      // Webhook delivery status counts
+      pool.query<{ status: string; count: string }>(
+        `SELECT status, COUNT(*)::text AS count
+         FROM webhook_delivery_log
+         GROUP BY status`
+      ).catch(() => ({ rows: [] as { status: string; count: string }[] })),
+      // 10 most recent dead-letter webhooks
+      pool.query<{
+        id: string;
+        gateway_event_id: string;
+        event_type: string;
+        retry_count: number;
+        last_error: string | null;
+        marked_dead_at: string | null;
+        created_at: string;
+      }>(
+        `SELECT id, gateway_event_id, event_type, retry_count, last_error, marked_dead_at, created_at
+         FROM webhook_delivery_log
+         WHERE status = 'dead'
+         ORDER BY COALESCE(marked_dead_at, created_at) DESC
+         LIMIT 10`
+      ).catch(() => ({
+        rows: [] as {
+          id: string;
+          gateway_event_id: string;
+          event_type: string;
+          retry_count: number;
+          last_error: string | null;
+          marked_dead_at: string | null;
+          created_at: string;
+        }[],
+      })),
     ]);
 
     const totalErros24h = parseInt(erros24h.rows[0]?.count ?? "0", 10);
@@ -109,6 +143,12 @@ export async function GET(request: NextRequest) {
     else if (qtdHoje > qtdOntem) tendencia = "piora";
 
     const usuariosRow = usuarios.rows[0];
+
+    // Webhook stats
+    const webhookStatusMap: Record<string, number> = {};
+    for (const row of webhookStats.rows) {
+      webhookStatusMap[row.status] = parseInt(row.count, 10);
+    }
 
     const response = NextResponse.json({
       erros: {
@@ -156,6 +196,21 @@ export async function GET(request: NextRequest) {
         tendenciaErros: tendencia,
         errosHoje: qtdHoje,
         errosOntem: qtdOntem,
+      },
+      webhooks: {
+        pending: webhookStatusMap["pending"] ?? 0,
+        failed: webhookStatusMap["failed"] ?? 0,
+        processed: webhookStatusMap["processed"] ?? 0,
+        dead: webhookStatusMap["dead"] ?? 0,
+        deadLetters: webhookDead.rows.map((r) => ({
+          id: r.id,
+          gatewayEventId: r.gateway_event_id,
+          eventType: r.event_type,
+          retryCount: r.retry_count,
+          lastError: r.last_error,
+          markedDeadAt: r.marked_dead_at,
+          createdAt: r.created_at,
+        })),
       },
     });
 
