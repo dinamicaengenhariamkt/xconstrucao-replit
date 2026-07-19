@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Testes de regressão: aviso de perfil incompleto na curadoria admin.
@@ -20,15 +21,6 @@ import { test, expect, type APIRequestContext, type Page } from "@playwright/tes
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /**
  * Configura perfilCompleto e status de um cliente ou empreiteira via endpoint

@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Jornada 21 — Observabilidade de Comunicação (Admin).
@@ -13,16 +14,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 const CONTRATANTE_EMAIL = "joao@construtora.com"; // seed (server/seed.ts) — role contratante
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  // Limpa cookies do contexto entre papéis.
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 test.describe("Jornada 21 — Observabilidade de Comunicação", () => {
   test("não-admin recebe 403 nos endpoints de comunicação admin", async ({ request }) => {

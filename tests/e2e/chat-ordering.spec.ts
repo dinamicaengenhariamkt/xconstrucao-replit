@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Chat ordering & send/load verification (after keyset ordering fix).
@@ -24,33 +25,6 @@ const CONTRATANTE_EMAIL = "joao@construtora.com";
 const CONTRATANTE_PASS = "Joao@2026!Obras";
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const EMPREITEIRO_PASS = "Maria@2026!Reforma";
-
-/**
- * Login helper: tries /api/test/login-as (E2E_TEST_AUTH=1) first, falls back
- * to a real credential POST to /api/auth/login with the anti-bot payload.
- */
-async function loginAs(
-  request: APIRequestContext,
-  email: string,
-  password: string,
-) {
-  const fast = await request.post("/api/test/login-as", { data: { email } });
-  if (fast.ok()) return;
-
-  const res = await request.post("/api/auth/login", {
-    data: {
-      email,
-      password,
-      mountedAt: Date.now() - 3000,
-      website: "",
-    },
-  });
-  expect(res.ok(), `login real de ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /** Returns the first conversation ID from the empreiteiro conversations list. */
 async function getFirstEmpreiteiroThread(request: APIRequestContext): Promise<string | null> {

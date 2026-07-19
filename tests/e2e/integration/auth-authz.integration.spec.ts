@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout } from "../helpers";
 
 /**
  * Integração (J36) — Auth & Autorização (guards transversais).
@@ -32,14 +33,6 @@ const ADMIN_EMAIL = "admin@xconstrucao.com";
 // Conta de seed com email NÃO verificado (login-as não neutraliza esse gate).
 const NOVER_EMAIL = "teste-1778553138682@xconstrucao.com";
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /** Confirma que a conta NOVER existe no seed; senão pula os testes que a exigem. */
 async function noverExiste(request: APIRequestContext): Promise<boolean> {

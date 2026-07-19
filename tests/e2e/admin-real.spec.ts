@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Admin real (Clientes, Empreiteiras, FAQ, Auditoria) — endpoints que antes só
@@ -14,14 +15,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 const CONTRATANTE_EMAIL = "joao@construtora.com"; // seed — role contratante
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 const ADMIN_GET_ENDPOINTS = [
   "/api/admin/faq",

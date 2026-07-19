@@ -16,17 +16,24 @@
  *   npm run test:integration:gaps
  *   npm run test:integration:gaps -- --all      (lista também os GET sem cobertura)
  *   npm run test:integration:gaps -- --json     (saída JSON para automação/hook)
+ *   npm run test:integration:gaps:strict        (gate: falha em gap NOVO fora da baseline)
+ *   npm run test:integration:gaps -- --update-baseline  (regrava a baseline atual)
  *
- * Exit code: 0 sempre (é um radar informativo, não um gate de CI). Para
- * transformar em gate, troque o exit final por process.exit(gaps.length ? 1 : 0).
+ * Exit code: 0 por padrão (é um radar informativo). Com --strict o exit passa a
+ * ser 1 quando há gap NOVO — endpoint sem cobertura que não consta na baseline
+ * `scripts/integration-coverage-baseline.json`. Isso implementa um "ratchet":
+ * todo endpoint novo nasce com E2E, sem bloquear o backlog já existente. À medida
+ * que os gaps da baseline são cobertos, rode --update-baseline para encolhê-la
+ * (ela só diminui). Baseline vazia + --strict = gate total.
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
 const API_DIR = join(ROOT, "app", "api");
 const TESTS_DIR = join(ROOT, "tests", "e2e");
+const BASELINE_FILE = join(ROOT, "scripts", "integration-coverage-baseline.json");
 
 const MUTATION_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
@@ -133,10 +140,33 @@ function isCovered(url: string, testText: string): boolean {
   return re.test(testText);
 }
 
+/** Lê a baseline (lista de URLs de endpoints hoje sem cobertura). Vazia se ausente. */
+function loadBaseline(): Set<string> {
+  try {
+    const raw = JSON.parse(readFileSync(BASELINE_FILE, "utf8")) as { endpoints?: string[] };
+    return new Set(raw.endpoints ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** Regrava a baseline com os URLs atualmente sem cobertura (só encolhe na prática). */
+function writeBaseline(urls: string[]): void {
+  const payload = {
+    _comment:
+      "Endpoints hoje sem cobertura de integração (ratchet). --strict só falha em " +
+      "gaps NOVOS fora desta lista. Encolha via `test:integration:gaps -- --update-baseline`.",
+    endpoints: [...urls].sort(),
+  };
+  writeFileSync(BASELINE_FILE, JSON.stringify(payload, null, 2) + "\n");
+}
+
 function main(): void {
   const args = process.argv.slice(2);
   const includeGets = args.includes("--all");
   const asJson = args.includes("--json");
+  const strict = args.includes("--strict");
+  const updateBaseline = args.includes("--update-baseline");
 
   const endpoints = collectEndpoints();
   const testText = readAllTestText();
@@ -149,18 +179,61 @@ function main(): void {
   const score = (e: Endpoint) => (e.critical ? 2 : 0) + (e.hasMutation ? 1 : 0);
   gaps.sort((a, b) => score(b) - score(a) || a.url.localeCompare(b.url));
 
-  if (asJson) {
-    console.log(JSON.stringify({ total: endpoints.length, gaps }, null, 2));
+  if (updateBaseline) {
+    writeBaseline(gaps.map((e) => e.url));
+    console.log(`✅ Baseline atualizada: ${gaps.length} endpoint(s) sem cobertura registrados.`);
+    console.log(`   ${relative(ROOT, BASELINE_FILE)}`);
     return;
   }
 
-  const covered = endpoints.length - gaps.length;
+  // Gaps NOVOS = sem cobertura E fora da baseline. São os que o gate strict barra.
+  const baseline = loadBaseline();
+  const newGaps = gaps.filter((e) => !baseline.has(e.url));
+
+  if (asJson) {
+    console.log(
+      JSON.stringify(
+        { total: endpoints.length, gaps, baselineSize: baseline.size, newGaps },
+        null,
+        2
+      )
+    );
+    if (strict && newGaps.length > 0) process.exit(1);
+    return;
+  }
+
   console.log("");
   console.log("🔎 Radar de cobertura de integração (Jornada 36 — Fase 5)");
   console.log(`   Endpoints na API: ${endpoints.length}`);
   console.log(`   Sem cobertura de integração (mutação/crítico): ${gaps.length}`);
+  if (baseline.size > 0 || strict) {
+    console.log(`   Na baseline (backlog conhecido): ${gaps.length - newGaps.length}`);
+    console.log(`   Gaps NOVOS (fora da baseline): ${newGaps.length}`);
+  }
   console.log(`   (use --all para incluir GETs; --json para saída de máquina)`);
   console.log("");
+
+  // No modo strict, o que importa é o gap NOVO. Barra o CI se houver algum.
+  if (strict) {
+    if (newGaps.length === 0) {
+      console.log("✅ Nenhum endpoint novo sem cobertura. Gate OK.");
+      console.log("   (backlog da baseline não bloqueia — encolha com --update-baseline)");
+      return;
+    }
+    console.log("❌ Gate strict: endpoint(s) NOVO(s) sem cobertura de integração —");
+    console.log("   todo endpoint novo deve nascer com E2E. Cubra-os ou, se intencional,");
+    console.log("   rode `npm run test:integration:gaps -- --update-baseline`.");
+    console.log("   ─────────────────────────────────────────────");
+    for (const e of newGaps) {
+      const tag = [e.critical ? "CRÍTICO" : "", e.hasMutation ? "MUTAÇÃO" : "leitura"]
+        .filter(Boolean)
+        .join(" · ");
+      console.log(`   • ${e.methods.join("/").padEnd(16)} ${e.url}`);
+      console.log(`     ${tag}  —  ${e.file}`);
+    }
+    console.log("");
+    process.exit(1);
+  }
 
   if (gaps.length === 0) {
     console.log("✅ Nenhum endpoint crítico/mutação sem cobertura detectado. Bom trabalho!");

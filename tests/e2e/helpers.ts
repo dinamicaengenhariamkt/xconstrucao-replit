@@ -1,5 +1,100 @@
 import { APIRequestContext, expect } from "@playwright/test";
 
+/**
+ * Emails do seed usados como default pelos utilitários compartilhados. Um spec
+ * pode sobrescrevê-los passando argumentos explícitos.
+ */
+export const SEED_CONTRATANTE_EMAIL = "joao@construtora.com";
+export const SEED_EMPREITEIRO_EMAIL = "maria@empreiteira.com";
+export const SEED_ADMIN_EMAIL = "admin@xconstrucao.com";
+
+/**
+ * Autentica via endpoint test-only `POST /api/test/login-as` (habilitado por
+ * E2E_TEST_AUTH=1). Emite os cookies de sessão pulando senha/verificação de
+ * email. Se `password` for informado e o login-as falhar (ex.: test-auth
+ * indisponível), faz fallback para um login real com o payload anti-bot.
+ */
+export async function loginAs(
+  request: APIRequestContext,
+  email: string,
+  password?: string
+): Promise<void> {
+  const fast = await request.post("/api/test/login-as", { data: { email } });
+  if (fast.ok()) return;
+
+  if (password) {
+    const res = await request.post("/api/auth/login", {
+      data: { email, password, mountedAt: Date.now() - 3000, website: "" },
+    });
+    expect(
+      res.ok(),
+      `login real de ${email} deve responder ok (status ${res.status()})`
+    ).toBeTruthy();
+    return;
+  }
+
+  expect(
+    fast.ok(),
+    `login-as ${email} deve responder ok (status ${fast.status()})`
+  ).toBeTruthy();
+}
+
+/** Encerra a sessão atual. Best-effort (nunca lança). */
+export async function logout(request: APIRequestContext): Promise<void> {
+  await request.post("/api/auth/logout").catch(() => {});
+}
+
+function asRows(payload: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(payload)
+    ? (payload as Array<Record<string, unknown>>)
+    : (((payload as { rows?: Array<Record<string, unknown>> })?.rows) ?? []);
+}
+
+/**
+ * Conclui (via admin) todas as obras abertas do contratante para liberar a cota
+ * do plano free. Best-effort — nunca lança. Envia `numero` junto para satisfazer
+ * a revalidação `insertObraSchemaStrict` em obras publicadas sem número.
+ */
+export async function liberarCotaObras(
+  request: APIRequestContext,
+  {
+    contratanteEmail = SEED_CONTRATANTE_EMAIL,
+    adminEmail = SEED_ADMIN_EMAIL,
+  }: { contratanteEmail?: string; adminEmail?: string } = {}
+): Promise<void> {
+  await loginAs(request, contratanteEmail);
+  const listRes = await request.get("/api/obras");
+  if (!listRes.ok()) {
+    await logout(request);
+    return;
+  }
+  const abertas = asRows(await listRes.json()).filter((o) => o.status !== "concluida");
+  await logout(request);
+  if (abertas.length === 0) return;
+
+  await loginAs(request, adminEmail);
+  for (const o of abertas) {
+    await request
+      .patch(`/api/obras/${o.id as string}`, { data: { status: "concluida", numero: "0" } })
+      .catch(() => {});
+  }
+  await logout(request);
+}
+
+/** Conclui (via admin) uma obra específica para liberar a cota. Best-effort. */
+export async function concluirObra(
+  request: APIRequestContext,
+  obraId: string,
+  { adminEmail = SEED_ADMIN_EMAIL }: { adminEmail?: string } = {}
+): Promise<void> {
+  if (!obraId) return;
+  await loginAs(request, adminEmail);
+  await request
+    .patch(`/api/obras/${obraId}`, { data: { status: "concluida", numero: "0" } })
+    .catch(() => {});
+  await logout(request);
+}
+
 export type CapturedEmail = {
   id: string;
   to: string;

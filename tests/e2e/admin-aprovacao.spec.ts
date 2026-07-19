@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Aprovação de clientes, empreiteiras e obras pelo admin (Task #114 regression guard).
@@ -13,15 +14,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 const CONTRATANTE_EMAIL = "joao@construtora.com";
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fluxo 1 — Aprovação de cliente via UI do admin

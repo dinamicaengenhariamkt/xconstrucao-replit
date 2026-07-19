@@ -1,4 +1,10 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  loginAs,
+  logout,
+  liberarCotaObras as liberarCotaObrasBase,
+  concluirObra as concluirObraBase,
+} from "../helpers";
 
 /**
  * Integração (J36) — G3: moderação de obras (admin).
@@ -34,46 +40,21 @@ const CONTRATANTE_EMAIL = "joao@construtora.com";
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
-
 function rows(payload: unknown): Array<Record<string, any>> {
   return Array.isArray(payload) ? payload : ((payload as any)?.rows ?? []);
 }
 
 /** Conclui TODAS as obras abertas do contratante (via admin) p/ liberar a cota do plano free. */
 async function liberarCotaObras(request: APIRequestContext) {
-  await loginAs(request, CONTRATANTE_EMAIL);
-  const listRes = await request.get("/api/obras");
-  if (!listRes.ok()) {
-    await logout(request);
-    return;
-  }
-  const abertas = rows(await listRes.json()).filter((o) => o.status !== "concluida");
-  await logout(request);
-  if (abertas.length === 0) return;
-
-  await loginAs(request, ADMIN_EMAIL);
-  for (const o of abertas) {
-    await request
-      .patch(`/api/obras/${o.id}`, { data: { status: "concluida", numero: "0" } })
-      .catch(() => {});
-  }
-  await logout(request);
+  await liberarCotaObrasBase(request, {
+    contratanteEmail: CONTRATANTE_EMAIL,
+    adminEmail: ADMIN_EMAIL,
+  });
 }
 
 /** Conclui uma obra específica (via admin) para liberar a cota. Best-effort. */
 async function concluirObra(request: APIRequestContext, obraId: string) {
-  if (!obraId) return;
-  await loginAs(request, ADMIN_EMAIL);
-  await request.patch(`/api/obras/${obraId}`, { data: { status: "concluida", numero: "0" } }).catch(() => {});
-  await logout(request);
+  await concluirObraBase(request, obraId, { adminEmail: ADMIN_EMAIL });
 }
 
 /** Payload completo de publicação (transição p/ 'publicada' reseta moderação → 'pendente'). */

@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { fetchCapturedEmails, clearCapturedEmails, type CapturedEmail } from "../helpers";
+import { loginAs, logout, fetchCapturedEmails, clearCapturedEmails, type CapturedEmail } from "../helpers";
 
 /**
  * Integração (J36) — G4: resets de acesso admin.
@@ -39,15 +39,6 @@ import { fetchCapturedEmails, clearCapturedEmails, type CapturedEmail } from "..
 const CONTRATANTE_EMAIL = "joao@construtora.com";
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const ADMIN_EMAIL = "admin@xconstrucao.com";
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /** Faz polling por um email de um `kind` e retorna a URL apontada por `urlField`. */
 async function waitForEmailUrl(

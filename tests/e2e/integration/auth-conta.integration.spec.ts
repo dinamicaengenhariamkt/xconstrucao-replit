@@ -1,6 +1,8 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { generateSync } from "otplib";
 import {
+  loginAs,
+  logout,
   uniqueEmail,
   uniqueUsername,
   fetchCapturedEmails,
@@ -43,16 +45,6 @@ import {
 // Payload anti-bot: `mountedAt` no passado (> 1.5s de dwell) e sem honeypot.
 function antiBotFields() {
   return { website: "", mountedAt: Date.now() - 5_000 };
-}
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  // Sem endpoint garantido de logout API-only aqui; limpar o cookie jar basta.
-  await request.post("/api/auth/logout").catch(() => {});
 }
 
 /** Registra um usuário novo (fica NÃO verificado) e devolve email/senha, ou null se indisponível. */

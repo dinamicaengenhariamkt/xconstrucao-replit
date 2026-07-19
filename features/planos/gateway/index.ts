@@ -2,7 +2,7 @@ import type { PaymentGateway } from "./payment-gateway";
 import { ManualGateway } from "./manual-gateway";
 import { AsaasGateway } from "./asaas-gateway";
 
-export type { PaymentGateway, CheckoutInput, CheckoutResult, NormalizedWebhookEvent } from "./payment-gateway";
+export type { PaymentGateway, CheckoutInput, CheckoutResult, NormalizedWebhookEvent, GatewayPaymentStatus } from "./payment-gateway";
 
 /**
  * Factory do gateway de pagamento. Resolve o adapter por `PAYMENT_GATEWAY`

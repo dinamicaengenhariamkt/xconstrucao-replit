@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout } from "../helpers";
 
 /**
  * Integração (J36) — Chat: autorização, IDOR e consistência de não-lidas.
@@ -38,14 +39,6 @@ const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const OUTRO_CONTRATANTE_EMAIL = "ramon.gds92@gmail.com";
 const OUTRO_EMPREITEIRO_EMAIL = "ramon_gds@hotmail.com";
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /** Primeiro conversationId da persona, ou null se não houver thread. */
 async function firstThreadId(

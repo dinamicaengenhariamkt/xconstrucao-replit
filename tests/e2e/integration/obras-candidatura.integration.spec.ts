@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase } from "../helpers";
 
 /**
  * Integração (J36) — Obras + Candidatura/Aceite.
@@ -25,43 +26,12 @@ const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const ADMIN_EMAIL = "admin@xconstrucao.com";
 const OUTRO_CONTRATANTE_EMAIL = "ramon.gds92@gmail.com"; // dono diferente → testar 403 não-dono
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
-
-/** Marca as obras abertas do contratante como concluídas (via admin) p/ liberar cota. */
+/** Libera a cota do plano free concluindo as obras abertas do contratante seed. */
 async function liberarCotaObras(request: APIRequestContext) {
-  await loginAs(request, CONTRATANTE_EMAIL);
-  const listRes = await request.get("/api/obras");
-  if (!listRes.ok()) {
-    await logout(request);
-    return;
-  }
-  const payload = await listRes.json();
-  const rows: Array<{ id: string; status: string }> = Array.isArray(payload)
-    ? payload
-    : (payload.rows ?? []);
-  await logout(request);
-
-  const abertas = rows.filter((o) => o.status !== "concluida");
-  if (abertas.length === 0) return;
-
-  await loginAs(request, ADMIN_EMAIL);
-  for (const o of abertas) {
-    // O PATCH faz merge+revalidação com insertObraSchemaStrict: se a obra está
-    // 'publicada' mas foi criada sem `numero` (ex.: resíduo do j40), a revalidação
-    // barra com 400 e a conclusão não ocorre. Enviamos `numero` junto para
-    // satisfazer o schema; o objetivo é só liberar a cota concluindo a obra.
-    await request
-      .patch(`/api/obras/${o.id}`, { data: { status: "concluida", numero: "0" } })
-      .catch(() => {});
-  }
-  await logout(request);
+  await liberarCotaObrasBase(request, {
+    contratanteEmail: CONTRATANTE_EMAIL,
+    adminEmail: ADMIN_EMAIL,
+  });
 }
 
 test.describe.serial("Integração — Obras + Candidatura/Aceite", () => {

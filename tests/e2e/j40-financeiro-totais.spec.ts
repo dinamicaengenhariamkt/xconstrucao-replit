@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase } from "./helpers";
 
 /**
  * J40 — Totais financeiros (valorTotal e valorPago) após aceite e quitação.
@@ -29,43 +30,16 @@ const VALOR_LANCAMENTO = 25_000;
 // Formato BRL: R$ 75.000 ou R$\u00a075.000
 const BRL_NONZERO_REGEX = /R\$[\s\u00a0]?(?!0,00)[0-9]/;
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
-
 /**
  * Marca todas as obras não-concluídas do contratante como 'concluida' (via admin)
  * para liberar a cota de obrasAbertas do plano free antes do teste criar a obra
  * de validação. O contador de obras usa `status <> 'concluida'`, não visibilidade.
  */
 async function liberarCotaObras(request: APIRequestContext) {
-  await loginAs(request, CONTRATANTE_EMAIL);
-  const listRes = await request.get("/api/obras");
-  if (!listRes.ok()) {
-    await logout(request);
-    return;
-  }
-  const payload = await listRes.json();
-  const rows: Array<{ id: string; status: string }> = Array.isArray(payload)
-    ? payload
-    : (payload.rows ?? []);
-  await logout(request);
-
-  const abertas = rows.filter((o) => o.status !== "concluida");
-  if (abertas.length === 0) return;
-
-  await loginAs(request, ADMIN_EMAIL);
-  for (const o of abertas) {
-    await request
-      .patch(`/api/obras/${o.id}`, { data: { status: "concluida" } })
-      .catch(() => {/* best-effort */});
-  }
-  await logout(request);
+  await liberarCotaObrasBase(request, {
+    contratanteEmail: CONTRATANTE_EMAIL,
+    adminEmail: ADMIN_EMAIL,
+  });
 }
 
 /**

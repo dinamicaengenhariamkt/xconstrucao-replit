@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { loginAs, logout } from "../helpers";
 
 /**
  * Integração (J36) — Financeiro/Medições + Webhook de gateway.
@@ -28,14 +29,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok (status ${res.status()})`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 /** eventId único e rastreável (contém E2E para auditoria/limpeza manual futura). */
 function uniqueEventId(): string {

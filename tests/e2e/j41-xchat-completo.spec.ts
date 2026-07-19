@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { loginAs, logout } from "./helpers";
 
 /**
  * Jornada 41 — XChat Completo.
@@ -18,15 +19,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 
 const CONTRATANTE_EMAIL = "joao@construtora.com"; // seed — role contratante
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com"; // seed — role empreiteiro
-
-async function loginAs(request: APIRequestContext, email: string) {
-  const res = await request.post("/api/test/login-as", { data: { email } });
-  expect(res.ok(), `login-as ${email} deve responder ok`).toBeTruthy();
-}
-
-async function logout(request: APIRequestContext) {
-  await request.post("/api/auth/logout").catch(() => {});
-}
 
 test.describe("Jornada 41 — XChat Completo", () => {
   test("garantir-thread do empreiteiro: 422 NAO_VINCULADO para obra inexistente", async ({
