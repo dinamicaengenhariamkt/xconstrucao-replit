@@ -31,8 +31,19 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
-  const result = await iniciarCheckout({ userId: guard.user.id, planoId: parsed.data.planoId, ciclo: parsed.data.ciclo });
-  if (!result.ok) {
+  const result = await iniciarCheckout({
+    userId: guard.user.id,
+    planoId: parsed.data.planoId,
+    ciclo: parsed.data.ciclo,
+  });
+
+  if (result.ok === false) {
+    if (result.code === "INTERNAL_ERROR") {
+      console.error("[checkout] iniciarCheckout error:", result.detail);
+      const r = NextResponse.json({ message: "Erro interno no checkout.", detail: result.detail }, { status: 500 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const status = result.code === "PLANO_INVALIDO" ? 404 : 409;
     const message = result.code === "PLANO_INVALIDO" ? "Plano inválido." : "Você já assina este plano.";
     const r = NextResponse.json({ message, code: result.code }, { status });

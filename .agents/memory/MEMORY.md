@@ -1,1 +1,2 @@
 - [Tailwind v4 source scanning & @source none](tailwind-v4-source-none.md) — correct syntax to disable auto-detection and prevent .local/ corruption in v4.1.18
+- [E2E payment gateway isolation](e2e-payment-gateway.md) — must set PAYMENT_GATEWAY=manual in playwright.config.ts webServer env or tests call real ASAAS API and fail

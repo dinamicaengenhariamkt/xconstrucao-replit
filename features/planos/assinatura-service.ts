@@ -68,7 +68,8 @@ export async function listarPlanos(persona?: PlanoPersona): Promise<typeof plano
 export type CheckoutResult =
   | { ok: true; kind: "activated"; assinaturaId: string }
   | { ok: true; kind: "redirect"; url: string }
-  | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" };
+  | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" }
+  | { ok: false; code: "INTERNAL_ERROR"; detail: string };
 
 /**
  * Inicia o checkout de um plano para o usuário. Com o adapter manual, ativa a
@@ -79,6 +80,19 @@ export type CheckoutResult =
  * depois, via webhook (aplicarEventoWebhook).
  */
 export async function iniciarCheckout(args: {
+  userId: string;
+  planoId: string;
+  ciclo?: "mensal" | "anual";
+}): Promise<CheckoutResult> {
+  try {
+    return await _iniciarCheckoutImpl(args);
+  } catch (err) {
+    console.error("[iniciarCheckout] erro inesperado:", err);
+    return { ok: false, code: "INTERNAL_ERROR", detail: String(err) };
+  }
+}
+
+async function _iniciarCheckoutImpl(args: {
   userId: string;
   planoId: string;
   ciclo?: "mensal" | "anual";

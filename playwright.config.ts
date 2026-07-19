@@ -49,6 +49,8 @@ export default defineConfig({
       NODE_ENV: "development",
       // distDir dedicado para não colidir com o lock do .next/dev do workflow
       NEXT_DIST_DIR: ".next-e2e",
+      // Força o adapter manual em testes E2E para não chamar gateways reais.
+      PAYMENT_GATEWAY: "manual",
     },
   },
 });

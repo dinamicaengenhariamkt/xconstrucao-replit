@@ -21,11 +21,14 @@ export class ManualGateway implements PaymentGateway {
   readonly provider = "manual";
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-    // Sem cobrança: ativa imediatamente. Gera ids sintéticos rastreáveis.
+    // Sem cobrança: ativa imediatamente. Sufixo de timestamp garante que o mesmo
+    // user+plano pode ser re-assinado após cancelamento sem violar o unique
+    // constraint de assinaturaEventos.gatewayEventId.
+    const ts = Date.now();
     return {
       kind: "activated",
       gatewayCustomerId: `manual_cus_${input.userId}`,
-      gatewaySubscriptionId: `manual_sub_${input.userId}_${input.planoId}`,
+      gatewaySubscriptionId: `manual_sub_${input.userId}_${input.planoId}_${ts}`,
     };
   }
 
