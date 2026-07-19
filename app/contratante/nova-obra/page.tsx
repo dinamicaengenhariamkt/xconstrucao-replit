@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { RiAttachment2, RiCloseLine, RiImageLine, RiSaveLine, RiSendPlaneLine } from 'react-icons/ri';
+import { PlanoUpsellDialog } from '@features/planos/ui/PlanoUpsellDialog';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { useToast } from '@shared/hooks/use-toast';
 import { Button } from '@shared/components/ui/button';
@@ -217,6 +218,8 @@ export default function NovaObraPage() {
   const { toast } = useToast();
   const { upload } = useUpload();
   const [submitting, setSubmitting] = useState<'rascunho' | 'publicada' | null>(null);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [upsellDescricao, setUpsellDescricao] = useState('');
   const [staged, setStaged] = useState<StagedAnexo[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Imagem de capa opcional (obra_capa). Guardamos o File + preview local.
@@ -416,6 +419,13 @@ export default function NovaObraPage() {
       });
       const data = await r.json();
       if (!r.ok) {
+        if (r.status === 402 && data?.code === 'LIMITE_PLANO') {
+          const limite = data?.limite ?? 1;
+          setUpsellDescricao(`${limite} obra${limite !== 1 ? 's' : ''} aberta${limite !== 1 ? 's' : ''}`);
+          setUpsellOpen(true);
+          setSubmitting(null);
+          return;
+        }
         const fieldErrors = (data?.errors?.fieldErrors ?? {}) as Record<string, string[]>;
         const first = Object.entries(fieldErrors)[0];
         const msg = first
@@ -1025,6 +1035,13 @@ export default function NovaObraPage() {
           </Card>
         </form>
       </Form>
+
+      <PlanoUpsellDialog
+        open={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        descricaoLimite={upsellDescricao}
+        planosHref="/contratante/planos"
+      />
     </div>
   );
 }

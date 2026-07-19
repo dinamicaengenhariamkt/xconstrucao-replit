@@ -21,6 +21,10 @@ export async function dispararNotificacaoAssinaturaAdmin(args: {
   userEmail: string;
   planoNome: string;
   ciclo?: "mensal" | "anual";
+  /** Sobrescreve a descrição gerada automaticamente para o tipo. */
+  descricaoOverride?: string;
+  /** Tipo da notificação in-app. Default: "info". Use "alerta" para situações críticas. */
+  tipoNotificacao?: "info" | "alerta" | "sucesso" | "lembrete";
 }): Promise<void> {
   try {
     const admins = await db
@@ -53,10 +57,16 @@ export async function dispararNotificacaoAssinaturaAdmin(args: {
         break;
     }
 
+    if (args.descricaoOverride) {
+      descricao = args.descricaoOverride;
+    }
+
+    const tipoNotificacao = args.tipoNotificacao ?? "info";
+
     for (const admin of admins) {
       await criarNotificacao({
         userId: admin.id,
-        tipo: "info",
+        tipo: tipoNotificacao,
         titulo,
         descricao,
         href: "/admin/financeiro",

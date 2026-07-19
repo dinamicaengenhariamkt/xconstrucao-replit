@@ -11,6 +11,7 @@ import {
 } from "@shared/db/schema";
 import { sendAvisoExpiracaoEmail } from "@shared/lib/email";
 import { emailEnabledFromPrefs } from "@features/notificacoes/preferences";
+import { dispararNotificacaoAssinaturaAdmin } from "@features/notificacoes/assinatura-admin-dispatcher";
 
 /**
  * Número de dias de carência padrão após `renovaEm` antes de revogar o plano.
@@ -240,6 +241,23 @@ export async function notificarInadimplentesExpirando(
         console.info(
           `[aviso-expiracao] notificado assinaturaId=${row.id} userId=${row.userId} diasRestantes=${diasRestantes}`,
         );
+
+        // Notifica admins sobre a inadimplência (fire-and-forget por usuário).
+        const diasInadimplente = Math.max(
+          0,
+          Math.floor((new Date().getTime() - new Date(row.renovaEm).getTime()) / (1000 * 60 * 60 * 24)),
+        );
+        const renovaEmFormatada = row.renovaEm
+          ? new Date(row.renovaEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+          : "—";
+        void dispararNotificacaoAssinaturaAdmin({
+          tipo: "inadimplente",
+          userNome: row.userName ?? "—",
+          userEmail: row.userEmail ?? "—",
+          planoNome: row.planoNome ?? "—",
+          tipoNotificacao: "alerta",
+          descricaoOverride: `${row.userName ?? "Usuário"} está inadimplente no ${row.planoNome ?? "plano"} há ${diasInadimplente} dia${diasInadimplente !== 1 ? "s" : ""}. Renova em ${renovaEmFormatada}.`,
+        });
       } catch (rowErr) {
         console.error(
           `[aviso-expiracao] erro ao processar assinaturaId=${row.id}:`,

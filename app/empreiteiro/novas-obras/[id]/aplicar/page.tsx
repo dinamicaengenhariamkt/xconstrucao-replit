@@ -9,6 +9,8 @@ import { useTermosStore } from '@features/auth/store/termos-store';
 import { useUpload } from '@features/shared/hooks/use-uploads';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { IconArrowBack, IconChevronRight, IconCheckCircle, IconCheck, IconSend, IconDelete, IconAddCircle, IconUploadFile, IconDescription, IconConstruction, IconLocationOn, IconHomeRepairService, IconStraighten, IconAttachMoney, IconSchedule, IconSignalCellularAlt } from '@shared/components/icons';
+import { useToast } from '@shared/hooks/use-toast';
+import { PlanoUpsellDialog } from '@features/planos/ui/PlanoUpsellDialog';
 
 interface Atividade {
   id: string;
@@ -58,9 +60,12 @@ export default function AplicarPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [upsellDescricao, setUpsellDescricao] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { acceptAll } = useTermosStore();
   const { upload } = useUpload();
+  const { toast } = useToast();
 
   const addAtividade = useCallback(() => {
     setAtividades(prev => [...prev, { id: generateId(), descricao: '', valor: '', observacoes: '' }]);
@@ -142,6 +147,12 @@ export default function AplicarPage() {
       });
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 402 && err.code === 'LIMITE_PLANO') {
+          const limite = err.limite ?? 5;
+          setUpsellDescricao(`${limite} proposta${limite !== 1 ? 's' : ''}/mês`);
+          setUpsellOpen(true);
+          return;
+        }
         throw new Error(err.message || 'Erro ao enviar candidatura');
       }
       const candidatura = await res.json();
@@ -159,7 +170,11 @@ export default function AplicarPage() {
       }
       setIsSubmitted(true);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro ao enviar candidatura');
+      toast({
+        title: 'Erro ao enviar candidatura',
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -571,6 +586,13 @@ export default function AplicarPage() {
           {isSubmitting ? 'Enviando...' : 'Enviar proposta'}
         </button>
       </motion.div>
+
+      <PlanoUpsellDialog
+        open={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        descricaoLimite={upsellDescricao}
+        planosHref="/empreiteiro/planos"
+      />
     </div>
   );
 }
