@@ -60,7 +60,10 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - [x] Lançamento de entrada em J09 ao ativar (escopo plataforma, categoria `assinatura`, idempotente)
 - [x] Cancelar (`POST /api/assinaturas/cancelar`) → rebaixa para free
 - [ ] Decidir e plugar gateway REAL (Stripe/PayPal/MercadoPago/Asaas) → **Jornada 14 (bloqueada)**
-- [ ] Tela "minha assinatura" persona-facing consumindo os endpoints (UI — backend pronto)
+- [x] Tela "minha assinatura" persona-facing consumindo os endpoints _(Task #206)_
+- [x] Item "Planos" no nav lateral de empreiteiro e contratante _(Task #206)_
+- [x] CTA upgrade destacado na aba "Plano & Uso" das Configurações (banner free-only) _(Task #206)_
+- [x] Notificações admin in-app em eventos de assinatura (checkout, cancelamento, inadimplente, reativação) _(Task #206)_
 - [ ] Proration na troca de plano no meio do ciclo (hoje: cancela a anterior + cria nova)
 
 ## 10. Critérios de aceite
@@ -89,3 +92,4 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - **2026-06-01** — Gating retorna **HTTP 402** com `code: "LIMITE_PLANO"` em J03 (obras abertas) e J05 (propostas/mês). Tier free = catálogo (empreiteiro: 5 propostas, 2 obras; contratante: 1 obra). Enterprise (9999) tratado como ilimitado (gate não dispara).
 - **2026-06-01** — Backend 100% pronto; falta a **UI persona-facing** ("minha assinatura"/checkout) consumir `/api/planos` + `/api/assinaturas/*`. Páginas `/contratante/planos` e `/empreiteiro/planos` existem mas ainda não plugadas aos endpoints — candidato a fase de UI.
 - **2026-06-01** — Item de backlog `userTemAssinaturaAtiva` (precondição estratégica) materializado de verdade nesta fase.
+- **2026-07-19 (Task #206)** — UI persona-facing completa: nav item "Planos" (empreiteiro + contratante), painel "Minha Assinatura" com badge de status/data/valor, dialog de confirmação na troca de plano, cancelamento direto na página de planos, banner de upgrade nas Configurações para free. `alert()` substituído por toast. Dispatcher `assinatura-admin-dispatcher.ts` integrado no `assinatura-service.ts` (fire-and-forget pós-commit para checkout, cancelamento, inadimplente, reativação).

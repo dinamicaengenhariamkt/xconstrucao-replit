@@ -11,9 +11,27 @@ import {
   RiArrowDownSLine,
   RiArrowUpSLine,
   RiStarFill,
+  RiVipCrownLine,
+  RiCalendarLine,
+  RiArrowRightLine,
 } from 'react-icons/ri';
-import { usePlanos, usePerfilPlano, useCheckout, type PlanoApi } from '@features/planos/ui/use-planos';
+import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
 import type { PlanoTier } from '@shared/lib/plans-catalog';
+import { useToast } from '@shared/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@shared/components/ui/alert-dialog';
 
 /* ─────────────────────────────────────────────
    Data
@@ -114,16 +132,112 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 /* ─────────────────────────────────────────────
+   Minha Assinatura Panel
+───────────────────────────────────────────── */
+function MinhaAssinaturaPainel() {
+  const { data: perfilPlano, isLoading } = usePerfilPlano();
+  const cancelar = useCancelarAssinatura();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  if (isLoading || !perfilPlano) return null;
+  if (perfilPlano.plano === 'free') return null;
+
+  const tierLabel =
+    perfilPlano.plano === 'pro' ? 'Profissional' : perfilPlano.plano === 'enterprise' ? 'Enterprise' : perfilPlano.plano;
+
+  const inicio = perfilPlano.planoStartedAt
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.planoStartedAt))
+    : null;
+
+  function handleCancelar() {
+    cancelar.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: 'Assinatura cancelada', description: 'Você voltou para o plano gratuito.' });
+        router.refresh();
+      },
+      onError: () => {
+        toast({ title: 'Erro', description: 'Não foi possível cancelar agora. Tente novamente.', variant: 'destructive' });
+      },
+    });
+  }
+
+  return (
+    <div className="mb-10 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-testid="painel-minha-assinatura">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <RiVipCrownLine className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Minha Assinatura</p>
+            <Badge className="bg-primary/10 text-primary border-0 text-xs" data-testid="badge-assinatura-tier">{tierLabel}</Badge>
+          </div>
+          {inicio && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <RiCalendarLine className="w-3.5 h-3.5" />
+              Ativo desde {inicio}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            {perfilPlano.catalogo.precoMensal > 0
+              ? `R$ ${perfilPlano.catalogo.precoMensal}/mês`
+              : 'Gratuito'}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-900/20"
+              disabled={cancelar.isPending}
+              data-testid="button-cancelar-assinatura-planos"
+            >
+              {cancelar.isPending ? 'Cancelando…' : 'Cancelar assinatura'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você voltará para o plano gratuito imediatamente. Obras em andamento são preservadas, mas os limites do plano gratuito passam a valer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Manter assinatura</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelar}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-confirmar-cancelar"
+              >
+                Cancelar assinatura
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────── */
 export default function PlanosPage() {
   const [anual, setAnual] = useState(false);
+  const [pendingSlot, setPendingSlot] = useState<PlanId | null>(null);
   const { data: planos } = usePlanos();
   const { data: perfilPlano } = usePerfilPlano();
   const checkout = useCheckout();
+  const { toast } = useToast();
 
   const PLANO_ATUAL: PlanId =
     perfilPlano?.plano === 'pro' ? 'profissional' : perfilPlano?.plano === 'enterprise' ? 'enterprise' : 'basico';
+
+  const temAssinaturaPaga = PLANO_ATUAL !== 'basico';
 
   function planoDeSlot(slot: PlanId): PlanoApi | undefined {
     return planos?.find((p) => p.tier === SLOT_TIER[slot]);
@@ -137,18 +251,41 @@ export default function PlanosPage() {
     return n && n > 0 ? Math.round(n) : null;
   }
 
-  function assinar(slot: PlanId) {
+  function executarAssinar(slot: PlanId) {
     const p = planoDeSlot(slot);
     if (!p || checkout.isPending) return;
     checkout.mutate(
       { planoId: p.id, ciclo: anual ? 'anual' : 'mensal' },
       {
+        onSuccess: (data) => {
+          if (data.kind === 'activated') {
+            toast({ title: 'Plano ativado!', description: `Bem-vindo ao plano ${p.nome}.` });
+          }
+        },
         onError: (err) => {
           if (err.code === 'JA_ASSINANTE') return;
-          alert(err.message);
+          toast({
+            title: 'Erro ao assinar',
+            description: err.message || 'Não foi possível processar a assinatura. Tente novamente.',
+            variant: 'destructive',
+          });
         },
       },
     );
+  }
+
+  function assinar(slot: PlanId) {
+    if (temAssinaturaPaga && slot !== PLANO_ATUAL && slot !== 'basico') {
+      setPendingSlot(slot);
+      return;
+    }
+    executarAssinar(slot);
+  }
+
+  function confirmarTroca() {
+    if (!pendingSlot) return;
+    executarAssinar(pendingSlot);
+    setPendingSlot(null);
   }
 
   return (
@@ -169,6 +306,9 @@ export default function PlanosPage() {
           </p>
         </div>
 
+        {/* ── Minha Assinatura ── */}
+        <MinhaAssinaturaPainel />
+
         {/* ── Toggle Mensal / Anual ── */}
         <div className="flex items-center justify-center gap-4 mb-12">
           <span className={cn('text-sm font-medium transition-colors', !anual ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400')}>
@@ -181,6 +321,7 @@ export default function PlanosPage() {
               anual ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
             )}
             aria-label="Alternar cobrança anual"
+            data-testid="toggle-ciclo-anual"
           >
             <span
               className={cn(
@@ -247,7 +388,7 @@ export default function PlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'basico' ? (
-              <button disabled className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 cursor-not-allowed" data-testid="button-plano-atual-basico">
                 Plano atual
               </button>
             ) : (
@@ -255,6 +396,7 @@ export default function PlanosPage() {
                 onClick={() => assinar('basico')}
                 disabled={checkout.isPending || !planoDeSlot('basico')}
                 className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-basico"
               >
                 {checkout.isPending ? 'Processando…' : 'Começar grátis'}
               </button>
@@ -325,7 +467,7 @@ export default function PlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'profissional' ? (
-              <button disabled className="w-full py-3 rounded-xl bg-white/20 text-sm font-bold text-white cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl bg-white/20 text-sm font-bold text-white cursor-not-allowed" data-testid="button-plano-atual-profissional">
                 Plano atual
               </button>
             ) : (
@@ -333,6 +475,7 @@ export default function PlanosPage() {
                 onClick={() => assinar('profissional')}
                 disabled={checkout.isPending || !planoDeSlot('profissional')}
                 className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-primary hover:bg-white/90 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-profissional"
               >
                 {checkout.isPending ? 'Processando…' : 'Assinar agora'}
               </button>
@@ -394,12 +537,17 @@ export default function PlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'enterprise' ? (
-              <button disabled className="w-full py-3 rounded-xl bg-white/10 text-sm font-bold text-white cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl bg-white/10 text-sm font-bold text-white cursor-not-allowed" data-testid="button-plano-atual-enterprise">
                 Plano atual
               </button>
             ) : (
-              <button className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-gray-900 hover:bg-gray-100 transition-colors">
-                Falar com comercial
+              <button
+                onClick={() => assinar('enterprise')}
+                disabled={checkout.isPending || !planoDeSlot('enterprise')}
+                className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-enterprise"
+              >
+                {checkout.isPending ? 'Processando…' : 'Assinar agora'}
               </button>
             )}
           </div>
@@ -455,6 +603,30 @@ export default function PlanosPage() {
         </div>
 
       </div>
+
+      {/* ── Diálogo confirmação troca de plano ── */}
+      <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Trocar de plano?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sua assinatura atual será cancelada e o novo plano será ativado imediatamente.
+              Os limites do novo plano passam a valer na hora.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSlot(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarTroca}
+              disabled={checkout.isPending}
+              data-testid="button-confirmar-troca-plano"
+            >
+              <RiArrowRightLine className="w-4 h-4 mr-1" />
+              Confirmar troca
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

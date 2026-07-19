@@ -7,6 +7,7 @@ import {
   RiSettings3Line,
   RiMoneyDollarCircleLine,
   RiFileList3Line,
+  RiVipCrownLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -17,6 +18,7 @@ export const CONTRATANTE_NAV_ITEMS: NavItem[] = [
   { title: 'Medições', url: '/contratante/medicoes', icon: RiFileList3Line },
   { title: 'Pagamentos', url: '/contratante/pagamentos', icon: RiMoneyDollarCircleLine },
   { title: 'xchat', url: '/contratante/chat', icon: RiChat1Line },
+  { title: 'Planos', url: '/contratante/planos', icon: RiVipCrownLine },
 ];
 
 export const CONTRATANTE_BOTTOM_NAV_ITEMS: NavItem[] = [

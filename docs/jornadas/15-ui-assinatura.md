@@ -54,6 +54,11 @@ Nada novo. Usa `planos`, `assinaturas` (J11).
 - [x] Botão "cancelar" → `POST /api/assinaturas/cancelar` com confirmação (AlertDialog) na aba Plano & Uso; só aparece em tier pago
 - [~] 402 `LIMITE_PLANO`: o servidor é a fonte de verdade e já retorna 402 nos fluxos de J03/J05; o upsell na origem desses fluxos fica como melhoria pontual (não bloqueia J15)
 - [x] Feedback de loading/erro (estado "Processando…", `alert`/`toast` de erro, `JA_ASSINANTE` silencioso)
+- [x] Painel "Minha Assinatura" (`MinhaAssinaturaPainel`) nas páginas /planos: status badge (ativa/inadimplente/cancelada), data renovação, valor, cancel com AlertDialog _(Task #206)_
+- [x] Dialog de confirmação na troca de plano (upgrade/downgrade) com destaque do antes→depois _(Task #206)_
+- [x] Nav item "Planos" no sidebar empreiteiro e contratante (`RiVipCrownLine`) _(Task #206)_
+- [x] Banner de upgrade destacado na aba Plano & Uso das Configurações (free-only) _(Task #206)_
+- [x] `alert(err.message)` substituído por toast amigável em pt-BR em ambas as páginas de planos _(Task #206)_
 
 ## 10. Critérios de aceite
 1. Empreiteiro abre `/empreiteiro/planos` → vê free/pro/enterprise com preços reais.
@@ -73,3 +78,5 @@ Nada novo. Usa `planos`, `assinaturas` (J11).
 - 2026-06-01: **Implementada.** Hooks client em [features/planos/ui/use-planos.ts](../../features/planos/ui/use-planos.ts) (`usePlanos`, `usePerfilPlano`, `useCheckout`, `useCancelarAssinatura`). Os slots visuais das páginas mapeiam para os tiers reais (free/pro/enterprise) via `SLOT_TIER`; preço e "plano atual" vêm de `/api/planos` + `/api/perfil/plano`.
 - 2026-06-01: O checkout já trata os dois `kind` — quando o gateway real (J14) entrar, o branch `redirect` (`window.location.assign(url)`) já funciona sem mudança de UI.
 - 2026-06-01: O cancelamento foi colocado na aba Plano & Uso das Configurações (já consumia `/api/perfil/plano`), não na página de planos — é onde o usuário gerencia a assinatura ativa. O CTA "Falar com comercial" do Enterprise foi mantido (venda assistida, sem self-checkout).
+- 2026-07-19 (Task #206): Cancelamento duplicado na página /planos (componente `MinhaAssinaturaPainel`) para acesso direto sem ir às Configurações. Ambos os pontos de cancelamento coexistem.
+- 2026-07-19 (Task #206): Dispatcher admin integrado no `assinatura-service.ts` pós-commit (checkout + cancel + webhook: payment_failed→inadimplente, payment_succeeded reativação). fire-and-forget, ignora erros para não bloquear o fluxo principal.

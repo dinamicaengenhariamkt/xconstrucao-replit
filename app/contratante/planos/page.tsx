@@ -11,9 +11,27 @@ import {
   RiArrowDownSLine,
   RiArrowUpSLine,
   RiStarFill,
+  RiVipCrownLine,
+  RiCalendarLine,
+  RiArrowRightLine,
 } from 'react-icons/ri';
-import { usePlanos, usePerfilPlano, useCheckout, type PlanoApi } from '@features/planos/ui/use-planos';
+import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
 import type { PlanoTier } from '@shared/lib/plans-catalog';
+import { useToast } from '@shared/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { Button } from '@shared/components/ui/button';
+import { Badge } from '@shared/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@shared/components/ui/alert-dialog';
 
 /* ─────────────────────────────────────────────
    Data
@@ -35,16 +53,16 @@ interface Feature {
 }
 
 const FEATURES: Feature[] = [
-  { label: 'Obras publicadas simultâneas',       starter: '2',         empresarial: '10',        enterprise: 'Ilimitado' },
-  { label: 'Propostas recebidas por obra',       starter: '5',         empresarial: 'Ilimitado', enterprise: 'Ilimitado' },
-  { label: 'Acesso ao diretório de empreiteiros', starter: 'Básico',   empresarial: 'Completo',  enterprise: 'Premium' },
-  { label: 'Contratos digitais',                 starter: false,       empresarial: true,        enterprise: true },
-  { label: 'Gestão de medições',                 starter: false,       empresarial: true,        enterprise: true },
-  { label: 'Relatórios de obra',                 starter: false,       empresarial: true,        enterprise: 'Avançado' },
-  { label: 'Análises com IA',                    starter: false,       empresarial: true,        enterprise: 'Avançado' },
-  { label: 'Suporte',                            starter: 'E-mail',    empresarial: 'Prioritário', enterprise: 'Dedicado' },
-  { label: 'Exportação de relatórios',           starter: false,       empresarial: true,        enterprise: true },
-  { label: 'Integrações / API',                  starter: false,       empresarial: false,       enterprise: true },
+  { label: 'Obras publicadas simultâneas',        starter: '2',         empresarial: '10',        enterprise: 'Ilimitado' },
+  { label: 'Propostas recebidas por obra',        starter: '5',         empresarial: 'Ilimitado', enterprise: 'Ilimitado' },
+  { label: 'Acesso ao diretório de empreiteiros', starter: 'Básico',    empresarial: 'Completo',  enterprise: 'Premium' },
+  { label: 'Contratos digitais',                  starter: false,       empresarial: true,        enterprise: true },
+  { label: 'Gestão de medições',                  starter: false,       empresarial: true,        enterprise: true },
+  { label: 'Relatórios de obra',                  starter: false,       empresarial: true,        enterprise: 'Avançado' },
+  { label: 'Análises com IA',                     starter: false,       empresarial: true,        enterprise: 'Avançado' },
+  { label: 'Suporte',                             starter: 'E-mail',    empresarial: 'Prioritário', enterprise: 'Dedicado' },
+  { label: 'Exportação de relatórios',            starter: false,       empresarial: true,        enterprise: true },
+  { label: 'Integrações / API',                   starter: false,       empresarial: false,       enterprise: true },
 ];
 
 const FAQ_ITEMS = [
@@ -54,11 +72,11 @@ const FAQ_ITEMS = [
   },
   {
     q: 'O que acontece com minhas obras se eu fizer downgrade?',
-    a: 'Suas obras em andamento são preservadas. Se o número de obras publicadas exceder o limite do novo plano, você poderá concluir as existentes mas não poderá publicar novas até ajustar o número.',
+    a: 'Suas obras em andamento são preservadas. Se o número de obras publicadas exceder o limite do novo plano, você poderá gerenciar as existentes mas não poderá publicar novas até ajustar o número.',
   },
   {
-    q: 'O plano inclui suporte jurídico nos contratos?',
-    a: 'Os contratos gerados na plataforma são modelos padronizados elaborados em conjunto com especialistas jurídicos. O plano Enterprise inclui revisão por equipe especializada para contratos de maior complexidade.',
+    q: 'Há suporte na migração de plano?',
+    a: 'Sim. Nossa equipe de sucesso está disponível para auxiliar em qualquer mudança de plano, tirar dúvidas e garantir que a transição seja tranquila.',
   },
 ];
 
@@ -114,16 +132,112 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 /* ─────────────────────────────────────────────
+   Minha Assinatura Panel
+───────────────────────────────────────────── */
+function MinhaAssinaturaPainel() {
+  const { data: perfilPlano, isLoading } = usePerfilPlano();
+  const cancelar = useCancelarAssinatura();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  if (isLoading || !perfilPlano) return null;
+  if (perfilPlano.plano === 'free') return null;
+
+  const tierLabel =
+    perfilPlano.plano === 'pro' ? 'Empresarial' : perfilPlano.plano === 'enterprise' ? 'Enterprise' : perfilPlano.plano;
+
+  const inicio = perfilPlano.planoStartedAt
+    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.planoStartedAt))
+    : null;
+
+  function handleCancelar() {
+    cancelar.mutate(undefined, {
+      onSuccess: () => {
+        toast({ title: 'Assinatura cancelada', description: 'Você voltou para o plano gratuito.' });
+        router.refresh();
+      },
+      onError: () => {
+        toast({ title: 'Erro', description: 'Não foi possível cancelar agora. Tente novamente.', variant: 'destructive' });
+      },
+    });
+  }
+
+  return (
+    <div className="mb-10 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-testid="painel-minha-assinatura">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <RiVipCrownLine className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Minha Assinatura</p>
+            <Badge className="bg-primary/10 text-primary border-0 text-xs" data-testid="badge-assinatura-tier">{tierLabel}</Badge>
+          </div>
+          {inicio && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <RiCalendarLine className="w-3.5 h-3.5" />
+              Ativo desde {inicio}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            {perfilPlano.catalogo.precoMensal > 0
+              ? `R$ ${perfilPlano.catalogo.precoMensal}/mês`
+              : 'Gratuito'}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-800 dark:hover:bg-red-900/20"
+              disabled={cancelar.isPending}
+              data-testid="button-cancelar-assinatura-planos"
+            >
+              {cancelar.isPending ? 'Cancelando…' : 'Cancelar assinatura'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Você voltará para o plano gratuito imediatamente. Obras em andamento são preservadas, mas os limites do plano gratuito passam a valer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Manter assinatura</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelar}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-confirmar-cancelar"
+              >
+                Cancelar assinatura
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Main Page
 ───────────────────────────────────────────── */
 export default function ContratantePlanosPage() {
   const [anual, setAnual] = useState(false);
+  const [pendingSlot, setPendingSlot] = useState<PlanId | null>(null);
   const { data: planos } = usePlanos();
   const { data: perfilPlano } = usePerfilPlano();
   const checkout = useCheckout();
+  const { toast } = useToast();
 
   const PLANO_ATUAL: PlanId =
     perfilPlano?.plano === 'pro' ? 'empresarial' : perfilPlano?.plano === 'enterprise' ? 'enterprise' : 'starter';
+
+  const temAssinaturaPaga = PLANO_ATUAL !== 'starter';
 
   function planoDeSlot(slot: PlanId): PlanoApi | undefined {
     return planos?.find((p) => p.tier === SLOT_TIER[slot]);
@@ -138,18 +252,41 @@ export default function ContratantePlanosPage() {
     return n && n > 0 ? Math.round(n) : null;
   }
 
-  function assinar(slot: PlanId) {
+  function executarAssinar(slot: PlanId) {
     const p = planoDeSlot(slot);
     if (!p || checkout.isPending) return;
     checkout.mutate(
       { planoId: p.id, ciclo: anual ? 'anual' : 'mensal' },
       {
+        onSuccess: (data) => {
+          if (data.kind === 'activated') {
+            toast({ title: 'Plano ativado!', description: `Bem-vindo ao plano ${p.nome}.` });
+          }
+        },
         onError: (err) => {
-          if (err.code === 'JA_ASSINANTE') return; // já é o plano atual
-          alert(err.message);
+          if (err.code === 'JA_ASSINANTE') return;
+          toast({
+            title: 'Erro ao assinar',
+            description: err.message || 'Não foi possível processar a assinatura. Tente novamente.',
+            variant: 'destructive',
+          });
         },
       },
     );
+  }
+
+  function assinar(slot: PlanId) {
+    if (temAssinaturaPaga && slot !== PLANO_ATUAL && slot !== 'starter') {
+      setPendingSlot(slot);
+      return;
+    }
+    executarAssinar(slot);
+  }
+
+  function confirmarTroca() {
+    if (!pendingSlot) return;
+    executarAssinar(pendingSlot);
+    setPendingSlot(null);
   }
 
   return (
@@ -163,12 +300,15 @@ export default function ContratantePlanosPage() {
             Planos & Preços
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-4">
-            Escolha o plano ideal<br className="hidden sm:block" /> para o seu negócio
+            Escolha o plano ideal<br className="hidden sm:block" /> para sua construtora
           </h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-            Publique obras, gerencie empreiteiros e acompanhe cada etapa da construção.
+            Publique obras, gerencie contratos e encontre os melhores empreiteiros da sua região.
           </p>
         </div>
+
+        {/* ── Minha Assinatura ── */}
+        <MinhaAssinaturaPainel />
 
         {/* ── Toggle Mensal / Anual ── */}
         <div className="flex items-center justify-center gap-4 mb-12">
@@ -182,6 +322,7 @@ export default function ContratantePlanosPage() {
               anual ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'
             )}
             aria-label="Alternar cobrança anual"
+            data-testid="toggle-ciclo-anual"
           >
             <span
               className={cn(
@@ -248,7 +389,7 @@ export default function ContratantePlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'starter' ? (
-              <button disabled className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 cursor-not-allowed" data-testid="button-plano-atual-starter">
                 Plano atual
               </button>
             ) : (
@@ -256,6 +397,7 @@ export default function ContratantePlanosPage() {
                 onClick={() => assinar('starter')}
                 disabled={checkout.isPending || !planoDeSlot('starter')}
                 className="w-full py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-primary hover:text-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-starter"
               >
                 {checkout.isPending ? 'Processando…' : 'Começar grátis'}
               </button>
@@ -326,7 +468,7 @@ export default function ContratantePlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'empresarial' ? (
-              <button disabled className="w-full py-3 rounded-xl bg-white/20 text-sm font-bold text-white cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl bg-white/20 text-sm font-bold text-white cursor-not-allowed" data-testid="button-plano-atual-empresarial">
                 Plano atual
               </button>
             ) : (
@@ -334,6 +476,7 @@ export default function ContratantePlanosPage() {
                 onClick={() => assinar('empresarial')}
                 disabled={checkout.isPending || !planoDeSlot('empresarial')}
                 className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-primary hover:bg-white/90 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-empresarial"
               >
                 {checkout.isPending ? 'Processando…' : 'Assinar agora'}
               </button>
@@ -395,12 +538,17 @@ export default function ContratantePlanosPage() {
             </ul>
 
             {PLANO_ATUAL === 'enterprise' ? (
-              <button disabled className="w-full py-3 rounded-xl bg-white/10 text-sm font-bold text-white cursor-not-allowed">
+              <button disabled className="w-full py-3 rounded-xl bg-white/10 text-sm font-bold text-white cursor-not-allowed" data-testid="button-plano-atual-enterprise">
                 Plano atual
               </button>
             ) : (
-              <button className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-gray-900 hover:bg-gray-100 transition-colors">
-                Falar com comercial
+              <button
+                onClick={() => assinar('enterprise')}
+                disabled={checkout.isPending || !planoDeSlot('enterprise')}
+                className="w-full py-3 rounded-xl bg-white text-sm font-extrabold text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                data-testid="button-assinar-enterprise"
+              >
+                {checkout.isPending ? 'Processando…' : 'Assinar agora'}
               </button>
             )}
           </div>
@@ -456,6 +604,30 @@ export default function ContratantePlanosPage() {
         </div>
 
       </div>
+
+      {/* ── Diálogo confirmação troca de plano ── */}
+      <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Trocar de plano?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sua assinatura atual será cancelada e o novo plano será ativado imediatamente.
+              Os limites do novo plano passam a valer na hora.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingSlot(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarTroca}
+              disabled={checkout.isPending}
+              data-testid="button-confirmar-troca-plano"
+            >
+              <RiArrowRightLine className="w-4 h-4 mr-1" />
+              Confirmar troca
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

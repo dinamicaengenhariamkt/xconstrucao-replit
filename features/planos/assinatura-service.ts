@@ -4,6 +4,7 @@ import { assinaturaEventos, assinaturas, planos, users } from "@shared/db/schema
 import { getPlanCatalog, PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
 import { criarLancamentoPlataforma } from "@features/financeiro/lancamentos-service";
 import { getPaymentGateway } from "@features/planos/gateway";
+import { dispararNotificacaoAssinaturaAdmin } from "@features/notificacoes/assinatura-admin-dispatcher";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -172,6 +173,33 @@ export async function iniciarCheckout(args: {
     return nova.id;
   });
 
+  // Notifica admins sobre nova assinatura (fire-and-forget).
+  void (async () => {
+    try {
+      const [userRow] = await db
+        .select({ name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, args.userId))
+        .limit(1);
+      const [planoRow] = await db
+        .select({ nome: planos.nome })
+        .from(planos)
+        .where(eq(planos.id, args.planoId))
+        .limit(1);
+      if (userRow && planoRow) {
+        await dispararNotificacaoAssinaturaAdmin({
+          tipo: "checkout",
+          userNome: userRow.name ?? "—",
+          userEmail: userRow.email ?? "—",
+          planoNome: planoRow.nome,
+          ciclo,
+        });
+      }
+    } catch {
+      // fire-and-forget: ignora erros
+    }
+  })();
+
   return { ok: true, kind: "activated", assinaturaId };
 }
 
@@ -179,6 +207,18 @@ export async function iniciarCheckout(args: {
 export async function cancelarAssinatura(userId: string): Promise<{ ok: boolean }> {
   const atual = await getAssinaturaAtiva(userId);
   if (!atual) return { ok: false };
+
+  // Carrega nome/email antes da transação para o dispatcher.
+  const [userRow] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const [planoRow] = await db
+    .select({ nome: planos.nome })
+    .from(planos)
+    .where(eq(planos.id, atual.planoId))
+    .limit(1);
 
   const gateway = getPaymentGateway();
   await gateway.cancelSubscription(atual.gatewaySubscriptionId);
@@ -196,6 +236,17 @@ export async function cancelarAssinatura(userId: string): Promise<{ ok: boolean 
       payloadJson: {},
     });
   });
+
+  // Notifica admins (fire-and-forget).
+  if (userRow && planoRow) {
+    void dispararNotificacaoAssinaturaAdmin({
+      tipo: "cancelamento",
+      userNome: userRow.name ?? "—",
+      userEmail: userRow.email ?? "—",
+      planoNome: planoRow.nome,
+    });
+  }
+
   return { ok: true };
 }
 
@@ -215,7 +266,11 @@ export async function aplicarEventoWebhook(evt: {
   externalReference?: string;
   valor?: number;
 }): Promise<{ processed: boolean }> {
-  return db.transaction(async (tx) => {
+  // Acumula notificações a disparar após o commit da transação.
+  type NotifPayload = Parameters<typeof dispararNotificacaoAssinaturaAdmin>[0];
+  let notifPayload: NotifPayload | null = null;
+
+  const result = await db.transaction(async (tx) => {
     // Dedup: se o evento já foi registrado, ignora.
     const jaExiste = await tx
       .select({ id: assinaturaEventos.id })
@@ -254,14 +309,25 @@ export async function aplicarEventoWebhook(evt: {
             if (a.ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
             else renova.setMonth(renova.getMonth() + 1);
             await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
-            const [plano] = await tx.select({ tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
+            const [plano] = await tx.select({ nome: planos.nome, tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
             if (plano) {
               await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, a.userId));
+            }
+            // Prepara notificação de reativação (disparo pós-commit).
+            const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, a.userId)).limit(1);
+            if (userRow && plano) {
+              notifPayload = { tipo: "reativacao", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome };
             }
             console.info(`[asaas] assinatura reativada após pagamento: assinaturaId=${a.id} userId=${a.userId}`);
           }
         } else if (evt.type === "payment_failed") {
           await tx.update(assinaturas).set({ status: "inadimplente" }).where(eq(assinaturas.id, a.id));
+          // Prepara notificação de inadimplência.
+          const [plano] = await tx.select({ nome: planos.nome }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
+          const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, a.userId)).limit(1);
+          if (userRow && plano) {
+            notifPayload = { tipo: "inadimplente", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome };
+          }
         } else if (evt.type === "subscription_canceled") {
           await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, a.id));
           await tx.update(users).set({ plano: "free" }).where(eq(users.id, a.userId));
@@ -327,6 +393,12 @@ export async function aplicarEventoWebhook(evt: {
             });
           }
 
+          // Prepara notificação de nova assinatura via webhook.
+          const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+          if (userRow) {
+            notifPayload = { tipo: "checkout", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome, ciclo: ciclo as "mensal" | "anual" };
+          }
+
           console.info(`[asaas] assinatura criada via webhook: userId=${userId} plano=${plano.nome} assinaturaId=${nova.id}`);
         }
       }
@@ -340,6 +412,13 @@ export async function aplicarEventoWebhook(evt: {
     });
     return { processed: true };
   });
+
+  // Dispara notificação admin pós-commit (fire-and-forget).
+  if (result.processed && notifPayload) {
+    void dispararNotificacaoAssinaturaAdmin(notifPayload);
+  }
+
+  return result;
 }
 
 /** Importado do adapter ASAS para parsear externalReference no webhook. */

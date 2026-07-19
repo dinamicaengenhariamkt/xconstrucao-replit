@@ -11,6 +11,7 @@ import {
   RiUser3Line,
   RiBuilding2Line,
   RiStarLine,
+  RiVipCrownLine,
   RiExternalLinkLine,
   RiCheckboxCircleLine,
   RiCheckLine,
@@ -1380,6 +1381,28 @@ function SecaoPlano() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Banner de upgrade para plano free */}
+      {plano.plano === 'free' && (
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" data-testid="banner-upgrade-free">
+          <div className="flex items-start gap-3">
+            <RiStarLine className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Quer desbloquear mais recursos?</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Mais obras ativas, mais propostas e destaque no diretório.</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => router.push('/empreiteiro/planos')}
+            data-testid="button-upgrade-plano"
+          >
+            <RiVipCrownLine className="w-4 h-4 mr-1.5" />
+            Ver planos
+          </Button>
+        </div>
+      )}
+
       {/* Card 1: Plano atual + billing */}
       <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
         <CardHeader className="p-6 pb-2">

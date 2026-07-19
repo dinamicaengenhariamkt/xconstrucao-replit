@@ -8,6 +8,7 @@ import {
   RiBookmarkLine,
   RiWalletLine,
   RiFileList3Line,
+  RiVipCrownLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -19,6 +20,7 @@ export const EMPREITEIRO_NAV_ITEMS: NavItem[] = [
   { title: 'Minhas Candidaturas', url: '/empreiteiro/minhas-candidaturas', icon: RiFileList3Line },
   { title: 'Meus Recebimentos', url: '/empreiteiro/pagamentos', icon: RiWalletLine },
   { title: 'xchat', url: '/empreiteiro/chat', icon: RiChat3Line },
+  { title: 'Planos', url: '/empreiteiro/planos', icon: RiVipCrownLine },
 ];
 
 export const EMPREITEIRO_BOTTOM_NAV_ITEMS: NavItem[] = [
