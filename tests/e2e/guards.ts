@@ -82,15 +82,54 @@ export function inspecionarDatabaseUrl(
 }
 
 /**
+ * Guard anti-gateway-real: garante que a suíte E2E nunca dispara chamadas ao
+ * gateway de pagamento real (ASAAS ou qualquer outro).
+ *
+ * Contexto: `playwright.config.ts` injeta `PAYMENT_GATEWAY=manual` no
+ * `webServer.env`, mas um segundo playwright.config criado para testes de UI
+ * isolados poderia herdar `PAYMENT_GATEWAY=asaas` do ambiente e silenciosamente
+ * chamar a API real. Este guard aborta a suíte de forma ruidosa antes que
+ * qualquer spec toque no gateway.
+ *
+ * Retorna `{ ok: true }` quando é seguro rodar, ou `{ ok: false, reason }`.
+ */
+export function inspecionarPaymentGateway(
+  gateway: string | undefined,
+): { ok: true } | { ok: false; reason: string } {
+  const gw = (gateway ?? "").trim().toLowerCase();
+
+  if (gw === "" || gw === "manual") return { ok: true };
+
+  return {
+    ok: false,
+    reason:
+      `PAYMENT_GATEWAY está definido como "${gateway}" — apenas "manual" é permitido em testes E2E. ` +
+      `Adicione 'process.env.PAYMENT_GATEWAY = "manual";' no topo do playwright.config usado ` +
+      `(antes de 'export default defineConfig(...)') para que o valor seguro seja propagado ao ` +
+      `worker de globalSetup e ao servidor de testes. ` +
+      `Rodar a suíte com um gateway real pode gerar cobranças indesejadas na API ASAAS.`,
+  };
+}
+
+/**
  * globalSetup do Playwright: valida o ambiente antes de rodar qualquer spec.
- * Lança erro (aborta a suíte) se a `DATABASE_URL` parecer de produção.
+ * Lança erro (aborta a suíte) se a `DATABASE_URL` parecer de produção ou se
+ * `PAYMENT_GATEWAY` não for "manual".
  */
 export default function globalSetup(): void {
-  const verdict = inspecionarDatabaseUrl(process.env.DATABASE_URL);
-  if (!verdict.ok) {
+  const dbVerdict = inspecionarDatabaseUrl(process.env.DATABASE_URL);
+  if (!dbVerdict.ok) {
     throw new Error(
-      `\n\n🛑 SUÍTE DE TESTES ABORTADA (guard anti-produção)\n${verdict.reason}\n\n` +
+      `\n\n🛑 SUÍTE DE TESTES ABORTADA (guard anti-produção)\n${dbVerdict.reason}\n\n` +
         `Veja tests/e2e/guards.ts / docs/jornadas/36-testes-integracao.md §8.\n`,
+    );
+  }
+
+  const gwVerdict = inspecionarPaymentGateway(process.env.PAYMENT_GATEWAY);
+  if (!gwVerdict.ok) {
+    throw new Error(
+      `\n\n🛑 SUÍTE DE TESTES ABORTADA (guard anti-gateway-real)\n${gwVerdict.reason}\n\n` +
+        `Veja tests/e2e/guards.ts.\n`,
     );
   }
 }

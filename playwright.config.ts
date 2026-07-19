@@ -1,5 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Garante que o gateway de pagamento seja sempre "manual" no processo do
+// Playwright (runner + workers de globalSetup). O valor é propagado via herança
+// de process.env ao processo filho do globalSetup, onde o guard verifica.
+// O webServer também recebe PAYMENT_GATEWAY=manual em webServer.env (abaixo),
+// cobrindo o processo do Next.js. Sem esta linha, PAYMENT_GATEWAY=asaas do
+// ambiente de produção do Replit vazaria para o guard e abortaria a suíte.
+process.env.PAYMENT_GATEWAY = "manual";
+
 // Porta dedicada para os testes E2E (3010 por padrão), separada do workflow de
 // desenvolvimento (5000). Pode ser sobrescrita via E2E_PORT.
 //
