@@ -94,8 +94,8 @@ do número "sem cobertura" no radar.
 - [ ] **G7 · candidaturas & medições (personas)** — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
 - [ ] **G8 · usuários & config admin** — admin/usuarios(+[id]/ativo), admin/configuracoes, admin/legal, admin/faq/[id], admin/integracoes/api-key, admin/marketplace-leads/[id], admin/planos/[id], perfil/admin.
 - [ ] **G9 · anúncios admin** — admin/anuncios/{anunciantes,campanhas(+[id]),config,pedidos/[id]} + KPIs.
-- [ ] **G10 · financeiro admin (read-only shape+authz)** — admin/{financeiro,caixa,entradas,saidas}/** GETs (shape correto + admin-only).
-- [ ] **G11 · uploads & assinaturas** — uploads/{presign,commit,sign,[id]}, chat/[threadId]/upload/presign, assinaturas/{checkout,cancelar}.
+- [x] **G10 · financeiro admin (read-only shape+authz)** — admin/{financeiro,caixa,entradas,saidas}/** GETs (shape correto + admin-only). → `admin-financeiro-shape.integration.spec.ts` (32 testes; 26 endpoints × personas + `obras/[id]` 404 + `indicadores` `[]`).
+- [x] **G11 · uploads & assinaturas** — uploads/{presign,commit,sign,[id]}, chat/[threadId]/upload/presign, assinaturas/{checkout,cancelar}. → `uploads-assinaturas.integration.spec.ts` (18 testes; IDOR de DELETE/sign via `file-setup`, presign 503-tolerante, checkout/cancelar sem mutar seed).
 - [ ] **G12 · impersonate** — admin/impersonate/[id] + exit (fecha gap T2.4 da §10; exige helper test-only p/ montar cookie).
 
 ## 7. Critérios de aceite
@@ -257,6 +257,46 @@ do número "sem cobertura" no radar.
   forte com o mesmo token→200, reuso→400). (f) **isolamento**: cada reset de João/Maria conclui com um
   `definir-senha-inicial` bem-sucedido, restaurando `mustChangePassword=false`; os demais specs usam
   `login-as` (ignora senha), então a troca de senha do seed não afeta nada.
+
+- 2026-07-19: **G10 (financeiro admin — read-only) concluído** — `tests/e2e/integration/admin-financeiro-shape.integration.spec.ts`
+  (**32 testes, todos passando** rodado isolado). Cobre os **26 GETs** de `admin/{financeiro,caixa,entradas,saidas}/**`:
+  para cada endpoint, **anônimo→401 · contratante/empreiteiro→403 · admin→200** + shape (campo âncora) + **nunca 500**;
+  `financeiro/obras/[id]` inexistente→**404** (não 500) e caminho feliz com obra real (via `GET /api/admin/obras`, `test.skip`
+  se seed vazio); `caixa/indicadores` é stub→`[]`. Radar caiu de **126 → 100** endpoints sem cobertura (saíram os 26 de
+  financeiro admin); **baseline encolhida p/ 100** (`--update-baseline`) e `--strict` verde (gate OK). `tsc --noEmit` limpo.
+  Descobertas: (a) **guard uniforme nos 26** — `requireVerifiedUser` + `isAdminLike` (nenhum usa `requireAdmin` estrito);
+  anônimo dá **401** (`auth-utils.ts:33`), não-admin dá **403** com chave `message` (o guard usa chave `error`). (b) **Nenhum
+  GET exige query param** — `periodo`/`from`/`to` são opcionais, o service resolve um intervalo default; então não há 400 por
+  query ausente. (c) shapes: 15 endpoints retornam **array puro**, 11 retornam **objeto**; `indicadores` é `[]` fixo (stub).
+- 2026-07-19: **⚠️ 2 falhas PRÉ-EXISTENTES (não-G10) em `financeiro-webhook.integration.spec.ts`** — os testes
+  "ciclo anual/mensal: PAYMENT_CONFIRMED reativa" (linhas 114 e 151) falham de forma determinística: o webhook responde
+  200 mas `processed=false`, então a assinatura inadimplente de teste (criada via `/api/test/sub-setup`) não é reativada.
+  Causa provável: em teste o adapter de gateway é o `manual` (`PAYMENT_GATEWAY` indefinido — ver nota de 2026-07-17 Fase 4),
+  que não reconhece o payload no formato ASAS (`event: "PAYMENT_CONFIRMED"`) para casar com a assinatura por
+  `gatewaySubscriptionId`. **Não é regressão do G10** (spec e endpoint `sub-setup` já commitados em `028b508`, sem WIP;
+  meu spec roda 32/32 isolado). **Gap registrado — investigar ao chegar no G11 (assinaturas), que toca o mesmo fluxo de
+  gateway.** Provável correção: `sub-setup` setar `PAYMENT_GATEWAY=asaas` no ambiente ou o teste usar o payload do adapter manual.
+- 2026-07-19: **G11 (uploads & assinaturas) concluído** — `tests/e2e/integration/uploads-assinaturas.integration.spec.ts`
+  (**18 testes, todos passando** isolado). Radar caiu de **100 → 94**; baseline encolhida p/ 94; `--strict` verde; `tsc` limpo.
+  Cobre: `uploads/presign` (anônimo→401; payload inválido→400 **ou 503** conforme storage; válido→200/503 — nunca 500);
+  `uploads/[id]` DELETE (**IDOR**: apagar arquivo alheio→**403**; próprio→200 `{ok:true}`; já apagado→404; inexistente→404);
+  `uploads/sign` (sem key/id→400; arquivo alheio→403); `chat/[threadId]/upload/presign` (sem acesso à thread→403 antes do 503);
+  `assinaturas/checkout` (admin→403 persona; sem planoId→400; plano inexistente→404 `PLANO_INVALIDO`); `assinaturas/cancelar`
+  (sem assinatura ativa→409). Descobertas: (a) **storage R2 ausente no ambiente E2E** → `presign` responde **503** (não 200);
+  o teste é tolerante (200|503) e o **IDOR real usa `POST /api/test/file-setup`** que insere `user_files` direto no banco,
+  sem R2 — foi exatamente para isso que o `file-setup` foi criado. (b) `commit` valida a key por `validateKeyForOwner` e
+  retorna **400** (não 403) para key de outro dono. (c) **checkout com adapter manual ATIVA de verdade (201)** — para não
+  sujar o seed, cobrimos só persona-403 / plano-404 / Zod-400, sem disparar ativação real. (d) `sign` checa dono **antes** de
+  bifurcar público/privado, então arquivo alheio dá 403 mesmo se público.
+- 2026-07-19: **Nota sobre a falha do webhook (G10) — causa-raiz confirmada, correção PENDENTE de decisão.** `financeiro-webhook`
+  falha porque o teste envia envelope **ASAS** (`{event:"PAYMENT_CONFIRMED",payment:{…}}`) mas o ambiente resolve o adapter
+  **manual** (default quando `PAYMENT_GATEWAY` indefinido, `features/planos/gateway/index.ts:32`). O manual lê `type` top-level,
+  não o envelope ASAS → mapeia p/ `type:"ignored"` (`manual-gateway.ts:46`) → o route curto-circuita em `processed:false`
+  (`app/api/webhooks/gateway/route.ts:44`). **Correção recomendada:** setar `PAYMENT_GATEWAY=asaas` (+ `ASAAS_WEBHOOK_IPS`
+  vazio) no ambiente E2E, garantindo `payment.subscription == gatewaySubscriptionId` do `sub-setup`. **Não aplicado nesta
+  rodada** por mexer na config global de gateway de teste (afeta toda a suíte) — decisão a confirmar com o dono antes de tocar.
+- 2026-07-19: **PAREI AQUI: próximo = G8 (usuários & config admin — `admin-gestao.integration.spec.ts`)**. Ordem de
+  execução acordada (barato→caro): ✅G10 → ✅G11 → **G8** → G9 → G6 → G7 → G5 → G12.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).

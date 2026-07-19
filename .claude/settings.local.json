@@ -10,7 +10,10 @@
       "Bash(grep -nE \"PLANOS|const planos|hardcode|R\\\\\\\\$|preco|=>\" app/contratante/planos/page.tsx)",
       "Bash(npx tsc *)",
       "Bash(grep -vE \"bootstrap|^\\\\s*$\")",
-      "Bash(git show *)"
+      "Bash(git show *)",
+      "Bash(grep -nA2 'test-e2e:' Makefile)",
+      "Bash(npx playwright *)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('scripts/integration-coverage-baseline.json'\\)\\); print\\('total baseline:', len\\(d['endpoints']\\)\\)\")"
     ]
   }
 }
