@@ -92,7 +92,7 @@ do número "sem cobertura" no radar.
 - [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
 - [ ] **G6 · obras — sub-recursos** — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
 - [ ] **G7 · candidaturas & medições (personas)** — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
-- [ ] **G8 · usuários & config admin** — admin/usuarios(+[id]/ativo), admin/configuracoes, admin/legal, admin/faq/[id], admin/integracoes/api-key, admin/marketplace-leads/[id], admin/planos/[id], perfil/admin.
+- [x] **G8 · usuários & config admin** — admin/usuarios(+[id]/ativo), admin/configuracoes, admin/legal, admin/faq/[id], admin/integracoes/api-key, admin/marketplace-leads/[id], admin/planos/[id], perfil/admin. → `admin-gestao.integration.spec.ts` (9 testes + 1 skip; authz 15 endpoints × 3 personas + mutações com restauração).
 - [ ] **G9 · anúncios admin** — admin/anuncios/{anunciantes,campanhas(+[id]),config,pedidos/[id]} + KPIs.
 - [x] **G10 · financeiro admin (read-only shape+authz)** — admin/{financeiro,caixa,entradas,saidas}/** GETs (shape correto + admin-only). → `admin-financeiro-shape.integration.spec.ts` (32 testes; 26 endpoints × personas + `obras/[id]` 404 + `indicadores` `[]`).
 - [x] **G11 · uploads & assinaturas** — uploads/{presign,commit,sign,[id]}, chat/[threadId]/upload/presign, assinaturas/{checkout,cancelar}. → `uploads-assinaturas.integration.spec.ts` (18 testes; IDOR de DELETE/sign via `file-setup`, presign 503-tolerante, checkout/cancelar sem mutar seed).
@@ -295,8 +295,22 @@ do número "sem cobertura" no radar.
   (`app/api/webhooks/gateway/route.ts:44`). **Correção recomendada:** setar `PAYMENT_GATEWAY=asaas` (+ `ASAAS_WEBHOOK_IPS`
   vazio) no ambiente E2E, garantindo `payment.subscription == gatewaySubscriptionId` do `sub-setup`. **Não aplicado nesta
   rodada** por mexer na config global de gateway de teste (afeta toda a suíte) — decisão a confirmar com o dono antes de tocar.
-- 2026-07-19: **PAREI AQUI: próximo = G8 (usuários & config admin — `admin-gestao.integration.spec.ts`)**. Ordem de
-  execução acordada (barato→caro): ✅G10 → ✅G11 → **G8** → G9 → G6 → G7 → G5 → G12.
+- 2026-07-19: **G8 (usuários & config admin) concluído** — `tests/e2e/integration/admin-gestao.integration.spec.ts`
+  (**9 testes + 1 skip**, isolado). Radar caiu de **94 → 82**; baseline p/ 82; `--strict` verde; `tsc` limpo. Cobre: **authz
+  transversal** (15 endpoints × anônimo→401 · contratante→403 · empreiteiro→403), GETs admin→200, e **mutações reversíveis
+  exercitadas de verdade**: `perfil/admin` PATCH (ler/gravar/restaurar bio); `configuracoes` PATCH `notificacoes`
+  (ler/gravar/restaurar + chave inválida→400); `faq` ciclo descartável (cria 201→GET reflete→PATCH→DELETE físico→já
+  apagado 404 + inválido→400); `usuarios` descartável (cria 201 email único→duplicado 409→GET reflete→PATCH→`ativo` toggle
+  off/on→soft-DELETE); `marketplace-leads/[id]` (id fake→404 + restauração se houver lead); `planos/[id]` id fake→404.
+  Descobertas: (a) **dois guards no grupo** — a maioria usa `requireVerifiedUser`+`isAdminLike` (403 por role no handler),
+  mas `faq` e `marketplace-leads` usam guard JWT-puro (`adminGuard`/`requireAdmin`); ambos dão 401 anônimo / 403 não-admin.
+  Para o 403 vir do check de role (não do guard de email não-verificado), o teste usa personas seed **verificadas+ativas**.
+  (b) `usuarios/[id]/ativo` é **POST** (não PATCH) apesar do nome; body `{ativo:boolean}`. (c) soft-DELETE de usuário =
+  `ativo:false` (reversível), nunca hard-delete. (d) **SÓ-AUTHZ deliberado** em `legal` (append-only, dispara re-consent),
+  `integracoes/api-key` (rotação irreversível) e `planos/[id]` (muda preço → afeta assinaturas): cobertos só por 401/403
+  (+404 id fake em planos), **sem** exercitar o efeito — evita sujar ambiente compartilhado.
+- 2026-07-19: **PAREI AQUI: próximo = G9 (anúncios admin — `admin-anuncios.integration.spec.ts`)**. Ordem de
+  execução acordada (barato→caro): ✅G10 → ✅G11 → ✅G8 → **G9** → G6 → G7 → G5 → G12.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
