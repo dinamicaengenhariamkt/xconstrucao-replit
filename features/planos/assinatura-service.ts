@@ -152,6 +152,12 @@ async function _iniciarCheckoutImpl(args: {
     };
   }
 
+  // vigenciaEm: para upgrade/downgrade com assinatura ativa, o plano muda ao
+  // final do ciclo atual (renovaEm). Para nova assinatura (sem ciclo prévio),
+  // entra em vigor imediatamente (hoje). O ASAAS gerencia o calendário de
+  // cobranças/proration — isso é configuração do plano no painel ASAAS (OOS).
+  const vigenciaEm = (atual?.renovaEm ?? new Date()).toISOString();
+
   // Para gateways externos (ex: ASAAS), NÃO cancelamos a assinatura anterior
   // antes de criar o checkout — o checkout é apenas um link de pagamento, não
   // uma assinatura. O cancelamento ocorre de forma segura no webhook handler
@@ -202,7 +208,7 @@ async function _iniciarCheckoutImpl(args: {
         // fire-and-forget
       }
     })();
-    return { ok: true, kind: "redirect", url: result.url, vigenciaEm: new Date().toISOString() };
+    return { ok: true, kind: "redirect", url: result.url, vigenciaEm };
   }
 
   // Ativação imediata (adapter manual): persiste tudo numa transação.
@@ -303,7 +309,7 @@ async function _iniciarCheckoutImpl(args: {
     }
   })();
 
-  return { ok: true, kind: "activated", assinaturaId, vigenciaEm: new Date().toISOString() };
+  return { ok: true, kind: "activated", assinaturaId, vigenciaEm };
 }
 
 /** Cancela a assinatura ativa do usuário. Rebaixa para free no fim do ciclo. */
@@ -507,11 +513,22 @@ export async function aplicarEventoWebhook(evt: {
             });
           }
 
-          // Prepara notificação de nova assinatura via webhook.
+          // Prepara notificação admin de nova assinatura via webhook.
           const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
           if (userRow) {
             notifPayload = { tipo: "checkout", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome, ciclo: ciclo as "mensal" | "anual" };
           }
+
+          // Notificação in-app ao próprio usuário confirmando ativação do plano.
+          void criarNotificacao({
+            userId,
+            tipo: "sucesso",
+            titulo: `Plano ${plano.nome} ativado`,
+            descricao: `Pagamento confirmado. O plano ${plano.nome} (${ciclo}) está ativo e seus limites já foram atualizados.`,
+            href: null,
+          }).catch(() => {
+            // fire-and-forget: não bloqueia processamento do webhook
+          });
 
           console.info(`[asaas] assinatura criada via webhook: userId=${userId} plano=${plano.nome} assinaturaId=${nova.id}`);
         }

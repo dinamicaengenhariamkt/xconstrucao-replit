@@ -652,7 +652,9 @@ export default function ContratantePlanosPage() {
         const renovaLabel = perfilPlano?.renovaEm
           ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.renovaEm))
           : null;
-        const vigenciaEm = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
+        // vigenciaEm: se há assinatura ativa, a mudança entra em vigor no fim do ciclo atual.
+        // Para nova assinatura, entra em vigor imediatamente (hoje).
+        const vigenciaEm = renovaLabel ?? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
         return (
           <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
             <AlertDialogContent>
@@ -675,18 +677,16 @@ export default function ContratantePlanosPage() {
                       </div>
                     )}
                     <p>
-                      {isUpgrade ? 'Upgrade' : 'Downgrade'} para o plano{' '}
-                      <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong>.
-                      {' '}Ao confirmar, sua assinatura atual será cancelada e os limites do novo plano entrarão em vigor imediatamente.
+                      {renovaLabel
+                        ? <>Seu plano mudará para <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong> ao final do ciclo atual.</>
+                        : <>{isUpgrade ? 'Upgrade' : 'Troca'} para o plano <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong>. Os limites entrarão em vigor imediatamente.</>
+                      }
                     </p>
-                    <div className="text-xs space-y-1">
+                    <div className="text-xs space-y-1 mt-1">
                       <p>
                         Data de vigência:{' '}
                         <strong data-testid="dialog-vigencia-em">{vigenciaEm}</strong>
                       </p>
-                      {renovaLabel && (
-                        <p>Ciclo anterior válido até: <strong>{renovaLabel}</strong></p>
-                      )}
                     </div>
                   </div>
                 </AlertDialogDescription>
