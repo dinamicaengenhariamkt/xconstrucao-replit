@@ -46,11 +46,27 @@ export function parseExternalRef(ref: string): { userId: string; planoId: string
   return { userId: parts[1], planoId: parts[2], ciclo: parts[3] };
 }
 
-/** Busca customer ASAS por email; cria se não existir. */
+/** Busca customer ASAS por email; cria se não existir. Atualiza cpfCnpj se já
+ *  existe mas estava faltando — evita HTTP 400 em cobranças recorrentes. */
 async function findOrCreateCustomer(email: string, name: string, cpfCnpj?: string): Promise<AsaasCustomer> {
   // Tenta encontrar por email
   const list = await asaasRequest<AsaasCustomerList>("GET", `/customers?email=${encodeURIComponent(email)}&limit=1`);
-  if (list.data?.length > 0) return list.data[0];
+  if (list.data?.length > 0) {
+    const existing = list.data[0];
+    // Se o customer existente não tem cpfCnpj mas agora temos, atualiza via PUT.
+    if (cpfCnpj && !existing.cpfCnpj) {
+      try {
+        return await asaasRequest<AsaasCustomer>("PUT", `/customers/${existing.id}`, {
+          name,
+          email,
+          cpfCnpj,
+        });
+      } catch (err) {
+        console.warn(`[asaas] falha ao atualizar cpfCnpj do customer ${existing.id}:`, err);
+      }
+    }
+    return existing;
+  }
 
   // Cria novo customer
   return asaasRequest<AsaasCustomer>("POST", "/customers", {

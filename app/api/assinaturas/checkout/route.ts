@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
       setNoCacheHeaders(r);
       return r;
     }
+    if (result.code === "PERFIL_INCOMPLETO") {
+      const r = NextResponse.json({ message: result.detail, code: result.code }, { status: 422 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const status = result.code === "PLANO_INVALIDO" ? 404 : 409;
     const message = result.code === "PLANO_INVALIDO" ? "Plano inválido." : "Você já assina este plano.";
     const r = NextResponse.json({ message, code: result.code }, { status });

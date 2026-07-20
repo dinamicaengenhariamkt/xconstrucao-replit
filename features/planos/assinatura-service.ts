@@ -70,6 +70,7 @@ export type CheckoutResult =
   | { ok: true; kind: "activated"; assinaturaId: string }
   | { ok: true; kind: "redirect"; url: string }
   | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" }
+  | { ok: false; code: "PERFIL_INCOMPLETO"; detail: string }
   | { ok: false; code: "INTERNAL_ERROR"; detail: string };
 
 /**
@@ -139,6 +140,18 @@ async function _iniciarCheckoutImpl(args: {
     userCpfCnpj = er?.cnpj ?? undefined;
   }
 
+  // Gateways externos (ex: ASAAS) exigem cpfCnpj para cobranças recorrentes.
+  // Se não localizado no perfil, interrompemos com erro acionável ao invés de
+  // deixar o ASAAS retornar HTTP 400 com mensagem opaca.
+  if (gateway.provider !== "manual" && !userCpfCnpj) {
+    console.warn(`[checkout] cpfCnpj não encontrado para userId=${args.userId} — gateway=${gateway.provider}`);
+    return {
+      ok: false,
+      code: "PERFIL_INCOMPLETO",
+      detail: "CPF/CNPJ não cadastrado no seu perfil. Complete o cadastro antes de assinar.",
+    };
+  }
+
   // Upgrade/downgrade via gateway externo: cancela a assinatura anterior no
   // gateway antes de criar novo checkout para evitar conflito de assinaturas
   // duplicadas (ex: ASAAS retorna HTTP 400 se customer já tem recorrência ativa).
@@ -168,6 +181,36 @@ async function _iniciarCheckoutImpl(args: {
   });
 
   if (result.kind === "redirect") {
+    // Notifica admins e o usuário que o checkout foi iniciado (gateway externo).
+    // A confirmação definitiva virá via webhook após o pagamento.
+    void (async () => {
+      try {
+        const [planoRow] = await db
+          .select({ nome: planos.nome })
+          .from(planos)
+          .where(eq(planos.id, args.planoId))
+          .limit(1);
+        if (userRow && planoRow) {
+          await dispararNotificacaoAssinaturaAdmin({
+            tipo: "checkout",
+            userNome: userRow.name ?? "—",
+            userEmail: userRow.email ?? "—",
+            planoNome: planoRow.nome,
+            ciclo,
+            descricaoOverride: `${userRow.name ?? userRow.email} iniciou checkout do plano ${planoRow.nome} (${ciclo}) via gateway externo. Aguardando confirmação de pagamento.`,
+          });
+          await criarNotificacao({
+            userId: args.userId,
+            tipo: "lembrete",
+            titulo: `Conclua o pagamento para ativar o plano ${planoRow.nome}`,
+            descricao: `Você foi redirecionado para o pagamento. Assim que confirmado, o plano ${planoRow.nome} será ativado automaticamente.`,
+            href: null,
+          });
+        }
+      } catch {
+        // fire-and-forget
+      }
+    })();
     return { ok: true, kind: "redirect", url: result.url };
   }
 

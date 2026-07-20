@@ -287,6 +287,14 @@ export default function PlanosPage() {
         },
         onError: (err) => {
           if (err.code === 'JA_ASSINANTE') return;
+          if (err.code === 'PERFIL_INCOMPLETO') {
+            toast({
+              title: 'Cadastro incompleto',
+              description: 'Informe seu CNPJ em Configurações antes de assinar.',
+              variant: 'destructive',
+            });
+            return;
+          }
           if (err.code === 'LIMITE_PLANO') {
             toast({
               title: 'Limite do plano atingido',
