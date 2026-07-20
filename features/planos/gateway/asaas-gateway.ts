@@ -110,11 +110,17 @@ export class AsaasGateway implements PaymentGateway {
     const customer = await findOrCreateCustomer(email, name, input.userCpfCnpj);
     const externalRef = buildExternalRef(input.userId, input.planoId, input.ciclo);
 
+    const tierLabel: Record<string, string> = { free: "Free", pro: "Pro", enterprise: "Enterprise" };
+    const cicloLabel: Record<string, string> = { mensal: "Mensal", anual: "Anual" };
+    const itemName =
+      input.planoNome ??
+      `Plano XConstrução ${tierLabel[input.tier] ?? input.tier} – ${cicloLabel[input.ciclo] ?? input.ciclo}`;
+
     const checkout = await asaasRequest<AsaasCheckout>("POST", "/checkouts", {
       billingTypes: ["PIX", "CREDIT_CARD", "BOLETO"],
       chargeTypes: ["RECURRENT"],
       cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
-      value: input.valor,
+      items: [{ name: itemName, value: input.valor, quantity: 1 }],
       externalReference: externalRef,
       customer: customer.id,
       callback: {

@@ -22,6 +22,8 @@ export interface CheckoutInput {
   userName?: string;
   /** CPF ou CNPJ do usuário (opcional; pode ser vazio em sandbox). */
   userCpfCnpj?: string;
+  /** Nome legível do plano — exibido como descrição do item no checkout hospedado (ex: ASAAS). */
+  planoNome?: string;
   /**
    * Se `true`, força o adapter a retornar `kind:"redirect"` (pagamento pendente)
    * em vez de ativar imediatamente. Usado em testes E2E que precisam exercitar

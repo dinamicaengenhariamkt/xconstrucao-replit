@@ -170,6 +170,7 @@ async function _iniciarCheckoutImpl(args: {
     tier: plano.tier as PlanoTier,
     ciclo,
     valor,
+    planoNome: plano.nome,
     successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
