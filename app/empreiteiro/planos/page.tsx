@@ -45,6 +45,18 @@ const SLOT_TIER: Record<PlanId, PlanoTier> = {
   enterprise: 'enterprise',
 };
 
+const SLOT_LABEL: Record<PlanId, string> = {
+  basico: 'Básico',
+  profissional: 'Profissional',
+  enterprise: 'Enterprise',
+};
+
+const TIER_ORDER: Record<PlanId, number> = {
+  basico: 0,
+  profissional: 1,
+  enterprise: 2,
+};
+
 interface Feature {
   label: string;
   basico: string | boolean;
@@ -625,28 +637,60 @@ export default function PlanosPage() {
       </div>
 
       {/* ── Diálogo confirmação troca de plano ── */}
-      <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Trocar de plano?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sua assinatura atual será cancelada e o novo plano será ativado imediatamente.
-              Os limites do novo plano passam a valer na hora.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingSlot(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmarTroca}
-              disabled={checkout.isPending}
-              data-testid="button-confirmar-troca-plano"
-            >
-              <RiArrowRightLine className="w-4 h-4 mr-1" />
-              Confirmar troca
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {(() => {
+        const isUpgrade = pendingSlot !== null && TIER_ORDER[pendingSlot] > TIER_ORDER[PLANO_ATUAL];
+        const pendingPreco = pendingSlot ? precoMensal(pendingSlot) : null;
+        const renovaLabel = perfilPlano?.renovaEm
+          ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.renovaEm))
+          : null;
+        return (
+          <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle data-testid="dialog-troca-plano-titulo">
+                  {pendingSlot !== null ? (isUpgrade ? 'Fazer upgrade de plano?' : 'Fazer downgrade de plano?') : 'Trocar de plano?'}
+                </AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    {pendingSlot !== null && (
+                      <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-muted/50 text-foreground font-medium">
+                        <span data-testid="dialog-plano-atual">{SLOT_LABEL[PLANO_ATUAL]}</span>
+                        <RiArrowRightLine className="w-4 h-4 shrink-0 text-muted-foreground" />
+                        <span data-testid="dialog-plano-novo">{SLOT_LABEL[pendingSlot]}</span>
+                        {pendingPreco != null && (
+                          <span className="ml-auto text-xs font-normal text-muted-foreground">
+                            R$ {pendingPreco}/mês
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p>
+                      Sua assinatura atual será cancelada e o novo plano será ativado imediatamente.
+                      {' '}Os limites do plano <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong> passam a valer na hora.
+                    </p>
+                    {renovaLabel && (
+                      <p className="text-xs">
+                        Seu ciclo atual estava programado para renovar em <strong>{renovaLabel}</strong>.
+                      </p>
+                    )}
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPendingSlot(null)}>Manter plano atual</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmarTroca}
+                  disabled={checkout.isPending}
+                  data-testid="button-confirmar-troca-plano"
+                >
+                  <RiArrowRightLine className="w-4 h-4 mr-1" />
+                  {checkout.isPending ? 'Processando…' : 'Confirmar troca'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        );
+      })()}
     </div>
   );
 }

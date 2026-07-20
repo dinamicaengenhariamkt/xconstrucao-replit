@@ -1,10 +1,11 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { assinaturaEventos, assinaturas, planos, users } from "@shared/db/schema";
+import { assinaturaEventos, assinaturas, clientes, empreiteiras, planos, users } from "@shared/db/schema";
 import { getPlanCatalog, PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
 import { criarLancamentoPlataforma } from "@features/financeiro/lancamentos-service";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { dispararNotificacaoAssinaturaAdmin } from "@features/notificacoes/assinatura-admin-dispatcher";
+import { criarNotificacao } from "@features/notificacoes/service";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -111,13 +112,47 @@ async function _iniciarCheckoutImpl(args: {
   const valor = ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal);
   const gateway = getPaymentGateway();
 
-  // Busca nome/email do usuário para gateways externos (ex: ASAS) que precisam
+  // Busca nome/email/role do usuário para gateways externos (ex: ASAAS) que precisam
   // criar/encontrar um customer. Falha silenciosa: campos opcionais no adapter.
   const [userRow] = await db
-    .select({ name: users.name, email: users.email })
+    .select({ name: users.name, email: users.email, role: users.role })
     .from(users)
     .where(eq(users.id, args.userId))
     .limit(1);
+
+  // Busca cpfCnpj do perfil do usuário — exigido pelo ASAAS para cobranças
+  // recorrentes (boleto/PIX). Lookup por role para saber qual tabela consultar.
+  let userCpfCnpj: string | undefined;
+  if (userRow?.role === "contratante") {
+    const [cr] = await db
+      .select({ cnpjCpf: clientes.cnpjCpf })
+      .from(clientes)
+      .where(eq(clientes.userId, args.userId))
+      .limit(1);
+    userCpfCnpj = cr?.cnpjCpf ?? undefined;
+  } else if (userRow?.role === "empreiteiro") {
+    const [er] = await db
+      .select({ cnpj: empreiteiras.cnpj })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.userId, args.userId))
+      .limit(1);
+    userCpfCnpj = er?.cnpj ?? undefined;
+  }
+
+  // Upgrade/downgrade via gateway externo: cancela a assinatura anterior no
+  // gateway antes de criar novo checkout para evitar conflito de assinaturas
+  // duplicadas (ex: ASAAS retorna HTTP 400 se customer já tem recorrência ativa).
+  if (atual && gateway.provider !== "manual" && atual.gatewaySubscriptionId) {
+    try {
+      await gateway.cancelSubscription(atual.gatewaySubscriptionId);
+      console.info(
+        `[checkout] assinatura anterior cancelada no gateway antes de upgrade/downgrade: ${atual.gatewaySubscriptionId}`,
+      );
+    } catch (err) {
+      // Log mas não bloqueia: o gateway pode já ter cancelado ou o id ser inválido.
+      console.warn("[checkout] falha ao cancelar assinatura anterior no gateway:", err);
+    }
+  }
 
   const result = await gateway.createCheckout({
     userId: args.userId,
@@ -128,6 +163,7 @@ async function _iniciarCheckoutImpl(args: {
     successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
+    userCpfCnpj,
     pendingMode: args.pendingMode,
   });
 
@@ -191,10 +227,10 @@ async function _iniciarCheckoutImpl(args: {
     return nova.id;
   });
 
-  // Notifica admins sobre nova assinatura (fire-and-forget).
+  // Notifica admins + o próprio usuário (fire-and-forget).
   void (async () => {
     try {
-      const [userRow] = await db
+      const [uRow] = await db
         .select({ name: users.name, email: users.email })
         .from(users)
         .where(eq(users.id, args.userId))
@@ -204,15 +240,30 @@ async function _iniciarCheckoutImpl(args: {
         .from(planos)
         .where(eq(planos.id, args.planoId))
         .limit(1);
-      if (userRow && planoRow) {
+      if (uRow && planoRow) {
         await dispararNotificacaoAssinaturaAdmin({
           tipo: "checkout",
-          userNome: userRow.name ?? "—",
-          userEmail: userRow.email ?? "—",
+          userNome: uRow.name ?? "—",
+          userEmail: uRow.email ?? "—",
           planoNome: planoRow.nome,
           ciclo,
         });
       }
+
+      // Notificação in-app para o próprio usuário sobre troca ou nova assinatura.
+      const titulo = atual
+        ? `Plano alterado para ${plano.nome}`
+        : `Bem-vindo ao plano ${plano.nome}`;
+      const descricao = atual
+        ? `Seu plano foi atualizado com sucesso. Os limites do plano ${plano.nome} já estão em vigor.`
+        : `Sua assinatura do plano ${plano.nome} (${ciclo}) foi ativada com sucesso.`;
+      await criarNotificacao({
+        userId: args.userId,
+        tipo: "sucesso",
+        titulo,
+        descricao,
+        href: null,
+      });
     } catch {
       // fire-and-forget: ignora erros
     }
