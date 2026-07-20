@@ -41,9 +41,15 @@ export class ManualGateway implements PaymentGateway {
       // Modo pendente: simula gateway hospedado que redireciona para pagar.
       // O externalReference segue o contrato "xconstrucao|userId|planoId|ciclo"
       // e é embutido na URL para que o chamador o use no webhook de confirmação.
+      // A URL usa NEXT_PUBLIC_BASE_URL (ou o fallback sandbox do ASAAS) para
+      // que o campo `url` comece com https:// — espelhando o contrato do gateway
+      // real — e os testes E2E possam verificar o formato de redirect.
       const extRef = `xconstrucao|${input.userId}|${input.planoId}|${input.ciclo}`;
+      const base =
+        process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ??
+        "https://sandbox.asaas.com";
       const url =
-        `/planos/aguardando` +
+        `${base}/planos/aguardando` +
         `?ext=${encodeURIComponent(extRef)}` +
         `&gwSub=${encodeURIComponent(gwSubId)}`;
       return { kind: "redirect", url, gatewaySubscriptionId: gwSubId };

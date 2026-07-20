@@ -802,3 +802,158 @@ test.describe("UI — Admin: receitas de assinatura", () => {
     await logout(request);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fluxo 6 — Gateway redirect: nova assinatura e upgrade (compatibilidade ASAAS)
+//
+// Estes testes verificam que o endpoint POST /api/assinaturas/checkout retorna
+// { kind: "redirect", url: "https://..." } quando o gateway opera no modo de
+// checkout hospedado (redirect), cobrindo o caminho de código que estava
+// quebrando com HTTP 400 no ASAAS. Em E2E usamos o ManualGateway com o header
+// `x-manual-gateway-pending: 1` para disparar o mesmo branch de código sem
+// depender de credenciais ASAAS reais.
+// ---------------------------------------------------------------------------
+
+test.describe("Fluxo 6 — Gateway redirect: nova assinatura e upgrade (ASAAS compat)", () => {
+  test("nova assinatura via redirect retorna 200 + kind:redirect com URL https://", async ({
+    request,
+  }) => {
+    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+
+    // Cancela assinatura existente para garantir estado free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    // Lista planos para obter o plano Pro do empreiteiro
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve retornar 200").toBe(200);
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+    const proPlan = planos.find((p) => p.tier === "pro");
+    test.skip(!proPlan, "plano pro empreiteiro não encontrado — pular Fluxo 6");
+
+    // Checkout com header que aciona o modo redirect (pendingMode)
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan!.id, ciclo: "mensal" },
+      headers: { "x-manual-gateway-pending": "1" },
+    });
+
+    expect(
+      checkoutRes.status(),
+      `checkout redirect deve retornar 200 (kind:redirect), recebeu ${checkoutRes.status()}`,
+    ).toBe(200);
+
+    const body = (await checkoutRes.json()) as {
+      kind?: string;
+      url?: string;
+      gatewaySubscriptionId?: string;
+    };
+
+    expect(body.kind, "kind deve ser 'redirect'").toBe("redirect");
+    expect(
+      typeof body.url === "string" && body.url.length > 0,
+      "url deve ser string não vazia",
+    ).toBeTruthy();
+    expect(
+      body.url,
+      "url deve iniciar com https:// (gateway hospedado)",
+    ).toMatch(/^https:\/\//);
+
+    // Perfil ainda deve estar free (a assinatura só ativa via webhook)
+    const perfilRes = await request.get("/api/perfil/plano");
+    expect(perfilRes.status(), "perfil deve responder 200").toBe(200);
+    const perfil = (await perfilRes.json()) as { plano: string };
+    expect(
+      perfil.plano,
+      "tier deve continuar free enquanto aguarda confirmação de pagamento",
+    ).toBe("free");
+
+    await logout(request);
+  });
+
+  test("upgrade de Pro para Enterprise via redirect retorna 200 + kind:redirect", async ({
+    request,
+  }) => {
+    // Usa seed empreiteiro (email verificado) para garantir acesso a /api/planos
+    const email = SEED_EMPREITEIRO_EMAIL;
+    await loginAs(request, email);
+
+    // Cancela assinatura existente para iniciar em estado free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    // Lista planos para obter Pro e Enterprise
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve retornar 200").toBe(200);
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+    const proPlan = planos.find((p) => p.tier === "pro");
+    const enterprisePlan = planos.find((p) => p.tier === "enterprise");
+
+    if (!proPlan || !enterprisePlan) {
+      await logout(request);
+      test.skip(true, "plano pro ou enterprise não encontrado — pular upgrade");
+      return;
+    }
+
+    // Passo 1: ativa Pro imediatamente (modo direto, sem pendingMode)
+    const activateRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan.id, ciclo: "mensal" },
+    });
+    expect(
+      activateRes.status(),
+      `ativar Pro deve retornar 201, recebeu ${activateRes.status()}`,
+    ).toBe(201);
+    const activateBody = (await activateRes.json()) as { kind: string };
+    expect(activateBody.kind, "ativar Pro direto deve ser kind:activated").toBe("activated");
+
+    // Confirma tier=pro antes do upgrade
+    const perfilPro = await request.get("/api/perfil/plano");
+    const dadosPro = (await perfilPro.json()) as { plano: string };
+    expect(dadosPro.plano, "tier deve ser pro antes do upgrade").toBe("pro");
+
+    // Passo 2: inicia upgrade para Enterprise via redirect (pendingMode)
+    const upgradeRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: enterprisePlan.id, ciclo: "mensal" },
+      headers: { "x-manual-gateway-pending": "1" },
+    });
+
+    expect(
+      upgradeRes.status(),
+      `upgrade Enterprise deve retornar 200 (kind:redirect), recebeu ${upgradeRes.status()}`,
+    ).toBe(200);
+
+    const upgradeBody = (await upgradeRes.json()) as {
+      kind?: string;
+      url?: string;
+      gatewaySubscriptionId?: string;
+    };
+
+    expect(upgradeBody.kind, "kind do upgrade deve ser 'redirect'").toBe("redirect");
+    expect(
+      typeof upgradeBody.url === "string" && upgradeBody.url.length > 0,
+      "url do upgrade deve ser string não vazia",
+    ).toBeTruthy();
+    expect(
+      upgradeBody.url,
+      "url do upgrade deve iniciar com https:// (gateway hospedado)",
+    ).toMatch(/^https:\/\//);
+
+    // Tier ainda deve ser pro (o upgrade só completa via webhook)
+    const perfilAindaPro = await request.get("/api/perfil/plano");
+    const dadosAindaPro = (await perfilAindaPro.json()) as { plano: string };
+    expect(
+      dadosAindaPro.plano,
+      "tier deve continuar pro durante checkout de upgrade (pendente de confirmação)",
+    ).toBe("pro");
+
+    // Cleanup: cancela para restaurar estado free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    await logout(request);
+  });
+});
