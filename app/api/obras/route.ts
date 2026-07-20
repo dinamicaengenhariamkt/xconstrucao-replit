@@ -217,17 +217,37 @@ export async function GET(request: NextRequest) {
       ...getTableColumns(obras),
       anexosCount: anexosCountExpr,
       naMinhaZona: naMinhaZonaExpr,
+      // Contratante: nome e avatar da empreiteira vinculada (LEFT JOIN — null quando não vinculada).
+      empreiteiraNome: empreiteiras.nome,
+      empreiteiraAvatarUrl: empreiteiras.avatarUrl,
     })
     .from(obras)
+    .leftJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
     .where(whereClause)
     .orderBy(...orderBy)
     .limit(pageSize)
     .offset(offset);
 
-  // Empreiteiro: sanitizar PII (clienteId omitido até J05).
-  const sanitized = role === "empreiteiro"
-    ? rows.map(({ clienteId, ...rest }) => rest)
-    : rows.map(({ naMinhaZona: _drop, ...rest }) => rest);
+  // Sanitização por role: strip de campos de outros roles.
+  const sanitized = rows.map((row) => {
+    const { empreiteiraNome, empreiteiraAvatarUrl, naMinhaZona, ...obraFields } = row;
+    if (role === "empreiteiro") {
+      // Empreiteiro: omite clienteId (PII) mas mantém naMinhaZona.
+      const { clienteId: _pii, ...empFields } = obraFields;
+      return { ...empFields, naMinhaZona };
+    }
+    if (role === "contratante") {
+      // Contratante: expõe empreiteiraInfo (nome+avatar) para os cards da listagem.
+      return {
+        ...obraFields,
+        empreiteiraInfo: obraFields.empreiteiraId
+          ? { nome: empreiteiraNome, avatarUrl: empreiteiraAvatarUrl }
+          : null,
+      };
+    }
+    // admin/superadmin: devolve campos obra sem empreiteira extras.
+    return obraFields;
+  });
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
   const r = NextResponse.json({

@@ -116,6 +116,7 @@ export default function ObraDetalhePage() {
           body: JSON.stringify({ fotoCapaFileId: result.id }),
         });
         await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', id] });
+        await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras'] });
       } catch {
         /* uploadError já está disponível no hook, UI pode exibi-lo externamente */
       } finally {

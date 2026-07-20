@@ -12,7 +12,7 @@ import {
   userFiles,
 } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { insertObraSchemaStrict } from "@features/obras/schemas";
+import { insertObraSchema, insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
@@ -252,16 +252,35 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     ...safeBody
   } = body ?? {};
 
-  // Merge com a obra atual e revalida (suporta transição rascunho → publicada).
-  const merged = { ...access.obra, ...safeBody };
-  const parsed = insertObraSchemaStrict.safeParse(merged);
-  if (!parsed.success) {
+  // Valida apenas os campos enviados (partial — sem superRefine de endereço).
+  // Permite patches pontuais como { fotoCapaFileId } sem exigir campos de publicação.
+  const incomingParsed = insertObraSchema.partial().safeParse(safeBody);
+  if (!incomingParsed.success) {
     const r = NextResponse.json(
-      { message: "Dados inválidos", errors: parsed.error.flatten() },
+      { message: "Dados inválidos", errors: incomingParsed.error.flatten() },
       { status: 400 },
     );
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // Quando transitando para 'publicada', valida o objeto merged com o schema estrito
+  // (endereço, CEP, tipo, modalidade etc. obrigatórios).
+  const indoPublicar =
+    "visibilidade" in safeBody &&
+    safeBody.visibilidade === "publicada" &&
+    access.obra.visibilidade !== "publicada";
+  if (indoPublicar) {
+    const merged = { ...access.obra, ...incomingParsed.data };
+    const strictParsed = insertObraSchemaStrict.safeParse(merged);
+    if (!strictParsed.success) {
+      const r = NextResponse.json(
+        { message: "Dados inválidos", errors: strictParsed.error.flatten() },
+        { status: 400 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   // Bloqueio: valorTotal/descricao não podem ser alterados após vínculo com empreiteira.
@@ -305,17 +324,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   // Aplica apenas os campos enviados (não sobrescreve com merged completo).
   const updateData: Record<string, unknown> = {};
   for (const k of Object.keys(safeBody)) {
-    updateData[k] = (parsed.data as any)[k];
+    updateData[k] = (incomingParsed.data as any)[k];
   }
   updateData.updatedAt = new Date();
 
   // J03 — Task #86: transição para 'publicada' reseta moderação para 'pendente'
   // (cobre primeira publicação e re-submissão após rejeição). Não vale para admin
   // empurrando alteração administrativa sem mudar visibilidade.
-  const indoPublicar =
-    "visibilidade" in safeBody &&
-    safeBody.visibilidade === "publicada" &&
-    access.obra.visibilidade !== "publicada";
+  // `indoPublicar` foi computado acima (junto à validação estrita).
   if (indoPublicar) {
     updateData.statusModeracao = "pendente";
     updateData.motivoModeracao = null;
