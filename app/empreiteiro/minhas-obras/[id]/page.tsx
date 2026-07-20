@@ -1,7 +1,7 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useState, useRef } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMinhaObraDetalhe } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
@@ -64,12 +64,25 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
 
 export default function MinhaObraDetalhePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAtualizacao, setShowAtualizacao] = useState(false);
+  // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
+  const medicoesSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchParams?.get('tab') === 'medicoes' && medicoesSectionRef.current) {
+      // Aguarda a renderização completa antes de rolar.
+      const timer = setTimeout(() => {
+        medicoesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, obra]);
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -396,7 +409,9 @@ export default function MinhaObraDetalhePage() {
       </motion.div>
 
       {/* BLOCO J06: Medições, Diário, Ocorrências e Fotos (fonte de verdade) */}
-      <ObraJ06Section obraId={obra.id} />
+      <div ref={medicoesSectionRef} id="secao-medicoes">
+        <ObraJ06Section obraId={obra.id} />
+      </div>
 
       {/* BLOCO 11: Resumo Financeiro */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
