@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUpload } from '@features/shared/hooks/use-uploads';
 import Link from 'next/link';
@@ -89,6 +89,7 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
 
 export default function ObraDetalhePage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const { data: obra, isLoading } = useObraContratanteDetalhe(id);
   const { data: obraHealth } = useObraHealth(id);
@@ -96,7 +97,13 @@ export default function ObraDetalhePage() {
   const { data: checklists } = useObraChecklists(id);
   const { data: equipe } = useObraEquipe(id);
   const { data: tarefasResumo } = useObraTarefasResumo(id);
-  const [activeTab, setActiveTab] = useState<ObraTab>('visao-geral');
+
+  // Deep-link: ?tab=financeiro (ou qualquer ObraTab válida) ativa a aba diretamente.
+  const tabFromParam = searchParams?.get('tab') as ObraTab | null;
+  const validTabFromParam: ObraTab | null = tabFromParam && TABS.some((t) => t.key === tabFromParam)
+    ? tabFromParam
+    : null;
+  const [activeTab, setActiveTab] = useState<ObraTab>(validTabFromParam ?? 'visao-geral');
 
   // ── Botão "Trocar capa" (Item 13 J40) ────────────────────────────────────
   const queryClient = useQueryClient();

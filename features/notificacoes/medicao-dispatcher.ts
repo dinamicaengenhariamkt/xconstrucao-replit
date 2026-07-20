@@ -83,7 +83,8 @@ export async function dispararNotificacaoMedicaoCriada(args: { medicaoId: string
       tipo: "info",
       titulo: `Nova medição: ${ctx.etapa}`,
       descricao: `${ctx.obraNome}: medição #${ctx.numero} aguarda sua avaliação.`,
-      href: `/contratante/minhas-obras/${ctx.obraId}`,
+      // ?tab=financeiro abre diretamente a aba Financeiro (seção Medições) da obra.
+      href: `/contratante/minhas-obras/${ctx.obraId}?tab=financeiro`,
     });
   } catch (err) {
     console.error("[medicao-notif] falha em dispararNotificacaoMedicaoCriada:", err);
@@ -102,7 +103,7 @@ export async function dispararNotificacaoMedicaoAprovada(args: { medicaoId: stri
       tipo: "sucesso",
       titulo: `Medição aprovada: ${ctx.etapa}`,
       descricao: `${ctx.obraNome}: medição #${ctx.numero} foi aprovada pelo contratante.`,
-      href: `/empreiteiro/minhas-obras/${ctx.obraId}`,
+      href: `/empreiteiro/minhas-obras/${ctx.obraId}?tab=medicoes`,
     });
   } catch (err) {
     console.error("[medicao-notif] falha em dispararNotificacaoMedicaoAprovada:", err);
@@ -129,7 +130,7 @@ export async function dispararNotificacaoMedicaoContestada(args: {
       tipo: "alerta",
       titulo: `Medição contestada: ${ctx.etapa}`,
       descricao,
-      href: `/empreiteiro/minhas-obras/${ctx.obraId}`,
+      href: `/empreiteiro/minhas-obras/${ctx.obraId}?tab=medicoes`,
     });
   } catch (err) {
     console.error("[medicao-notif] falha em dispararNotificacaoMedicaoContestada:", err);

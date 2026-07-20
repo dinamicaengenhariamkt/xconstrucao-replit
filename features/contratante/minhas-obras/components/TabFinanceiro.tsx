@@ -1,10 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ObraContratanteDetalhe, ObraMedicaoContratante } from '../types';
 import { IconReceiptLong, IconCheck, IconClose } from '@shared/components/icons';
+import { useToast } from '@shared/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@shared/components/ui/alert-dialog';
+import { Textarea } from '@shared/components/ui/textarea';
+import { apiRequest } from '@shared/lib/queryClient';
 
 interface TabFinanceiroProps {
   obra: ObraContratanteDetalhe;
@@ -34,19 +48,72 @@ const NUM_BADGE: Record<ObraMedicaoContratante['status'], string> = {
 
 export function TabFinanceiro({ obra }: TabFinanceiroProps) {
   const { financeiro } = obra;
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
   const [overrides, setOverrides] = useState<Record<string, 'aprovada' | 'rejeitada'>>({});
+  const [contestandoId, setContestandoId] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (contestandoId !== null) setMotivo('');
+  }, [contestandoId]);
 
   const getStatus = (m: ObraMedicaoContratante): ObraMedicaoContratante['status'] =>
     overrides[m.id] ?? m.status;
 
-  const handleAprovar = (id: string) =>
-    setOverrides((prev) => ({ ...prev, [id]: 'aprovada' }));
+  const invalidateObra = () => {
+    void qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obra.id] });
+    void qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
+  };
 
-  const handleRejeitar = (id: string) =>
+  const handleAprovar = async (id: string) => {
+    setOverrides((prev) => ({ ...prev, [id]: 'aprovada' }));
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      await apiRequest('POST', `/api/contratante/medicoes/${id}/aprovar`);
+      invalidateObra();
+    } catch (err) {
+      setOverrides((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      toast({
+        title: 'Não foi possível aprovar a medição',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    }
+  };
+
+  const confirmarRejeicao = async () => {
+    if (!contestandoId) return;
+    const id = contestandoId;
+    const motivoTrim = motivo.trim();
+    setContestandoId(null);
     setOverrides((prev) => ({ ...prev, [id]: 'rejeitada' }));
+    setLoading((prev) => ({ ...prev, [id]: true }));
+    try {
+      await apiRequest('POST', `/api/contratante/medicoes/${id}/contestar`, { motivo: motivoTrim });
+      invalidateObra();
+    } catch (err) {
+      setOverrides((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      toast({
+        title: 'Não foi possível rejeitar a medição',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    }
+  };
 
   const pendentes = financeiro.medicoes.filter((m) => getStatus(m) === 'aguardando_aprovacao').length;
   const aLiberar = financeiro.valorTotal - financeiro.valorPago;
+  const motivoTrim = motivo.trim();
+  const isValid = motivoTrim.length >= 10;
+
+  const contestandoMedicao = financeiro.medicoes.find((m) => m.id === contestandoId) ?? null;
 
   return (
     <div className="flex flex-col gap-6" data-testid="tab-content-financeiro">
@@ -126,6 +193,7 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
               const cfg = STATUS_CONFIG[status];
               const numCls = NUM_BADGE[status];
               const isAguardando = status === 'aguardando_aprovacao';
+              const isLoading = loading[medicao.id] ?? false;
 
               return (
                 <div
@@ -136,7 +204,7 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
                   )}
                   data-testid={`medicao-row-${medicao.id}`}
                 >
-                  {/* Número */}
+                  {/* Número + descrição */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span className={cn('w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0', numCls)}>
                       #{medicao.numero}
@@ -166,15 +234,17 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleAprovar(medicao.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-success hover:bg-success/90 transition-colors cursor-pointer"
+                          disabled={isLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-success hover:bg-success/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           data-testid={`btn-aprovar-${medicao.id}`}
                         >
                           <IconCheck className="text-sm" />
                           Aprovar
                         </button>
                         <button
-                          onClick={() => handleRejeitar(medicao.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 transition-colors cursor-pointer"
+                          onClick={() => setContestandoId(medicao.id)}
+                          disabled={isLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           data-testid={`btn-rejeitar-${medicao.id}`}
                         >
                           <IconClose className="text-sm" />
@@ -211,6 +281,52 @@ export function TabFinanceiro({ obra }: TabFinanceiroProps) {
           </div>
         </div>
       )}
+
+      {/* Dialog de rejeição */}
+      <AlertDialog open={contestandoId !== null} onOpenChange={(o) => { if (!o) setContestandoId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Rejeitar medição #{contestandoMedicao?.numero}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Descreva o motivo — o empreiteiro receberá esse retorno e poderá enviar uma nova medição.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="my-2 flex flex-col gap-2">
+            <label
+              htmlFor="motivo-rejeicao-tab"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider"
+            >
+              Motivo (mín. 10 caracteres)
+            </label>
+            <Textarea
+              id="motivo-rejeicao-tab"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ex: quantitativos divergentes do projeto; favor revisar e reenviar."
+              rows={4}
+              data-testid="textarea-motivo-rejeicao"
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="btn-cancelar-rejeicao">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!isValid}
+              onClick={(e) => {
+                if (!isValid) { e.preventDefault(); return; }
+                void confirmarRejeicao();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="btn-confirmar-rejeicao"
+            >
+              Confirmar rejeição
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
