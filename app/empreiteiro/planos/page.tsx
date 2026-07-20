@@ -651,6 +651,7 @@ export default function PlanosPage() {
         const renovaLabel = perfilPlano?.renovaEm
           ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(perfilPlano.renovaEm))
           : null;
+        const vigenciaEm = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
         return (
           <AlertDialog open={pendingSlot !== null} onOpenChange={(o) => { if (!o) setPendingSlot(null); }}>
             <AlertDialogContent>
@@ -673,14 +674,19 @@ export default function PlanosPage() {
                       </div>
                     )}
                     <p>
-                      Sua assinatura atual será cancelada e o novo plano será ativado imediatamente.
-                      {' '}Os limites do plano <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong> passam a valer na hora.
+                      {isUpgrade ? 'Upgrade' : 'Downgrade'} para o plano{' '}
+                      <strong>{pendingSlot ? SLOT_LABEL[pendingSlot] : ''}</strong>.
+                      {' '}Ao confirmar, sua assinatura atual será cancelada e os limites do novo plano entrarão em vigor imediatamente.
                     </p>
-                    {renovaLabel && (
-                      <p className="text-xs">
-                        Seu ciclo atual estava programado para renovar em <strong>{renovaLabel}</strong>.
+                    <div className="text-xs space-y-1">
+                      <p>
+                        Data de vigência:{' '}
+                        <strong data-testid="dialog-vigencia-em">{vigenciaEm}</strong>
                       </p>
-                    )}
+                      {renovaLabel && (
+                        <p>Ciclo anterior válido até: <strong>{renovaLabel}</strong></p>
+                      )}
+                    </div>
                   </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>

@@ -67,8 +67,8 @@ export async function listarPlanos(persona?: PlanoPersona): Promise<typeof plano
 
 // ─── Checkout / ativação ────────────────────────────────────────────────────
 export type CheckoutResult =
-  | { ok: true; kind: "activated"; assinaturaId: string }
-  | { ok: true; kind: "redirect"; url: string }
+  | { ok: true; kind: "activated"; assinaturaId: string; vigenciaEm: string }
+  | { ok: true; kind: "redirect"; url: string; vigenciaEm: string }
   | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" }
   | { ok: false; code: "PERFIL_INCOMPLETO"; detail: string }
   | { ok: false; code: "INTERNAL_ERROR"; detail: string };
@@ -152,20 +152,11 @@ async function _iniciarCheckoutImpl(args: {
     };
   }
 
-  // Upgrade/downgrade via gateway externo: cancela a assinatura anterior no
-  // gateway antes de criar novo checkout para evitar conflito de assinaturas
-  // duplicadas (ex: ASAAS retorna HTTP 400 se customer já tem recorrência ativa).
-  if (atual && gateway.provider !== "manual" && atual.gatewaySubscriptionId) {
-    try {
-      await gateway.cancelSubscription(atual.gatewaySubscriptionId);
-      console.info(
-        `[checkout] assinatura anterior cancelada no gateway antes de upgrade/downgrade: ${atual.gatewaySubscriptionId}`,
-      );
-    } catch (err) {
-      // Log mas não bloqueia: o gateway pode já ter cancelado ou o id ser inválido.
-      console.warn("[checkout] falha ao cancelar assinatura anterior no gateway:", err);
-    }
-  }
+  // Para gateways externos (ex: ASAAS), NÃO cancelamos a assinatura anterior
+  // antes de criar o checkout — o checkout é apenas um link de pagamento, não
+  // uma assinatura. O cancelamento ocorre de forma segura no webhook handler
+  // APÓS confirmação de pagamento (aplicarEventoWebhook). Cancelar antes seria
+  // arriscado: se o checkout falhar, o usuário perde a assinatura atual.
 
   const result = await gateway.createCheckout({
     userId: args.userId,
@@ -211,7 +202,7 @@ async function _iniciarCheckoutImpl(args: {
         // fire-and-forget
       }
     })();
-    return { ok: true, kind: "redirect", url: result.url };
+    return { ok: true, kind: "redirect", url: result.url, vigenciaEm: new Date().toISOString() };
   }
 
   // Ativação imediata (adapter manual): persiste tudo numa transação.
@@ -312,7 +303,7 @@ async function _iniciarCheckoutImpl(args: {
     }
   })();
 
-  return { ok: true, kind: "activated", assinaturaId };
+  return { ok: true, kind: "activated", assinaturaId, vigenciaEm: new Date().toISOString() };
 }
 
 /** Cancela a assinatura ativa do usuário. Rebaixa para free no fim do ciclo. */
@@ -381,6 +372,8 @@ export async function aplicarEventoWebhook(evt: {
   // Acumula notificações a disparar após o commit da transação.
   type NotifPayload = Parameters<typeof dispararNotificacaoAssinaturaAdmin>[0];
   let notifPayload: NotifPayload | null = null;
+  // gatewaySubscriptionId da assinatura anterior a cancelar no gateway pós-commit.
+  let antigaGatewaySubIdToCancel: string | null = null;
 
   const result = await db.transaction(async (tx) => {
     // Dedup: se o evento já foi registrado, ignora.
@@ -456,6 +449,15 @@ export async function aplicarEventoWebhook(evt: {
         const [plano] = await tx.select().from(planos).where(eq(planos.id, planoId)).limit(1);
         if (plano && plano.ativo) {
           // Cancela assinatura ativa anterior (troca de plano).
+          // Guarda o gatewaySubscriptionId da assinatura anterior para cancelar
+          // no gateway APÓS o commit da transação (seguro: nova assinatura já salva).
+          const [antigaAssinatura] = await tx
+            .select({ gatewaySubscriptionId: assinaturas.gatewaySubscriptionId })
+            .from(assinaturas)
+            .where(and(eq(assinaturas.userId, userId), eq(assinaturas.status, "ativa")))
+            .limit(1);
+          antigaGatewaySubIdToCancel = antigaAssinatura?.gatewaySubscriptionId ?? null;
+
           await tx
             .update(assinaturas)
             .set({ status: "cancelada", canceladaEm: new Date() })
@@ -528,6 +530,18 @@ export async function aplicarEventoWebhook(evt: {
   // Dispara notificação admin pós-commit (fire-and-forget).
   if (result.processed && notifPayload) {
     void dispararNotificacaoAssinaturaAdmin(notifPayload);
+  }
+
+  // Cancela a assinatura anterior no gateway pós-commit (fire-and-forget).
+  // Feito APÓS o commit para garantir que a nova assinatura já foi persistida antes
+  // de cancelar a anterior — elimina o risco de o usuário perder o plano atual
+  // caso o checkout ou a criação da nova assinatura falhem.
+  if (result.processed && antigaGatewaySubIdToCancel) {
+    void getPaymentGateway()
+      .cancelSubscription(antigaGatewaySubIdToCancel)
+      .catch((err) => {
+        console.warn("[webhook] falha ao cancelar assinatura anterior no gateway:", err);
+      });
   }
 
   return result;
