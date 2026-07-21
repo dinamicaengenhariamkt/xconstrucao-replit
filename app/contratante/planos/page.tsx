@@ -445,7 +445,7 @@ export default function ContratantePlanosPage() {
           </div>
 
           {/* Empresarial — destacado */}
-          <div className="relative bg-primary rounded-3xl shadow-2xl p-8 flex flex-col lg:scale-[1.04] lg:z-10">
+          <div className="relative bg-primary rounded-3xl shadow-2xl p-8 flex flex-col xl:scale-[1.04] xl:z-10">
             {/* Badge Mais Popular */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
               <span className="px-4 py-1.5 rounded-full bg-amber-400 text-amber-900 text-[11px] font-extrabold uppercase tracking-wider shadow-lg">
