@@ -957,3 +957,329 @@ test.describe("Fluxo 6 — Gateway redirect: nova assinatura e upgrade (ASAAS co
     await logout(request);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fluxo ASAAS Sandbox — checkout gera URL válida de redirect
+// ---------------------------------------------------------------------------
+//
+// Este bloco só executa quando PAYMENT_GATEWAY=asaas está definido no ambiente.
+// No CI padrão (playwright.config.ts força PAYMENT_GATEWAY=manual) todos os
+// testes aqui são pulados automaticamente — garantindo que o gateway real nunca
+// é chamado sem as credenciais de sandbox.
+//
+// Para rodar manualmente:
+//   PAYMENT_GATEWAY=asaas ASAAS_API_KEY=<chave_sandbox> npx playwright test \
+//     tests/e2e/integration/planos-assinatura.integration.spec.ts \
+//     --grep "ASAAS Sandbox"
+
+test.describe("ASAAS Sandbox — checkout gera URL de redirect válida", () => {
+  test.beforeEach(({}, testInfo) => {
+    const gateway = process.env.PAYMENT_GATEWAY ?? "manual";
+    if (gateway !== "asaas") {
+      testInfo.skip(
+        true,
+        `PAYMENT_GATEWAY="${gateway}" — testes ASAAS Sandbox só rodam com PAYMENT_GATEWAY=asaas`,
+      );
+    }
+  });
+
+  test("contratante: checkout Pro retorna kind=redirect com URL sandbox.asaas.com", async ({
+    request,
+  }) => {
+    // 1. Lista planos disponíveis para contratante
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+
+    // Cancela assinatura existente para garantir estado free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve responder 200").toBe(200);
+
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      nome: string;
+      persona: string;
+    }>;
+    expect(Array.isArray(planos), "deve retornar array de planos").toBeTruthy();
+
+    // Encontra o plano Pro para contratante (ou "ambos")
+    const proPlan = planos.find(
+      (p) =>
+        p.tier === "pro" &&
+        (p.persona === "contratante" || p.persona === "ambos"),
+    );
+    if (!proPlan) {
+      await logout(request);
+      test.skip(
+        true,
+        "plano pro para contratante não encontrado no catálogo — pular",
+      );
+      return;
+    }
+
+    // 2. Chama o checkout — gateway ASAAS deve retornar kind=redirect + URL sandbox
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan.id, ciclo: "mensal" },
+    });
+
+    expect(
+      [200, 201].includes(checkoutRes.status()),
+      `checkout ASAAS deve retornar 200 ou 201, recebeu ${checkoutRes.status()} — ` +
+        "verifique ASAAS_API_KEY e conectividade com a sandbox",
+    ).toBeTruthy();
+
+    const body = (await checkoutRes.json()) as {
+      kind?: string;
+      url?: string;
+      gatewaySubscriptionId?: string;
+    };
+
+    // 3. Verifica que o gateway retornou um redirect (não ativação imediata)
+    expect(
+      body.kind,
+      "gateway ASAAS deve retornar kind=redirect (checkout hospedado)",
+    ).toBe("redirect");
+
+    // 4. Verifica que a URL aponta para o checkout sandbox do ASAAS
+    expect(
+      typeof body.url === "string" && body.url.length > 0,
+      "URL do checkout ASAAS deve ser uma string não vazia",
+    ).toBeTruthy();
+
+    expect(
+      body.url,
+      "URL do checkout deve iniciar com https://sandbox.asaas.com/",
+    ).toMatch(/^https:\/\/sandbox\.asaas\.com\//);
+
+    // 5. Verifica que o gatewaySubscriptionId foi retornado (para rastrear via webhook)
+    expect(
+      typeof body.gatewaySubscriptionId === "string" &&
+        body.gatewaySubscriptionId.length > 0,
+      "gatewaySubscriptionId deve ser string não vazia",
+    ).toBeTruthy();
+
+    await logout(request);
+  });
+
+  test("empreiteiro: checkout Pro retorna kind=redirect com URL sandbox.asaas.com", async ({
+    request,
+  }) => {
+    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+
+    // Cancela assinatura existente para garantir estado free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve responder 200").toBe(200);
+
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+
+    const proPlan = planos.find(
+      (p) =>
+        p.tier === "pro" &&
+        (p.persona === "empreiteiro" || p.persona === "ambos"),
+    );
+    if (!proPlan) {
+      await logout(request);
+      test.skip(
+        true,
+        "plano pro para empreiteiro não encontrado no catálogo — pular",
+      );
+      return;
+    }
+
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan.id, ciclo: "mensal" },
+    });
+
+    expect(
+      [200, 201].includes(checkoutRes.status()),
+      `checkout ASAAS empreiteiro deve retornar 200 ou 201, recebeu ${checkoutRes.status()}`,
+    ).toBeTruthy();
+
+    const body = (await checkoutRes.json()) as {
+      kind?: string;
+      url?: string;
+    };
+
+    expect(body.kind, "gateway ASAAS deve retornar kind=redirect").toBe(
+      "redirect",
+    );
+    expect(
+      body.url,
+      "URL deve iniciar com https://sandbox.asaas.com/",
+    ).toMatch(/^https:\/\/sandbox\.asaas\.com\//);
+
+    await logout(request);
+  });
+
+  test("payload do checkout ASAAS não gera HTTP 400 (campos billingType/chargeType válidos)", async ({
+    request,
+  }) => {
+    // Este teste confirma especificamente que billingType="UNDEFINED" e
+    // chargeType="RECURRENT" são aceitos pela API ASAAS sem retornar 400.
+    // É a regressão direta da correção de campos da task que criou este spec.
+    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    const listRes = await request.get("/api/planos");
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+
+    const proPlan = planos.find(
+      (p) =>
+        p.tier === "pro" &&
+        (p.persona === "empreiteiro" || p.persona === "ambos"),
+    );
+    if (!proPlan) {
+      await logout(request);
+      test.skip(true, "plano pro não encontrado — pular");
+      return;
+    }
+
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan.id, ciclo: "mensal" },
+    });
+
+    // O ponto crítico: não deve retornar 400 (que era o bug de billingType/chargeType)
+    expect(
+      checkoutRes.status(),
+      `API ASAAS não deve retornar 400 — verifique billingType e chargeType no payload. Status: ${checkoutRes.status()}`,
+    ).not.toBe(400);
+
+    expect(
+      [200, 201].includes(checkoutRes.status()),
+      `checkout deve ter sucesso (200 ou 201), recebeu ${checkoutRes.status()}`,
+    ).toBeTruthy();
+
+    await logout(request);
+  });
+
+  /**
+   * Browser-driven: navega até /contratante/planos, clica em "Assinar agora"
+   * e captura a URL gerada pelo gateway ASAAS antes de o browser a seguir para
+   * o site externo. Verifica que a URL é um checkout válido do sandbox ASAAS.
+   *
+   * Estratégia: interceptar a chamada /api/assinaturas/checkout para capturar
+   * o payload de resposta (url), e bloquear a navegação externa para
+   * sandbox.asaas.com — o teste não completa o pagamento no lado do ASAAS, só
+   * confirma que a URL de redirect foi emitida corretamente.
+   */
+  test("UI contratante: /contratante/planos → clicar Assinar retorna URL sandbox.asaas.com", async ({
+    page,
+    request,
+  }) => {
+    // Garante estado free para o contratante seed
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+    await logout(request);
+
+    // Autentica via test-login cookie (E2E_TEST_AUTH=1)
+    await page.goto("/api/test/login-as", { waitUntil: "commit" }).catch(
+      () => {},
+    );
+    const loginRes = await page.request.post("/api/test/login-as", {
+      data: { email: SEED_CONTRATANTE_EMAIL },
+    });
+    expect(
+      loginRes.ok(),
+      `login de ${SEED_CONTRATANTE_EMAIL} deve ter sucesso`,
+    ).toBeTruthy();
+
+    // Intercepta a resposta do checkout para capturar a URL ASAAS
+    let capturedCheckoutUrl: string | null = null;
+    await page.route("**/api/assinaturas/checkout", async (route) => {
+      const response = await route.fetch();
+      const body = await response.json().catch(() => ({})) as {
+        kind?: string;
+        url?: string;
+      };
+      if (body.kind === "redirect" && typeof body.url === "string") {
+        capturedCheckoutUrl = body.url;
+      }
+      // Continua com a resposta original (não altera o body)
+      await route.fulfill({ response });
+    });
+
+    // Bloqueia a navegação externa para sandbox.asaas.com — o browser não deve
+    // sair do servidor de teste. A rota precisa existir antes de navigarmos.
+    await page.route("https://sandbox.asaas.com/**", (route) => route.abort());
+
+    // Navega para a página de planos do contratante
+    await page.goto("/contratante/planos", { waitUntil: "networkidle" });
+
+    // Verifica que a página carregou o botão de assinatura do plano Empresarial
+    const btnAssinar = page.getByTestId("button-assinar-empresarial");
+    await expect(
+      btnAssinar,
+      "botão 'Assinar agora' do plano Empresarial deve estar visível",
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Clica em Assinar — dispara POST /api/assinaturas/checkout
+    await btnAssinar.click();
+
+    // Aguarda a chamada de checkout completar (interceptada acima)
+    await page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/assinaturas/checkout") && resp.status() !== 0,
+      { timeout: 30_000 },
+    );
+
+    // Verifica a URL capturada da resposta do checkout
+    expect(
+      capturedCheckoutUrl,
+      "checkout deve retornar uma URL (kind=redirect) — gateway ASAAS deve responder corretamente",
+    ).not.toBeNull();
+
+    expect(
+      capturedCheckoutUrl,
+      "URL do checkout ASAAS deve iniciar com https://sandbox.asaas.com/",
+    ).toMatch(/^https:\/\/sandbox\.asaas\.com\//);
+  });
+
+  /**
+   * Browser-driven: verifica que /planos/sucesso renderiza o spinner de polling
+   * ao ser acessado diretamente (fluxo de retorno do gateway ASAAS).
+   */
+  test("UI: /planos/sucesso renderiza página de confirmação após redirect do gateway", async ({
+    page,
+    request,
+  }) => {
+    // Autentica como contratante
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    await logout(request);
+
+    const loginRes = await page.request.post("/api/test/login-as", {
+      data: { email: SEED_CONTRATANTE_EMAIL },
+    });
+    expect(loginRes.ok(), "login deve ter sucesso").toBeTruthy();
+
+    // Navega para a página de sucesso (simulando o retorno do ASAAS via successUrl)
+    await page.goto("/planos/sucesso", { waitUntil: "networkidle" });
+
+    // Verifica que a página de sucesso está montada
+    const successPage = page.getByTestId("planos-sucesso-page");
+    await expect(
+      successPage,
+      "página /planos/sucesso deve estar visível",
+    ).toBeVisible({ timeout: 15_000 });
+
+    // O status inicial é "polling" — deve mostrar spinner ou estado de timeout
+    // (timeout ocorre em ~12s no ambiente de teste onde não há webhook confirmando)
+    const spinner = page.getByTestId("icon-polling-spinner");
+    const iconTimeout = page.getByTestId("icon-timeout");
+
+    await expect(
+      spinner.or(iconTimeout),
+      "deve exibir spinner de polling ou ícone de timeout",
+    ).toBeVisible({ timeout: 20_000 });
+  });
+});
