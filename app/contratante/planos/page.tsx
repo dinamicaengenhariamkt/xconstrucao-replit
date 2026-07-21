@@ -384,10 +384,10 @@ export default function ContratantePlanosPage() {
         </div>
 
         {/* ── Plan Cards ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-center mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-center mb-16">
 
           {/* Starter */}
-          <div className="relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6 lg:p-8 flex flex-col">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                 <RiSeedlingLine className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -445,7 +445,7 @@ export default function ContratantePlanosPage() {
           </div>
 
           {/* Empresarial — destacado */}
-          <div className="relative bg-primary rounded-3xl shadow-2xl p-8 flex flex-col xl:scale-[1.04] xl:z-10">
+          <div className="relative bg-primary rounded-3xl shadow-2xl p-6 lg:p-8 flex flex-col xl:scale-[1.04] xl:z-10">
             {/* Badge Mais Popular */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
               <span className="px-4 py-1.5 rounded-full bg-amber-400 text-amber-900 text-[11px] font-extrabold uppercase tracking-wider shadow-lg">
@@ -524,9 +524,9 @@ export default function ContratantePlanosPage() {
           </div>
 
           {/* Enterprise */}
-          <div className="relative rounded-3xl p-8 flex flex-col bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-700 shadow-xl">
+          <div className="relative rounded-3xl p-6 lg:p-8 flex flex-col bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-700 shadow-xl">
             {/* Badge */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 lg:top-6">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-6 md:top-6">
               <span className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider border border-emerald-500/30">
                 Melhor ROI
               </span>
@@ -599,7 +599,8 @@ export default function ContratantePlanosPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
             Compare todos os recursos
           </h2>
-          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
+          <div className="overflow-x-auto rounded-2xl">
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 min-w-[540px]">
             {/* Table header */}
             <div className="grid grid-cols-4 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-800">
               <div className="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Recurso</div>
@@ -628,6 +629,7 @@ export default function ContratantePlanosPage() {
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </div>
 
