@@ -117,8 +117,8 @@ export class AsaasGateway implements PaymentGateway {
       `Plano XConstrução ${tierLabel[input.tier] ?? input.tier} – ${cicloLabel[input.ciclo] ?? input.ciclo}`;
 
     const checkout = await asaasRequest<AsaasCheckout>("POST", "/checkouts", {
-      billingTypes: ["PIX", "CREDIT_CARD", "BOLETO"],
-      chargeTypes: ["RECURRENT"],
+      billingType: "UNDEFINED",
+      chargeType: "RECURRENT",
       cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
       items: [{ name: itemName, value: input.valor, quantity: 1 }],
       externalReference: externalRef,

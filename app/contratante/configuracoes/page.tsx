@@ -70,8 +70,9 @@ import { useToast } from '@shared/hooks/use-toast';
 import { Textarea } from '@shared/components/ui/textarea';
 import {
   formatPhone, unformatPhone, isPhoneValid,
-  formatCpf, unformatCpf, isCpfValid,
-  formatCnpj, unformatCnpj, isCnpjValid,
+  unformatCpf, isCpfValid,
+  unformatCnpj, isCnpjValid,
+  formatCpfCnpj, unformatCpfCnpj,
 } from '@shared/lib/masks';
 import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS } from '@features/perfil/constants';
 
@@ -367,14 +368,14 @@ function SecaoPerfil() {
           </FieldRow>
           <FieldRow label={isPF ? 'CPF' : 'CNPJ'}>
             <Input
-              value={isPF ? formatCpf(dados.cnpjCpf) : formatCnpj(dados.cnpjCpf)}
+              value={formatCpfCnpj(dados.cnpjCpf)}
               onChange={(e) => setDados((p) => ({
                 ...p,
-                cnpjCpf: isPF ? unformatCpf(e.target.value) : unformatCnpj(e.target.value),
+                cnpjCpf: unformatCpfCnpj(e.target.value),
               }))}
               placeholder={isPF ? '000.000.000-00' : '00.000.000/0000-00'}
               inputMode="numeric"
-              maxLength={isPF ? 14 : 18}
+              maxLength={18}
               data-testid="input-perfil-cpfcnpj"
             />
           </FieldRow>

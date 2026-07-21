@@ -383,7 +383,7 @@ export default function PlanosPage() {
         </div>
 
         {/* ── Plan Cards ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center mb-16">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-center mb-16">
 
           {/* Básico */}
           <div className="relative bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8 flex flex-col">
