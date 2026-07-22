@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { asaasSubcontas, saques, type Saque } from "@shared/db/schema";
 import { getBalance, requestTransfer, type AsaasTransferInput } from "@shared/lib/asaas-client";
@@ -100,21 +100,42 @@ export async function solicitarSaque(userId: string, valor: number): Promise<Saq
     const sub = await carregarSubcontaOperavel(userId);
     if (!sub) return { ok: false, code: "SUBCONTA_NAO_APROVADA" };
 
-    // Não sacar acima do saldo real.
-    const { balance } = await getBalance(sub.apiKey);
-    if (valor > Number(balance)) {
+    // Serializa saques do MESMO usuário (advisory lock por-transação) para
+    // impedir TOCTOU: dois saques concorrentes não podem ambos passar o check
+    // de saldo antes de qualquer débito. A revalidação de saldo ocorre DENTRO
+    // do lock. O lock é liberado automaticamente no commit/rollback.
+    const criacao = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${"saque:" + userId}))`);
+
+      const { balance } = await getBalance(sub.apiKey);
+      // Desconta saques locais ainda pendentes (em voo, possivelmente não
+      // debitados no Asaas ainda) para não autorizar acima do disponível real.
+      const [pend] = (
+        await tx.execute<{ soma: string }>(
+          sql`SELECT COALESCE(SUM(valor::numeric), 0) AS soma FROM saques WHERE user_id = ${userId} AND status = 'pendente'`,
+        )
+      ).rows as { soma: string }[];
+      const disponivel = Number(balance) - Number(pend?.soma ?? 0);
+
+      if (valor > disponivel) {
+        return { insufficient: true as const };
+      }
+
+      const [saque] = await tx
+        .insert(saques)
+        .values({ userId, valor: String(valor), status: "pendente", metodo: sub.tipoConta })
+        .returning();
+      return { insufficient: false as const, saque };
+    });
+
+    if (criacao.insufficient) {
       return { ok: false, code: "SALDO_INSUFICIENTE", detail: "Valor solicitado excede o saldo disponível." };
     }
+    const saque = criacao.saque;
 
-    // Monta o destino da transferência a partir dos dados de recebimento (J45).
+    // Dispara a transferência FORA da transação (chamada de rede externa não
+    // deve segurar o lock). O saque já está registrado como pendente.
     const transferInput = montarTransferInput(sub, valor);
-
-    // Registra o saque como pendente ANTES de chamar o Asaas (rastro).
-    const [saque] = await db
-      .insert(saques)
-      .values({ userId, valor: String(valor), status: "pendente", metodo: sub.tipoConta })
-      .returning();
-
     let transfer;
     try {
       transfer = await requestTransfer(transferInput, sub.apiKey);
@@ -124,7 +145,8 @@ export async function solicitarSaque(userId: string, valor: number): Promise<Saq
         .set({ status: "falhou", erro: String(err), updatedAt: new Date() })
         .where(eq(saques.id, saque.id))
         .catch(() => {});
-      return { ok: false, code: "INTERNAL_ERROR", detail: String(err) };
+      // Não expõe a mensagem crua do gateway ao cliente — só registra em `erro`.
+      return { ok: false, code: "INTERNAL_ERROR" };
     }
 
     // Asaas costuma retornar PENDING/DONE. Só marca concluído em DONE.
@@ -142,7 +164,8 @@ export async function solicitarSaque(userId: string, valor: number): Promise<Saq
     return { ok: true, saque: atualizado };
   } catch (err) {
     console.error("[saldo-service] solicitarSaque falhou:", err);
-    return { ok: false, code: "INTERNAL_ERROR", detail: String(err) };
+    // detail omitido: não vaza mensagem interna/gateway ao cliente.
+    return { ok: false, code: "INTERNAL_ERROR" };
   }
 }
 

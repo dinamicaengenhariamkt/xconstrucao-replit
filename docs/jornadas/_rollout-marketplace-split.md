@@ -12,7 +12,8 @@
 | `MARKETPLACE_ENC_KEY` | 32 bytes hex (64 chars) | Cripto AES-256-GCM da apiKey da subconta. **Estável** — rotacionar torna segredos cifrados indecifráveis. |
 | `ASAAS_API_KEY` | master key | Chave da conta-mãe. |
 | `ASAAS_ENVIRONMENT` | `production` \| `sandbox` | Ambiente da API. |
-| `ASAAS_WEBHOOK_IPS` | IPs oficiais do Asaas (csv) | Whitelist do webhook. **Obrigatório** em produção. |
+| `ASAAS_WEBHOOK_TOKEN` | token do painel Asaas | **Auth primária** do webhook (header `asaas-access-token`, validado em tempo constante). Impede POST forjado confirmar pagamento. Recomendado em produção. |
+| `ASAAS_WEBHOOK_IPS` | IPs oficiais do Asaas (csv) | Whitelist do webhook (defesa **secundária**, spoofável via XFF se o proxy não sanear). |
 | `NEXT_PUBLIC_BASE_URL` | URL pública | successUrl/cancelUrl e invoiceUrl. |
 | `TRUST_PROXY_HEADERS` | `1` atrás de proxy | Resolve o IP real para a whitelist do webhook. |
 
@@ -23,6 +24,7 @@ Gerar `MARKETPLACE_ENC_KEY`: `node -e "console.log(require('crypto').randomBytes
 - Endpoint único: `POST /api/webhooks/gateway`. Configurar no painel Asaas (conta-mãe **e** subcontas — ver abaixo).
 - Eventos necessários: pagamento (`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`/`PAYMENT_OVERDUE`) e conta/KYC (`ACCOUNT_STATUS_*`).
 - Roteamento interno (transparente): assinatura → `aplicarEventoWebhook`; conta/KYC → `aplicarEventoSubconta` (J46); pagamento de obra (externalReference `xconstrucao-obra|...`) → `aplicarEventoSplit` (J48).
+- **Autenticação (crítico — o webhook confirma dinheiro):** definir `ASAAS_WEBHOOK_TOKEN` no painel Asaas e na env. É validado em tempo constante no header `asaas-access-token`. **Fail-closed:** com `MARKETPLACE_SPLIT=on`, se nem token nem `ASAAS_WEBHOOK_IPS` estiverem configurados, o webhook é RECUSADO. A whitelist de IP é defesa secundária (spoofável por `X-Forwarded-For` se o edge proxy não sanear o header de entrada — confirmar que sim).
 - **Subcontas**: configurar o webhook já na criação da subconta (o Asaas recomenda, para não perder eventos de KYC). Hoje a criação (J45) usa `/accounts` sem webhook embutido — se necessário, os eventos de conta chegam pela conta-mãe.
 
 ## Reconciliação (proteção contra webhook perdido)

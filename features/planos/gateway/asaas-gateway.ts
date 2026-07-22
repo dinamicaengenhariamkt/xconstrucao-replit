@@ -16,6 +16,7 @@
  *   TRUST_PROXY_HEADERS  — se "1", lê X-Forwarded-For para extrair o IP real.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import {
   asaasRequest,
   type AsaasCheckout,
@@ -184,21 +185,47 @@ export class AsaasGateway implements PaymentGateway {
     }
   }
 
-  async parseWebhook(rawBody: string, _headers: Record<string, string> = {}, clientIp?: string): Promise<NormalizedWebhookEvent> {
-    // ── IP whitelist ────────────────────────────────────────────────────────
-    // `clientIp` é resolvido pelo route handler via `getClientIp(request)` que
-    // já aplica corretamente a política TRUST_PROXY_HEADERS. Não lemos headers
-    // de IP aqui — o chamador poderia forjar X-Real-IP ou X-Forwarded-For.
+  async parseWebhook(rawBody: string, headers: Record<string, string> = {}, clientIp?: string): Promise<NormalizedWebhookEvent> {
+    // ── Auth criptográfica: token do webhook (asaas-access-token) ────────────
+    // Auth PRIMÁRIA, independente de IP/proxy. O token é definido no painel Asaas
+    // (Integrações → Webhooks) e enviado no header `asaas-access-token`.
+    // Comparação em tempo constante (timingSafeEqual sobre SHA-256 dos valores,
+    // para não vazar comprimento). Este é o controle que impede um POST forjado
+    // de confirmar pagamento de obra / aprovar subconta.
+    const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN ?? "";
     const allowedIps = (process.env.ASAAS_WEBHOOK_IPS ?? "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
+    if (expectedToken) {
+      // Header vem em minúsculas (normalizado pelo route). Aceita algumas grafias.
+      const received =
+        headers["asaas-access-token"] ?? headers["Asaas-Access-Token"] ?? headers["access_token"] ?? "";
+      const a = createHash("sha256").update(received).digest();
+      const b = createHash("sha256").update(expectedToken).digest();
+      if (!timingSafeEqual(a, b)) {
+        console.warn("[asaas] webhook rejeitado: token inválido");
+        throw new Error("[asaas] webhook token inválido");
+      }
+    } else if (allowedIps.length === 0 && process.env.MARKETPLACE_SPLIT?.toLowerCase() === "on") {
+      // FAIL-CLOSED: com split ligado (dinheiro de obra trafega), recusar quando
+      // NENHUMA auth de webhook está configurada — nem token, nem IP whitelist.
+      console.error("[asaas] webhook recusado: sem ASAAS_WEBHOOK_TOKEN nem ASAAS_WEBHOOK_IPS com MARKETPLACE_SPLIT=on");
+      throw new Error("[asaas] webhook sem autenticação configurada");
+    }
+
+    // ── IP whitelist (defesa secundária) ─────────────────────────────────────
+    // `clientIp` é resolvido pelo route handler via `getClientIp(request)` que
+    // já aplica corretamente a política TRUST_PROXY_HEADERS. Não lemos headers
+    // de IP aqui — o chamador poderia forjar X-Real-IP ou X-Forwarded-For.
     if (allowedIps.length === 0) {
-      console.warn(
-        "[asaas] ASAAS_WEBHOOK_IPS não configurado — aceitando webhook sem verificação de IP (modo sandbox). " +
-          "Configure esta env var em produção com os IPs oficiais do ASAS."
-      );
+      if (!expectedToken) {
+        console.warn(
+          "[asaas] ASAAS_WEBHOOK_IPS/TOKEN não configurados — aceitando webhook sem verificação (modo sandbox). " +
+            "Configure ASAAS_WEBHOOK_TOKEN em produção."
+        );
+      }
     } else {
       const resolvedIp = clientIp ?? "unknown";
 
