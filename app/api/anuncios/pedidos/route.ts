@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
-import { criarPedidoSchema } from "@features/anuncios/self-service/schemas";
+import { criarPedidoSchema, validarPeriodoPago } from "@features/anuncios/self-service/schemas";
 import { criarPedido, listarPedidosDoUsuario } from "@features/anuncios/self-service/pedido-service";
+import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
 
 /** GET /api/anuncios/pedidos — pedidos do usuário logado (com slots). */
 export async function GET(request: NextRequest) {
@@ -43,6 +44,20 @@ export async function POST(request: NextRequest) {
     );
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // J31 — no modo pago, período é obrigatório e o início deve estar na janela
+  // [hoje, hoje+7]. Validação server-side (fresca), separada do schema base.
+  if (isAdPaymentEnabled()) {
+    const errosPeriodo = validarPeriodoPago(parsed.data.slots);
+    if (errosPeriodo.length > 0) {
+      const r = NextResponse.json(
+        { message: errosPeriodo[0], errors: { periodo: errosPeriodo }, code: "PERIODO_INVALIDO" },
+        { status: 400 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   let result: Awaited<ReturnType<typeof criarPedido>>;

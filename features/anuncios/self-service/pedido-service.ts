@@ -12,6 +12,8 @@ import {
 } from "@shared/db/schema";
 import { criarCampanha, isZonaMultipla } from "@features/anuncios/anuncios-service";
 import { getBillingPort } from "./billing-port";
+import { isAdPaymentEnabled } from "./flags";
+import { cobrarAnuncio, resolverCustomerAnunciante } from "./asaas-ad-billing";
 import { precoSlot } from "./precificacao";
 import type { SlotInput } from "./schemas";
 
@@ -199,42 +201,31 @@ export async function moderarPedido(args: {
     return { pedido: { ...upd, slots: pedido.slots }, slotsPublicados: 0, slotsPulados: 0 };
   }
 
-  // Aprovar → materializar.
-  const anuncianteId = await db.transaction(async (tx) =>
-    ensureAnuncianteDoUsuario(pedido.solicitanteUserId, tx),
-  );
-
-  let slotsPublicados = 0;
-  let slotsPulados = 0;
-  const cobrancaIsenta = pedido.cobrancaStatus === "prototipo";
-
-  for (const slot of pedido.slots) {
-    // Conflito de zona não-múltipla: primeira aprovada leva (default §13).
-    const livre = await zonaDisponivel(slot.zona, slot.periodoInicio, slot.periodoFim);
-    if (!livre) {
-      slotsPulados++;
-      continue;
-    }
-    const anuncio = await criarCampanha({
-      anuncianteId,
-      titulo: slot.titulo,
-      subtitulo: slot.subtitulo ?? undefined,
-      criativoUrl: slot.criativoUrl ?? undefined,
-      ctaUrl: slot.ctaUrl ?? undefined,
-      ctaTexto: slot.ctaTexto ?? undefined,
-      zona: slot.zona,
-      template: slot.template,
-      conteudo: slot.conteudo ?? undefined,
-      inicio: slot.periodoInicio ?? undefined,
-      fim: slot.periodoFim ?? undefined,
-      // Protótipo não lança receita (default §13): orçamento 0 → maybeLancarReceita
-      // não dispara. A J31 passa o valor real cobrado.
-      orcamento: cobrancaIsenta ? 0 : Number(slot.valorSlot),
-      status: "ativa",
-    });
-    await db.update(pedidoSlots).set({ anuncioId: anuncio.id }).where(eq(pedidoSlots.id, slot.id));
-    slotsPublicados++;
+  // ── Modo PAGO (J31): aprovar NÃO materializa. Só libera o link de pagamento.
+  // A materialização ocorre no webhook de pagamento confirmado (moderar-antes-de-pagar).
+  if (isAdPaymentEnabled()) {
+    const [upd] = await db
+      .update(pedidosAnuncio)
+      .set({
+        status: "aprovado",
+        cobrancaStatus: "pendente",
+        valorTotal: args.valorTotal !== undefined ? String(args.valorTotal) : pedido.valorTotal,
+        moderadoEm: new Date(),
+        moderadoPor: args.moderadorId,
+      })
+      .where(eq(pedidosAnuncio.id, args.pedidoId))
+      .returning();
+    const slots = await db.select().from(pedidoSlots).where(eq(pedidoSlots.pedidoId, args.pedidoId));
+    // Sem publicação ainda — aguarda pagamento. slotsPublicados=0 é esperado aqui.
+    return { pedido: { ...upd, slots }, slotsPublicados: 0, slotsPulados: 0 };
   }
+
+  // ── Modo PROTÓTIPO/ISENTO (dev/E2E): aprovar materializa direto (comportamento J23).
+  const cobrancaIsenta = pedido.cobrancaStatus === "prototipo";
+  const { slotsPublicados, slotsPulados } = await materializarSlotsDoPedido({
+    pedido,
+    orcamentoPorSlot: (slot) => (cobrancaIsenta ? 0 : Number(slot.valorSlot)),
+  });
 
   // Se NENHUM slot foi publicado (todas as zonas em conflito), o pedido não vai ao
   // ar: marca como `aprovado` (revisado, mas sem veiculação) em vez de `publicado`,
@@ -255,6 +246,57 @@ export async function moderarPedido(args: {
 
   const slots = await db.select().from(pedidoSlots).where(eq(pedidoSlots.pedidoId, args.pedidoId));
   return { pedido: { ...upd, slots }, slotsPublicados, slotsPulados };
+}
+
+/**
+ * J31 — Materializa os slots de um pedido em `anuncios` (status 'ativa', copiando
+ * inicio/fim do slot). Reusada pelo modo protótipo (na aprovação) e pelo modo pago
+ * (no webhook de pagamento confirmado). Conflito de zona não-múltipla: primeira
+ * leva (slot pulado). Idempotente por slot: pula slots que já têm `anuncioId`.
+ */
+export async function materializarSlotsDoPedido(args: {
+  pedido: PedidoView;
+  orcamentoPorSlot: (slot: PedidoSlot) => number;
+}): Promise<{ slotsPublicados: number; slotsPulados: number }> {
+  const anuncianteId = await db.transaction(async (tx) =>
+    ensureAnuncianteDoUsuario(args.pedido.solicitanteUserId, tx),
+  );
+
+  let slotsPublicados = 0;
+  let slotsPulados = 0;
+
+  for (const slot of args.pedido.slots) {
+    // Idempotência: slot já materializado (reprocessamento de webhook) — não recria.
+    if (slot.anuncioId) {
+      slotsPublicados++;
+      continue;
+    }
+    // Conflito de zona não-múltipla: primeira aprovada leva (default §13).
+    const livre = await zonaDisponivel(slot.zona, slot.periodoInicio, slot.periodoFim);
+    if (!livre) {
+      slotsPulados++;
+      continue;
+    }
+    const anuncio = await criarCampanha({
+      anuncianteId,
+      titulo: slot.titulo,
+      subtitulo: slot.subtitulo ?? undefined,
+      criativoUrl: slot.criativoUrl ?? undefined,
+      ctaUrl: slot.ctaUrl ?? undefined,
+      ctaTexto: slot.ctaTexto ?? undefined,
+      zona: slot.zona,
+      template: slot.template,
+      conteudo: slot.conteudo ?? undefined,
+      inicio: slot.periodoInicio ?? undefined,
+      fim: slot.periodoFim ?? undefined,
+      orcamento: args.orcamentoPorSlot(slot),
+      status: "ativa",
+    });
+    await db.update(pedidoSlots).set({ anuncioId: anuncio.id }).where(eq(pedidoSlots.id, slot.id));
+    slotsPublicados++;
+  }
+
+  return { slotsPublicados, slotsPulados };
 }
 
 /** Zona livre? Múltiplas sempre aceitam. Não-múltiplas: livre se não há anúncio ativo. */
@@ -305,15 +347,110 @@ export async function anuncioPertenceAoUsuario(anuncioId: string, userId: string
   return !!row;
 }
 
-/** Pausa/reativa o próprio anúncio. Valida posse antes (404/403 fica no route). */
+/**
+ * J31 — O anúncio veio de um pedido PAGO? (join anuncio → pedido_slots → pedido).
+ * Um anúncio é de origem paga se algum slot que o materializou pertence a um pedido
+ * com `cobranca_status='paga'`. Usado para BLOQUEAR pausa em anúncio pago (decisão
+ * de produto: anúncio pago roda direto do início ao fim, sem pausa por ora).
+ */
+export async function anuncioDeOrigemPaga(anuncioId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: pedidosAnuncio.id })
+    .from(pedidoSlots)
+    .innerJoin(pedidosAnuncio, eq(pedidoSlots.pedidoId, pedidosAnuncio.id))
+    .where(and(eq(pedidoSlots.anuncioId, anuncioId), eq(pedidosAnuncio.cobrancaStatus, "paga")))
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * Pausa/reativa o próprio anúncio. Valida posse antes (404/403 fica no route).
+ * J31: anúncio de origem PAGA não pode ser pausado (retorna `"pago"`).
+ */
 export async function gerirMeuAnuncio(
   anuncioId: string,
   userId: string,
   acao: "pausar" | "reativar",
-): Promise<boolean> {
+): Promise<boolean | "pago"> {
   const dono = await anuncioPertenceAoUsuario(anuncioId, userId);
   if (!dono) return false;
+  if (await anuncioDeOrigemPaga(anuncioId)) return "pago";
   const novoStatus = acao === "pausar" ? "pausada" : "ativa";
   await db.update(anuncios).set({ status: novoStatus }).where(eq(anuncios.id, anuncioId));
   return true;
+}
+
+/**
+ * J31 — Gera o link de pagamento de um pedido APROVADO (moderar-antes-de-pagar).
+ * Cria/reusa o customer Asaas do anunciante (lazy, com o CPF/CNPJ informado no
+ * checkout), emite a cobrança one-off e persiste os ids do gateway + invoiceUrl.
+ * Idempotente: se o pedido já tem invoiceUrl, retorna a existente.
+ *
+ * Verifica conflito de zona ANTES de emitir o link: se NENHUM slot pode ir ao ar
+ * (todas as zonas ocupadas), não cobra — retorna `zonasIndisponiveis` para o route
+ * responder ao anunciante (evita cobrar por veiculação que não vai acontecer).
+ */
+export async function gerarLinkPagamento(args: {
+  pedidoId: string;
+  userId: string;
+  cpfCnpj: string;
+}): Promise<
+  | { ok: true; invoiceUrl: string }
+  | { ok: false; code: "NAO_ENCONTRADO" | "ESTADO_INVALIDO" | "ZONAS_INDISPONIVEIS" | "ERRO_GATEWAY" }
+> {
+  const pedido = await getPedido(args.pedidoId, args.userId);
+  if (!pedido) return { ok: false, code: "NAO_ENCONTRADO" };
+  // Só cobra pedido aprovado e ainda pendente de pagamento.
+  if (pedido.status !== "aprovado" || pedido.cobrancaStatus !== "pendente") {
+    return { ok: false, code: "ESTADO_INVALIDO" };
+  }
+  // Já emitido? Idempotente — devolve a fatura existente.
+  if (pedido.invoiceUrl) return { ok: true, invoiceUrl: pedido.invoiceUrl };
+
+  // Nenhum slot pode ir ao ar? Não cobra.
+  let algumLivre = false;
+  for (const slot of pedido.slots) {
+    if (await zonaDisponivel(slot.zona, slot.periodoInicio, slot.periodoFim)) {
+      algumLivre = true;
+      break;
+    }
+  }
+  if (!algumLivre) return { ok: false, code: "ZONAS_INDISPONIVEIS" };
+
+  // Dados do pagador (anunciante).
+  const [u] = await db
+    .select({ email: users.email, name: users.name })
+    .from(users)
+    .where(eq(users.id, args.userId))
+    .limit(1);
+
+  try {
+    const customerId = await resolverCustomerAnunciante({
+      email: u?.email ?? "",
+      name: u?.name ?? "Anunciante",
+      cpfCnpj: args.cpfCnpj,
+    });
+    const { asaasPaymentId, invoiceUrl } = await cobrarAnuncio({
+      pedidoId: pedido.id,
+      customerId,
+      valorTotal: Number(pedido.valorTotal),
+      descricao: `Anúncio XConstrução (${pedido.slots.length} slot(s))`,
+    });
+
+    await db
+      .update(pedidosAnuncio)
+      .set({
+        gatewayProvider: "asaas",
+        gatewayCustomerId: customerId,
+        gatewayPaymentId: asaasPaymentId,
+        cpfCnpj: args.cpfCnpj,
+        invoiceUrl,
+      })
+      .where(eq(pedidosAnuncio.id, pedido.id));
+
+    return { ok: true, invoiceUrl };
+  } catch (err) {
+    console.error(`[anuncio-pagamento] falha ao gerar link (pedido=${pedido.id}):`, err);
+    return { ok: false, code: "ERRO_GATEWAY" };
+  }
 }

@@ -136,6 +136,10 @@ export async function register() {
     const { markOverduePagamentos } = await import("./features/financeiro/mark-overdue-job");
     await runBootstrap("mark-overdue-pagamentos", () => markOverduePagamentos().then(() => {}));
 
+    // J31 — expira anúncios cujo período terminou (ativa→expirada). Idempotente.
+    const { expirarAnuncios } = await import("./features/anuncios/expirar-anuncios-job");
+    await runBootstrap("expirar-anuncios", () => expirarAnuncios().then(() => {}));
+
     const { snapshotKpisJob } = await import("./features/financeiro/snapshot-kpis-job");
     await runBootstrap("snapshot-kpis", () => snapshotKpisJob().then(() => {}));
 

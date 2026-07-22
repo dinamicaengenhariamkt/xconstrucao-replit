@@ -52,6 +52,8 @@ import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
 import { parseExternalRefObra } from "@features/marketplace/split-service";
+import { aplicarEventoAnuncioPago } from "@features/anuncios/self-service/aplicar-evento-anuncio-pago";
+import { parseExternalRefAnuncio } from "@features/anuncios/self-service/asaas-ad-billing";
 
 function isEnabled(): boolean {
   // Hard deny in production regardless of any test env vars.
@@ -127,6 +129,19 @@ export async function POST(request: NextRequest) {
   const externalReference =
     typeof body.externalReference === "string" ? body.externalReference : undefined;
   const valor = typeof body.valor === "number" ? body.valor : undefined;
+
+  // J31 — pagamento de ANÚNCIO (externalReference `xconstrucao-anuncio|pedidoId`):
+  // roteia para o handler de anúncio pago, espelhando o route.ts real.
+  const refAnuncio = parseExternalRefAnuncio(externalReference);
+  if (refAnuncio && (type === "payment_succeeded" || type === "payment_failed")) {
+    try {
+      const result = await aplicarEventoAnuncioPago({ eventId, type, pedidoId: refAnuncio.pedidoId });
+      return NextResponse.json({ received: true, processed: result.processed });
+    } catch (err) {
+      console.error("[test/webhooks/asaas] falha ao aplicar evento de anúncio:", err);
+      return NextResponse.json({ error: "PROCESSING_ERROR" }, { status: 500 });
+    }
+  }
 
   // J48 — pagamento de OBRA (externalReference `xconstrucao-obra|...`): roteia
   // para o handler de split, espelhando o route.ts real.

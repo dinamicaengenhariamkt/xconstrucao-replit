@@ -1,19 +1,27 @@
 # Jornada — Pagamento Real de Anúncios (Billing do Marketplace de Mídia)
 
-> Status: bloqueada | Prioridade: média | Wave: 7
-> Última atualização: 2026-06-07
+> Status: pronto (MVP) | Prioridade: média | Wave: 7
+> Última atualização: 2026-07-22
 >
-> **BLOQUEADA por duas dependências em série:**
-> 1. **J23** (self-service de anúncios) precisa estar concluída — esta jornada só
->    troca o `PrototipoBilling` da J23 pelo gateway real; sem o checkout, a porta e
->    o modelo de pedido da J23, não há o que ligar.
-> 2. **J14** (gateway de pagamento) precisa estar resolvida — a escolha do provedor
->    (Stripe / MercadoPago / Asaas / outro) e a fundação de gateway são reusadas
->    aqui. O pagamento de anúncio é **avulso** (one-off por pedido), não recorrente
->    como a assinatura da J11/J14 — mas reaproveita a mesma abstração de porta.
+> **MVP CONCLUÍDO (2026-07-22):** cobrança one-off real de anúncio via Asaas,
+> **moderar-antes-de-pagar**, **período obrigatório**, janela de início hoje..+7
+> dias, **expiração automática** (`ativa→expirada`) e bloqueio de pausa em anúncio
+> pago. Gated por `AD_PAYMENT_GATEWAY=asaas` (+ `PAYMENT_GATEWAY=asaas`); o
+> `PrototipoBilling` permanece como fallback dev/E2E (fluxo J23 intacto). Dinheiro
+> 100% na conta-mãe (sem split) — ver [../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md).
 >
-> Roteiro pré-criado para retomada. Quando J23 entregar e J14 destravar,
-> desbloquear e implementar o adapter de cobrança avulsa para anúncios.
+> Fora do MVP (backlog, §14): pausa-com-crédito de dias, sobreposição real de
+> período no conflito de zona, janela recorrente/horária, estorno automático.
+
+## 0. Decisões travadas (com o dono, 2026-07-22)
+
+| # | Decisão | Escolha | Consequência |
+|---|---|---|---|
+| E1 | **Escopo** | MVP: cobrança one-off + período obrigatório + expiração | Deixa pausa-com-crédito, sobreposição de período e recorrência para depois |
+| E2 | **Ordem pagar × moderar** | **Moderar ANTES de pagar** | Admin pré-aprova → link de pagamento → pagou, materializa. **Sem estorno** no caminho feliz |
+| E3 | **Início da veiculação** | Anunciante escolhe, janela **hoje..+7 dias** | Reusa o filtro de data (`whereAtivo`); sem job `agendada→ativa` |
+| E4 | **Pausa em anúncio pago** | **Não permitir** por ora | Anúncio pago roda direto início→fim; sem mecânica de crédito de dias |
+| E5 | **Customer do anunciante** | **Lazy no checkout** (coleta CPF/CNPJ) | Cadastro de anunciante segue isento; customer criado no `POST /pagar` |
 
 ## 1. Contexto & Objetivo
 
@@ -205,3 +213,12 @@ A J23 já deixou `pedidos_anuncio.cobrancaStatus` com os estados
   que o anunciante **não tem customer ASAAS** hoje (isento de CPF/CNPJ no cadastro) e
   **não tem subconta** (nunca recebe). Decisão: criar o customer **lazy no checkout**
   desta jornada, coletando o documento ali (§6.2b). Pagamento vai para a conta-mãe.
+- **2026-07-22 — MVP IMPLEMENTADO.** Decisões E1–E5 (§0) travadas e entregues:
+  - **Schema**: `pedidos_anuncio` += `gateway_provider/customer_id/payment_id/cpf_cnpj/invoice_url`; nova `pedido_pagamento_eventos` (`gateway_event_id` único = idempotência). Bootstrap idempotente + probe em `schema-health`.
+  - **Cobrança**: `features/anuncios/self-service/asaas-ad-billing.ts` (one-off via `createPaymentWithSplit` com `split:[]` = 100% conta-mãe; `findOrCreateCustomer` lazy). Porta `billing-port.ts` resolve por `AD_PAYMENT_GATEWAY` (flag em `flags.ts`); protótipo é fallback.
+  - **Moderar-antes-de-pagar**: `moderarPedido` bifurcado — modo pago aprova SEM materializar (`aprovado`/`pendente`). Materialização extraída para `materializarSlotsDoPedido`, chamada no webhook de pagamento confirmado.
+  - **Webhook**: 3º prefixo `xconstrucao-anuncio|pedidoId` roteado no `/api/webhooks/gateway` único → `aplicar-evento-anuncio-pago.ts` (idempotente; materializa + `paga`/`publicado` + notifica).
+  - **Endpoints**: `POST /api/anuncios/pedidos/[id]/pagar` (exige CPF/CNPJ, gera link); período obrigatório + janela hoje..+7 validados server-side (`validarPeriodoPago`) no criar-pedido; bloqueio de pausa (`ANUNCIO_PAGO` 409) em `/api/anuncios/meus/[id]` para origem paga.
+  - **Expiração**: `expirar-anuncios-job.ts` (`ativa→expirada` por `fim<hoje`) + `scripts/expirar-anuncios.ts` + registro no `instrumentation.ts`.
+  - **Conflito de zona**: verificado ANTES de emitir o link (`ZONAS_INDISPONIVEIS` 409) — não cobra veiculação que não vai acontecer. Sobreposição real de período fica no backlog.
+- **2026-07-22 (code-review)** — **Race de webhook corrigido**: o Asaas envia `PAYMENT_RECEIVED` e `PAYMENT_CONFIRMED` com `eventId` distintos, ambos → `payment_succeeded`. O guard `cobrancaStatus!='pendente'` sozinho não era atômico (dois eventos concorrentes materializariam 2× → receita dobrada). Corrigido com **claim atômico**: `SELECT ... FOR UPDATE` no pedido + flip para `paga` dentro da transação (espelha `aplicar-evento-split.ts`); só o 1º evento materializa. Teste cobrindo os dois eventIds distintos adicionado.

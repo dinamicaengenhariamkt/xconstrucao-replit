@@ -5,6 +5,8 @@ import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
 import { parseExternalRefObra } from "@features/marketplace/split-service";
+import { aplicarEventoAnuncioPago } from "@features/anuncios/self-service/aplicar-evento-anuncio-pago";
+import { parseExternalRefAnuncio } from "@features/anuncios/self-service/asaas-ad-billing";
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { db } from "@shared/db/db";
 import { retryPendingWebhookEvents } from "@features/planos/webhook-retry-job";
@@ -123,12 +125,23 @@ export async function POST(request: NextRequest) {
     //         aplicarEventoSplit. A distinção de pagamento obra vs assinatura é
     //         pelo PREFIXO do externalReference (mesmo `type` payment_succeeded).
     const refObra = parseExternalRefObra(evtPayload.externalReference);
+    const refAnuncio = parseExternalRefAnuncio(evtPayload.externalReference);
     let result;
     if (evtPayload.type === "account_status_changed") {
       result = await aplicarEventoSubconta({
         eventId: evtPayload.eventId,
         accountId: evtPayload.accountId,
         accountStatus: evtPayload.accountStatus,
+      });
+    } else if (
+      refAnuncio &&
+      (evtPayload.type === "payment_succeeded" || evtPayload.type === "payment_failed")
+    ) {
+      // J31 — pagamento de ANÚNCIO (externalReference `xconstrucao-anuncio|pedidoId`).
+      result = await aplicarEventoAnuncioPago({
+        eventId: evtPayload.eventId,
+        type: evtPayload.type,
+        pedidoId: refAnuncio.pedidoId,
       });
     } else if (
       refObra &&

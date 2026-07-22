@@ -212,4 +212,15 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["user_id", "valor", "status", "asaas_transfer_id"],
     label: "saques (marketplace split)",
   },
+  // Pagamento real de anúncio (bootstrap-anuncios-self-service, J31)
+  {
+    table: "pedidos_anuncio",
+    columns: ["gateway_provider", "gateway_customer_id", "gateway_payment_id", "cpf_cnpj", "invoice_url"],
+    label: "pedidos_anuncio (J31 gateway columns)",
+  },
+  {
+    table: "pedido_pagamento_eventos",
+    columns: ["pedido_id", "tipo", "gateway_event_id"],
+    label: "pedido_pagamento_eventos (J31 idempotência)",
+  },
 ];

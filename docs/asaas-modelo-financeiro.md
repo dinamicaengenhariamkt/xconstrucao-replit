@@ -19,7 +19,7 @@ contratante, nem anunciante.
 |---|---|---|---|
 | **Contratante** | Sim — criado no cadastro se informar CPF/CNPJ | Não | Paga assinatura → **conta-mãe**. Paga obra → total na conta-mãe, com split repassando a fatia do empreiteiro |
 | **Empreiteiro** | Sim — criado no cadastro se informar CPF/CNPJ | **Sim** — único que tem (`POST /accounts`), criado ao configurar recebimento | Paga assinatura → **conta-mãe**. **Recebe** o repasse da obra na subconta (`walletId`) |
-| **Anunciante** | **Não hoje** (isento de CPF/CNPJ no cadastro) | Não | Pagamento de anúncio é **protótipo** (não cobra ainda — J31 pendente). Quando real, paga a conta-mãe |
+| **Anunciante** | Lazy no checkout de anúncio (J31); isento no cadastro | Não | Paga anúncio (one-off) → **conta-mãe** (J31 MVP, gated por `AD_PAYMENT_GATEWAY`). Protótipo é fallback dev |
 | **Admin / Superadmin** | Não | Não | **Nenhuma conta ASAAS.** Só opera fluxos (reconciliação, moderação) |
 | **Plataforma (conta-mãe)** | — | — | `ASAAS_API_KEY`. Recebe **100% das assinaturas** e a **comissão** de cada obra (a parte não destinada ao split) |
 
@@ -75,13 +75,15 @@ Pré-condição: a subconta do empreiteiro precisa estar `aprovada` com `walletI
 senão retorna `SUBCONTA_NAO_APROVADA` e o fluxo cai para pagamento manual (fallback
 `quitarLancamento`). Confirmação chega por webhook (J48, `aplicar-evento-split.ts`).
 
-### Pagamento de anúncio (anunciante) — GAP / protótipo
-Hoje o billing é `PrototipoBilling` ([features/anuncios/self-service/billing-port.ts](../features/anuncios/self-service/billing-port.ts))
-— **não cobra nada** (pedido nasce `cobrancaStatus: 'prototipo'`, vira `'isenta'` na
-aprovação). A cobrança real é a **J31** (bloqueada por decisão comercial; o gateway já
-existe). Quando implementada, o anunciante paga a **conta-mãe** (não tem subconta, pois
-nunca recebe) e o customer dele será criado **lazy no checkout** (coletando CPF/CNPJ ali,
-já que o cadastro de anunciante é isento) — ver decisão na J31.
+### Pagamento de anúncio (anunciante) — MVP implementado (J31)
+A cobrança real de anúncio (one-off) foi entregue na **J31** (MVP, 2026-07-22), gated
+por `AD_PAYMENT_GATEWAY=asaas` (+ `PAYMENT_GATEWAY=asaas`); o `PrototipoBilling`
+([features/anuncios/self-service/billing-port.ts](../features/anuncios/self-service/billing-port.ts))
+permanece como fallback dev/E2E. No modo pago: o anunciante paga a **conta-mãe** via
+`createPaymentWithSplit` com `split: []` (100% receita da plataforma — não tem subconta,
+pois nunca recebe); o customer dele é criado **lazy no checkout** (`POST /api/anuncios/pedidos/[id]/pagar`,
+coletando CPF/CNPJ ali). Fluxo **moderar-antes-de-pagar** (sem estorno no caminho feliz);
+materialização no webhook de pagamento confirmado. Ver [jornadas/31-pagamento-anuncios.md](jornadas/31-pagamento-anuncios.md).
 
 ## Por que o admin não tem conta ASAAS
 
@@ -94,10 +96,12 @@ sempre do contratante/empreiteiro.
 
 ## Gaps conhecidos
 
-- **Pagamento de anúncio (J31)** é protótipo — o único ponto do modelo que ainda não
-  toca o ASAAS de verdade. Bloqueado por decisão comercial.
-- **Customer do anunciante** não existe hoje (isento de CPF/CNPJ). Decisão: criar
-  lazy no checkout de anúncio (J31), não no cadastro nem no wizard (J51).
+- **Estorno de anúncio**: a J31 usa moderar-antes-de-pagar (sem estorno no caminho
+  feliz). Refund automático (ex.: recusa após pagamento) fica no backlog da J31.
+- **Anúncio — backlog**: pausa-com-crédito de dias, sobreposição real de período no
+  conflito de zona, janela recorrente/horária (fora do MVP da J31).
+- **Documento env**: modo pago de anúncio exige `AD_PAYMENT_GATEWAY=asaas` +
+  `PAYMENT_GATEWAY=asaas`; sem isso, protótipo (não cobra).
 
 ## Links cruzados
 - [J11 — Planos & Assinatura](jornadas/11-planos-assinatura.md) — cobrança de assinatura (conta-mãe).

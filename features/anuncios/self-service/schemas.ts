@@ -83,6 +83,42 @@ export const criarPedidoSchema = z.object({
 export type SlotInput = z.infer<typeof slotInputSchema>;
 export type CriarPedidoInput = z.infer<typeof criarPedidoSchema>;
 
+/** Janela máxima (em dias) para a data de início da veiculação a partir de hoje. */
+export const JANELA_INICIO_DIAS = 7;
+
+/**
+ * J31 — Validação adicional do modo PAGO (moderar-antes-de-pagar). No protótipo o
+ * período é opcional (assume 30 dias); com cobrança real ele é OBRIGATÓRIO e a data
+ * de início deve estar entre hoje e hoje+7 (o dinheiro não fica parado). Rodada
+ * SERVER-SIDE (com "hoje" fresco), separada do schema base para não quebrar o
+ * fluxo protótipo/E2E. Retorna a lista de erros (vazia = ok).
+ */
+export function validarPeriodoPago(slots: Array<{ periodoInicio?: string | null; periodoFim?: string | null }>): string[] {
+  const erros: string[] = [];
+  const hoje = new Date().toISOString().slice(0, 10);
+  const limite = new Date();
+  limite.setDate(limite.getDate() + JANELA_INICIO_DIAS);
+  const limiteStr = limite.toISOString().slice(0, 10);
+
+  slots.forEach((s, i) => {
+    const n = i + 1;
+    if (!s.periodoInicio || !s.periodoFim) {
+      erros.push(`Slot ${n}: informe início e fim da veiculação (obrigatório).`);
+      return;
+    }
+    if (s.periodoInicio < hoje) {
+      erros.push(`Slot ${n}: a data de início não pode ser no passado.`);
+    }
+    if (s.periodoInicio > limiteStr) {
+      erros.push(`Slot ${n}: o início deve ser em até ${JANELA_INICIO_DIAS} dias a partir de hoje.`);
+    }
+    if (s.periodoFim < s.periodoInicio) {
+      erros.push(`Slot ${n}: o fim não pode ser antes do início.`);
+    }
+  });
+  return erros;
+}
+
 // Gestão do próprio anúncio (PATCH /api/anuncios/meus/[id]).
 export const gerirAnuncioSchema = z.object({
   acao: z.enum(["pausar", "reativar"]),

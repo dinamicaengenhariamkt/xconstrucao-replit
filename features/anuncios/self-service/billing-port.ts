@@ -10,6 +10,8 @@
  * Ver docs/jornadas/23-meus-anuncios-self-service.md (D5) e 31-pagamento-anuncios.md.
  */
 
+import { isAdPaymentEnabled } from "./flags";
+
 export type CobrancaStatus = "prototipo" | "pendente" | "paga" | "isenta";
 
 export interface CobrarArgs {
@@ -42,9 +44,24 @@ export const PrototipoBilling: BillingPort = {
 };
 
 /**
- * Resolve a porta de billing ativa. Hoje sempre protótipo. A J31 lerá uma env
- * (ex.: AD_PAYMENT_GATEWAY) para decidir entre protótipo e gateway real.
+ * J31 — Billing real: na CRIAÇÃO do pedido não cobramos ainda (moderar-antes-de-pagar).
+ * O pedido nasce `pendente`; a cobrança real ocorre depois, no `POST /pagar`
+ * (`gerarLinkPagamento`), só após a aprovação do admin. Aqui apenas marcamos o
+ * estado inicial correto para o modo pago.
+ */
+export const AsaasAdBilling: BillingPort = {
+  nome: "asaas",
+  async cobrar(_args: CobrarArgs): Promise<CobrarResult> {
+    // Não cobra na criação — aguarda moderação. Estado inicial = pendente.
+    return { kind: "adquirido", cobrancaStatus: "pendente" };
+  },
+};
+
+/**
+ * Resolve a porta de billing ativa por env (`AD_PAYMENT_GATEWAY=asaas` +
+ * `PAYMENT_GATEWAY=asaas`). Fora disso, protótipo (dev/E2E) — comportamento J23
+ * intacto.
  */
 export function getBillingPort(): BillingPort {
-  return PrototipoBilling;
+  return isAdPaymentEnabled() ? AsaasAdBilling : PrototipoBilling;
 }

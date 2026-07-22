@@ -111,12 +111,37 @@ export async function bootstrapAnunciosSelfServiceSchema(): Promise<void> {
     await db.execute(
       sql`CREATE INDEX IF NOT EXISTS idx_pedido_slots_pedido ON pedido_slots(pedido_id)`,
     );
+
+    // J31 — cobrança real one-off: colunas de gateway em pedidos_anuncio + tabela
+    // de eventos de pagamento (idempotência do webhook). Todas nullable/idempotentes.
+    await db.execute(sql`ALTER TABLE pedidos_anuncio ADD COLUMN IF NOT EXISTS gateway_provider TEXT`);
+    await db.execute(sql`ALTER TABLE pedidos_anuncio ADD COLUMN IF NOT EXISTS gateway_customer_id TEXT`);
+    await db.execute(sql`ALTER TABLE pedidos_anuncio ADD COLUMN IF NOT EXISTS gateway_payment_id TEXT`);
+    await db.execute(sql`ALTER TABLE pedidos_anuncio ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT`);
+    await db.execute(sql`ALTER TABLE pedidos_anuncio ADD COLUMN IF NOT EXISTS invoice_url TEXT`);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS pedido_pagamento_eventos (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        pedido_id VARCHAR REFERENCES pedidos_anuncio(id) ON DELETE CASCADE,
+        tipo TEXT NOT NULL,
+        gateway_event_id TEXT,
+        payload_json JSONB NOT NULL DEFAULT '{}',
+        criado_em TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(
+      sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_pedido_pagamento_eventos_gateway ON pedido_pagamento_eventos(gateway_event_id)`,
+    );
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS idx_pedido_pagamento_eventos_pedido ON pedido_pagamento_eventos(pedido_id)`,
+    );
   } catch (err) {
     console.error("[bootstrap-anuncios-self-service] falha:", err);
     return;
   }
 
   console.info(
-    "[bootstrap-anuncios-self-service] schema ready (user_roles[+backfill] + anunciantes.user_id + pedidos_anuncio + pedido_slots)",
+    "[bootstrap-anuncios-self-service] schema ready (user_roles[+backfill] + anunciantes.user_id + pedidos_anuncio[+gateway] + pedido_slots + pedido_pagamento_eventos)",
   );
 }

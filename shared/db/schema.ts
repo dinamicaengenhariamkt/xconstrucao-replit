@@ -1237,6 +1237,12 @@ export const pedidosAnuncio = pgTable(
     motivoRecusa: text("motivo_recusa"),
     valorTotal: numeric("valor_total", { precision: 15, scale: 2 }).notNull().default("0"),
     cobrancaStatus: pedidoCobrancaStatusEnum("cobranca_status").notNull().default("prototipo"),
+    // J31 — cobrança real (one-off). Nullable: só populados no fluxo pago.
+    gatewayProvider: text("gateway_provider"),
+    gatewayCustomerId: text("gateway_customer_id"),
+    gatewayPaymentId: text("gateway_payment_id"),
+    cpfCnpj: text("cpf_cnpj"),
+    invoiceUrl: text("invoice_url"),
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
     moderadoEm: timestamp("moderado_em"),
     moderadoPor: varchar("moderado_por").references(() => users.id, { onDelete: "set null" }),
@@ -1244,6 +1250,25 @@ export const pedidosAnuncio = pgTable(
   (t) => ({
     idxSolicitante: index("idx_pedidos_anuncio_solicitante").on(t.solicitanteUserId),
     idxStatus: index("idx_pedidos_anuncio_status").on(t.status),
+  }),
+);
+
+// J31 — eventos de pagamento de pedido de anúncio (idempotência do webhook).
+// Espelha `assinatura_eventos`: `gateway_event_id` único garante que reenvio do
+// mesmo webhook não materialize/lance receita duas vezes.
+export const pedidoPagamentoEventos = pgTable(
+  "pedido_pagamento_eventos",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    pedidoId: varchar("pedido_id").references(() => pedidosAnuncio.id, { onDelete: "cascade" }),
+    tipo: text("tipo").notNull(), // paga | falhou
+    gatewayEventId: text("gateway_event_id"),
+    payloadJson: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uqGatewayEvent: uniqueIndex("uq_pedido_pagamento_eventos_gateway").on(t.gatewayEventId),
+    idxPedido: index("idx_pedido_pagamento_eventos_pedido").on(t.pedidoId),
   }),
 );
 
@@ -1277,6 +1302,8 @@ export type PedidoAnuncio = typeof pedidosAnuncio.$inferSelect;
 export type InsertPedidoAnuncio = typeof pedidosAnuncio.$inferInsert;
 export type PedidoSlot = typeof pedidoSlots.$inferSelect;
 export type InsertPedidoSlot = typeof pedidoSlots.$inferInsert;
+export type PedidoPagamentoEvento = typeof pedidoPagamentoEventos.$inferSelect;
+export type InsertPedidoPagamentoEvento = typeof pedidoPagamentoEventos.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Admin FAQ — base de perguntas frequentes gerenciável pelo admin.

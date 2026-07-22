@@ -28,6 +28,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const ok = await gerirMeuAnuncio(id, guard.user.id, parsed.data.acao);
+  // J31 — anúncio de origem PAGA não pode ser pausado/reativado por ora.
+  if (ok === "pago") {
+    const r = NextResponse.json(
+      { message: "Anúncios pagos rodam do início ao fim e não podem ser pausados por enquanto.", code: "ANUNCIO_PAGO" },
+      { status: 409 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (!ok) {
     const r = NextResponse.json({ message: "Não foi possível atualizar o anúncio" }, { status: 400 });
     setNoCacheHeaders(r);
