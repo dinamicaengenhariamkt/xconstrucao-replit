@@ -106,6 +106,16 @@ entre pagar e moderar (decisão de negócio, §13):
 Recomendação preliminar: **moderar antes de pagar** (evita refund e conteúdo
 impróprio cobrado). Mas depende do apetite comercial — decidir com os sócios.
 
+### 6.2b Customer ASAAS do anunciante — criar lazy no checkout
+O anunciante é **isento de CPF/CNPJ no cadastro** (para não friccionar a porta de
+entrada da J23), então **não ganha o customer ASAAS proativo** que contratante/empreiteiro
+recebem na J44. Decisão (2026-07-22): quando a cobrança real ligar, **coletar CPF/CNPJ
+no checkout do anúncio e criar o customer lazy ali**, reusando `findOrCreateCustomer`
+([features/planos/gateway/asaas-gateway.ts](../../features/planos/gateway/asaas-gateway.ts)) —
+o mesmo fallback lazy que a J44 já mantém para o 1º checkout de assinatura. O anunciante
+**paga a conta-mãe** e **não tem subconta** (nunca recebe). Ver o modelo completo em
+[../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md).
+
 ### 6.3 Idempotência
 Espelhar a garantia da J14: tabela de eventos de pagamento de anúncio com
 `gatewayEventId` **único** — reenvio do mesmo webhook não duplica lançamento de
@@ -140,6 +150,7 @@ A J23 já deixou `pedidos_anuncio.cobrancaStatus` com os estados
 
 ## 10. Checklist de implementação (quando desbloquear)
 - [ ] **Confirmar provedor** (deve casar com a decisão da J14) e modelo de cobrança avulsa
+- [ ] **Coletar CPF/CNPJ do anunciante no checkout e criar customer ASAAS lazy** (`findOrCreateCustomer`) — anunciante não tem customer proativo (isento no cadastro). Ver §6.2b
 - [ ] Decidir §6.1 (estender `PaymentGateway` vs porta `AdPaymentGateway` dedicada)
 - [ ] Decidir §6.2 (pagar-antes vs moderar-antes) com os sócios → define refund ou não
 - [ ] Adapter real implementando a porta: `createAdCheckout`, `parseWebhook` (**valida assinatura**)
@@ -190,3 +201,7 @@ A J23 já deixou `pedidos_anuncio.cobrancaStatus` com os estados
   da J23 como protótipo plugável). Bloqueada em série por J23 (precisa existir) e J14
   (precisa do provedor). Decisões a tomar na execução: §6.1 (porta única vs dedicada),
   §6.2 (pagar-antes vs moderar-antes → refund ou não), regra fiscal de venda de mídia.
+- **2026-07-22** — Confirmado no modelo financeiro (ver [../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md))
+  que o anunciante **não tem customer ASAAS** hoje (isento de CPF/CNPJ no cadastro) e
+  **não tem subconta** (nunca recebe). Decisão: criar o customer **lazy no checkout**
+  desta jornada, coletando o documento ali (§6.2b). Pagamento vai para a conta-mãe.

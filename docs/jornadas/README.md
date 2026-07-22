@@ -124,6 +124,7 @@ Quando uma feature aparece em duas jornadas (ex: notificação de candidatura ac
 
 - Stack: Next.js 16 App Router, React 19, Tailwind 4, shadcn/ui, Drizzle ORM, PostgreSQL, NextAuth.js
 - Schema canônico: [shared/db/schema.ts](../../shared/db/schema.ts)
+- Modelo financeiro ASAAS (conta-mãe, customers, subcontas, split): [../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md)
 - Camada de storage: [server/storage.ts](../../server/storage.ts)
 - Padrão de API real (referência): [app/api/obras/route.ts](../../app/api/obras/route.ts)
 - Flag de mock genérica: `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` (nome legado — vale para todos os módulos admin/contratante/empreiteiro)
