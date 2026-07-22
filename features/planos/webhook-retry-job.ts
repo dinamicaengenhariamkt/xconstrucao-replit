@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
+import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 import { markAndNotifyDeadWebhooks } from "@features/planos/webhook-dead-notifier";
 
 export const MAX_RETRIES = 5;
@@ -128,14 +129,24 @@ export async function retryPendingWebhookEvents(
           continue;
         }
 
-        await aplicarEventoWebhook({
-          eventId: retryEvt.eventId,
-          type: retryEvt.type,
-          gatewaySubscriptionId: retryEvt.gatewaySubscriptionId,
-          gatewayCustomerId: retryEvt.gatewayCustomerId,
-          externalReference: retryEvt.externalReference,
-          valor: retryEvt.valor,
-        });
+        // J46 — roteia eventos de conta/KYC para o handler de subconta; todo o
+        // resto (assinatura) segue para aplicarEventoWebhook, inalterado.
+        if (retryEvt.type === "account_status_changed") {
+          await aplicarEventoSubconta({
+            eventId: retryEvt.eventId,
+            accountId: retryEvt.accountId,
+            accountStatus: retryEvt.accountStatus,
+          });
+        } else {
+          await aplicarEventoWebhook({
+            eventId: retryEvt.eventId,
+            type: retryEvt.type,
+            gatewaySubscriptionId: retryEvt.gatewaySubscriptionId,
+            gatewayCustomerId: retryEvt.gatewayCustomerId,
+            externalReference: retryEvt.externalReference,
+            valor: retryEvt.valor,
+          });
+        }
 
         await db
           .execute(sql`

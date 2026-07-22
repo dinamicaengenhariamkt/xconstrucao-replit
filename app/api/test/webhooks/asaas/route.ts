@@ -49,6 +49,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
+import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 
 function isEnabled(): boolean {
   // Hard deny in production regardless of any test env vars.
@@ -65,6 +66,8 @@ const VALID_TYPES = new Set([
   "payment_failed",
   "subscription_canceled",
   "subscription_activated",
+  // J46 — evento de status de subconta (KYC). Aceita accountId + accountStatus.
+  "account_status_changed",
   "ignored",
 ]);
 
@@ -98,6 +101,22 @@ export async function POST(request: NextRequest) {
     typeof body.eventId === "string" && body.eventId.trim()
       ? body.eventId.trim()
       : generateEventId();
+
+  // J46 — evento de conta/KYC: roteia para o handler de subconta.
+  if (type === "account_status_changed") {
+    const accountId = typeof body.accountId === "string" ? body.accountId : undefined;
+    const accountStatus =
+      body.accountStatus === "approved" || body.accountStatus === "rejected" || body.accountStatus === "pending"
+        ? body.accountStatus
+        : undefined;
+    try {
+      const result = await aplicarEventoSubconta({ eventId, accountId, accountStatus });
+      return NextResponse.json({ received: true, processed: result.processed });
+    } catch (err) {
+      console.error("[test/webhooks/asaas] falha ao aplicar evento de conta:", err);
+      return NextResponse.json({ error: "PROCESSING_ERROR" }, { status: 500 });
+    }
+  }
 
   const gatewaySubscriptionId =
     typeof body.gatewaySubscriptionId === "string" ? body.gatewaySubscriptionId : undefined;

@@ -1,10 +1,18 @@
 # Jornada — Webhooks de Status de Subconta (KYC)
 
-> Status: planejada | Prioridade: média | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: média | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: introduz **roteamento** no webhook único existente sem alterar o
 > caminho de assinatura. Risco de regressão alto — cobrir com teste.
+>
+> **CONCLUÍDA (2026-07-22):** `parseWebhook` reconhece eventos `ACCOUNT_STATUS_*`
+> (novo tipo normalizado `account_status_changed` + `accountId`/`accountStatus`);
+> `route.ts` E o retry job roteiam esse tipo para
+> `features/marketplace/aplicar-evento-subconta.ts` (localiza por
+> `asaas_account_id`, transiciona status idempotentemente, notifica o empreiteiro).
+> Simulador `POST /api/test/webhooks/asaas` estendido. Testes: 5 novos verdes +
+> **regressão zero** confirmada (webhook de assinatura: 8+14 specs verdes).
 
 ## 1. Contexto & Objetivo
 A subconta criada em J45 nasce `aguardando_kyc`. O Asaas emite eventos de conta (aprovação/rejeição de KYC). Esta jornada roteia esses eventos no webhook único e atualiza `asaas_subcontas.onboarding_status`/`kyc_status`, notificando o empreiteiro. Sem isso, a subconta nunca sai de "aguardando" e o split (J47) fica permanentemente bloqueado.
@@ -75,4 +83,6 @@ Reusa `asaas_subcontas` (J42) e `webhook_delivery_log` (dead-letter existente). 
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- 2026-07-22: os nomes de evento do Asaas foram confirmados na doc oficial (`ACCOUNT_STATUS_{BANK_ACCOUNT_INFO,COMMERCIAL_INFO,DOCUMENT,GENERAL_APPROVAL}_{APPROVED,AWAITING_APPROVAL,PENDING,REJECTED}`). Só `GENERAL_APPROVAL_APPROVED` leva a `aprovada`; as demais etapas são intermediárias (`aguardando_kyc`). Payload traz o id da subconta em `account.id` (casa com `asaas_account_id`).
+- 2026-07-22: o roteamento foi replicado em DOIS lugares — o handler principal (`route.ts`) e o `webhook-retry-job.ts` (que re-parseia o `raw_body` do dead-letter). Ambos roteiam `account_status_changed` para `aplicarEventoSubconta`. Esquecer o retry job deixaria eventos de conta em dead-letter sendo reprocessados como assinatura.
+- 2026-07-22: `mapStatus` nunca regride de `aprovada` por um evento intermediário `pending` (ex: reenvio de `DOCUMENT_PENDING` após aprovação geral não desfaz a aprovação).

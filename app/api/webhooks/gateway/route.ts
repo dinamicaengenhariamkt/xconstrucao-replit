@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
+import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { db } from "@shared/db/db";
 import { retryPendingWebhookEvents } from "@features/planos/webhook-retry-job";
@@ -59,6 +60,9 @@ export async function POST(request: NextRequest) {
     gatewayCustomerId: evt.gatewayCustomerId,
     externalReference: evt.externalReference,
     valor: evt.valor,
+    // J46 — presentes apenas em eventos de conta/KYC (account_status_changed).
+    accountId: evt.accountId,
+    accountStatus: evt.accountStatus,
   };
 
   let logId: string | null = null;
@@ -110,7 +114,16 @@ export async function POST(request: NextRequest) {
 
   // ── Processamento do evento principal ───────────────────────────────────
   try {
-    const result = await aplicarEventoWebhook(evtPayload);
+    // J46 — roteamento: eventos de conta/KYC vão para aplicarEventoSubconta;
+    // TODO o caminho de assinatura permanece em aplicarEventoWebhook, intacto.
+    const result =
+      evtPayload.type === "account_status_changed"
+        ? await aplicarEventoSubconta({
+            eventId: evtPayload.eventId,
+            accountId: evtPayload.accountId,
+            accountStatus: evtPayload.accountStatus,
+          })
+        : await aplicarEventoWebhook(evtPayload);
 
     await db.execute(sql`
       UPDATE webhook_delivery_log

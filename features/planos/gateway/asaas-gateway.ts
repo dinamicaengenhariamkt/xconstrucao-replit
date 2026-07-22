@@ -222,6 +222,32 @@ export class AsaasGateway implements PaymentGateway {
     const payment = (body.payment as Record<string, unknown>) ?? {};
     const subscription = (body.subscription as Record<string, unknown>) ?? {};
 
+    // J46 — eventos de status de subconta (KYC). Formato Asaas:
+    //   { event: "ACCOUNT_STATUS_*", id: "<evtId>", account: { id }, accountStatus: {...} }
+    // A subconta só fica APTA a receber na aprovação GERAL; as demais etapas
+    // (bank/commercial/document) são intermediárias → segue aguardando.
+    if (event.startsWith("ACCOUNT_STATUS_")) {
+      const account = (body.account as Record<string, unknown>) ?? {};
+      const accountId = (account.id as string) ?? "";
+      const evtUniqueId = (body.id as string) ?? "";
+      const eventId = `${event}:${accountId || evtUniqueId || `asaas_conta`}`;
+
+      let accountStatus: NormalizedWebhookEvent["accountStatus"];
+      if (event === "ACCOUNT_STATUS_GENERAL_APPROVAL_APPROVED") accountStatus = "approved";
+      else if (event.endsWith("_REJECTED")) accountStatus = "rejected";
+      else accountStatus = "pending";
+
+      console.info(`[asaas] webhook conta event="${event}" accountId="${accountId}" status="${accountStatus}"`);
+
+      return {
+        eventId,
+        type: "account_status_changed",
+        accountId: accountId || undefined,
+        accountStatus,
+        raw: body,
+      };
+    }
+
     // ID do evento: preferir payment.id, depois subscription.id.
     // IMPORTANTE: o eventId DEVE incluir o tipo do evento para evitar falsa
     // deduplicação entre eventos distintos no mesmo recurso. Ex: PAYMENT_OVERDUE

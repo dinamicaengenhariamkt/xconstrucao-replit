@@ -49,7 +49,15 @@ export type CheckoutResult =
 export interface NormalizedWebhookEvent {
   /** ID único do evento no gateway — chave de idempotência. */
   eventId: string;
-  type: "subscription_activated" | "payment_succeeded" | "payment_failed" | "subscription_canceled" | "ignored";
+  type:
+    | "subscription_activated"
+    | "payment_succeeded"
+    | "payment_failed"
+    | "subscription_canceled"
+    // J46 — eventos de status de subconta (KYC). Roteados para
+    // aplicarEventoSubconta, NÃO para aplicarEventoWebhook (assinatura).
+    | "account_status_changed"
+    | "ignored";
   gatewaySubscriptionId?: string;
   gatewayCustomerId?: string;
   /**
@@ -60,6 +68,15 @@ export interface NormalizedWebhookEvent {
   externalReference?: string;
   /** Valor pago (em BRL) — usado para criar o lançamento no caixa. */
   valor?: number;
+  /** J46 — id da subconta Asaas (account.id) nos eventos de conta/KYC. */
+  accountId?: string;
+  /**
+   * J46 — situação normalizada da subconta derivada do evento ACCOUNT_STATUS_*:
+   *   "approved"  — aprovação GERAL concedida (subconta apta a receber).
+   *   "rejected"  — alguma etapa rejeitada.
+   *   "pending"   — etapa intermediária aprovada/pendente (segue aguardando).
+   */
+  accountStatus?: "approved" | "rejected" | "pending";
   raw: Record<string, unknown>;
 }
 
