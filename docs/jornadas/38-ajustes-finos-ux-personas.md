@@ -1,7 +1,12 @@
 # Jornada — Ajustes Finos de UX (Visões Empreiteiro & Contratante)
 
-> Status: revisão | Prioridade: média | Wave: 8
-> Última atualização: 2026-06-20
+> Status: concluída | Prioridade: média | Wave: 8
+> Última atualização: 2026-07-22
+>
+> **CONCLUÍDA (2026-07-22):** sign-off — checklist 12/12, verificado no código
+> (`AdSidebarSlot` nas duas sidebars; FAQ `.filter(c => c.count > 0)` nas 3 visões;
+> "Meus rascunhos" no topbar do contratante → Minhas Obras filtrada; margem
+> `p-10` na Nova Obra). `npm run check` limpo.
 
 ## 1. Contexto & Objetivo
 Jornada **agrupadora** de ajustes finos de UX — irmã da J34 (que cobriu a visão admin), agora nas visões **empreiteiro e contratante**. Identificados em uso real. Não é feature nova: é **consistência e correção pontual reusando o que já existe**. Quase tudo aqui foi "ligar o que já estava construído mas não plugado" (ex.: o componente de anúncio dinâmico já existia, só não estava nas sidebars).

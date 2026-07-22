@@ -1,9 +1,16 @@
 # Jornada — Ajustes Finos de UX: Nova Obra (Contratante)
 
-> Status: em andamento | Prioridade: alta | Wave: 8
-> Última atualização: 2026-07-13
+> Status: concluída | Prioridade: alta | Wave: 8
+> Última atualização: 2026-07-22
 >
-> Itens 1–16 concluídos e verificados. **Item 9 (upload R2) validado junto ao Replit** — credencial autentica, upload real chega ao bucket. Itens 10–16 (adapter/GET agregam dados reais, vazamentos financeiros corrigidos, itens 14/15 cobertos por E2E que passa em API-shape). Novos ajustes finos do contratante em andamento: Itens 17–20 (máscara de data, número no endereço + Maps, hover dos cards, capa no cadastro).
+> **CONCLUÍDA (2026-07-22):** lote 1–22 completo e verificado no código
+> (itens 17–20: `formatDate` na fonte via `adapters.ts`; colunas
+> `numero`/`complemento` em `obras` com número obrigatório ao publicar
+> (`superRefine`) + Google Maps preciso; hover luminous no `ObraCard`; upload de
+> capa opcional com kind R2 `obra_capa`). `npm run check` limpo. Guarda-chuva:
+> reabrir para novos lotes de refinamento se surgirem.
+>
+> Itens 1–16 concluídos e verificados. **Item 9 (upload R2) validado junto ao Replit** — credencial autentica, upload real chega ao bucket. Itens 10–16 (adapter/GET agregam dados reais, vazamentos financeiros corrigidos, itens 14/15 cobertos por E2E que passa em API-shape). Itens 17–22 (máscara de data, número no endereço + Maps, hover dos cards, capa no cadastro, legibilidade endereço, perfil-status empreiteiro).
 
 ## 1. Contexto & Objetivo
 Lote de ajustes finos de UX na tela **Nova Obra** do contratante (`/contratante/nova-obra`),
@@ -210,3 +217,4 @@ Originalmente nenhum (jornada de UX). Na auditoria ponta-a-ponta (Itens 10–16)
 - 2026-07-13: **Lote Itens 17–20 (ajustes finos pós-cadastro)**, reportados em uso real. (17) Datas exibidas em ISO cru → formatadas na fonte (`adapters.ts`) via `formatDate` compartilhado + varredura das duplicatas em contratante/empreiteiro/admin (preservando `prazo` texto livre e inputs de data). (18) Endereço ganhou `numero` (obrigatório ao publicar) + `complemento` — novas colunas em `obras` (aplicar `npm run db:push`), form/schema/adapter atualizados; Google Maps monta a query com o número → pino preciso. (19) `ObraCard` recebeu o realce luminous (linha primary no topo + gradiente no hover), alinhando aos cards do dashboard. (20) Upload de **capa opcional** no cadastro com validação de dimensão mín. 1200×675 (~16:9); novo `kind` R2 `obra_capa` grava organizado em `public/obras/{userId}/capa/{ts}-capa.{ext}` (legível, irmão de `anexos/`). **Pendência operacional:** rodar `npm run db:push` para criar as colunas `numero`/`complemento` no banco antes de publicar obras com o novo campo.
 - 2026-07-14: **Colunas `numero`/`complemento` aplicadas no banco de dev** (via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, pois o `npm run db:push` completo esbarra num drift pré-existente não relacionado: `app_errors_id_seq already exists`). No Replit/produção, aplicar as duas colunas com o mesmo cuidado.
 - 2026-07-14: **Lote Itens 21–22.** (21) Bloco Endereço realinhado (CEP+Logradouro / Número+Complemento / Cidade+UF; CEP preenche a coluna). (22) Relato "obra publicada não aparece p/ empreiteiro" investigado com reprodução ao vivo: **backend/filtro corretos** — a `GET /api/obras` retorna a obra; era estado transitório do navegador (cliente confirmou "agora mostrou"; provável toggle "Só na minha zona" com zona vazia). Bug real colateral: `GET /api/empreiteiro/perfil-status` dava **404** em todo load (rota nunca existiu) → criada. Hardening: a tela agora mostra **erro visível + retry** em vez de lista vazia silenciosa, e o map de obras virou resiliente (uma row ruim não zera a lista).
+- 2026-07-22: **Sign-off do lote 1–22.** Verificado no código que os itens 17–20 (os que o header ainda listava como "em andamento") estão implementados: `formatDate` na fonte em `features/obras/adapters.ts`; colunas `numero`/`complemento` em `obras` + `numero` obrigatório no `superRefine` de `features/obras/schemas/index.ts`; span luminous `group-hover` em `ObraCard.tsx`; kind `obra_capa` em `key-builder.ts`/`validation.ts`. `npm run check` limpo. Status → concluída; guarda-chuva reabre se surgirem novos refinamentos.
