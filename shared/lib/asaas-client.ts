@@ -214,6 +214,11 @@ export function createPaymentWithSplit(input: AsaasPaymentWithSplitInput): Promi
   return asaasRequest<AsaasPayment>("POST", "/payments", input);
 }
 
+/** Consulta uma cobrança por id (GET /payments/{id}) — usado na reconciliação (J50). */
+export function getPayment(id: string): Promise<AsaasPayment> {
+  return asaasRequest<AsaasPayment>("GET", `/payments/${encodeURIComponent(id)}`);
+}
+
 /** Saldo da subconta — usa a apiKey DA SUBCONTA (não a master). */
 export function getBalance(apiKeyOverride: string): Promise<AsaasBalance> {
   return asaasRequest<AsaasBalance>("GET", "/finance/balance", undefined, apiKeyOverride);

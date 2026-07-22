@@ -11,6 +11,7 @@ import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopE
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
 import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
+import { MarketplaceSplitSection } from '@features/admin/financeiro/components/MarketplaceSplitSection';
 import { useDashboardStats } from '@features/admin/financeiro/hooks/use-dashboard-stats';
 import {
   useObrasAtencao,
@@ -121,6 +122,9 @@ export default function AdminFinanceiroPage() {
 
       {/* Bloco 6: Resumo de receitas (real — J18) */}
       <ReceitasPlataformaTable receitas={receitasData?.receitas ?? []} total={receitasData?.total ?? 0} luminous />
+
+      {/* Bloco 7: Marketplace / Split (real — J50) */}
+      <MarketplaceSplitSection />
 
     </div>
   );
