@@ -18,6 +18,9 @@ interface User {
   image?: string | null;
   avatarUrl?: string | null;
   canManageUsers?: boolean;
+  // J51 — gate do wizard de onboarding. Pode não vir em todas as respostas de
+  // login/refresh; o gate pós-login confirma via /api/auth/me quando ausente.
+  onboardingConcluido?: boolean;
 }
 
 interface RegisterData {

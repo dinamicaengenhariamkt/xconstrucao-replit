@@ -13,7 +13,7 @@ import { signIn } from "next-auth/react";
 import { loginSchema } from "@features/auth/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
 import { useAuthStore } from "@features/auth/store/auth-store";
-import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
+import { resolvePostLoginDestination } from "@features/auth/utils/post-login-destination";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
@@ -57,11 +57,13 @@ export default function LoginPage() {
   const [codigo2fa, setCodigo2fa] = useState('');
   const [verificando2fa, setVerificando2fa] = useState(false);
 
-  const navegarPosLogin = () => {
+  const navegarPosLogin = async () => {
     const user = useAuthStore.getState().user;
     if (user) {
       const next = searchParams.get('next');
-      router.replace(resolvePostLoginRedirect(user.role, next));
+      // J51 — desvia ao wizard de onboarding no primeiro acesso (gate via /me).
+      const dest = await resolvePostLoginDestination(user.role, next);
+      router.replace(dest);
     }
   };
 
@@ -71,7 +73,7 @@ export default function LoginPage() {
     setVerificando2fa(true);
     try {
       await verifyTwoFactor(challengeToken, codigo2fa.trim());
-      navegarPosLogin();
+      await navegarPosLogin();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Código inválido.';
       toast({ title: 'Verificação falhou', description: message, variant: 'destructive' });
@@ -103,7 +105,7 @@ export default function LoginPage() {
         return;
       }
 
-      navegarPosLogin();
+      await navegarPosLogin();
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes("EMAIL_NOT_VERIFIED")) {
         toast({

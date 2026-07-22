@@ -48,12 +48,19 @@ export default function OAuthSuccessPage() {
       if (meRes.ok) {
         const userData = await meRes.json();
         const role = userData?.role || userData?.user?.role;
+        // J51 — primeiro acesso via Google também passa pelo wizard de onboarding
+        // (exceto admin, que não se cadastra por aqui). Reusa o mesmo /me já lido.
+        const onboardingConcluido =
+          userData?.onboardingConcluido ?? userData?.user?.onboardingConcluido;
+        const isAdmin = role === "admin" || role === "superadmin";
         const target =
-          role === "empreiteiro"
-            ? "/empreiteiro/dashboard"
-            : role === "admin"
-              ? "/admin/financeiro"
-              : "/contratante/dashboard";
+          !isAdmin && onboardingConcluido === false
+            ? "/onboarding"
+            : role === "empreiteiro"
+              ? "/empreiteiro/dashboard"
+              : isAdmin
+                ? "/admin/financeiro"
+                : "/contratante/dashboard";
         router.replace(target);
       } else {
         router.replace("/contratante/dashboard");

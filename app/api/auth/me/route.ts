@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...userData,
       roles,
+      // J51 — gate do wizard de onboarding (explícito no contrato p/ o client).
+      onboardingConcluido: (viewer as { onboardingConcluido?: boolean }).onboardingConcluido ?? false,
       mustChangePassword: viewer.mustChangePassword ?? false,
       ativo: viewer.ativo ?? true,
       canManageUsers:

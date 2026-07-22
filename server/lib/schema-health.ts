@@ -142,6 +142,12 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["must_change_password", "ativo", "can_manage_users", "created_by"],
     label: "users (superadmin columns)",
   },
+  // Onboarding wizard gate (bootstrap-onboarding, J51)
+  {
+    table: "users",
+    columns: ["onboarding_concluido"],
+    label: "users (onboarding gate)",
+  },
   // Obras extended columns (bootstrap-obras)
   {
     table: "obras",

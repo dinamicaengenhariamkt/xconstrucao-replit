@@ -98,6 +98,10 @@ export async function register() {
     const { bootstrap2faSchema } = await import("./server/bootstrap-2fa");
     await runBootstrap("2fa", bootstrap2faSchema);
 
+    // J51 — wizard de onboarding: flag users.onboarding_concluido (só depende de users).
+    const { bootstrapOnboardingSchema } = await import("./server/bootstrap-onboarding");
+    await runBootstrap("onboarding", bootstrapOnboardingSchema);
+
     const { bootstrapPlanosSchema } = await import("./server/bootstrap-planos");
     await runBootstrap("planos", bootstrapPlanosSchema);
 

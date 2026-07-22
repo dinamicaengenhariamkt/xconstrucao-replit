@@ -39,7 +39,7 @@ export interface DadosRecebimentoInput {
 const KEY = ['empreiteiro', 'recebimento'] as const;
 const URL = '/api/empreiteiro/recebimento/subconta';
 
-export function useRecebimento() {
+export function useRecebimento(options?: { enabled?: boolean }) {
   return useQuery<RecebimentoStatus>({
     queryKey: KEY,
     queryFn: async () => {
@@ -48,6 +48,9 @@ export function useRecebimento() {
       return res.json();
     },
     staleTime: 60 * 1000,
+    // Permite ao caller não disparar a consulta quando ela não faz sentido
+    // (ex.: wizard de onboarding para contratante/anunciante). Default: true.
+    enabled: options?.enabled ?? true,
   });
 }
 

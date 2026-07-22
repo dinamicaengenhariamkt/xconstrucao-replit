@@ -83,6 +83,10 @@ export const users = pgTable("users", {
   // lazy por email). Nullable — não quebra registros existentes.
   cpfCnpj: text("cpf_cnpj"),
   asaasCustomerId: text("asaas_customer_id"),
+  // J51 — gate do wizard de onboarding (primeiro acesso). Marcado `true` ao
+  // concluir OU pular o wizard. Distinto de clientes/empreiteiras.perfilCompleto
+  // (que é derivado e exige perfil rico); esta flag é só "já viu o onboarding".
+  onboardingConcluido: boolean("onboarding_concluido").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
