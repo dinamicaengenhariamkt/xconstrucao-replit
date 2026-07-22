@@ -63,9 +63,15 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.goto("/login?perfil=contratante");
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-password").fill(password);
+    // J51 — usuário novo (onboarding_concluido=false) cai no wizard, não no
+    // dashboard. Pular por agora → dashboard da persona.
+    await Promise.all([
+      page.waitForURL(/\/onboarding/),
+      page.getByTestId("button-login").click(),
+    ]);
     await Promise.all([
       page.waitForURL(/\/contratante\/dashboard/),
-      page.getByTestId("button-login").click(),
+      page.getByTestId("button-onboarding-skip").click(),
     ]);
 
     await expect(page.getByTestId("banner-email-unverified")).toHaveCount(0);
@@ -106,9 +112,14 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.goto("/login?perfil=empreiteiro");
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-password").fill(password);
+    // J51 — wizard de onboarding intercepta o login do usuário novo. Pular → dashboard.
+    await Promise.all([
+      page.waitForURL(/\/onboarding/),
+      page.getByTestId("button-login").click(),
+    ]);
     await Promise.all([
       page.waitForURL(/\/empreiteiro\/dashboard/),
-      page.getByTestId("button-login").click(),
+      page.getByTestId("button-onboarding-skip").click(),
     ]);
 
     await expect(page.getByTestId("banner-email-unverified")).toHaveCount(0);

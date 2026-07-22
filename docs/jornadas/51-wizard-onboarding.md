@@ -1,6 +1,6 @@
 # Jornada — Wizard de Onboarding (Primeiro Acesso)
 
-> Status: pendente | Prioridade: alta | Wave: 11
+> Status: pronto | Prioridade: alta | Wave: 11
 > Última atualização: 2026-07-22
 >
 > Observação: introduz um passo-a-passo pós-cadastro (hoje inexistente: o fluxo é
@@ -75,19 +75,19 @@ flowchart LR
 - Nenhum. Feature nova; não introduzir dado fixo/fake na tela — sempre refletir o estado real de perfil.
 
 ## 9. Checklist de implementação
-- [ ] Coluna `users.onboarding_concluido` (bootstrap idempotente + espelho no schema + probe no schema-health)
-- [ ] `POST /api/onboarding/concluir` (marca a flag; guard autenticado; idempotente)
-- [ ] `GET /api/auth/me` expõe `onboardingConcluido`
-- [ ] Rota/telas `app/onboarding/` (wizard multi-step, pulável em todos os passos)
-- [ ] Interceptar redirect pós-login: desviar a `/onboarding` quando `!onboardingConcluido` — nos DOIS pontos: `app/login/page.tsx` (`navegarPosLogin`, email/senha + 2FA) e `app/auth/oauth-success/page.tsx` (Google)
-- [ ] Passo 1: seletor PF/PJ **explícito** + dados de empresa; gravar via `PATCH /api/perfil/{persona}`
-- [ ] Passo 2 (empreiteiro): cartão opcional linkando `SecaoRecebimentos` (J45), atrás de `MARKETPLACE_SPLIT`
-- [ ] Passo 3: planos com merchandising do pago + "começar no free"; reusar `usePlanos`/`useCheckout`; **ocultar para anunciante**
-- [ ] Passo 4: concluir → `POST /api/onboarding/concluir` → dashboard
-- [ ] "Pular por agora" em todos os passos → também chama `POST /api/onboarding/concluir` → dashboard
-- [ ] **Não tocar** em `provisionarCustomerAsaas` — a criação Asaas continua no cadastro (J44)
-- [ ] Sub-fluxo multi-papel: reuso de `POST /api/anunciante/upgrade` (J23) — documentado, não bloqueia o wizard base
-- [ ] Teste de integração em `tests/e2e/integration/` (concluir/pular persiste a flag; gate reflete)
+- [x] Coluna `users.onboarding_concluido` (bootstrap idempotente + espelho no schema + probe no schema-health)
+- [x] `POST /api/onboarding/concluir` (marca a flag; guard autenticado; idempotente)
+- [x] `GET /api/auth/me` expõe `onboardingConcluido`
+- [x] Rota/telas `app/onboarding/` (wizard multi-step, pulável em todos os passos)
+- [x] Interceptar redirect pós-login: desviar a `/onboarding` quando `!onboardingConcluido` — nos DOIS pontos: `app/login/page.tsx` (`navegarPosLogin`, email/senha + 2FA) e `app/auth/oauth-success/page.tsx` (Google)
+- [x] Passo 1: seletor PF/PJ **explícito** + dados de empresa; gravar via `PATCH /api/perfil/{persona}`
+- [x] Passo 2 (empreiteiro): cartão opcional linkando `SecaoRecebimentos` (J45), atrás de `MARKETPLACE_SPLIT`
+- [x] Passo 3: planos com merchandising do pago + "começar no free"; reusar `usePlanos`/`useCheckout`; **ocultar para anunciante**
+- [x] Passo 4: concluir → `POST /api/onboarding/concluir` → dashboard
+- [x] "Pular por agora" em todos os passos → também chama `POST /api/onboarding/concluir` → dashboard
+- [x] **Não tocar** em `provisionarCustomerAsaas` — a criação Asaas continua no cadastro (J44)
+- [x] Sub-fluxo multi-papel: reuso de `POST /api/anunciante/upgrade` (J23) — documentado, não bloqueia o wizard base
+- [x] Teste de integração em `tests/e2e/integration/` (concluir/pular persiste a flag; gate reflete) — [onboarding.integration.spec.ts](../../tests/e2e/integration/onboarding.integration.spec.ts), 3 testes verdes (nasce false, concluir/idempotência, PATCH PF/PJ, guard 401)
 
 ## 10. Critérios de aceite
 1. Cadastrar contratante novo → login → cair em `/onboarding` (não no dashboard).
@@ -119,3 +119,4 @@ flowchart LR
 - **2026-07-22 — `useRecebimento` ganhou `enabled` opcional**: o hook disparava `GET /api/empreiteiro/recebimento/subconta` (403) para contratante/anunciante no wizard. Adicionado param `{ enabled }` (default true) para gatear a query só ao empreiteiro.
 - **2026-07-22 — Checkout `redirect` não avança passo**: quando o gateway real devolve `kind: 'redirect'`, o hook já faz `window.location.assign`; o wizard passou a NÃO chamar `onNext()` nesse caso (só em `activated`), evitando avanço-fantasma antes da navegação externa.
 - **2026-07-22 — Anunciante sem passo de plano/recebimento é intencional**: pelo modelo financeiro ([../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md)), o anunciante não assina plano nem recebe (não tem subconta), e o **customer ASAAS dele é criado lazy no checkout de anúncio (J31)**, não no cadastro nem neste wizard. Por isso o wizard do anunciante é enxuto (só empresa → concluir).
+- **2026-07-22 — E2E de navegador da J01 desatualizados pelo gate**: os fluxos `contratante`/`empreiteiro` em [../../tests/e2e/onboarding.spec.ts](../../tests/e2e/onboarding.spec.ts) esperavam `login → dashboard`; com o gate da J51 o usuário novo cai em `/onboarding` primeiro. Ajustados para esperar `/onboarding` e clicar em `button-onboarding-skip` antes do dashboard. Os demais casos (acesso direto ao dashboard; OAuth API) NÃO são afetados — não há gate server-side, o desvio é client-side no login. **Nota de infra:** os E2E de navegador não rodam no ambiente atual (Chromium do Playwright falha no launch com `GLIBC_PRIVATE not found`) — validação de browser fica para a J37; os testes de integração da J51 (HTTP puro, sem browser) rodam e passam.

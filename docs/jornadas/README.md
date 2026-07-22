@@ -60,7 +60,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 48 | [Confirmação de Pagamento de Obra via Webhook](48-confirmacao-pagamento-obra-webhook.md) | contratante, empreiteiro, sistema | 10 | concluída | alta |
 | 49 | [Saldo e Saque do Empreiteiro (Transferência)](49-saldo-saque-empreiteiro.md) | empreiteiro | 10 | concluída | média |
 | 50 | [Reconciliação & Rollout do Split](50-reconciliacao-rollout-split.md) | admin, sistema | 10 | concluída | média |
-| 51 | [Wizard de Onboarding (Primeiro Acesso)](51-wizard-onboarding.md) | contratante, empreiteiro, anunciante | 11 | pendente | alta |
+| 51 | [Wizard de Onboarding (Primeiro Acesso)](51-wizard-onboarding.md) | contratante, empreiteiro, anunciante | 11 | pronto | alta |
 
 ---
 
@@ -93,7 +93,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 
 - **Wave 10 — Método de pagamento real & marketplace com split** (documentada 2026-07-19, pós-auditoria da J11/Asaas): leva o pagamento de "controle interno" para **movimentação financeira real via Asaas**. Duas frentes: (a) **hardening da cobrança de assinatura** para produção — fechar o gap bloqueante de CPF/CNPJ (J44) e as env vars/webhook (checklist da J11); (b) **novo papel de recebedor** — o empreiteiro recebe pela obra e saca para o banco dele, via subconta Asaas com split real. Sequência: **42 (schema) + 43 (asaas-client) paralelos → 44 (cadastro/CPF) → 45 (subconta) → (46 KYC, 47 checkout-split paralelos) → 48 (confirmação webhook) → 49 (saldo/saque) / 50 (reconciliação/rollout)**. Tudo atrás da flag `MARKETPLACE_SPLIT` (default off); o `quitarLancamento` manual permanece como fallback para não quebrar o fluxo atual. Descoberta-chave da auditoria: o **adapter Asaas real já existia** (a J14 não estava de fato bloqueada). Riscos concentrados em KYC/compliance (a plataforma vira intermediária financeira), idempotência de split e regressão no roteamento do webhook único.
 
-- **Wave 11 — Onboarding guiado & conversão** (documentada 2026-07-22): camada de UX sobre fluxos já prontos. **51 (wizard de onboarding pós-cadastro — pendente)**: hoje o primeiro acesso é cru (`cadastro → verificar email → login → dashboard`). O wizard, **pulável**, coleta PF/PJ explícito + dados de empresa e faz merchandising do plano pago (free como saída) no momento de maior atenção. **Não** reconstrói a criação de conta Asaas — reusa o provisionamento proativo silencioso da J44. Decisões de produto (fricção pulável, Asaas como hoje, empurrar pago, multi-role via J23) confirmadas com o dono em 2026-07-22.
+- **Wave 11 — Onboarding guiado & conversão** (documentada 2026-07-22): camada de UX sobre fluxos já prontos. **51 (wizard de onboarding pós-cadastro — pronto)**: hoje o primeiro acesso é cru (`cadastro → verificar email → login → dashboard`). O wizard, **pulável**, coleta PF/PJ explícito + dados de empresa e faz merchandising do plano pago (free como saída) no momento de maior atenção. **Não** reconstrói a criação de conta Asaas — reusa o provisionamento proativo silencioso da J44. Decisões de produto (fricção pulável, Asaas como hoje, empurrar pago, multi-role via J23) confirmadas com o dono em 2026-07-22.
 
 Princípio: dentro de cada wave, **terminar uma jornada inteira** (schema → API → UI → remover mock → critério de aceite) antes de iniciar a próxima.
 
