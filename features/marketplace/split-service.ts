@@ -22,6 +22,27 @@ export type CheckoutSplitResult =
   | { ok: false; code: "RECEBEDOR_INDEFINIDO"; detail: string }
   | { ok: false; code: "INTERNAL_ERROR"; detail: string };
 
+/** Prefixo do externalReference de pagamento de OBRA (distingue de assinatura). */
+export const EXTERNAL_REF_OBRA_PREFIX = "xconstrucao-obra";
+
+/** Monta o externalReference de um pagamento de obra com split. */
+export function buildExternalRefObra(financeiroId: string, obraId: string, splitId: string): string {
+  return `${EXTERNAL_REF_OBRA_PREFIX}|${financeiroId}|${obraId}|${splitId}`;
+}
+
+/**
+ * Parseia o externalReference de obra `xconstrucao-obra|financeiroId|obraId|splitId`.
+ * Retorna null se não for um ref de obra (ex: assinatura `xconstrucao|...`).
+ */
+export function parseExternalRefObra(
+  ref: string | undefined,
+): { financeiroId: string; obraId: string; splitId: string } | null {
+  if (!ref) return null;
+  const parts = ref.split("|");
+  if (parts.length !== 4 || parts[0] !== EXTERNAL_REF_OBRA_PREFIX) return null;
+  return { financeiroId: parts[1], obraId: parts[2], splitId: parts[3] };
+}
+
 /** Datas de vencimento: hoje + N dias, formato YYYY-MM-DD (sem hora). */
 function dueDateFromNow(dias: number): string {
   const d = new Date();
@@ -127,7 +148,7 @@ export async function iniciarCheckoutSplit(args: {
       })
       .returning({ id: pagamentosSplit.id });
 
-    const externalReference = `xconstrucao-obra|${lancamento.id}|${lancamento.obraId ?? ""}|${split.id}`;
+    const externalReference = buildExternalRefObra(lancamento.id, lancamento.obraId ?? "", split.id);
 
     let payment;
     try {

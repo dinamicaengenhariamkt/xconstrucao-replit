@@ -3,6 +3,8 @@ import { sql } from "drizzle-orm";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
+import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
+import { parseExternalRefObra } from "@features/marketplace/split-service";
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { db } from "@shared/db/db";
 import { retryPendingWebhookEvents } from "@features/planos/webhook-retry-job";
@@ -114,16 +116,34 @@ export async function POST(request: NextRequest) {
 
   // ── Processamento do evento principal ───────────────────────────────────
   try {
-    // J46 — roteamento: eventos de conta/KYC vão para aplicarEventoSubconta;
-    // TODO o caminho de assinatura permanece em aplicarEventoWebhook, intacto.
-    const result =
-      evtPayload.type === "account_status_changed"
-        ? await aplicarEventoSubconta({
-            eventId: evtPayload.eventId,
-            accountId: evtPayload.accountId,
-            accountStatus: evtPayload.accountStatus,
-          })
-        : await aplicarEventoWebhook(evtPayload);
+    // Roteamento por natureza do evento (o caminho de ASSINATURA é o default e
+    // permanece intacto):
+    //   J46 — eventos de conta/KYC → aplicarEventoSubconta;
+    //   J48 — pagamento de OBRA (externalReference `xconstrucao-obra|...`) →
+    //         aplicarEventoSplit. A distinção de pagamento obra vs assinatura é
+    //         pelo PREFIXO do externalReference (mesmo `type` payment_succeeded).
+    const refObra = parseExternalRefObra(evtPayload.externalReference);
+    let result;
+    if (evtPayload.type === "account_status_changed") {
+      result = await aplicarEventoSubconta({
+        eventId: evtPayload.eventId,
+        accountId: evtPayload.accountId,
+        accountStatus: evtPayload.accountStatus,
+      });
+    } else if (
+      refObra &&
+      (evtPayload.type === "payment_succeeded" || evtPayload.type === "payment_failed")
+    ) {
+      // Localiza o registro pelo splitId do externalReference (PK confiável,
+      // sempre presente). O asaas_payment_id foi gravado no checkout (J47).
+      result = await aplicarEventoSplit({
+        eventId: evtPayload.eventId,
+        type: evtPayload.type,
+        splitId: refObra.splitId,
+      });
+    } else {
+      result = await aplicarEventoWebhook(evtPayload);
+    }
 
     await db.execute(sql`
       UPDATE webhook_delivery_log

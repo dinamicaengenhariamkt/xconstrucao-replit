@@ -50,6 +50,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
+import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
+import { parseExternalRefObra } from "@features/marketplace/split-service";
 
 function isEnabled(): boolean {
   // Hard deny in production regardless of any test env vars.
@@ -125,6 +127,19 @@ export async function POST(request: NextRequest) {
   const externalReference =
     typeof body.externalReference === "string" ? body.externalReference : undefined;
   const valor = typeof body.valor === "number" ? body.valor : undefined;
+
+  // J48 — pagamento de OBRA (externalReference `xconstrucao-obra|...`): roteia
+  // para o handler de split, espelhando o route.ts real.
+  const refObra = parseExternalRefObra(externalReference);
+  if (refObra && (type === "payment_succeeded" || type === "payment_failed")) {
+    try {
+      const result = await aplicarEventoSplit({ eventId, type, splitId: refObra.splitId });
+      return NextResponse.json({ received: true, processed: result.processed });
+    } catch (err) {
+      console.error("[test/webhooks/asaas] falha ao aplicar evento de split:", err);
+      return NextResponse.json({ error: "PROCESSING_ERROR" }, { status: 500 });
+    }
+  }
 
   try {
     const result = await aplicarEventoWebhook({

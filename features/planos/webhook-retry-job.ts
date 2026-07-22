@@ -3,6 +3,8 @@ import { db } from "@shared/db/db";
 import { getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
+import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
+import { parseExternalRefObra } from "@features/marketplace/split-service";
 import { markAndNotifyDeadWebhooks } from "@features/planos/webhook-dead-notifier";
 
 export const MAX_RETRIES = 5;
@@ -129,13 +131,24 @@ export async function retryPendingWebhookEvents(
           continue;
         }
 
-        // J46 — roteia eventos de conta/KYC para o handler de subconta; todo o
-        // resto (assinatura) segue para aplicarEventoWebhook, inalterado.
+        // Roteamento (espelha o do route.ts): conta/KYC → subconta (J46);
+        // pagamento de OBRA (externalReference `xconstrucao-obra|...`) → split
+        // (J48); resto → assinatura, inalterado.
+        const refObra = parseExternalRefObra(retryEvt.externalReference);
         if (retryEvt.type === "account_status_changed") {
           await aplicarEventoSubconta({
             eventId: retryEvt.eventId,
             accountId: retryEvt.accountId,
             accountStatus: retryEvt.accountStatus,
+          });
+        } else if (
+          refObra &&
+          (retryEvt.type === "payment_succeeded" || retryEvt.type === "payment_failed")
+        ) {
+          await aplicarEventoSplit({
+            eventId: retryEvt.eventId,
+            type: retryEvt.type,
+            splitId: refObra.splitId,
           });
         } else {
           await aplicarEventoWebhook({

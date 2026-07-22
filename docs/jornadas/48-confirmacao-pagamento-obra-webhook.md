@@ -1,11 +1,20 @@
 # Jornada — Confirmação de Pagamento de Obra via Webhook (Crédito + Caixa)
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: fecha o ciclo do split — o webhook confirma o pagamento, marca o
 > lançamento como pago e credita o empreiteiro. Idempotência é crítica (não
 > duplicar `financeiro`).
+>
+> **CONCLUÍDA (2026-07-22):** `features/marketplace/aplicar-evento-split.ts`
+> (transacional: `pagamentos_split`→`confirmado`, `financeiro`→`pago`
+> (`metodoPagamento='asaas_split'`), RECOMPUTA `obras.valorPago`, notifica
+> recebedor; `payment_failed`→`falhou`). Roteamento por PREFIXO do
+> externalReference (`xconstrucao-obra|...`) em `route.ts`, `webhook-retry-job.ts`
+> e simulador. Idempotente (transição `pendente→confirmado` + `webhook_delivery_log`).
+> Testes: 5 verdes incl. anti-duplicação de `valorPago` e regressão de fronteira
+> (assinatura não vaza p/ split); webhooks assinatura/KYC (13) verdes.
 
 ## 1. Contexto & Objetivo
 Quando o contratante paga o checkout-split (J47), o Asaas confirma via webhook (`PAYMENT_CONFIRMED`/`RECEIVED`). Esta jornada aplica esse evento: marca `pagamentos_split` como `confirmado`, seta `financeiro.status='pago'` (`metodoPagamento='asaas_split'`), recomputa `obras.valorPago` e notifica o empreiteiro. O crédito na subconta é automático pelo split do Asaas; aqui refletimos isso no caixa interno.
@@ -79,4 +88,7 @@ Reusa `pagamentos_split` (idempotência via `asaas_payment_id` unique + transiç
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- 2026-07-22: a distinção pagamento-obra vs assinatura é pelo PREFIXO do externalReference — ambos chegam como `payment_succeeded`. `parseExternalRefObra` exige `parts[0] === "xconstrucao-obra"`; o `parseExternalRef` de assinatura já exigia `=== "xconstrucao"` (não casa), então a fronteira é limpa nos dois sentidos.
+- 2026-07-22: o handler localiza o `pagamentos_split` pelo `splitId` do externalReference (PK, sempre presente), não pelo `payment.id` — o `parseWebhook` não expõe o `payment.id` do `/payments` avulso separadamente, e o splitId é mais confiável.
+- 2026-07-22: recompute de `obras.valorPago` replicado inline na transação (não reusa `quitarLancamento`, que não aceita `tx`) — replicar preserva atomicidade confirmar-split + pagar-financeiro + recompute.
+- 2026-07-22: roteamento replicado nos 3 pontos que aplicam eventos — `route.ts`, `webhook-retry-job.ts` (dead-letter) e o simulador de teste. Manter os três em sincronia.
