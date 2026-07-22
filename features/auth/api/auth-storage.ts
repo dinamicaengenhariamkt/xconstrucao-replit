@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   users,
@@ -144,6 +144,10 @@ export async function createUserWithProfile(
         .onConflictDoNothing({ target: empreiteiras.userId });
     } else if (user.role === "anunciante") {
       // J23 — identidade de anunciante vinculada à conta (unifica `anunciantes`).
+      // O índice único de anunciantes.user_id é PARCIAL (WHERE user_id IS NOT NULL,
+      // pois anunciantes legados têm user_id NULL) — o ON CONFLICT precisa repetir o
+      // mesmo predicado, senão o Postgres não casa o índice ("no unique or exclusion
+      // constraint matching the ON CONFLICT specification"). Ver bootstrap-anuncios-self-service.
       await tx
         .insert(anunciantes)
         .values({
@@ -153,7 +157,7 @@ export async function createUserWithProfile(
           telefone: user.phone ?? null,
           status: "ativo",
         })
-        .onConflictDoNothing({ target: anunciantes.userId });
+        .onConflictDoNothing({ target: anunciantes.userId, where: sql`user_id IS NOT NULL` });
     }
 
     // J23 — multi-role: registra o papel PRIMÁRIO como papel aditivo também, para

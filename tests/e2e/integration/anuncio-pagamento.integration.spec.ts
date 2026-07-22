@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { users, anuncios, pedidosAnuncio, pedidoSlots } from "@shared/db/schema";
+import { users, anuncios, pedidosAnuncio, pedidoSlots, financeiro } from "@shared/db/schema";
 import { uniqueEmail, uniqueUsername } from "../helpers";
 
 /**
@@ -88,7 +88,11 @@ async function cleanupPedido(pedidoId: string): Promise<void> {
   await db.delete(pedidoSlots).where(eq(pedidoSlots.pedidoId, pedidoId));
   await db.delete(pedidosAnuncio).where(eq(pedidosAnuncio.id, pedidoId));
   for (const s of slots) {
-    if (s.anuncioId) await db.delete(anuncios).where(eq(anuncios.id, s.anuncioId));
+    if (!s.anuncioId) continue;
+    // Apaga a receita J09 lançada na materialização antes do próprio anúncio,
+    // para não deixar resíduo no caixa da plataforma entre execuções.
+    await db.delete(financeiro).where(and(eq(financeiro.origemTipo, "anuncio"), eq(financeiro.origemId, s.anuncioId)));
+    await db.delete(anuncios).where(eq(anuncios.id, s.anuncioId));
   }
 }
 
@@ -113,6 +117,20 @@ test.describe("J31 — Pagamento de anúncio (webhook + expiração)", () => {
       expect(slot.anuncioId, "slot deve estar materializado").toBeTruthy();
       const [anuncio] = await db.select().from(anuncios).where(eq(anuncios.id, slot.anuncioId!)).limit(1);
       expect(anuncio.status).toBe("ativa");
+
+      // Critério de aceite 5 — a receita cai no caixa (J09): 1 lançamento por origem,
+      // escopo plataforma, categoria `anuncio`, entrada paga, com o valor real do slot.
+      const lancs = await db
+        .select()
+        .from(financeiro)
+        .where(and(eq(financeiro.origemTipo, "anuncio"), eq(financeiro.origemId, slot.anuncioId!)));
+      expect(lancs.length, "deve haver exatamente 1 lançamento de receita").toBe(1);
+      const [lanc] = lancs;
+      expect(lanc.escopo).toBe("plataforma");
+      expect(lanc.categoria).toBe("anuncio");
+      expect(lanc.tipo).toBe("entrada");
+      expect(lanc.status).toBe("pago");
+      expect(Number(lanc.valor)).toBe(240);
     } finally {
       await cleanupPedido(pedidoId);
     }
@@ -165,7 +183,16 @@ test.describe("J31 — Pagamento de anúncio (webhook + expiração)", () => {
       expect((await second.json()).processed).toBe(false);
 
       const slots = await db.select().from(pedidoSlots).where(eq(pedidoSlots.pedidoId, pedidoId));
-      expect(slots.filter((s) => s.anuncioId).length).toBe(1);
+      const materializados = slots.filter((s) => s.anuncioId);
+      expect(materializados.length).toBe(1);
+
+      // A race de webhook (RECEIVED + CONFIRMED) NÃO pode duplicar a receita:
+      // exatamente 1 lançamento no caixa para o anúncio materializado.
+      const lancs = await db
+        .select()
+        .from(financeiro)
+        .where(and(eq(financeiro.origemTipo, "anuncio"), eq(financeiro.origemId, materializados[0].anuncioId!)));
+      expect(lancs.length, "receita não pode duplicar entre os dois eventos").toBe(1);
     } finally {
       await cleanupPedido(pedidoId);
     }

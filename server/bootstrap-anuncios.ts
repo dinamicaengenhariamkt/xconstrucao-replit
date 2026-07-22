@@ -70,6 +70,11 @@ export async function bootstrapAnunciosSchema(): Promise<void> {
         atualizado_em TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    // Bancos criados por uma versão anterior do bootstrap (antes de `chave` ganhar
+    // UNIQUE) não recebem a constraint via CREATE TABLE IF NOT EXISTS. Garante o
+    // índice único idempotente, sem o qual o upsert por `chave` (setConfigVisivel →
+    // onConflictDoUpdate) falha com "no unique or exclusion constraint matching".
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uniq_anuncio_config_chave ON anuncio_config(chave)`);
 
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_anuncios_zona_status ON anuncios(zona, status)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_anuncios_anunciante ON anuncios(anunciante_id)`);
