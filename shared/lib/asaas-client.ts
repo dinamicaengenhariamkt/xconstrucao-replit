@@ -87,6 +87,10 @@ export interface AsaasPayment {
   status: string;
   billingType: string;
   split?: AsaasSplit[];
+  /** Página de pagamento hospedada da cobrança (PIX/Boleto/Cartão) — J47. */
+  invoiceUrl?: string;
+  /** Vencimento da cobrança (YYYY-MM-DD). */
+  dueDate?: string;
 }
 
 export interface AsaasSubscription {

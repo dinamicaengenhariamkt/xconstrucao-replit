@@ -26,3 +26,14 @@ export async function quitarPagamento(id: string, input: QuitarPagamentoInput): 
     throw new Error(body?.error || 'Erro ao registrar pagamento');
   }
 }
+
+/**
+ * J47 — inicia o pagamento via plataforma (checkout Asaas com split).
+ * Retorna a URL de pagamento hospedada para redirecionar o contratante.
+ */
+export async function checkoutSplitPagamento(id: string): Promise<string> {
+  const res = await apiRequest('POST', `/api/contratante/pagamentos/${id}/checkout-split`, {});
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.message || 'Não foi possível iniciar o pagamento via plataforma');
+  return body.url as string;
+}

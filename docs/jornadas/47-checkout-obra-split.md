@@ -1,11 +1,22 @@
 # Jornada — Checkout de Obra com Split (Iniciação)
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: **o pivô** — o dinheiro da obra passa a trafegar pela plataforma.
 > Tudo atrás da flag `MARKETPLACE_SPLIT` (default off). O fluxo manual
 > (`quitarLancamento`) permanece intacto como fallback.
+>
+> **CONCLUÍDA (2026-07-22):** `features/marketplace/split-service.ts`
+> (`iniciarCheckoutSplit`: resolve subconta aprovada, calcula split, insere
+> `pagamentos_split` pendente, chama `createPaymentWithSplit`, retorna
+> `invoiceUrl`; + `filtrarRecebedoresAptos` para a lista). Endpoint
+> `POST /api/contratante/pagamentos/[id]/checkout-split` reusa os guards do fluxo
+> manual (ownership/pago/disputa). Comissão em `platform_settings`
+> (`marketplace.percentualPlataforma`, default 10%, editável no admin) —
+> `getPercentualPlataforma`. CTA "Pagar via plataforma" na tela de pagamentos
+> (condicional a `splitElegivel`). Testes: 6 guards verdes + caminho feliz
+> skipado no ambiente (força `PAYMENT_GATEWAY=manual`). **Confirmação → J48.**
 
 ## 1. Contexto & Objetivo
 Hoje o pagamento de obra é registro manual: o contratante paga por fora e marca "pago" (`quitarLancamento`). Esta jornada adiciona a opção **"Pagar via plataforma"**: o contratante paga via checkout Asaas com `split` configurado (% plataforma + % empreiteiro), e o Asaas credita a subconta do empreiteiro. Esta jornada cobre a **iniciação** (criar o checkout + registro `pendente`); a confirmação via webhook é a J48.
@@ -80,4 +91,7 @@ Reusa `pagamentos_split` (J42). Insere registro `pendente` com snapshot de `perc
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- 2026-07-22: checkout usa `createPaymentWithSplit` (`/payments`) e redireciona para `payment.invoiceUrl` (decisão de produto — reusa o método da J43 em vez de criar `/checkouts` com split). `AsaasPayment` ganhou `invoiceUrl`/`dueDate`.
+- 2026-07-22: split modelado como `fixedValue = valorEmpreiteiro` no array `split` (o repasse é valor fixo; a comissão da plataforma fica no que sobra na conta master). `billingType: "UNDEFINED"` deixa o pagador escolher PIX/Boleto/Cartão.
+- 2026-07-22: o registro `pagamentos_split` é criado ANTES da chamada ao Asaas (para ter `splitId` no externalReference e rastro em caso de falha); se o Asaas falhar, o registro vira `falhou` (reconciliação J50).
+- 2026-07-22: a elegibilidade do CTA ("Pagar via plataforma") é resolvida no endpoint de LISTA via `filtrarRecebedoresAptos` (1 query para todos os recebedores), evitando N chamadas — exposta como `splitElegivel` por item.

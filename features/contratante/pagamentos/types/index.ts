@@ -12,6 +12,8 @@ export interface PagamentoContratante {
   status: PagamentoStatus;
   categoria: string;
   metodoPagamento: string;
+  /** J47 — true quando o pagamento pode ser feito via plataforma (split Asaas). */
+  splitElegivel?: boolean;
 }
 
 export interface PagamentosKPI {

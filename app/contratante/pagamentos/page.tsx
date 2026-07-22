@@ -27,7 +27,7 @@ import {
 import { cn } from '@shared/lib/utils';
 import { StatsCard } from '@features/contratante/dashboard/components/StatsCard';
 import { PagamentosEvolutionChart } from '@features/contratante/pagamentos/components/PagamentosEvolutionChart';
-import { usePagamentos, usePagamentosKPI, useQuitarPagamento } from '@features/contratante/pagamentos/hooks/use-pagamentos';
+import { usePagamentos, usePagamentosKPI, useQuitarPagamento, useCheckoutSplit } from '@features/contratante/pagamentos/hooks/use-pagamentos';
 import { FileUploader } from '@features/shared/components/FileUploader';
 import { Label } from '@shared/components/ui/label';
 import {
@@ -127,8 +127,24 @@ export default function PagamentosPage() {
   const [payComprovanteName, setPayComprovanteName] = useState<string | null>(null);
   const { toast } = useToast();
   const quitarMutation = useQuitarPagamento();
+  const checkoutSplit = useCheckoutSplit();
   const localPaidIds = useMemo(() => new Set<string>(), []);
   const loadingId = quitarMutation.isPending ? quitarMutation.variables?.id ?? null : null;
+  const splitLoadingId = checkoutSplit.isPending ? checkoutSplit.variables ?? null : null;
+
+  // J47 — inicia o pagamento via plataforma e redireciona para a página do Asaas.
+  async function handlePagarViaPlataforma(id: string) {
+    try {
+      const url = await checkoutSplit.mutateAsync(id);
+      window.location.assign(url);
+    } catch (err) {
+      toast({
+        title: 'Pagamento via plataforma indisponível',
+        description: err instanceof Error ? err.message : 'Tente novamente ou use o pagamento manual.',
+        variant: 'destructive',
+      });
+    }
+  }
 
   function openPagamentoDialog(p: PagamentoContratante) {
     setSelectedPagamento(p);
@@ -750,15 +766,36 @@ export default function PagamentosPage() {
                     >
                       {formatCurrency(pag.valor)}
                     </p>
+                    {pag.splitElegivel && (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePagarViaPlataforma(pag.id)}
+                        disabled={splitLoadingId === pag.id}
+                        className="text-xs font-bold whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+                        data-testid={`pendente-pagar-plataforma-${pag.id}`}
+                      >
+                        {splitLoadingId === pag.id ? (
+                          <>
+                            <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            Redirecionando...
+                          </>
+                        ) : (
+                          'Pagar via plataforma'
+                        )}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
+                      variant={pag.splitElegivel ? 'outline' : 'default'}
                       onClick={() => openPagamentoDialog(pag)}
                       disabled={loadingId === pag.id}
                       className={cn(
                         'text-xs font-bold whitespace-nowrap',
-                        isAtrasado
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white',
+                        pag.splitElegivel
+                          ? ''
+                          : isAtrasado
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-amber-600 hover:bg-amber-700 text-white',
                       )}
                       data-testid={`pendente-marcar-pago-${pag.id}`}
                     >
@@ -767,6 +804,8 @@ export default function PagamentosPage() {
                           <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                           Salvando...
                         </>
+                      ) : pag.splitElegivel ? (
+                        'Pagar manual'
                       ) : (
                         'Marcar como pago'
                       )}

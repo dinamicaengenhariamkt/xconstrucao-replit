@@ -50,6 +50,10 @@ const DEFAULTS: PlatformSettings = {
   legal: {
     reconsentModo: "avisar",
   },
+  // J47 — comissão da plataforma no split de pagamento de obra (percentual).
+  marketplace: {
+    percentualPlataforma: "10",
+  },
 };
 
 const TTL_MS = 30_000;
@@ -117,6 +121,18 @@ export async function getSenhaMinima(): Promise<number> {
   const seguranca = await getPlatformSetting("seguranca");
   const raw = Number(seguranca.senhaMinima);
   return Number.isFinite(raw) ? Math.max(8, raw) : 8;
+}
+
+/**
+ * J47 — Percentual de comissão da plataforma no split de obra
+ * (`marketplace.percentualPlataforma`). Faixa válida 0–100; fail-open → 10.
+ * O valor é congelado (snapshot) em `pagamentos_split.percentual_plataforma`
+ * no momento do checkout — mudar depois não altera cobranças já iniciadas.
+ */
+export async function getPercentualPlataforma(): Promise<number> {
+  const mkt = await getPlatformSetting("marketplace");
+  const raw = Number(mkt.percentualPlataforma);
+  return Number.isFinite(raw) && raw >= 0 && raw <= 100 ? raw : 10;
 }
 
 /**

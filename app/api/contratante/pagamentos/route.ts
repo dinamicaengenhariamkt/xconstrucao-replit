@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listLancamentosContratante, type LancamentoRow } from "@features/financeiro/lancamentos-service";
+import { filtrarRecebedoresAptos } from "@features/marketplace/split-service";
 
 function statusToContratante(s: LancamentoRow["status"]): "pago" | "pendente" | "atrasado" | "agendado" {
   if (s === "cancelado") return "pendente";
@@ -18,6 +19,18 @@ export async function GET(request: NextRequest) {
 
   const lancamentos = await listLancamentosContratante(guard.user.id);
   const today = new Date().toISOString().slice(0, 10);
+
+  // J47 — quais recebedores estão aptos a receber via split (subconta aprovada).
+  // Uma query só para todos os recebedores de lançamentos ainda não pagos.
+  const recebedores = Array.from(
+    new Set(
+      lancamentos
+        .filter((l) => l.status !== "pago" && l.status !== "cancelado" && l.recebedorUserId)
+        .map((l) => l.recebedorUserId as string),
+    ),
+  );
+  const aptos = await filtrarRecebedoresAptos(recebedores);
+
   const payload = lancamentos
     .filter((l) => l.status !== "cancelado")
     .map((l) => {
@@ -37,6 +50,8 @@ export async function GET(request: NextRequest) {
         status,
         categoria: l.categoria ?? "Outros",
         metodoPagamento: l.metodoPagamento ?? "",
+        // J47 — só true quando o pagamento pode ser feito via plataforma (split).
+        splitElegivel: status !== "pago" && !!l.recebedorUserId && aptos.has(l.recebedorUserId),
       };
     });
 

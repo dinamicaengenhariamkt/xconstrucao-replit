@@ -3,6 +3,7 @@ import {
   getPagamentos,
   getPagamentosKPI,
   quitarPagamento,
+  checkoutSplitPagamento,
   type QuitarPagamentoInput,
 } from '../api/pagamentos-service';
 import { QUERY_CONFIG } from '../constants';
@@ -35,5 +36,12 @@ export function useQuitarPagamento() {
       queryClient.invalidateQueries({ queryKey: ['contratante', 'pagamentos'] });
       queryClient.invalidateQueries({ queryKey: ['contratante', 'pagamentos', 'kpi'] });
     },
+  });
+}
+
+/** J47 — inicia o checkout via plataforma e retorna a URL de pagamento. */
+export function useCheckoutSplit() {
+  return useMutation({
+    mutationFn: (id: string) => checkoutSplitPagamento(id),
   });
 }
