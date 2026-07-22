@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPlatformSetting } from "@features/admin/platform-settings/server/settings-reader";
+import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
 
 /**
  * GET /api/plataforma/public-config — config pública NÃO-sensível (J26).
@@ -20,6 +21,9 @@ export async function GET() {
     // flags de módulo: default ON; só `false` explícito desliga.
     anuncios: plataforma.anuncios !== false,
     faq: plataforma.faq !== false,
+    // J53 — cobrança real de anúncio ligada? (gate env AD_PAYMENT_GATEWAY + gateway
+    // Asaas). Default false = protótipo; a UI só oferece "Pagar" quando true.
+    adPaymentEnabled: isAdPaymentEnabled(),
   };
 
   const r = NextResponse.json(body);

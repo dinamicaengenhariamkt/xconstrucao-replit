@@ -16,6 +16,7 @@ import { userHasRoleClient } from '@features/auth/store/auth-store';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { AnuncianteLayout } from '@features/anunciante/components/AnuncianteLayout';
 import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
+import { OnboardingGate } from '@features/onboarding/components/OnboardingGate';
 import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function AnuncianteRootLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,7 @@ export default function AnuncianteRootLayout({ children }: { children: React.Rea
 
   return (
     <AuthSessionGuard>
+      <OnboardingGate />
       <AnuncianteLayout>
         <EmailVerificationBanner />
         {children}

@@ -82,11 +82,11 @@ export interface FaqPublicItem {
 }
 
 /**
- * J32 — leitura por visão (contratante/empreiteiro). Inclui as perguntas marcadas
- * `ambos`. Só perguntas ativas. Ordenado por categoria + ordem.
+ * J32/J53 — leitura por visão (contratante/empreiteiro/anunciante). Inclui as
+ * perguntas marcadas `ambos`. Só perguntas ativas. Ordenado por categoria + ordem.
  */
 export async function listarFaqPorVisao(
-  visao: "contratante" | "empreiteiro",
+  visao: "contratante" | "empreiteiro" | "anunciante",
 ): Promise<FaqPublicItem[]> {
   const rows = await db
     .select({

@@ -17,7 +17,7 @@ const patchSchema = z.object({
   question: z.string().trim().min(10).max(500).optional(),
   answer: z.string().trim().min(20).max(5000).optional(),
   category: z.string().trim().min(1).max(80).optional(),
-  visao: z.enum(["contratante", "empreiteiro", "ambos"]).optional(),
+  visao: z.enum(["contratante", "empreiteiro", "anunciante", "ambos"]).optional(),
   ordem: z.number().int().min(0).max(9999).optional(),
   ativo: z.boolean().optional(),
 });

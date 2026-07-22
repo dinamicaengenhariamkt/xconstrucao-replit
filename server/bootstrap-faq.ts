@@ -3,7 +3,7 @@ import { db } from "@shared/db/db";
 
 /**
  * Bootstrap idempotente do Admin FAQ.
- * - Enum: faq_visao (contratante|empreiteiro|ambos).
+ * - Enum: faq_visao (contratante|empreiteiro|anunciante|ambos).
  * - Tabela: faq (categoria TEXT p/ forward-compat).
  * - Seed canônico inline (ids estáveis afq-*), idempotente por ON CONFLICT (id).
  *   O seed vive aqui — não depende do módulo de mock do front, que é removido.
@@ -14,7 +14,7 @@ interface FaqSeed {
   question: string;
   answer: string;
   category: string;
-  visao: "contratante" | "empreiteiro" | "ambos";
+  visao: "contratante" | "empreiteiro" | "anunciante" | "ambos";
   ordem: number;
   ativo: boolean;
   criadoEm: string;
@@ -364,12 +364,77 @@ const FAQ_SEED: FaqSeed[] = [
     criadoEm: "2025-07-15",
     atualizadoEm: "2026-01-30",
   },
+
+  // ── Anunciante (J53) — pré-criadas, editáveis pelo admin ──────────────────
+  {
+    id: "afq-anun1",
+    question: "Como crio um anúncio na plataforma?",
+    answer:
+      'Acesse "Novo pedido de anúncio" no seu painel, escolha um ou mais locais (zonas) onde o anúncio vai aparecer, monte o criativo com a pré-visualização ao vivo e envie o pedido. Ele passa por uma moderação antes de entrar no ar.',
+    category: "anuncios",
+    visao: "anunciante",
+    ordem: 1,
+    ativo: true,
+    criadoEm: "2026-07-22",
+    atualizadoEm: "2026-07-22",
+  },
+  {
+    id: "afq-anun2",
+    question: "O que são as zonas de exibição e como escolho?",
+    answer:
+      "Zonas são os espaços onde seu anúncio pode aparecer (por exemplo, a vitrine do mercado ou seções específicas do app). Cada zona tem um preço por dia e um período de veiculação. Algumas zonas comportam vários anunciantes ao mesmo tempo; outras são exclusivas — nestas, vale quem reservar primeiro para o período.",
+    category: "anuncios",
+    visao: "anunciante",
+    ordem: 2,
+    ativo: true,
+    criadoEm: "2026-07-22",
+    atualizadoEm: "2026-07-22",
+  },
+  {
+    id: "afq-anun3",
+    question: "Por que meu pedido precisa ser aprovado antes de ir ao ar?",
+    answer:
+      "Todo anúncio passa por uma moderação para garantir que o criativo está adequado e dentro das regras da plataforma. Assim que aprovado, você é avisado e, quando a cobrança está ativa, recebe o link para pagamento. O anúncio entra no ar após a confirmação.",
+    category: "anuncios",
+    visao: "anunciante",
+    ordem: 3,
+    ativo: true,
+    criadoEm: "2026-07-22",
+    atualizadoEm: "2026-07-22",
+  },
+  {
+    id: "afq-anun4",
+    question: "Como funciona o pagamento do anúncio?",
+    answer:
+      'Depois que o pedido é aprovado, aparece o botão "Pagar" no seu pedido. Você informa um CPF ou CNPJ e é levado ao checkout seguro. Assim que o pagamento é confirmado, o anúncio é publicado automaticamente no período escolhido. O anúncio só passa a veicular após o pagamento confirmado.',
+    category: "anuncios",
+    visao: "anunciante",
+    ordem: 4,
+    ativo: true,
+    criadoEm: "2026-07-22",
+    atualizadoEm: "2026-07-22",
+  },
+  {
+    id: "afq-anun5",
+    question: "Posso pausar ou acompanhar meus anúncios depois de publicados?",
+    answer:
+      'Sim. Em "Meus Anúncios" você acompanha o status de cada pedido e dos anúncios publicados. Anúncios ativos podem ser pausados e reativados — exceto anúncios já pagos, que veiculam do início ao fim do período contratado.',
+    category: "anuncios",
+    visao: "anunciante",
+    ordem: 5,
+    ativo: true,
+    criadoEm: "2026-07-22",
+    atualizadoEm: "2026-07-22",
+  },
 ];
 
 export async function bootstrapFaqSchema(): Promise<void> {
   await db.execute(
     sql`DO $$ BEGIN CREATE TYPE faq_visao AS ENUM ('contratante','empreiteiro','ambos'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
   );
+  // J53 — adiciona a visão 'anunciante' em bancos criados antes dela existir.
+  // ADD VALUE é idempotente com IF NOT EXISTS e não recria o tipo.
+  await db.execute(sql`ALTER TYPE faq_visao ADD VALUE IF NOT EXISTS 'anunciante'`);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS faq (

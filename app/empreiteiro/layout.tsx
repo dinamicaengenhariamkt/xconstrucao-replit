@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { EmpreiteiroLayout } from '@features/empreiteiro/components/EmpreiteiroLayout';
 import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
+import { PerfilIncompletoBanner } from '@features/perfil/components/PerfilIncompletoBanner';
+import { OnboardingGate } from '@features/onboarding/components/OnboardingGate';
 import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function EmpreiteiroLayoutWrapper({
@@ -41,8 +43,10 @@ export default function EmpreiteiroLayoutWrapper({
 
   return (
     <AuthSessionGuard>
+      <OnboardingGate />
       <EmpreiteiroLayout>
         <EmailVerificationBanner />
+        <PerfilIncompletoBanner />
         {children}
       </EmpreiteiroLayout>
     </AuthSessionGuard>

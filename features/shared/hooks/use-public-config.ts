@@ -7,6 +7,7 @@ export interface PublicConfig {
   descricao: string;
   anuncios: boolean;
   faq: boolean;
+  adPaymentEnabled: boolean;
 }
 
 const DEFAULTS: PublicConfig = {
@@ -14,6 +15,8 @@ const DEFAULTS: PublicConfig = {
   descricao: "Plataforma de gestão de obras e conexão entre contratantes e empreiteiras.",
   anuncios: true,
   faq: true,
+  // fail-safe: nunca prometer cobrança real que não está ligada.
+  adPaymentEnabled: false,
 };
 
 /**

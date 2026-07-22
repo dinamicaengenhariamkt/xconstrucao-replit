@@ -1,8 +1,12 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { loginAs, uniqueEmail, uniqueUsername } from "../helpers";
+import { eq } from "drizzle-orm";
+import { db } from "@shared/db/db";
+import { users } from "@shared/db/schema";
+import { loginAs, uniqueEmail, uniqueUsername, SEED_ADMIN_EMAIL } from "../helpers";
 
 /**
- * Integração (J51) — Wizard de Onboarding (primeiro acesso).
+ * Integração (J51/J54) — Wizard de Onboarding (primeiro acesso) + validação
+ * transversal das personas.
  *
  * Cobre o contrato do gate `users.onboarding_concluido`:
  *   Fluxo 1 — Usuário recém-registrado nasce com onboardingConcluido=false.
@@ -10,6 +14,9 @@ import { loginAs, uniqueEmail, uniqueUsername } from "../helpers";
  *   Fluxo 3 — Idempotência: chamar de novo mantém true, sem erro.
  *   Fluxo 4 — Passo 1 grava PF/PJ explícito via PATCH /api/perfil/contratante.
  *   Fluxo 5 — Guard: anônimo não pode concluir (401).
+ *   J54.a — cada persona (contratante/empreiteiro/anunciante) nasce false no banco.
+ *   J54.b — empreiteiro criado por ADMIN também nasce false (cai no wizard).
+ *   J54.c — FAQ do anunciante responde (visão nova; item de menu não é mais 404).
  *
  * Isolamento: cada fluxo cria um usuário E2E fresh (nunca toca no seed).
  * Pré-requisitos: E2E_TEST_AUTH=1; seed padrão.
@@ -19,17 +26,19 @@ const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
 const CPF_VALIDO = "52998224725";
 const SENHA = "Xconstr@E2E2026!";
 
-async function registrarContratante(
+async function registrarPersona(
   request: APIRequestContext,
+  role: "contratante" | "empreiteiro" | "anunciante",
+  tag: string,
 ): Promise<{ email: string }> {
-  const email = uniqueEmail("onb-ctr");
+  const email = uniqueEmail(`onb-${tag}`);
   const res = await request.post("/api/auth/register", {
     data: {
-      name: "E2E Onboarding Contratante",
+      name: `E2E Onboarding ${role} ${tag}`,
       email,
-      username: uniqueUsername("onbctr"),
+      username: uniqueUsername(`onb${tag}`),
       password: SENHA,
-      role: "contratante",
+      role,
       phone: "11966660000",
       cpfCnpj: CPF_VALIDO,
       acceptTerms: true,
@@ -38,9 +47,33 @@ async function registrarContratante(
   });
   expect(
     [200, 201].includes(res.status()),
-    `registro E2E contratante deve funcionar, recebeu ${res.status()}`,
+    `registro E2E ${role} deve funcionar, recebeu ${res.status()}`,
   ).toBeTruthy();
   return { email };
+}
+
+/** Marca o email como verificado (o cadastro nasce sem verificar; rotas com
+ *  requireVerifiedUser exigem isso). Espelha o clique no link de verificação. */
+async function verificarEmail(email: string): Promise<void> {
+  await db.update(users).set({ emailVerified: new Date() }).where(eq(users.email, email));
+}
+
+async function registrarContratante(request: APIRequestContext): Promise<{ email: string }> {
+  return registrarPersona(request, "contratante", "ctr");
+}
+
+/** Lê a flag de onboarding direto no banco pelo email. */
+async function onboardingFlag(email: string): Promise<boolean | undefined> {
+  const [row] = await db
+    .select({ v: users.onboardingConcluido })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return row?.v;
+}
+
+async function cleanupUser(email: string): Promise<void> {
+  await db.delete(users).where(eq(users.email, email)).catch(() => {});
 }
 
 test.describe("J51 — Onboarding wizard gate", () => {
@@ -93,5 +126,68 @@ test.describe("J51 — Onboarding wizard gate", () => {
       headers: { cookie: "" },
     });
     expect(res.status()).toBe(401);
+  });
+
+  // ── J54 — validação transversal das personas ─────────────────────────────
+
+  test("J54.a — cada persona nasce onboarding_concluido=false (cai no wizard)", async ({ request }) => {
+    const personas = [
+      { role: "contratante" as const, tag: "vc" },
+      { role: "empreiteiro" as const, tag: "ve" },
+      { role: "anunciante" as const, tag: "va" },
+    ];
+    const emails: string[] = [];
+    try {
+      for (const p of personas) {
+        const { email } = await registrarPersona(request, p.role, p.tag);
+        emails.push(email);
+        expect(await onboardingFlag(email), `${p.role} deve nascer com wizard pendente`).toBe(false);
+      }
+    } finally {
+      for (const e of emails) await cleanupUser(e);
+    }
+  });
+
+  test("J54.b — empreiteiro criado por ADMIN também nasce false", async ({ request }) => {
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    const email = uniqueEmail("onb-admincria");
+    try {
+      const res = await request.post("/api/admin/usuarios", {
+        data: {
+          name: "E2E Empreiteiro Criado Por Admin",
+          email,
+          role: "empreiteiro",
+          senhaModo: "random",
+        },
+      });
+      expect([200, 201].includes(res.status()), `admin cria usuário (${res.status()})`).toBeTruthy();
+      // Nasce com o wizard pendente, igual ao cadastro público (prova requisito J54.b).
+      expect(await onboardingFlag(email)).toBe(false);
+    } finally {
+      await cleanupUser(email);
+    }
+  });
+
+  test("J54.c — FAQ do anunciante responde (visão nova, item de menu resolve)", async ({ request }) => {
+    const { email } = await registrarPersona(request, "anunciante", "faq");
+    try {
+      await verificarEmail(email); // /api/anunciante/faq exige requireVerifiedUser
+      await loginAs(request, email);
+      const res = await request.get("/api/anunciante/faq");
+      expect(res.ok(), `GET /api/anunciante/faq deve responder ok (${res.status()})`).toBeTruthy();
+      const items = (await res.json()) as Array<{ id: string; question: string; category: string }>;
+      expect(Array.isArray(items)).toBeTruthy();
+      // As FAQs semeadas da visão 'anunciante' devem aparecer.
+      expect(items.some((i) => i.category === "anuncios")).toBeTruthy();
+    } finally {
+      await cleanupUser(email);
+    }
+  });
+
+  test("J54.d — public-config expõe adPaymentEnabled (booleano)", async ({ request }) => {
+    const res = await request.get("/api/plataforma/public-config");
+    expect(res.ok()).toBeTruthy();
+    const body = (await res.json()) as { adPaymentEnabled?: unknown };
+    expect(typeof body.adPaymentEnabled).toBe("boolean");
   });
 });

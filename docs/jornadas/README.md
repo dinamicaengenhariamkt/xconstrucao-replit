@@ -61,6 +61,9 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 49 | [Saldo e Saque do Empreiteiro (Transferência)](49-saldo-saque-empreiteiro.md) | empreiteiro | 10 | concluída | média |
 | 50 | [Reconciliação & Rollout do Split](50-reconciliacao-rollout-split.md) | admin, sistema | 10 | concluída | média |
 | 51 | [Wizard de Onboarding (Primeiro Acesso)](51-wizard-onboarding.md) | contratante, empreiteiro, anunciante | 11 | pronto | alta |
+| 52 | [Perfil Incompleto & Continuidade de Onboarding](52-perfil-incompleto-continuidade-onboarding.md) | contratante, empreiteiro | 11 | pronto | alta |
+| 53 | [UI de Pagamento de Anúncios & FAQ do Anunciante](53-ui-pagamento-anuncios-faq.md) | anunciante, admin | 11 | pronto | alta |
+| 54 | [Validação Ponta-a-Ponta das 3 Personas & Specs](54-validacao-personas-specs.md) | todas | 11 | em andamento | alta |
 
 ---
 

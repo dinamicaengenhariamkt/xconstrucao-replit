@@ -5,8 +5,10 @@ import { PageHeader } from '@features/shared/components/PageHeader';
 import { Button } from '@shared/components/ui/button';
 import { RiAddLine, RiMegaphoneLine } from 'react-icons/ri';
 import { MeusAnunciosLista } from '@features/anuncios/self-service/components/MeusAnunciosLista';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 
 export default function AnuncianteDashboardPage() {
+  const { config } = usePublicConfig();
   return (
     <div className="p-6 md:p-12 space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -24,7 +26,9 @@ export default function AnuncianteDashboardPage() {
           <p className="font-semibold text-gray-800 dark:text-gray-100">Anuncie onde seu público está</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             Escolha os locais, monte o criativo com pré-visualização ao vivo e acompanhe a aprovação.
-            A cobrança é simulada nesta fase — você não será cobrado.
+            {config.adPaymentEnabled
+              ? ' Após a aprovação, você paga com segurança para o anúncio entrar no ar.'
+              : ' A cobrança é simulada nesta fase — você não será cobrado.'}
           </p>
         </div>
       </div>

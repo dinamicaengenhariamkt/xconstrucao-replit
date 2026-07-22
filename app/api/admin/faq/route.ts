@@ -24,7 +24,7 @@ const faqSchema = z.object({
   question: z.string().trim().min(10, "Pergunta muito curta").max(500),
   answer: z.string().trim().min(20, "Resposta muito curta").max(5000),
   category: z.string().trim().min(1, "Categoria obrigatória").max(80),
-  visao: z.enum(["contratante", "empreiteiro", "ambos"]),
+  visao: z.enum(["contratante", "empreiteiro", "anunciante", "ambos"]),
   ordem: z.number().int().min(0).max(9999),
   ativo: z.boolean(),
 });

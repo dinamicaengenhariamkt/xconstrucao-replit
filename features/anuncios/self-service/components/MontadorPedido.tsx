@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@shared/components/ui/button';
 import { useToast } from '@shared/hooks/use-toast';
 import { RiAddLine, RiShoppingBag3Line } from 'react-icons/ri';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { SlotEditor } from './SlotEditor';
 import type { SlotDraft, ZonaOption } from './types';
 
@@ -44,6 +45,7 @@ function novoSlot(zonas: ZonaOption[]): SlotDraft {
 export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { config } = usePublicConfig();
   const [zonas, setZonas] = useState<ZonaOption[]>([]);
   const [slots, setSlots] = useState<SlotDraft[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -141,18 +143,20 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
         <RiAddLine className="w-4 h-4 mr-1" /> Adicionar outro local
       </Button>
 
-      {/* Checkout-protótipo */}
+      {/* Checkout: no modo pago o pagamento vem após a aprovação (moderar-antes-de-pagar). */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-900 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500">Total estimado ({slots.length} local{slots.length !== 1 ? 'is' : ''})</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            <span className="text-xs font-normal text-amber-600 ml-2">simulação — sem cobrança real</span>
+            <span className="text-xs font-normal text-amber-600 ml-2">
+              {config.adPaymentEnabled ? 'você paga após a aprovação' : 'simulação — sem cobrança real'}
+            </span>
           </p>
         </div>
         <Button type="button" onClick={enviar} disabled={!podeEnviar || enviando} size="lg">
           <RiShoppingBag3Line className="w-5 h-5 mr-2" />
-          {enviando ? 'Processando…' : 'Confirmar aquisição'}
+          {enviando ? 'Processando…' : config.adPaymentEnabled ? 'Enviar pedido' : 'Confirmar aquisição'}
         </Button>
       </div>
     </div>

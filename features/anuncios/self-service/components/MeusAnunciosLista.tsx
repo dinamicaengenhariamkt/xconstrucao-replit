@@ -5,6 +5,7 @@ import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
 import { useToast } from '@shared/hooks/use-toast';
 import { RiPauseLine, RiPlayLine, RiMegaphoneLine } from 'react-icons/ri';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { PedidoStatusCard } from './PedidoStatusCard';
 
 interface MeuAnuncio {
@@ -24,6 +25,7 @@ interface Pedido {
   motivoRecusa: string | null;
   valorTotal: string;
   cobrancaStatus: string;
+  invoiceUrl?: string | null;
   criadoEm: string;
   slots: { id: string; zona: string; titulo: string; template: string }[];
 }
@@ -43,6 +45,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
  */
 export function MeusAnunciosLista() {
   const { toast } = useToast();
+  const { config } = usePublicConfig();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [anuncios, setAnuncios] = useState<MeuAnuncio[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +133,12 @@ export function MeusAnunciosLista() {
         ) : (
           <div className="grid gap-3">
             {pedidos.map((p) => (
-              <PedidoStatusCard key={p.id} pedido={p} />
+              <PedidoStatusCard
+                key={p.id}
+                pedido={p}
+                adPaymentEnabled={config.adPaymentEnabled}
+                onPago={carregar}
+              />
             ))}
           </div>
         )}

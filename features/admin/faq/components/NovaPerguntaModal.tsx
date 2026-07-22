@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RiQuestionLine, RiUserLine, RiToolsLine, RiGroupLine } from 'react-icons/ri';
+import { RiQuestionLine, RiUserLine, RiToolsLine, RiGroupLine, RiMegaphoneLine } from 'react-icons/ri';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ const novaPerguntaSchema = z.object({
   question: z.string().min(10, 'Mínimo de 10 caracteres'),
   answer: z.string().min(20, 'Mínimo de 20 caracteres'),
   category: z.string().min(1, 'Selecione uma categoria'),
-  visao: z.enum(['contratante', 'empreiteiro', 'ambos'] as const),
+  visao: z.enum(['contratante', 'empreiteiro', 'anunciante', 'ambos'] as const),
   ordem: z.number().int().min(1, 'Ordem deve ser pelo menos 1'),
   ativo: z.boolean(),
 });
@@ -70,6 +70,14 @@ const VISAO_OPTIONS: { value: FAQVisao; label: string; description: string; icon
     icon: RiToolsLine,
     color: 'border-transparent bg-gray-100 dark:bg-gray-800 hover:border-green-300/50',
     selectedColor: 'border-green-400 bg-green-50 dark:bg-green-900/20',
+  },
+  {
+    value: 'anunciante',
+    label: 'Anunciante',
+    description: 'Visível para anunciantes',
+    icon: RiMegaphoneLine,
+    color: 'border-transparent bg-gray-100 dark:bg-gray-800 hover:border-blue-300/50',
+    selectedColor: 'border-blue-400 bg-blue-50 dark:bg-blue-900/20',
   },
   {
     value: 'ambos',

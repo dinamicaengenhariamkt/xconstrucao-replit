@@ -87,11 +87,14 @@ async function patchJSON<T>(url: string, body: unknown): Promise<T> {
 const KEY_C = ['perfil', 'contratante'] as const;
 const KEY_E = ['perfil', 'empreiteiro'] as const;
 
-export function usePerfilContratante() {
+export function usePerfilContratante(options?: { enabled?: boolean }) {
   return useQuery<PerfilContratante>({
     queryKey: KEY_C,
     queryFn: () => getJSON<PerfilContratante>('/api/perfil/contratante'),
     staleTime: 5 * 60 * 1000,
+    // `enabled` evita disparar o GET quando o consumidor não é contratante
+    // (ex.: banner global montado para outra persona → 403).
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -104,11 +107,13 @@ export function useUpdatePerfilContratante() {
   });
 }
 
-export function usePerfilEmpreiteiro() {
+export function usePerfilEmpreiteiro(options?: { enabled?: boolean }) {
   return useQuery<PerfilEmpreiteiro>({
     queryKey: KEY_E,
     queryFn: () => getJSON<PerfilEmpreiteiro>('/api/perfil/empreiteiro'),
     staleTime: 5 * 60 * 1000,
+    // `enabled` evita disparar o GET quando o consumidor não é empreiteiro.
+    enabled: options?.enabled ?? true,
   });
 }
 

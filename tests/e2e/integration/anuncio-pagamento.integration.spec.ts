@@ -2,7 +2,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 import { and, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { users, anuncios, pedidosAnuncio, pedidoSlots, financeiro } from "@shared/db/schema";
-import { uniqueEmail, uniqueUsername } from "../helpers";
+import { uniqueEmail, uniqueUsername, loginAs } from "../helpers";
 
 /**
  * Integração (J31) — Pagamento real de anúncio (webhook + expiração).
@@ -220,6 +220,41 @@ test.describe("J31 — Pagamento de anúncio (webhook + expiração)", () => {
       expect(anuncio.status).toBe("expirada");
     } finally {
       await cleanupPedido(pedidoId);
+    }
+  });
+
+  test("POST /pagar retorna 404 quando a cobrança de anúncio está desabilitada (modo manual)", async ({ request }) => {
+    // A suíte roda com PAYMENT_GATEWAY=manual → isAdPaymentEnabled()=false. O
+    // endpoint de pagamento não existe nesse modo (o pedido "adquire" no protótipo).
+    const email = uniqueEmail("anuncio-pg-flagoff");
+    const reg = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Anunciante FlagOff",
+        email,
+        username: uniqueUsername("anpgflag"),
+        password: "Xconstr@E2E2026!",
+        role: "anunciante",
+        phone: "11955550000",
+        acceptTerms: true,
+        ...ANTI_BOT,
+      },
+    });
+    expect([200, 201].includes(reg.status())).toBeTruthy();
+    const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+    // /pagar exige requireVerifiedUser; o cadastro nasce sem verificar.
+    await db.update(users).set({ emailVerified: new Date() }).where(eq(users.id, u.id));
+    const { pedidoId } = await seedPedidoAprovado(u.id, "flagoff");
+
+    try {
+      await loginAs(request, email);
+      const res = await request.post(`/api/anuncios/pedidos/${pedidoId}/pagar`, {
+        headers: { "content-type": "application/json" },
+        data: { cpfCnpj: "529.982.247-25" },
+      });
+      expect(res.status(), "sem cobrança real, /pagar responde 404").toBe(404);
+    } finally {
+      await cleanupPedido(pedidoId);
+      await db.delete(users).where(eq(users.id, u.id)).catch(() => {});
     }
   });
 });

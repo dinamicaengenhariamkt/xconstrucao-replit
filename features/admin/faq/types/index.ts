@@ -1,4 +1,4 @@
-export type FAQVisao = 'contratante' | 'empreiteiro' | 'ambos';
+export type FAQVisao = 'contratante' | 'empreiteiro' | 'anunciante' | 'ambos';
 
 export interface AdminFAQItem {
   id: string;

@@ -1311,7 +1311,7 @@ export type InsertPedidoPagamentoEvento = typeof pedidoPagamentoEventos.$inferIn
 // migration. `visao` segmenta por persona. Schema criado idempotente em
 // server/bootstrap-faq.ts (com seed dos itens canônicos).
 // ---------------------------------------------------------------------------
-export const faqVisaoEnum = pgEnum("faq_visao", ["contratante", "empreiteiro", "ambos"]);
+export const faqVisaoEnum = pgEnum("faq_visao", ["contratante", "empreiteiro", "anunciante", "ambos"]);
 
 export const faq = pgTable(
   "faq",

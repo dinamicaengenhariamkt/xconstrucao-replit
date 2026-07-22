@@ -11,6 +11,8 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { ContratanteLayout } from '@features/contratante/components/ContratanteLayout';
 import { EmailVerificationBanner } from '@features/auth/components/EmailVerificationBanner';
+import { PerfilIncompletoBanner } from '@features/perfil/components/PerfilIncompletoBanner';
+import { OnboardingGate } from '@features/onboarding/components/OnboardingGate';
 import { AuthSessionGuard } from '@features/auth/components/AuthSessionGuard';
 
 export default function ContratanteRootLayout({
@@ -50,8 +52,10 @@ export default function ContratanteRootLayout({
 
   return (
     <AuthSessionGuard>
+      <OnboardingGate />
       <ContratanteLayout>
         <EmailVerificationBanner />
+        <PerfilIncompletoBanner />
         {children}
       </ContratanteLayout>
     </AuthSessionGuard>
