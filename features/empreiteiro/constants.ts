@@ -9,6 +9,7 @@ import {
   RiWalletLine,
   RiFileList3Line,
   RiVipCrownLine,
+  RiMoneyDollarCircleLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -19,6 +20,7 @@ export const EMPREITEIRO_NAV_ITEMS: NavItem[] = [
   { title: 'Obras Salvas', url: '/empreiteiro/obras-salvas', icon: RiBookmarkLine },
   { title: 'Minhas Candidaturas', url: '/empreiteiro/minhas-candidaturas', icon: RiFileList3Line },
   { title: 'Meus Recebimentos', url: '/empreiteiro/pagamentos', icon: RiWalletLine },
+  { title: 'Meu Saldo', url: '/empreiteiro/saldo', icon: RiMoneyDollarCircleLine },
   { title: 'xchat', url: '/empreiteiro/chat', icon: RiChat3Line },
   { title: 'Planos', url: '/empreiteiro/planos', icon: RiVipCrownLine },
 ];

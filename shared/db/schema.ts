@@ -1081,6 +1081,38 @@ export type InsertAsaasSubconta = typeof asaasSubcontas.$inferInsert;
 export type PagamentoSplit = typeof pagamentosSplit.$inferSelect;
 export type InsertPagamentoSplit = typeof pagamentosSplit.$inferInsert;
 
+// J49 — Saques do empreiteiro (transferência da subconta Asaas para o banco).
+// Histórico local espelhando /transfers do Asaas; base para reconciliação (J50).
+export const saqueStatusEnum = pgEnum("saque_status", [
+  "pendente",
+  "concluido",
+  "falhou",
+]);
+
+export const saques = pgTable(
+  "saques",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    valor: numeric("valor", { precision: 15, scale: 2 }).notNull(),
+    status: saqueStatusEnum("status").notNull().default("pendente"),
+    // id da transferência no Asaas (/transfers) — auditoria/reconciliação.
+    asaasTransferId: text("asaas_transfer_id"),
+    // método usado: PIX | TED (snapshot dos dados de recebimento da subconta).
+    metodo: text("metodo"),
+    erro: text("erro"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxUser: index("idx_saques_user").on(t.userId),
+    idxTransfer: index("idx_saques_transfer").on(t.asaasTransferId),
+  }),
+);
+
+export type Saque = typeof saques.$inferSelect;
+export type InsertSaque = typeof saques.$inferInsert;
+
 // ---------------------------------------------------------------------------
 // J12 — Gestão de Anúncios. Campanhas internas exibidas em zonas (sidebar/banner)
 // na landing e dashboards, com tracking de impressão/clique e KPIs. Entrada de

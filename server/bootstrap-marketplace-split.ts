@@ -79,14 +79,33 @@ export async function bootstrapMarketplaceSplitSchema(): Promise<void> {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pagamentos_split_obra_status ON pagamentos_split(obra_id, status)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pagamentos_split_financeiro ON pagamentos_split(financeiro_id)`);
 
+    // J49 — histórico local de saques (transferências da subconta para o banco).
+    await db.execute(sql`DO $$ BEGIN CREATE TYPE saque_status AS ENUM ('pendente','concluido','falhou'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS saques (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        valor NUMERIC(15,2) NOT NULL,
+        status saque_status NOT NULL DEFAULT 'pendente',
+        asaas_transfer_id TEXT,
+        metodo TEXT,
+        erro TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_saques_user ON saques(user_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_saques_transfer ON saques(asaas_transfer_id)`);
+
     // Falha cedo se algum CREATE/ALTER silenciosamente não aplicar (defesa Neon).
     await assertColumns("users", ["cpf_cnpj", "asaas_customer_id"]);
     await assertColumns("asaas_subcontas", ["user_id", "wallet_id", "asaas_api_key_enc", "onboarding_status"]);
     await assertColumns("pagamentos_split", ["asaas_payment_id", "obra_id", "status", "valor_empreiteiro"]);
+    await assertColumns("saques", ["user_id", "valor", "status", "asaas_transfer_id"]);
   } catch (err) {
     console.error("[bootstrap-marketplace-split] falha:", err);
     return;
   }
 
-  console.info("[bootstrap-marketplace-split] schema ready (users.cpf_cnpj/asaas_customer_id + asaas_subcontas + pagamentos_split)");
+  console.info("[bootstrap-marketplace-split] schema ready (users.cpf_cnpj/asaas_customer_id + asaas_subcontas + pagamentos_split + saques)");
 }

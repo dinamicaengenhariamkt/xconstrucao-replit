@@ -201,4 +201,9 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["asaas_payment_id", "obra_id", "status", "valor_empreiteiro"],
     label: "pagamentos_split (marketplace split)",
   },
+  {
+    table: "saques",
+    columns: ["user_id", "valor", "status", "asaas_transfer_id"],
+    label: "saques (marketplace split)",
+  },
 ];
