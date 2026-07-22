@@ -101,6 +101,11 @@ export async function register() {
     const { bootstrapPlanosSchema } = await import("./server/bootstrap-planos");
     await runBootstrap("planos", bootstrapPlanosSchema);
 
+    // J42 — fundação marketplace split. Roda DEPOIS de users/obras/financeiro
+    // (FKs de pagamentos_split apontam para essas tabelas).
+    const { bootstrapMarketplaceSplitSchema } = await import("./server/bootstrap-marketplace-split");
+    await runBootstrap("marketplace-split", bootstrapMarketplaceSplitSchema);
+
     const { bootstrapAnunciosSchema } = await import("./server/bootstrap-anuncios");
     await runBootstrap("anuncios", bootstrapAnunciosSchema);
 

@@ -19,6 +19,7 @@ import {
   RiFileTextLine,
   RiShieldCheckLine,
   RiAlertLine,
+  RiBankLine,
 } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import {
@@ -60,6 +61,8 @@ import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { CepInput } from '@features/perfil/components/CepInput';
 import { ContaSection } from '@features/perfil/components/ContaSection';
+import { SecaoRecebimentos } from '@features/marketplace/components/SecaoRecebimentos';
+import { useRecebimento } from '@features/marketplace/hooks/use-recebimento';
 import { TwoFactorSection } from '@features/auth/components/TwoFactorSection';
 import { MapaRaio } from '@features/perfil/components/MapaRaio';
 import { Switch } from '@shared/components/ui/switch';
@@ -74,9 +77,9 @@ import { IDIOMA_OPTIONS, TIMEZONE_OPTIONS, ESPECIALIDADES_SUGGESTIONS } from '@f
 import { useQuery } from '@tanstack/react-query';
 
 /* ── Types ── */
-type Section = 'perfil' | 'empresa' | 'documentos' | 'notificacoes' | 'privacidade' | 'plano';
+type Section = 'perfil' | 'empresa' | 'documentos' | 'notificacoes' | 'privacidade' | 'plano' | 'recebimentos';
 
-const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'documentos', 'notificacoes', 'privacidade', 'plano'];
+const VALID_SECTIONS: Section[] = ['perfil', 'empresa', 'documentos', 'notificacoes', 'privacidade', 'plano', 'recebimentos'];
 
 const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'perfil',        label: 'Perfil',          icon: RiUser3Line },
@@ -85,6 +88,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'notificacoes',  label: 'Notificações',    icon: RiBellLine },
   { id: 'privacidade',   label: 'Privacidade',     icon: RiShieldLine },
   { id: 'plano',         label: 'Plano & Uso',     icon: RiStarLine },
+  { id: 'recebimentos',  label: 'Recebimentos',    icon: RiBankLine },
 ];
 
 /* ── IBGE Cidades autocomplete (Task #95) ── */
@@ -1847,6 +1851,7 @@ const SECTION_COMPONENTS: Record<Section, React.ComponentType> = {
   notificacoes:  SecaoNotificacoes,
   privacidade:   SecaoPrivacidade,
   plano:         SecaoPlano,
+  recebimentos:  SecaoRecebimentos,
 };
 
 function SearchParamsReader({ onSection }: { onSection: (s: Section) => void }) {
@@ -1872,6 +1877,12 @@ function EmpreiteiroConfiguracoesInner({
 }) {
   const SectionComponent = SECTION_COMPONENTS[activeSection];
 
+  // Gate do flag: só mostra "Recebimentos" no nav quando o recurso está ativo.
+  // Se a seção estiver ativa mas o flag off, o próprio SecaoRecebimentos exibe
+  // a mensagem de indisponível — não precisamos redirecionar.
+  const { data: receb } = useRecebimento();
+  const navItems = NAV_ITEMS.filter((i) => i.id !== 'recebimentos' || receb?.enabled);
+
   return (
     <div className="p-6 md:p-10 min-h-full">
       {/* Header */}
@@ -1886,7 +1897,7 @@ function EmpreiteiroConfiguracoesInner({
 
       {/* Mobile nav — horizontal scroll */}
       <div className="lg:hidden flex gap-2 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           return (
@@ -1912,7 +1923,7 @@ function EmpreiteiroConfiguracoesInner({
         {/* Left nav */}
         <nav className="hidden lg:flex flex-col w-56 shrink-0 sticky top-6">
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-            {NAV_ITEMS.map((item, idx) => {
+            {navItems.map((item, idx) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
               return (
@@ -1921,7 +1932,7 @@ function EmpreiteiroConfiguracoesInner({
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-4 py-3.5 text-sm transition-colors text-left',
-                    idx < NAV_ITEMS.length - 1 && 'border-b border-gray-50 dark:border-gray-800',
+                    idx < navItems.length - 1 && 'border-b border-gray-50 dark:border-gray-800',
                     isActive
                       ? 'bg-primary/5 text-primary font-semibold border-r-2 border-primary'
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60'

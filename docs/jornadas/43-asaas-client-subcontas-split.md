@@ -1,11 +1,19 @@
 # Jornada — Extensão do asaas-client: Subcontas, Split, Saldo & Transferência
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: jornada de **camada de transporte** — adiciona métodos/tipos sobre o
-> `asaasRequest` existente, **sem caller ainda**. Paralelizável com J42. Testável
-> isoladamente com mock de `fetch`.
+> `asaasRequest` existente. Paralelizável com J42.
+>
+> **CONCLUÍDA (2026-07-22):** `asaasRequest` ganhou 4º param `apiKeyOverride`;
+> tipos `AsaasSubaccount(Input)`, `AsaasSplit`, `AsaasBalance`, `AsaasTransfer(Input)`
+> + `split?` em `AsaasPayment`/`AsaasCheckout`; funções `createSubaccount`,
+> `getSubaccount`, `createPaymentWithSplit`, `getBalance`, `requestTransfer`.
+> `createSubaccount`/`getSubaccount` já têm caller (J45); `createPaymentWithSplit`/
+> `getBalance`/`requestTransfer` ainda sem caller (J47/J49). Testes unitários de
+> fetch mockado **adiados** (decisão de produto) — cobertura via E2E sandbox quando
+> houver caller.
 
 ## 1. Contexto & Objetivo
 O client HTTP do Asaas ([shared/lib/asaas-client.ts](../../shared/lib/asaas-client.ts)) hoje só cobre customer/checkout/payment/subscription — o suficiente para cobrar assinatura. Para o marketplace precisamos das operações de **recebimento**: criar subconta (`/accounts`), pagar com split (`/payments` ou `/checkouts` com `split`), consultar saldo (`/finance/balance`) e transferir para banco (`/transfers`). Esta jornada adiciona esses métodos finos reusando o transporte `asaasRequest`, sem reescrever nada.
@@ -85,4 +93,5 @@ Nenhum (camada nova, ainda sem caller).
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- 2026-07-22: `createPaymentWithSplit` usa `/payments` (avulso/DETACHED) em vez de `/checkouts` — o split de obra é cobrança única, não recorrente. O payload de checkout hospedado foi espelhado só na estrutura, não no `chargeType`.
+- 2026-07-22: `getSubaccount` decide entre `GET /accounts/{id}` e `GET /accounts?cpfCnpj=` pela contagem de dígitos (11=CPF, 14=CNPJ) — útil para o webhook KYC (J46) reidratar por documento.

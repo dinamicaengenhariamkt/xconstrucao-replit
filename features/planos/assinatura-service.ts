@@ -116,7 +116,7 @@ async function _iniciarCheckoutImpl(args: {
   // Busca nome/email/role do usuário para gateways externos (ex: ASAAS) que precisam
   // criar/encontrar um customer. Falha silenciosa: campos opcionais no adapter.
   const [userRow] = await db
-    .select({ name: users.name, email: users.email, role: users.role })
+    .select({ name: users.name, email: users.email, role: users.role, asaasCustomerId: users.asaasCustomerId })
     .from(users)
     .where(eq(users.id, args.userId))
     .limit(1);
@@ -175,6 +175,7 @@ async function _iniciarCheckoutImpl(args: {
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
     userCpfCnpj,
+    userAsaasCustomerId: userRow?.asaasCustomerId ?? undefined,
     pendingMode: args.pendingMode,
   });
 

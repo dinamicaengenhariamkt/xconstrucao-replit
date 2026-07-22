@@ -190,4 +190,15 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["status", "data_vencimento", "data_pagamento", "pagador_user_id", "recebedor_user_id"],
     label: "financeiro (pagamentos columns)",
   },
+  // Marketplace split foundation (bootstrap-marketplace-split, J42)
+  {
+    table: "asaas_subcontas",
+    columns: ["user_id", "wallet_id", "asaas_api_key_enc", "onboarding_status"],
+    label: "asaas_subcontas (marketplace split)",
+  },
+  {
+    table: "pagamentos_split",
+    columns: ["asaas_payment_id", "obra_id", "status", "valor_empreiteiro"],
+    label: "pagamentos_split (marketplace split)",
+  },
 ];

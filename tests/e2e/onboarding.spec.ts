@@ -41,6 +41,7 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11999990000");
+    await page.getByTestId("input-cpfcnpj").fill("52998224725");
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
 
@@ -85,6 +86,7 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11988880000");
+    await page.getByTestId("input-cpfcnpj").fill("52998224725");
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
 
@@ -126,6 +128,7 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11977770000");
+    await page.getByTestId("input-cpfcnpj").fill("52998224725");
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
     await Promise.all([

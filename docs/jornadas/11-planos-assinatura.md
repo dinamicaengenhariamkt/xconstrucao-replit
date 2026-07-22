@@ -1,15 +1,17 @@
 # Jornada — Planos & Assinatura
 
 > Status: pronto | Prioridade: média | Wave: 3
-> Última atualização: 2026-07-19
+> Última atualização: 2026-07-21
 >
 > Observação: ecossistema completo e funcional. O adapter de gateway **"manual"**
 > (ativa sem cobrança real) é o default de dev/E2E e é **bloqueado em produção**.
 > **O adapter ASAAS real já existe e faz chamadas HTTP verdadeiras** à API do Asaas
 > (`shared/lib/asaas-client.ts` + `features/planos/gateway/asaas-gateway.ts`) — a
-> Jornada 14 **não está mais bloqueada** na prática: o gateway está escrito. Ir para
-> produção é configuração de env vars (ver seção 9) + fechar os itens de hardening
-> abaixo (o bloqueante é **enviar CPF/CNPJ ao Asaas**, hoje nunca populado).
+> Jornada 14 está **concluída**. O CPF/CNPJ **já é enviado ao Asaas**:
+> `iniciarCheckout` busca `clientes.cnpjCpf`/`empreiteiras.cnpj` e o passa ao
+> gateway; se ausente, retorna `PERFIL_INCOMPLETO` (acionável). O CPF/CNPJ passou
+> a ser **coletado no cadastro** (J44 parcial). A página `/planos/aguardando`
+> **existe**. Ir para produção é apenas configuração de env vars (ver seção 9).
 
 ## 1. Contexto & Objetivo
 Monetização da plataforma via assinatura. Admin define planos com preço e limites (nº de obras ativas, candidaturas/mês, recursos premium); contratante e empreiteiro escolhem e pagam; status de assinatura gateia features nas demais jornadas.

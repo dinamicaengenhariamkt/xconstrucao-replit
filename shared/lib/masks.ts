@@ -133,3 +133,13 @@ export function formatCpfCnpj(v: string): string {
 export function unformatCpfCnpj(v: string): string {
   return (v || "").replace(/\D/g, "").slice(0, 14);
 }
+
+/**
+ * Valida CPF ou CNPJ de forma unificada, decidindo pelo comprimento dos
+ * dígitos (≤11 → CPF, senão CNPJ). Reaproveita os validadores de dígito
+ * verificador acima. Usado no cadastro e em Configurações.
+ */
+export function isCpfCnpjValid(v: string): boolean {
+  const d = unformatCpfCnpj(v);
+  return d.length <= 11 ? isCpfValid(d) : isCnpjValid(d);
+}

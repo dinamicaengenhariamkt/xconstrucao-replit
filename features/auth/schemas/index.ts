@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { evaluatePasswordPolicy } from "./password";
+import { isCpfCnpjValid, unformatCpfCnpj } from "@shared/lib/masks";
 
 const emailField = z
   .string()
@@ -30,6 +31,14 @@ export const registerSchema = z
     password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
     role: z.enum(["contratante", "empreiteiro", "anunciante"]),
     phone: z.string().optional(),
+    // CPF/CNPJ coletado no cadastro (obrigatório p/ contratante e empreiteiro).
+    // O ASAAS exige esse dado para criar o customer e cobrar a assinatura; sem
+    // ele o checkout aborta com PERFIL_INCOMPLETO. Anunciante não assina plano,
+    // então o campo é opcional. Normalizado para dígitos no output.
+    cpfCnpj: z
+      .string()
+      .optional()
+      .transform((v) => (v ? unformatCpfCnpj(v) : v)),
     acceptTerms: z.literal(true, {
       errorMap: () => ({
         message: "Você deve aceitar os Termos de Uso e a Política de Privacidade",
@@ -48,6 +57,25 @@ export const registerSchema = z
         path: ["password"],
         message: result.message ?? "Senha inválida.",
       });
+    }
+
+    // Contratante/empreiteiro precisam de CPF/CNPJ válido no cadastro para
+    // conseguir assinar planos (pré-requisito do gateway de pagamento).
+    // Anunciante fica isento.
+    if (data.role === "contratante" || data.role === "empreiteiro") {
+      if (!data.cpfCnpj) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cpfCnpj"],
+          message: "CPF ou CNPJ é obrigatório",
+        });
+      } else if (!isCpfCnpjValid(data.cpfCnpj)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cpfCnpj"],
+          message: "CPF ou CNPJ inválido",
+        });
+      }
     }
   });
 

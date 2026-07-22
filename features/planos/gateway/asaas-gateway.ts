@@ -47,8 +47,9 @@ export function parseExternalRef(ref: string): { userId: string; planoId: string
 }
 
 /** Busca customer ASAS por email; cria se não existir. Atualiza cpfCnpj se já
- *  existe mas estava faltando — evita HTTP 400 em cobranças recorrentes. */
-async function findOrCreateCustomer(email: string, name: string, cpfCnpj?: string): Promise<AsaasCustomer> {
+ *  existe mas estava faltando — evita HTTP 400 em cobranças recorrentes.
+ *  Exportado para provisionamento proativo do customer no cadastro (J44). */
+export async function findOrCreateCustomer(email: string, name: string, cpfCnpj?: string): Promise<AsaasCustomer> {
   // Tenta encontrar por email
   const list = await asaasRequest<AsaasCustomerList>("GET", `/customers?email=${encodeURIComponent(email)}&limit=1`);
   if (list.data?.length > 0) {
@@ -107,7 +108,11 @@ export class AsaasGateway implements PaymentGateway {
     const name = input.userName ?? `Usuário ${input.userId.slice(0, 8)}`;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://xconstrucao.com.br";
 
-    const customer = await findOrCreateCustomer(email, name, input.userCpfCnpj);
+    // J44 — usa o customer já provisionado (users.asaasCustomerId) quando existir,
+    // evitando o lookup por email a cada checkout. Fallback lazy se ausente.
+    const customerId = input.userAsaasCustomerId
+      ? input.userAsaasCustomerId
+      : (await findOrCreateCustomer(email, name, input.userCpfCnpj)).id;
     const externalRef = buildExternalRef(input.userId, input.planoId, input.ciclo);
 
     const tierLabel: Record<string, string> = { free: "Free", pro: "Pro", enterprise: "Enterprise" };
@@ -122,17 +127,24 @@ export class AsaasGateway implements PaymentGateway {
       cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
       items: [{ name: itemName, value: input.valor, quantity: 1 }],
       externalReference: externalRef,
-      customer: customer.id,
+      customer: customerId,
       callback: {
         successUrl: input.successUrl ?? `${baseUrl}/planos/sucesso`,
         cancelUrl: input.cancelUrl ?? `${baseUrl}/planos`,
       },
     });
 
+    // NÃO retornamos gatewaySubscriptionId aqui: `checkout.id` é o ID de um
+    // /checkouts, NÃO de uma /subscriptions. A subscription só é criada pelo
+    // ASAAS APÓS o pagamento, e seu ID real chega no webhook via
+    // `payment.subscription` (parseWebhook) — é ele que é persistido em
+    // `assinaturas.gatewaySubscriptionId`. Devolver o checkout.id aqui faria
+    // cancelSubscription/checkPaymentStatus baterem em /subscriptions/{id}
+    // inexistente (404). O checkout.id é usado apenas para rastreio via log.
+    console.info(`[asaas] checkout criado: checkoutId=${checkout.id} customer=${customerId}`);
     return {
       kind: "redirect",
       url: checkout.url,
-      gatewaySubscriptionId: checkout.id,
     };
   }
 

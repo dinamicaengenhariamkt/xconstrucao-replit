@@ -28,6 +28,7 @@ import {
   IconBusiness,
   IconConstruction,
 } from '@shared/components/icons';
+import { formatCpfCnpj } from "@shared/lib/masks";
 
 type RegisterValues = z.infer<typeof registerSchema>;
 // Tipo de input do formulário: o checkbox precisa começar como `false`,
@@ -74,11 +75,18 @@ export default function CadastroPage() {
       password: "",
       role: perfilParaRole(perfil),
       phone: "",
+      cpfCnpj: "",
       acceptTerms: false,
     },
   });
 
+  // CPF/CNPJ só é exigido/coletado para contratante e empreiteiro — pré-requisito
+  // do gateway de pagamento (ASAAS) para assinar planos. Anunciante fica isento.
+  const roleAtual = perfilParaRole(perfil);
+  const exigeCpfCnpj = roleAtual === "contratante" || roleAtual === "empreiteiro";
+
   const passwordValue = form.watch("password");
+  const cpfCnpjValue = form.watch("cpfCnpj");
   const nameValue = form.watch("name");
   const emailValue = form.watch("email");
   const usernameValue = form.watch("username");
@@ -107,7 +115,7 @@ export default function CadastroPage() {
       }
     },
     (errors) => {
-      const order = ["name", "email", "username", "phone", "password", "acceptTerms"] as const;
+      const order = ["name", "email", "username", "phone", "cpfCnpj", "password", "acceptTerms"] as const;
       const firstField = order.find((f) => errors[f]?.message);
       const firstMsg = firstField
         ? (errors[firstField]?.message as string)
@@ -128,6 +136,7 @@ export default function CadastroPage() {
   const emailError = errs.email?.message;
   const usernameError = errs.username?.message;
   const phoneError = errs.phone?.message;
+  const cpfCnpjError = errs.cpfCnpj?.message;
   const termsError = errs.acceptTerms?.message;
 
   return (
@@ -258,6 +267,34 @@ export default function CadastroPage() {
                   <p className="text-xs text-red-500 mt-1" data-testid="text-phone-error">{phoneError}</p>
                 )}
               </div>
+              {exigeCpfCnpj && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">CPF ou CNPJ</label>
+                  <div className="relative">
+                    <IconBusiness className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000.000.000-00"
+                      autoComplete="off"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                      data-testid="input-cpfcnpj"
+                      value={formatCpfCnpj(cpfCnpjValue ?? "")}
+                      onChange={(e) =>
+                        form.setValue("cpfCnpj", e.target.value, {
+                          shouldValidate: form.formState.isSubmitted,
+                        })
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Necessário para emitir cobranças e assinar planos.
+                  </p>
+                  {cpfCnpjError && (
+                    <p className="text-xs text-red-500 mt-1" data-testid="text-cpfcnpj-error">{cpfCnpjError}</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium mb-2 block">Senha</label>
                 <PasswordInput

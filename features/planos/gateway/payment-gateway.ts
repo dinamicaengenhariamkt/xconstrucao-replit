@@ -22,6 +22,12 @@ export interface CheckoutInput {
   userName?: string;
   /** CPF ou CNPJ do usuário (opcional; pode ser vazio em sandbox). */
   userCpfCnpj?: string;
+  /**
+   * ID do customer no gateway, já persistido (J44 — provisionamento proativo).
+   * Quando presente, o adapter usa diretamente em vez de refazer o lookup por
+   * email. Ausente → fallback lazy (findOrCreateCustomer).
+   */
+  userAsaasCustomerId?: string;
   /** Nome legível do plano — exibido como descrição do item no checkout hospedado (ex: ASAAS). */
   planoNome?: string;
   /**

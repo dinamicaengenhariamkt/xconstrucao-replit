@@ -103,7 +103,16 @@ export async function ensureProfileRow(user: User): Promise<void> {
  * vinculada (clientes / empreiteiras) com defaults sensatos. Atômico:
  * se a criação do profile falhar, o user também é descartado.
  */
-export async function createUserWithProfile(data: InsertUser): Promise<User> {
+export async function createUserWithProfile(
+  data: InsertUser,
+  profileExtras?: { cpfCnpj?: string },
+): Promise<User> {
+  // cpfCnpj vem normalizado (só dígitos) do registerSchema. ≤11 dígitos → CPF
+  // (Pessoa Física); mais que isso → CNPJ (Pessoa Jurídica). Persistido no
+  // perfil de domínio para que o checkout de assinatura (ASAAS) o encontre.
+  const cpfCnpj = profileExtras?.cpfCnpj || null;
+  const tipoCliente = cpfCnpj && cpfCnpj.length > 11 ? "Pessoa Jurídica" : "Pessoa Física";
+
   return await db.transaction(async (tx) => {
     const [user] = await tx.insert(users).values(data).returning();
 
@@ -115,7 +124,8 @@ export async function createUserWithProfile(data: InsertUser): Promise<User> {
           nome: user.name,
           email: user.email,
           telefone: user.phone ?? null,
-          tipo: "Pessoa Física",
+          tipo: tipoCliente,
+          cnpjCpf: cpfCnpj,
           status: "aprovacao",
         })
         .onConflictDoNothing({ target: clientes.userId });
@@ -128,6 +138,7 @@ export async function createUserWithProfile(data: InsertUser): Promise<User> {
           responsavel: user.name,
           email: user.email,
           telefone: user.phone ?? null,
+          cnpj: cpfCnpj,
           status: "aprovacao",
         })
         .onConflictDoNothing({ target: empreiteiras.userId });

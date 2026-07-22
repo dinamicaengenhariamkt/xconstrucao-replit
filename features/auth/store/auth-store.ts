@@ -27,6 +27,7 @@ interface RegisterData {
   password: string;
   role: string;
   phone?: string;
+  cpfCnpj?: string;
   acceptTerms: true;
 }
 

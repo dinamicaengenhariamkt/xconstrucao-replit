@@ -1,11 +1,18 @@
 # Jornada — Cadastro: CPF/CNPJ + Customer Asaas Proativo
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: fecha um **gap bloqueante de produção** da J11 — o Asaas exige
-> CPF/CNPJ para cobrança real, mas o fluxo atual nunca o coleta nem envia
-> (`CheckoutInput.userCpfCnpj` existe mas `iniciarCheckout` nunca o popula).
+> CPF/CNPJ para cobrança real.
+>
+> **CONCLUÍDA (2026-07-22):** CPF/CNPJ coletado no cadastro
+> (`registerSchema.cpfCnpj`, obrigatório p/ contratante/empreiteiro, validação de
+> dígito) e enviado ao Asaas no checkout. **Customer proativo** implementado:
+> `provisionarCustomerAsaas` (`features/marketplace/customer-service.ts`) roda
+> best-effort no register (gate `PAYMENT_GATEWAY=asaas`, falha não bloqueia
+> cadastro) e persiste `users.asaas_customer_id`. `iniciarCheckout` passa
+> `userAsaasCustomerId` ao gateway, que o usa em vez do lookup lazy por email.
 
 ## 1. Contexto & Objetivo
 Coletar o documento fiscal do usuário e criar o customer Asaas **proativamente** (decisão de produto: "o cara já vai ter conta no Asaas após o cadastro"), em vez de lazy no primeiro checkout. Isso torna a cobrança de assinatura viável em produção e prepara o terreno para o empreiteiro virar recebedor (J45).

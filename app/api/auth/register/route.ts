@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, username, password, role, phone } = parsed.data;
+    const { name, email, username, password, role, phone, cpfCnpj } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
 
     // J30 — bloqueio de cadastro por perfil. `anunciante` nunca é bloqueado (porta
@@ -89,15 +89,18 @@ export async function POST(request: NextRequest) {
 
     const hashed = await hashPassword(password);
 
-    const user = await createUserWithProfile({
-      name,
-      email,
-      username,
-      password: hashed,
-      role,
-      phone: phone || null,
-      emailVerified: null,
-    });
+    const user = await createUserWithProfile(
+      {
+        name,
+        email,
+        username,
+        password: hashed,
+        role,
+        phone: phone || null,
+        emailVerified: null,
+      },
+      { cpfCnpj: cpfCnpj || undefined },
+    );
 
     // Persistir aceite LGPD (termos + privacidade) em user_consents.
     // Se falhar, removemos o usuário recém-criado para manter consistência
@@ -130,6 +133,14 @@ export async function POST(request: NextRequest) {
       await sendVerificationEmail(user.email, verificationUrl, user.name);
     } catch (emailError) {
       void logError("warn", "Failed to send verification email", { stack: (emailError as Error)?.stack, route: "/api/auth/register" });
+    }
+
+    // J44 — provisiona o customer Asaas proativamente (best-effort, fora do
+    // caminho crítico). Só age com PAYMENT_GATEWAY=asaas; falha nunca bloqueia
+    // o cadastro (fallback lazy no 1º checkout permanece).
+    if (cpfCnpj) {
+      const { provisionarCustomerAsaas } = await import("@features/marketplace/customer-service");
+      void provisionarCustomerAsaas({ userId: user.id, name, email, cpfCnpj });
     }
 
     return jsonNoStore(

@@ -1,11 +1,18 @@
 # Jornada — Fundação de Dados: Marketplace Split & Recebimento
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: jornada de **fundação** — só modelagem de dados (schema + migration
 > idempotente), **sem comportamento novo**. Destrava J43–J50. Nenhuma rota muda de
 > comportamento; nenhum mock é removido aqui.
+>
+> **CONCLUÍDA (2026-07-22):** colunas `users.cpf_cnpj`/`asaas_customer_id`, enums
+> `asaas_subconta_status`/`split_pagamento_status`, tabelas `asaas_subcontas` e
+> `pagamentos_split` (com índices unique/parciais). Migration idempotente em
+> `server/bootstrap-marketplace-split.ts`, registrada em `instrumentation.ts` e
+> com probes em `server/lib/schema-health.ts`. Idempotência verificada (2 runs
+> seguidas sem erro); `drizzle-kit check` sem divergência.
 
 ## 1. Contexto & Objetivo
 Hoje a plataforma só sabe **cobrar** (customer Asaas paga assinatura). Não há nada para o empreiteiro **receber** pela obra e sacar para o banco dele. Esta jornada cria toda a base de dados do modelo marketplace com split real via Asaas: documento fiscal do usuário, subconta Asaas do empreiteiro (com `walletId` — o campo que entra no split) e o registro de repasses por obra. Sem esta fundação, J43+ não têm onde persistir.
@@ -109,4 +116,5 @@ Nenhum. (A fundação não remove mock; a remoção acontece em J45/J47/J48 ao l
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- 2026-07-22: `pagamentos_split.asaas_payment_id` ficou como índice unique **parcial** (`WHERE asaas_payment_id IS NOT NULL`) para permitir registros pré-cobrança sem colidir. No Drizzle o `uniqueIndex` foi declarado sem `.where()` (o `WHERE` vive só no bootstrap SQL, como já ocorre em `uq_assinaturas_user_ativa`).
+- 2026-07-22: `asaas_api_key_enc` nasce como coluna nesta jornada mas só é populada (cifrada) em J45 — o vault de cripto foi criado junto com a J45.

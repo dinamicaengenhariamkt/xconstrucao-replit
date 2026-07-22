@@ -78,6 +78,11 @@ export const users = pgTable("users", {
   avatarFileId: varchar("avatar_file_id"),
   // J29 — rastreio de último login para churn por inatividade.
   lastLoginAt: timestamp("last_login_at"),
+  // J42/J44 — marketplace split: documento fiscal (papel pagador e recebedor)
+  // e id do customer Asaas (criado proativamente no cadastro; elimina lookup
+  // lazy por email). Nullable — não quebra registros existentes.
+  cpfCnpj: text("cpf_cnpj"),
+  asaasCustomerId: text("asaas_customer_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -983,6 +988,98 @@ export type InsertPlano = typeof planos.$inferInsert;
 export type Assinatura = typeof assinaturas.$inferSelect;
 export type InsertAssinatura = typeof assinaturas.$inferInsert;
 export type AssinaturaEvento = typeof assinaturaEventos.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// J42 — Fundação de dados: marketplace split & recebimento. Só modelagem
+// (sem comportamento novo). `asaas_subcontas` = subconta Asaas do empreiteiro
+// (recebedor) com `wallet_id` que entra no split; `pagamentos_split` = registro
+// de repasse por cobrança de obra. Schema criado idempotente em
+// server/bootstrap-marketplace-split.ts. Consumido por J45/J47/J48/J49/J50.
+// ---------------------------------------------------------------------------
+export const asaasSubcontaStatusEnum = pgEnum("asaas_subconta_status", [
+  "pendente",
+  "aguardando_kyc",
+  "aprovada",
+  "rejeitada",
+]);
+export const splitPagamentoStatusEnum = pgEnum("split_pagamento_status", [
+  "pendente",
+  "confirmado",
+  "repassado",
+  "falhou",
+  "estornado",
+]);
+
+export const asaasSubcontas = pgTable(
+  "asaas_subcontas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    // Uma subconta por empreiteiro (unique). Cascade: sumiu o user, some a subconta.
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    // IDs do Asaas: a subconta (/accounts) e o walletId (campo crítico do split).
+    asaasAccountId: text("asaas_account_id"),
+    walletId: text("wallet_id"),
+    // apiKey da subconta, SEMPRE cifrada em repouso (AES-256-GCM). Nunca texto puro.
+    asaasApiKeyEnc: text("asaas_api_key_enc"),
+    onboardingStatus: asaasSubcontaStatusEnum("onboarding_status").notNull().default("pendente"),
+    // Status bruto de KYC do Asaas (auditoria).
+    kycStatus: text("kyc_status"),
+    // Dados de recebimento: PIX ou TED.
+    tipoConta: text("tipo_conta"), // PIX | TED
+    pixChave: text("pix_chave"),
+    pixTipo: text("pix_tipo"),
+    bancoCodigo: text("banco_codigo"),
+    agencia: text("agencia"),
+    conta: text("conta"),
+    contaDigito: text("conta_digito"),
+    contaTipo: text("conta_tipo"),
+    titularNome: text("titular_nome"),
+    titularCpfCnpj: text("titular_cpf_cnpj"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uqUser: uniqueIndex("uq_asaas_subcontas_user").on(t.userId),
+    idxAccount: index("idx_asaas_subcontas_account").on(t.asaasAccountId),
+    idxWallet: index("idx_asaas_subcontas_wallet").on(t.walletId),
+  }),
+);
+
+export const pagamentosSplit = pgTable(
+  "pagamentos_split",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    financeiroId: varchar("financeiro_id").references(() => financeiro.id),
+    obraId: varchar("obra_id").references(() => obras.id),
+    medicaoId: varchar("medicao_id"),
+    pagadorUserId: varchar("pagador_user_id").references(() => users.id, { onDelete: "set null" }),
+    recebedorUserId: varchar("recebedor_user_id").references(() => users.id, { onDelete: "set null" }),
+    // ID do pagamento no Asaas — chave de idempotência do webhook (unique).
+    asaasPaymentId: text("asaas_payment_id"),
+    asaasCheckoutId: text("asaas_checkout_id"),
+    valorTotal: numeric("valor_total", { precision: 15, scale: 2 }),
+    valorPlataforma: numeric("valor_plataforma", { precision: 15, scale: 2 }),
+    valorEmpreiteiro: numeric("valor_empreiteiro", { precision: 15, scale: 2 }),
+    // Snapshot da regra de comissão no momento (a regra viva fica em platform_settings).
+    percentualPlataforma: numeric("percentual_plataforma", { precision: 5, scale: 2 }),
+    walletIdEmpreiteiro: text("wallet_id_empreiteiro"),
+    status: splitPagamentoStatusEnum("status").notNull().default("pendente"),
+    billingType: text("billing_type"), // PIX | BOLETO | CREDIT_CARD
+    confirmadoEm: timestamp("confirmado_em"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uqAsaasPayment: uniqueIndex("uq_pagamentos_split_asaas_payment").on(t.asaasPaymentId),
+    idxObraStatus: index("idx_pagamentos_split_obra_status").on(t.obraId, t.status),
+    idxFinanceiro: index("idx_pagamentos_split_financeiro").on(t.financeiroId),
+  }),
+);
+
+export type AsaasSubconta = typeof asaasSubcontas.$inferSelect;
+export type InsertAsaasSubconta = typeof asaasSubcontas.$inferInsert;
+export type PagamentoSplit = typeof pagamentosSplit.$inferSelect;
+export type InsertPagamentoSplit = typeof pagamentosSplit.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // J12 — Gestão de Anúncios. Campanhas internas exibidas em zonas (sidebar/banner)

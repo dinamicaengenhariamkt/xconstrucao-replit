@@ -1,12 +1,15 @@
 # Jornada — Integração de Gateway de Pagamento
 
-> Status: bloqueada | Prioridade: média | Wave: 3
-> Última atualização: 2026-06-01
+> Status: concluída | Prioridade: média | Wave: 3
+> Última atualização: 2026-07-21
 >
-> **BLOQUEADA**: aguarda decisão de negócio sobre QUAL gateway usar
-> (Stripe / PayPal / MercadoPago / Asaas / outro). Toda a fundação já existe
-> (J11) — esta jornada só pluga o provedor real. Quando o gateway for escolhido,
-> desbloquear e implementar o adapter correspondente.
+> **CONCLUÍDA**: o gateway escolhido foi o **Asaas**. O adapter real já está
+> implementado e faz chamadas HTTP verdadeiras (`shared/lib/asaas-client.ts` +
+> `features/planos/gateway/asaas-gateway.ts`): checkout hospedado (PIX/Boleto/
+> Cartão), `findOrCreateCustomer`, cancelamento e `parseWebhook` com verificação
+> de IP. Registrado na factory por `PAYMENT_GATEWAY`. Ir para produção é
+> configuração de env vars (`PAYMENT_GATEWAY=asaas`, `ASAAS_API_KEY`,
+> `ASAAS_ENVIRONMENT`, `ASAAS_WEBHOOK_IPS`, `NEXT_PUBLIC_BASE_URL`) — ver J11 §9.
 
 ## 1. Contexto & Objetivo
 A Jornada 11 (Planos & Assinatura) já está funcional ponta-a-ponta usando um

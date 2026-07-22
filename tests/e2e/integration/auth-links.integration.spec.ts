@@ -37,6 +37,10 @@ function antiBotFields() {
   return { website: "", mountedAt: Date.now() - 5_000 };
 }
 
+// CPF válido (dígito verificador correto) — obrigatório para contratante/empreiteiro
+// desde que `registerSchema` passou a exigir cpfCnpj para essas roles (ASAAS).
+const CPF_VALIDO = "52998224725";
+
 /** Registra um usuário novo (fica NÃO verificado) e devolve email/senha, ou null se o cadastro não for permitido. */
 async function registrarUsuarioNover(
   request: APIRequestContext
@@ -51,6 +55,7 @@ async function registrarUsuarioNover(
       password,
       role: "contratante",
       phone: "11999990000",
+      cpfCnpj: CPF_VALIDO,
       acceptTerms: true,
       ...antiBotFields(),
     },

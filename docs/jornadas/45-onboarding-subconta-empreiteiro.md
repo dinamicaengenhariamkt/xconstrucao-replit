@@ -1,11 +1,21 @@
 # Jornada — Onboarding de Subconta do Empreiteiro (Dados de Recebimento)
 
-> Status: planejada | Prioridade: alta | Wave: 10
-> Última atualização: 2026-07-19
+> Status: concluída | Prioridade: alta | Wave: 10
+> Última atualização: 2026-07-22
 >
 > Observação: primeira jornada que dá ao empreiteiro o papel de **recebedor**.
 > Cria a subconta Asaas (com `walletId`) a partir da plataforma — o empreiteiro
 > nunca entra no painel Asaas para isso.
+>
+> **CONCLUÍDA (2026-07-22):** vault de cripto AES-256-GCM
+> (`shared/lib/crypto-vault.ts`, chave `MARKETPLACE_ENC_KEY`, round-trip +
+> detecção de adulteração verificados); `features/marketplace/subconta-service.ts`
+> (create/get, cifra a apiKey, upsert idempotente por user); endpoints
+> `POST/GET /api/empreiteiro/recebimento/subconta`; seção "Recebimentos" em
+> `app/empreiteiro/configuracoes` (`SecaoRecebimentos`) com estados não
+> configurado/aguardando KYC/aprovada/rejeitada. Tudo atrás do flag
+> `MARKETPLACE_SPLIT=on` (`features/marketplace/flags.ts`) + `PAYMENT_GATEWAY=asaas`.
+> Teste E2E sandbox e webhook de KYC (`onboarding_status='aprovada'`) ficam para J46.
 
 ## 1. Contexto & Objetivo
 Permitir que o empreiteiro configure **como recebe** (PIX ou conta bancária, ex: Itaú) direto pela plataforma. Ao salvar, criamos uma subconta Asaas via `/accounts`, guardamos o `wallet_id` (que entra no split das obras) e a `apiKey` cifrada. O status de onboarding/KYC é rastreado; enquanto não `aprovada`, o split de obra fica bloqueado (fallback manual).

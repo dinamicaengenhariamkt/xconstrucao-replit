@@ -47,6 +47,10 @@ function antiBotFields() {
   return { website: "", mountedAt: Date.now() - 5_000 };
 }
 
+// CPF válido (dígito verificador correto) — obrigatório para contratante/empreiteiro
+// desde que `registerSchema` passou a exigir cpfCnpj para essas roles (ASAAS).
+const CPF_VALIDO = "52998224725";
+
 /** Registra um usuário novo (fica NÃO verificado) e devolve email/senha, ou null se indisponível. */
 async function registrarUsuario(
   request: APIRequestContext
@@ -61,6 +65,7 @@ async function registrarUsuario(
       password,
       role: "contratante",
       phone: "11999990000",
+      cpfCnpj: CPF_VALIDO,
       acceptTerms: true,
       ...antiBotFields(),
     },
@@ -330,6 +335,7 @@ test.describe("Integração — G2: register", () => {
         username: uniqueUsername("reg"),
         password: "Xc0nstru! Forte#2026",
         role: "contratante",
+        cpfCnpj: CPF_VALIDO,
         acceptTerms: true,
         ...antiBotFields(),
       },
@@ -345,6 +351,7 @@ test.describe("Integração — G2: register", () => {
         username: uniqueUsername("reg"),
         password: "curta",
         role: "contratante",
+        cpfCnpj: CPF_VALIDO,
         acceptTerms: true,
         ...antiBotFields(),
       },
@@ -363,6 +370,7 @@ test.describe("Integração — G2: register", () => {
         username: uniqueUsername("regdup"),
         password: "Xc0nstru! Forte#2026",
         role: "contratante",
+        cpfCnpj: CPF_VALIDO,
         acceptTerms: true,
         ...antiBotFields(),
       },
@@ -381,6 +389,7 @@ test.describe("Integração — G2: register", () => {
         password: "Xc0nstru! Forte#2026",
         role: "contratante",
         phone: "11999990000",
+        cpfCnpj: CPF_VALIDO,
         acceptTerms: true,
         ...antiBotFields(),
       },
@@ -393,6 +402,82 @@ test.describe("Integração — G2: register", () => {
 
     const verifyUrl = await waitForEmailUrl(request, email, "verification", "verificationUrl");
     expect(verifyUrl, "email de verificação deve ter chegado").toBeTruthy();
+  });
+
+  // ---- cpfCnpj: obrigatório p/ contratante e empreiteiro, isento p/ anunciante ----
+
+  test("contratante SEM cpfCnpj → 400", async ({ request }) => {
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Reg Sem CPF",
+        email: uniqueEmail("reg-sem-cpf"),
+        username: uniqueUsername("regsemcpf"),
+        password: "Xc0nstru! Forte#2026",
+        role: "contratante",
+        phone: "11999990000",
+        acceptTerms: true,
+        ...antiBotFields(),
+        // cpfCnpj propositalmente omitido
+      },
+    });
+    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+  });
+
+  test("empreiteiro SEM cpfCnpj → 400", async ({ request }) => {
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Reg Emp Sem CPF",
+        email: uniqueEmail("reg-emp-sem-cpf"),
+        username: uniqueUsername("regempsemcpf"),
+        password: "Xc0nstru! Forte#2026",
+        role: "empreiteiro",
+        phone: "11999990000",
+        acceptTerms: true,
+        ...antiBotFields(),
+        // cpfCnpj propositalmente omitido
+      },
+    });
+    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+  });
+
+  test("cpfCnpj com dígito verificador inválido → 400", async ({ request }) => {
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Reg CPF Invalido",
+        email: uniqueEmail("reg-cpf-invalido"),
+        username: uniqueUsername("regcpfinvalido"),
+        password: "Xc0nstru! Forte#2026",
+        role: "contratante",
+        phone: "11999990000",
+        cpfCnpj: "12345678900", // 11 dígitos, DV incorreto
+        acceptTerms: true,
+        ...antiBotFields(),
+      },
+    });
+    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+  });
+
+  test("anunciante SEM cpfCnpj → segue funcionando (isento)", async ({ request }) => {
+    await clearCapturedEmails(request);
+    const email = uniqueEmail("reg-anunciante");
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Reg Anunciante",
+        email,
+        username: uniqueUsername("reganunciante"),
+        password: "Xc0nstru! Forte#2026",
+        role: "anunciante",
+        phone: "11999990000",
+        acceptTerms: true,
+        ...antiBotFields(),
+        // cpfCnpj propositalmente omitido — anunciante é isento
+      },
+    });
+    test.skip(![200, 201].includes(res.status()), "cadastro de anunciante desabilitado neste ambiente");
+    expect(res.status(), `esperado 201; corpo: ${await res.text()}`).toBe(201);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.email).toBe(email);
   });
 });
 
