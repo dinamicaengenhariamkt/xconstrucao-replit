@@ -203,6 +203,14 @@ export async function GET(request: NextRequest) {
       AND _uf.deleted_at IS NULL
   )`;
 
+  // J57: conta candidaturas pendentes por obra (badge de propostas do ObraCard do
+  // contratante). Alias _c evita ambiguidade de coluna no subquery, como em anexos.
+  const candidaturasCountExpr = sql<number>`(
+    SELECT COUNT(*)::int FROM candidaturas AS _c
+    WHERE _c.obra_id = obras.id
+      AND _c.status = 'pendente'
+  )`;
+
   // Task #87/95: naMinhaZona = match SQL (UF ∈ zonaUfs OU cidade accent-insensitive ∈ zonaCidades).
   const naMinhaZonaExpr = zonaConfigurada ? sql<boolean>`${zonaMatchExpr}` : sql<boolean>`false`;
 
@@ -216,6 +224,7 @@ export async function GET(request: NextRequest) {
     .select({
       ...getTableColumns(obras),
       anexosCount: anexosCountExpr,
+      candidaturasCount: candidaturasCountExpr,
       naMinhaZona: naMinhaZonaExpr,
       // Contratante: nome e avatar da empreiteira vinculada (LEFT JOIN — null quando não vinculada).
       empreiteiraNome: empreiteiras.nome,
@@ -232,8 +241,9 @@ export async function GET(request: NextRequest) {
   const sanitized = rows.map((row) => {
     const { empreiteiraNome, empreiteiraAvatarUrl, naMinhaZona, ...obraFields } = row;
     if (role === "empreiteiro") {
-      // Empreiteiro: omite clienteId (PII) mas mantém naMinhaZona.
-      const { clienteId: _pii, ...empFields } = obraFields;
+      // Empreiteiro: omite clienteId (PII) e candidaturasCount (revela concorrência),
+      // mas mantém naMinhaZona.
+      const { clienteId: _pii, candidaturasCount: _comp, ...empFields } = obraFields;
       return { ...empFields, naMinhaZona };
     }
     if (role === "contratante") {

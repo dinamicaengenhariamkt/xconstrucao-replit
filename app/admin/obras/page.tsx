@@ -7,6 +7,9 @@ import { StatsCard } from '@features/shared/components/StatsCard';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { useAdminObras } from '@features/admin/obras/hooks/use-obras-list';
+import { useObrasHealthMap, summarizeHealthMap } from '@features/shared/health/hooks/use-obras-health';
+import { HealthBadge } from '@features/shared/health/components/HealthBadge';
+import { HealthSummary } from '@features/shared/health/components/HealthSummary';
 import {
   OBRA_STATUS_LABEL,
   OBRA_STATUS_COLOR,
@@ -82,6 +85,11 @@ export default function AdminObrasPage() {
   const obras = data?.rows ?? [];
   const totalPages = data?.totalPages ?? 1;
   const total = data?.total ?? 0;
+
+  // J57 — saúde real das obras (mapa obraId → ObraHealth) para badge por linha
+  // e resumo saudável/atenção/risco no topo. Reusa o módulo health do contratante.
+  const { data: healthMap } = useObrasHealthMap('admin');
+  const healthSummary = useMemo(() => summarizeHealthMap(healthMap), [healthMap]);
 
   const valorPaginaAtual = useMemo(
     () => obras.reduce((sum, o) => sum + toNum(o.valorTotal), 0),
@@ -168,6 +176,9 @@ export default function AdminObrasPage() {
           />
         ))}
       </div>
+
+      {/* J57 — resumo de saúde do portfólio (saudável / atenção / risco). */}
+      <HealthSummary summary={healthSummary} luminous />
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -330,9 +341,14 @@ export default function AdminObrasPage() {
                           <p className="text-sm text-gray-700 dark:text-gray-300">{obra.empreiteiraNome ?? '—'}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', statusColor)}>
-                            {OBRA_STATUS_LABEL[obra.status] ?? obra.status}
-                          </span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', statusColor)}>
+                              {OBRA_STATUS_LABEL[obra.status] ?? obra.status}
+                            </span>
+                            {healthMap?.[obra.id] && (
+                              <HealthBadge status={healthMap[obra.id].status} size="sm" variant="subtle" />
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 hidden md:table-cell">
                           <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold', visColor)}>

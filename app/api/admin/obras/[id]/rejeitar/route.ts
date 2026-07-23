@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
+import { dispararNotificacaoModeracaoObra } from "@features/notificacoes/moderacao-obra-dispatcher";
 
 const bodySchema = z.object({
   motivo: z.string().trim().min(5, "Motivo deve ter pelo menos 5 caracteres").max(500),
@@ -84,6 +85,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       statusAnterior: txResult.obra.statusModeracao,
     },
     request,
+  });
+
+  // J57: notifica o contratante dono de que a obra foi rejeitada (com motivo).
+  // Fire-and-forget — falhas logam mas não derrubam a rejeição.
+  void dispararNotificacaoModeracaoObra(id, "rejeitada", parsed.data.motivo).catch((err) => {
+    console.error("[rejeitar] falha no disparo de moderacao-obra:", err);
   });
 
   const r = NextResponse.json(txResult.updated);

@@ -41,6 +41,9 @@ interface CandidaturaUI {
     empresa?: string;
     telefone?: string;
     avaliacao?: number;
+    cnpj?: string;
+    especialidades?: string[];
+    registroProfissional?: string;
   };
   valorProposto: number;
   prazoMeses: number;
@@ -147,6 +150,12 @@ function mapApiRowToUi(row: CandidaturaApiRow): CandidaturaUI {
       empresa: row.empreiteiraEmpresa || undefined,
       telefone: row.empreiteiraTelefone || undefined,
       avaliacao: row.empreiteiraAvaliacao ? Number(row.empreiteiraAvaliacao) : undefined,
+      cnpj: row.empreiteiraCnpj || undefined,
+      especialidades:
+        row.empreiteiraEspecialidades && row.empreiteiraEspecialidades.length > 0
+          ? row.empreiteiraEspecialidades
+          : undefined,
+      registroProfissional: row.empreiteiraRegistroProfissional || undefined,
     },
     valorProposto: Number(row.valorProposta) || 0,
     prazoMeses: row.prazoEstimado ?? 0,
@@ -255,6 +264,40 @@ function PropostaModal({
                 <span className="text-[10px] text-gray-400">enviada em {candidatura.dataEnvio}</span>
               </>
             )}
+          </div>
+        )}
+
+        {(candidatura.empreiteiro.cnpj ||
+          candidatura.empreiteiro.registroProfissional ||
+          (candidatura.empreiteiro.especialidades && candidatura.empreiteiro.especialidades.length > 0)) && (
+          <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4" data-testid="bloco-sobre-profissional">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sobre o profissional</p>
+            <div className="flex flex-col gap-2">
+              {candidatura.empreiteiro.cnpj && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400 font-medium">CNPJ</span>
+                  <span className="text-gray-700 dark:text-gray-300">{candidatura.empreiteiro.cnpj}</span>
+                </div>
+              )}
+              {candidatura.empreiteiro.registroProfissional && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400 font-medium">Registro</span>
+                  <span className="text-gray-700 dark:text-gray-300">{candidatura.empreiteiro.registroProfissional}</span>
+                </div>
+              )}
+              {candidatura.empreiteiro.especialidades && candidatura.empreiteiro.especialidades.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {candidatura.empreiteiro.especialidades.map((esp) => (
+                    <span
+                      key={esp}
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                    >
+                      {esp}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

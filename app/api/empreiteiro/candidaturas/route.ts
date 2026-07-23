@@ -8,6 +8,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { getLimiteRecurso } from "@features/planos/assinatura-service";
+import { criarNotificacao } from "@features/notificacoes/service";
 
 /** Sinaliza estouro de limite de propostas/mês dentro da transação de criação. */
 class PropostaLimiteError extends Error {
@@ -271,6 +272,27 @@ export async function POST(request: NextRequest) {
         prazoEstimado: parsed.data.prazoEstimado ?? null,
       },
     });
+    // J57: notifica o contratante dono da obra sobre a nova proposta. Fire-and-forget.
+    // Idempotência por (userId, href) não-lido: o badge/menu de propostas cobre a
+    // contagem exata, então uma única notificação pendente por obra basta.
+    //
+    // href distinto do usado pela moderação (`/contratante/minhas-obras/<id>`):
+    // o índice parcial `uniq_notificacoes_user_href_unread` dedupa por (userId,
+    // href) não-lido; sem o sufixo `?proposta=1`, uma notificação de "obra
+    // aprovada" ainda não lida bloquearia a de "nova proposta" (mesmo alvo). O
+    // query param é ignorado pelo router — leva à mesma tela de detalhe.
+    if (contratanteUserId) {
+      const empreiteiroNome = guard.user.name ?? "Um empreiteiro";
+      void criarNotificacao({
+        userId: contratanteUserId,
+        tipo: "info",
+        titulo: "Nova proposta recebida",
+        descricao: `${empreiteiroNome} enviou uma proposta para "${obra.nome}".`,
+        href: `/contratante/minhas-obras/${obraId}?proposta=1`,
+      }).catch((err) => {
+        console.error("[candidaturas.criar] falha ao notificar contratante:", err);
+      });
+    }
     const r = NextResponse.json(inserted, { status: 201 });
     setNoCacheHeaders(r);
     return r;

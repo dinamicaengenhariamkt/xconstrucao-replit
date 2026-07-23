@@ -35,6 +35,10 @@ export interface CandidaturaApiRow {
   empreiteiraTelefone: string | null;
   empreiteiraAvatarUrl: string | null;
   empreiteiraAvaliacao: string | null;
+  // J57 — dados de confiança do candidato (sem portfólio: docs podem ser privados).
+  empreiteiraCnpj: string | null;
+  empreiteiraEspecialidades: string[] | null;
+  empreiteiraRegistroProfissional: string | null;
   anexos?: CandidaturaAnexoApi[];
 }
 

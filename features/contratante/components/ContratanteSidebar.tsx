@@ -23,6 +23,7 @@ import { RiMegaphoneLine } from 'react-icons/ri';
 import { useHasRole } from '@features/auth/store/auth-store';
 import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import { useContratanteUnreadCount } from '@features/contratante/xchat/hooks/use-unread-count';
+import { usePropostasNovasCount } from '@features/contratante/minhas-obras/hooks/use-propostas-novas-count';
 import {
   CONTRATANTE_NAV_ITEMS,
   CONTRATANTE_BOTTOM_NAV_ITEMS,
@@ -33,6 +34,7 @@ export function ContratanteSidebar() {
   const router = useRouter();
   const { logout } = useAuth();
   const { data: unreadCount = 0 } = useContratanteUnreadCount();
+  const { data: propostasNovas = 0 } = usePropostasNovasCount();
   // J23/D6 — "Meus Anúncios" embutido na visão de cliente quando tem o papel.
   const isAnunciante = useHasRole('anunciante');
   const navItems = isAnunciante
@@ -92,6 +94,15 @@ export function ContratanteSidebar() {
                           aria-label={`${unreadCount} mensagens não lidas`}
                         >
                           {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                      {item.url === '/contratante/minhas-obras' && propostasNovas > 0 && (
+                        <span
+                          className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none"
+                          data-testid="sidebar-propostas-badge"
+                          aria-label={`${propostasNovas} propostas novas`}
+                        >
+                          {propostasNovas > 9 ? '9+' : propostasNovas}
                         </span>
                       )}
                     </Link>

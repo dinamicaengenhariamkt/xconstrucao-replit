@@ -8,7 +8,7 @@ import type { ObraHealth, HealthSummaryData } from '../types';
  * @param persona define o endpoint (`/api/<persona>/obras-health`).
  */
 export function useObrasHealthMap(
-  persona: 'contratante' | 'empreiteiro',
+  persona: 'contratante' | 'empreiteiro' | 'admin',
 ): UseQueryResult<Record<string, ObraHealth>, Error> {
   return useQuery({
     queryKey: [persona, 'obras-health'],

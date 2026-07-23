@@ -6,6 +6,7 @@ import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoNovaObraZona } from "@features/notificacoes/nova-obra-zona-dispatcher";
+import { dispararNotificacaoModeracaoObra } from "@features/notificacoes/moderacao-obra-dispatcher";
 
 /**
  * POST /api/admin/obras/[id]/aprovar  (J03 — Task #86)
@@ -98,6 +99,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   // Fire-and-forget — falhas logam mas não derrubam a aprovação.
   void dispararNotificacaoNovaObraZona(id).catch((err) => {
     console.error("[aprovar] falha no disparo de nova-obra-zona:", err);
+  });
+
+  // J57: notifica o contratante dono de que a obra foi aprovada. Fire-and-forget.
+  void dispararNotificacaoModeracaoObra(id, "aprovada").catch((err) => {
+    console.error("[aprovar] falha no disparo de moderacao-obra:", err);
   });
 
   const r = NextResponse.json(txResult.updated);

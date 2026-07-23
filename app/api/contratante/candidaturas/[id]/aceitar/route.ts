@@ -6,6 +6,7 @@ import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
+import { dispararNotificacaoObraContratadaAdmin } from "@features/notificacoes/marketplace-admin-dispatcher";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { garantirChatThread } from "@features/chat/service";
 
@@ -242,6 +243,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       // Notifica empreiteiro vencedor + rejeitados em cascata (best-effort,
       // idempotente via flag `notificacao_disparada`).
       void dispararNotificacaoCandidaturaDecidida({ candidaturaId, request });
+
+      // J57: notifica admins do evento-chave "obra contratada" — só no aceite,
+      // nunca a cada proposta. Fire-and-forget, resolve as partes por obraId.
+      void dispararNotificacaoObraContratadaAdmin(obraIdAceita).catch((err) => {
+        console.error("[aceitar] falha no disparo marketplace-admin:", err);
+      });
       const rejeitadasIds: string[] = (result.body as any).rejeitadasIds ?? [];
       for (const rid of rejeitadasIds) {
         void dispararNotificacaoCandidaturaDecidida({ candidaturaId: rid, request });

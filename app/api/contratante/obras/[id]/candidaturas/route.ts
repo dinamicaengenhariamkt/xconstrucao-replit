@@ -65,6 +65,13 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       empreiteiraTelefone: empreiteiras.telefone,
       empreiteiraAvatarUrl: empreiteiras.avatarUrl,
       empreiteiraAvaliacao: empreiteiras.avaliacao,
+      // J57: dados que dão confiança ao dono da obra sobre o candidato. O
+      // profissional ofereceu estes dados ao se cadastrar — ok expor ao dono.
+      // NÃO expomos portfolioDocs/portfolioUrls aqui: podem conter docs privados
+      // (chave crua / PII); portfólio via signed URL fica para jornada futura.
+      empreiteiraCnpj: empreiteiras.cnpj,
+      empreiteiraEspecialidades: empreiteiras.especialidades,
+      empreiteiraRegistroProfissional: empreiteiras.registroProfissional,
     })
     .from(candidaturas)
     .leftJoin(users, eq(users.id, candidaturas.empreiteiroId))
