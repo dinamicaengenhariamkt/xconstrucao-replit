@@ -7,7 +7,7 @@ import { legalDocuments, userConsents, type LegalDocument } from "@shared/db/sch
  * lista o histórico (admin), publica novas versões e registra re-consentimento.
  */
 
-export type LegalTipo = "termos" | "privacidade";
+export type LegalTipo = "termos" | "privacidade" | "termo_anunciante";
 
 /** Versão vigente (ativa, maior versão) de um tipo. */
 export async function getVersaoVigente(tipo: LegalTipo): Promise<LegalDocument | null> {
@@ -85,6 +85,31 @@ export async function pendenciasReconsent(userId: string): Promise<
     }
   }
   return pendencias;
+}
+
+/**
+ * J59 — o usuário aceitou a versão VIGENTE do termo do anunciante?
+ *
+ * Fail-open: se não há documento vigente publicado (jurídico ainda não publicou),
+ * retorna `true` — não trava o produto antes de existir termo. Uma vez publicado,
+ * exige `user_consents` para `termo_anunciante` com versão >= a vigente.
+ *
+ * Deliberadamente FORA de `pendenciasReconsent` (gate global): o termo do
+ * anunciante só é cobrado no fluxo de anunciar, não no modal de re-consentimento
+ * mostrado a todo usuário logado.
+ */
+export async function anuncianteAceitouContratoVigente(userId: string): Promise<boolean> {
+  const vigente = await getVersaoVigente("termo_anunciante");
+  if (!vigente) return true; // sem termo publicado → não bloqueia
+  const consents = await db
+    .select({ versao: userConsents.versao })
+    .from(userConsents)
+    .where(and(eq(userConsents.userId, userId), eq(userConsents.documento, "termo_anunciante")));
+  for (const c of consents) {
+    const n = Math.floor(Number(c.versao));
+    if (Number.isFinite(n) && n >= vigente.versao) return true;
+  }
+  return false;
 }
 
 /** Registra o re-consentimento do usuário para a versão vigente de um tipo. */

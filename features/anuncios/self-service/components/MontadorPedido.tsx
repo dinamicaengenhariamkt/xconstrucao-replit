@@ -7,6 +7,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { RiAddLine, RiShoppingBag3Line } from 'react-icons/ri';
 import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { SlotEditor } from './SlotEditor';
+import { ContratoAnuncianteModal } from './ContratoAnuncianteModal';
 import type { SlotDraft, ZonaOption } from './types';
 
 /** Calcula dias inclusivos (mesma regra do server precificacao.calcularDias). */
@@ -50,6 +51,8 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
   const [slots, setSlots] = useState<SlotDraft[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [carregandoZonas, setCarregandoZonas] = useState(true);
+  // J59 — gate do Termo do Anunciante: abre quando o POST responde 403 CONTRATO_ANUNCIANTE_NAO_ACEITO.
+  const [contratoOpen, setContratoOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -102,6 +105,12 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        // J59 — precisa aceitar o Termo do Anunciante antes de anunciar: abre o
+        // modal em vez do toast destrutivo. Ao aceitar, reenvia o pedido.
+        if (err.code === 'CONTRATO_ANUNCIANTE_NAO_ACEITO') {
+          setContratoOpen(true);
+          return;
+        }
         throw new Error(err.message || 'Falha ao enviar o pedido');
       }
       toast({
@@ -159,6 +168,15 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
           {enviando ? 'Processando…' : config.adPaymentEnabled ? 'Enviar pedido' : 'Confirmar aquisição'}
         </Button>
       </div>
+
+      <ContratoAnuncianteModal
+        open={contratoOpen}
+        onOpenChange={setContratoOpen}
+        onAceito={() => {
+          // Aceite registrado → reenvia o pedido automaticamente.
+          void enviar();
+        }}
+      />
     </div>
   );
 }

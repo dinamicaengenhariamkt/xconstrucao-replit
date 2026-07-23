@@ -478,7 +478,7 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade"]);
+export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade", "termo_anunciante"]);
 
 export const userConsents = pgTable(
   "user_consents",

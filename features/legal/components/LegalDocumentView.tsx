@@ -16,7 +16,7 @@ interface LegalDoc {
  * J28 — Carrega e renderiza a versão vigente de um documento legal (do banco).
  * Substitui o JSX hardcoded. Conteúdo em Markdown renderizado de forma segura.
  */
-export function LegalDocumentView({ tipo }: { tipo: 'termos' | 'privacidade' }) {
+export function LegalDocumentView({ tipo }: { tipo: 'termos' | 'privacidade' | 'termo_anunciante' }) {
   const [doc, setDoc] = useState<LegalDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(false);

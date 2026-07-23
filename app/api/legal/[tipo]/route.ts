@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getVersaoVigente, type LegalTipo } from "@features/legal/legal-service";
 
-const TIPOS_VALIDOS: LegalTipo[] = ["termos", "privacidade"];
+const TIPOS_VALIDOS: LegalTipo[] = ["termos", "privacidade", "termo_anunciante"];
 
 /** GET /api/legal/[tipo] — público: versão vigente de termos/privacidade. */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ tipo: string }> }) {

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 }
 
 const publicarSchema = z.object({
-  tipo: z.enum(["termos", "privacidade"]),
+  tipo: z.enum(["termos", "privacidade", "termo_anunciante"]),
   titulo: z.string().trim().min(2).max(160),
   conteudo: z.string().trim().min(10, "Conteúdo muito curto"),
   vigenteEm: z.string().datetime().optional().nullable(),

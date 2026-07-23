@@ -48,6 +48,7 @@ export async function bootstrapLegalDocumentsSchema(): Promise<void> {
     // Seed v1 — só se o tipo ainda não tem nenhuma versão (não sobrescreve o jurídico).
     const termos = lerSeed("termos-v1.md");
     const privacidade = lerSeed("privacidade-v1.md");
+    const termoAnunciante = lerSeed("termo-anunciante-v1.md"); // J59
 
     if (termos) {
       await db.execute(sql`
@@ -70,10 +71,24 @@ export async function bootstrapLegalDocumentsSchema(): Promise<void> {
         WHERE tipo = 'privacidade' AND versao = 1 AND conteudo <> ${privacidade}
       `);
     }
+    // J59 — termo do anunciante (gate de entrada para anunciar). Mesmo padrão:
+    // seed idempotente da v1 + sync do conteúdo da v1 seedada com o .md (fonte de
+    // verdade), sem bump de versão; versões publicadas (>1) permanecem imutáveis.
+    if (termoAnunciante) {
+      await db.execute(sql`
+        INSERT INTO legal_documents (tipo, versao, titulo, conteudo)
+        SELECT 'termo_anunciante', 1, 'Termo do Anunciante', ${termoAnunciante}
+        WHERE NOT EXISTS (SELECT 1 FROM legal_documents WHERE tipo = 'termo_anunciante')
+      `);
+      await db.execute(sql`
+        UPDATE legal_documents SET conteudo = ${termoAnunciante}
+        WHERE tipo = 'termo_anunciante' AND versao = 1 AND conteudo <> ${termoAnunciante}
+      `);
+    }
   } catch (err) {
     console.error("[bootstrap-legal-documents] falha:", err);
     return;
   }
 
-  console.info("[bootstrap-legal-documents] schema ready (legal_documents + seed v1 termos/privacidade)");
+  console.info("[bootstrap-legal-documents] schema ready (legal_documents + seed v1 termos/privacidade/termo_anunciante)");
 }

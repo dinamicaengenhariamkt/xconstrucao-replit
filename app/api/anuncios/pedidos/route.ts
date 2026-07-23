@@ -5,6 +5,7 @@ import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { criarPedidoSchema, validarPeriodoPago } from "@features/anuncios/self-service/schemas";
 import { criarPedido, listarPedidosDoUsuario } from "@features/anuncios/self-service/pedido-service";
 import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
+import { anuncianteAceitouContratoVigente, getVersaoVigente } from "@features/legal/legal-service";
 
 /** GET /api/anuncios/pedidos — pedidos do usuário logado (com slots). */
 export async function GET(request: NextRequest) {
@@ -21,6 +22,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
+
+  // J59 — gate de contrato do anunciante: só quem aceitou a versão vigente do
+  // Termo do Anunciante pode criar um pedido. Cobre os dois caminhos (anunciante
+  // puro E cliente que anuncia), pois ambos batem neste POST — e fica ANTES de
+  // criarPedido (que criaria a identidade/papel de anunciante). Fail-open quando
+  // não há termo publicado (ver anuncianteAceitouContratoVigente).
+  if (!(await anuncianteAceitouContratoVigente(guard.user.id))) {
+    const vigente = await getVersaoVigente("termo_anunciante");
+    const r = NextResponse.json(
+      {
+        message: "Você precisa aceitar o Termo do Anunciante antes de anunciar.",
+        code: "CONTRATO_ANUNCIANTE_NAO_ACEITO",
+        versao: vigente?.versao ?? null,
+      },
+      { status: 403 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
 
   // Anti-abuso: limita criação por usuário e por IP (J19).
   const ip = getClientIp(request);
