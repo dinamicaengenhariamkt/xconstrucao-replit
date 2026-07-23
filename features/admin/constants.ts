@@ -17,6 +17,7 @@ import {
   RiUserHeartLine,
   RiStarLine,
   RiFileTextLine,
+  RiFileList3Line,
   RiHeartPulseLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
@@ -42,6 +43,7 @@ export const ADMIN_BOTTOM_NAV_ITEMS: NavItem[] = [
   { title: 'Planos', url: '/admin/planos', icon: RiVipCrownLine },
   { title: 'Perguntas Frequentes', url: '/admin/faq', icon: RiQuestionLine },
   { title: 'Documentos Legais', url: '/admin/legal', icon: RiFileTextLine },
+  { title: 'Contratos', url: '/admin/contratos', icon: RiFileList3Line },
   { title: 'Auditoria', url: '/admin/auditoria', icon: RiHistoryLine },
   { title: 'Configurações', url: '/admin/configuracoes', icon: RiSettings3Line },
 ];
