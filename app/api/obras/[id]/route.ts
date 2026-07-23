@@ -321,6 +321,27 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   }
 
+  // J58 — enquanto o contrato entre as partes não está `assinado`, este PATCH
+  // genérico não pode promover a obra a `em_andamento`. Só a rota de assinatura
+  // (app/api/obras/[id]/contrato/assinar) efetiva a obra. Blinda um vetor secundário
+  // (o campo `status` faz parte do insertObraSchema.partial()).
+  if (
+    "status" in safeBody &&
+    safeBody.status === "em_andamento" &&
+    access.obra.contratoStatus != null &&
+    access.obra.contratoStatus !== "assinado"
+  ) {
+    const r = NextResponse.json(
+      {
+        error: "CONTRATO_PENDENTE",
+        message: "A obra só inicia após a assinatura do contrato por ambas as partes.",
+      },
+      { status: 409 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   // Aplica apenas os campos enviados (não sobrescreve com merged completo).
   const updateData: Record<string, unknown> = {};
   for (const k of Object.keys(safeBody)) {

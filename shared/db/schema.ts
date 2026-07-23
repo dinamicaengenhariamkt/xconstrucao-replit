@@ -6,6 +6,15 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum("user_role", ["superadmin", "admin", "contratante", "empreiteiro", "anunciante"]);
 export const statusEnum = pgEnum("status", ["ativo", "inativo", "aprovacao"]);
 export const obraStatusEnum = pgEnum("obra_status", ["em_andamento", "concluida", "pausada", "planejamento"]);
+// J58 — estado do contrato entre as partes (coluna dedicada em `obras`, NÃO no
+// enum de status). null = obra sem fluxo de contrato (legado / não contratada).
+// Fluxo: pendente_contratante → pendente_empreiteiro → assinado (ao assinar, a
+// obra é promovida a status='em_andamento').
+export const obraContratoStatusEnum = pgEnum("obra_contrato_status", [
+  "pendente_contratante",
+  "pendente_empreiteiro",
+  "assinado",
+]);
 export const obraVisibilidadeEnum = pgEnum("obra_visibilidade", ["rascunho", "publicada", "pausada", "arquivada"]);
 export const obraStatusModeracaoEnum = pgEnum("obra_status_moderacao", ["pendente", "aprovada", "rejeitada"]);
 export const obraModalidadeEnum = pgEnum("obra_modalidade", ["administracao", "empreitada_global", "empreitada_etapa"]);
@@ -203,6 +212,8 @@ export const obras = pgTable("obras", {
   clienteId: varchar("cliente_id").references(() => clientes.id),
   empreiteiraId: varchar("empreiteira_id").references(() => empreiteiras.id),
   status: obraStatusEnum("status").notNull().default("planejamento"),
+  // J58 — estado do contrato entre as partes. null = obra sem fluxo de contrato.
+  contratoStatus: obraContratoStatusEnum("contrato_status"),
   visibilidade: obraVisibilidadeEnum("visibilidade").notNull().default("rascunho"),
   statusModeracao: obraStatusModeracaoEnum("status_moderacao").notNull().default("pendente"),
   motivoModeracao: text("motivo_moderacao"),
@@ -249,6 +260,30 @@ export const obraAnexos = pgTable("obra_anexos", {
 });
 
 export type ObraAnexo = typeof obraAnexos.$inferSelect;
+
+// J58 — assinatura eletrônica do contrato por parte (molde `user_consents`:
+// registro com IP/UA). Cada parte assina uma vez por obra (unique obra+papel).
+export const contratoPapelEnum = pgEnum("contrato_papel", ["contratante", "empreiteiro"]);
+
+export const contratoAssinaturas = pgTable(
+  "contrato_assinaturas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+    candidaturaId: varchar("candidatura_id").references(() => candidaturas.id, { onDelete: "set null" }),
+    papel: contratoPapelEnum("papel").notNull(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    versaoTemplate: integer("versao_template").notNull(),
+    assinadoEm: timestamp("assinado_em").defaultNow().notNull(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+  },
+  (t) => ({
+    uniqObraPapel: uniqueIndex("contrato_assinaturas_obra_papel_uniq").on(t.obraId, t.papel),
+  }),
+);
+
+export type ContratoAssinatura = typeof contratoAssinaturas.$inferSelect;
 
 export const financeiroStatusEnum = pgEnum("financeiro_status", ["pendente", "pago", "atrasado", "cancelado"]);
 // Escopo separa o dinheiro DA OBRA (pagamentos contratante↔empreiteiro, J06/J08)
@@ -478,7 +513,7 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade", "termo_anunciante"]);
+export const consentDocumentEnum = pgEnum("consent_document", ["termos", "privacidade", "termo_anunciante", "contrato_obra"]);
 
 export const userConsents = pgTable(
   "user_consents",

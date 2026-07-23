@@ -49,6 +49,7 @@ export async function bootstrapLegalDocumentsSchema(): Promise<void> {
     const termos = lerSeed("termos-v1.md");
     const privacidade = lerSeed("privacidade-v1.md");
     const termoAnunciante = lerSeed("termo-anunciante-v1.md"); // J59
+    const contratoObra = lerSeed("contrato-obra-v1.md"); // J58 (template com {{vars}})
 
     if (termos) {
       await db.execute(sql`
@@ -83,6 +84,18 @@ export async function bootstrapLegalDocumentsSchema(): Promise<void> {
       await db.execute(sql`
         UPDATE legal_documents SET conteudo = ${termoAnunciante}
         WHERE tipo = 'termo_anunciante' AND versao = 1 AND conteudo <> ${termoAnunciante}
+      `);
+    }
+    // J58 — template do contrato de obra (Markdown com {{vars}} mesclado no client).
+    if (contratoObra) {
+      await db.execute(sql`
+        INSERT INTO legal_documents (tipo, versao, titulo, conteudo)
+        SELECT 'contrato_obra', 1, 'Contrato de Obra', ${contratoObra}
+        WHERE NOT EXISTS (SELECT 1 FROM legal_documents WHERE tipo = 'contrato_obra')
+      `);
+      await db.execute(sql`
+        UPDATE legal_documents SET conteudo = ${contratoObra}
+        WHERE tipo = 'contrato_obra' AND versao = 1 AND conteudo <> ${contratoObra}
       `);
     }
   } catch (err) {

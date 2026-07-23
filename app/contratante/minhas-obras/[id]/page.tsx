@@ -28,6 +28,7 @@ import { ContatoEmpreiteiroCard } from '@features/contratante/minhas-obras/compo
 import { CandidaturasCard } from '@features/contratante/minhas-obras/components/CandidaturasCard';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { ObraVisibilidadeActions } from '@features/contratante/minhas-obras/components/ObraVisibilidadeActions';
+import { ContratoCard } from '@features/contratos/components/ContratoCard';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import {
   RiArrowLeftLine,
@@ -523,6 +524,11 @@ export default function ObraDetalhePage() {
             </motion.div>
           </AnimatePresence>
         </div>
+      </motion.div>
+
+      {/* J58 — Contrato entre as partes (auto-oculta se a obra não tem contrato). */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+        <ContratoCard obraId={obra.id} />
       </motion.div>
 
       {/* Contato do Empreiteiro / Candidaturas */}

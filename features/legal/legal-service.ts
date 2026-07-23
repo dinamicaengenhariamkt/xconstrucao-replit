@@ -7,7 +7,7 @@ import { legalDocuments, userConsents, type LegalDocument } from "@shared/db/sch
  * lista o histórico (admin), publica novas versões e registra re-consentimento.
  */
 
-export type LegalTipo = "termos" | "privacidade" | "termo_anunciante";
+export type LegalTipo = "termos" | "privacidade" | "termo_anunciante" | "contrato_obra";
 
 /** Versão vigente (ativa, maior versão) de um tipo. */
 export async function getVersaoVigente(tipo: LegalTipo): Promise<LegalDocument | null> {

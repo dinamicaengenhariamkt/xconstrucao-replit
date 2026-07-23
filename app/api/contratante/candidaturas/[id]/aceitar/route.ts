@@ -7,6 +7,7 @@ import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 import { dispararNotificacaoObraContratadaAdmin } from "@features/notificacoes/marketplace-admin-dispatcher";
+import { dispararNotificacaoVezDeAssinar } from "@features/notificacoes/contrato-dispatcher";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { garantirChatThread } from "@features/chat/service";
 
@@ -108,9 +109,15 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       // 1) Vincular obra + propagar valorTotal da proposta aceita (Item 14 J40).
       // valorProposta é a fonte de verdade do valor contratado; o lock
       // OBRA_LOCKED_AFTER_BIND (obras/[id]/route.ts) protege o campo após o vínculo.
+      //
+      // J58 — o aceite NÃO promove mais a obra a `em_andamento` direto: ela entra
+      // no fluxo de contrato (`contratoStatus = pendente_contratante`). A promoção
+      // a `em_andamento` acontece na rota de assinatura, quando AMBAS as partes
+      // assinam. O vínculo (empreiteiraId) e o valorTotal continuam sendo setados
+      // aqui — o contrato só governa o `status`.
       const obraAceiteSet: Record<string, unknown> = {
         empreiteiraId: emp.id,
-        status: "em_andamento",
+        contratoStatus: "pendente_contratante",
         updatedAt: now,
       };
       if (cand.valorProposta !== null && cand.valorProposta !== undefined) {
@@ -248,6 +255,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       // nunca a cada proposta. Fire-and-forget, resolve as partes por obraId.
       void dispararNotificacaoObraContratadaAdmin(obraIdAceita).catch((err) => {
         console.error("[aceitar] falha no disparo marketplace-admin:", err);
+      });
+
+      // J58: a obra entrou no fluxo de contrato — avisa o contratante que é a vez
+      // dele assinar (contratante assina 1º). Fire-and-forget.
+      void dispararNotificacaoVezDeAssinar(obraIdAceita, "contratante").catch((err) => {
+        console.error("[aceitar] falha no disparo contrato (vez de assinar):", err);
       });
       const rejeitadasIds: string[] = (result.body as any).rejeitadasIds ?? [];
       for (const rid of rejeitadasIds) {

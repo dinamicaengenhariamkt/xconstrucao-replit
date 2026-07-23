@@ -16,6 +16,7 @@ import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/component
 import { FinanceiroSection } from '@features/empreiteiro/minhas-obras/components/FinanceiroSection';
 import { EquipeSection } from '@features/empreiteiro/minhas-obras/components/EquipeSection';
 import { ContatoContratanteCard } from '@features/empreiteiro/minhas-obras/components/ContatoContratanteCard';
+import { ContratoCard } from '@features/contratos/components/ContratoCard';
 import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card';
 import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
 import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
@@ -421,6 +422,11 @@ export default function MinhaObraDetalhePage() {
       {/* BLOCO 12: Equipe e Colaboradores */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <EquipeSection obra={obra} />
+      </motion.div>
+
+      {/* J58 — Contrato entre as partes (auto-oculta se a obra não tem contrato). */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
+        <ContratoCard obraId={obra.id} />
       </motion.div>
 
       {/* BLOCO 13: Contato do Contratante */}

@@ -5,7 +5,7 @@
  * `user_consents` (documento `termo_anunciante`). A tipagem já prevê `documento`
  * genérico para quando a J58 (contrato entre-partes) plugar novas fontes/tipos.
  */
-export type ContratoDocumento = 'termo_anunciante' | 'termos' | 'privacidade';
+export type ContratoDocumento = 'termo_anunciante' | 'termos' | 'privacidade' | 'contrato_obra';
 
 export interface ContratoAceite {
   id: string;

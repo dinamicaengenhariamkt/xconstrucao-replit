@@ -173,10 +173,13 @@ test.describe.serial("Integração — Obras + Candidatura/Aceite", () => {
     const aceitarBody = await aceitarRes.json();
     expect(aceitarBody.ok, "aceite deve responder ok=true").toBe(true);
 
-    // Vínculo persiste: obra muda para em_andamento.
+    // J58 — o aceite vincula a empreiteira e entra no fluxo de contrato
+    // (contratoStatus = pendente_contratante); a obra só vira em_andamento após
+    // ambas as partes assinarem. O vínculo (empreiteiraId) já persiste aqui.
     const obraRes = await request.get(`/api/obras/${obraId}`);
     const obra = await obraRes.json();
-    expect(obra.status, "obra aceita deve ficar em_andamento").toBe("em_andamento");
+    expect(obra.contratoStatus, "aceite deve entrar em contrato pendente").toBe("pendente_contratante");
+    expect(obra.empreiteiraId, "vínculo com a empreiteira deve persistir no aceite").toBeTruthy();
     await logout(request);
 
     // Thread de chat passa a existir para o empreiteiro (a maria agora tem conversa nesta obra).
