@@ -98,7 +98,8 @@ export function useCheckout() {
     },
     onSuccess: (data) => {
       if (data.kind === 'redirect') {
-        window.location.assign(data.url);
+        // Guarda defensiva: redirect sem URL não navega para "undefined".
+        if (data.url) window.location.assign(data.url);
         return;
       }
       // Ativação imediata (adapter manual) → atualizar plano/uso.

@@ -64,6 +64,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 52 | [Perfil Incompleto & Continuidade de Onboarding](52-perfil-incompleto-continuidade-onboarding.md) | contratante, empreiteiro | 11 | pronto | alta |
 | 53 | [UI de Pagamento de Anúncios & FAQ do Anunciante](53-ui-pagamento-anuncios-faq.md) | anunciante, admin | 11 | pronto | alta |
 | 54 | [Validação Ponta-a-Ponta das 3 Personas & Specs](54-validacao-personas-specs.md) | todas | 11 | em andamento | alta |
+| 55 | [Transparência LGPD do Processamento de Pagamento](55-transparencia-lgpd-pagamento.md) | todas | 11 | pronto | alta |
+| 56 | [Hardening dos Fluxos de Pagamento](56-hardening-pagamento.md) | contratante, empreiteiro, anunciante | 11 | pronto | alta |
 
 ---
 

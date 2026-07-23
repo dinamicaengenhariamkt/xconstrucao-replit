@@ -1061,6 +1061,8 @@ export const pagamentosSplit = pgTable(
     // ID do pagamento no Asaas — chave de idempotência do webhook (unique).
     asaasPaymentId: text("asaas_payment_id"),
     asaasCheckoutId: text("asaas_checkout_id"),
+    // J56 — URL de pagamento reusada em reentrância (evita 2ª cobrança em double-click).
+    invoiceUrl: text("invoice_url"),
     valorTotal: numeric("valor_total", { precision: 15, scale: 2 }),
     valorPlataforma: numeric("valor_plataforma", { precision: 15, scale: 2 }),
     valorEmpreiteiro: numeric("valor_empreiteiro", { precision: 15, scale: 2 }),

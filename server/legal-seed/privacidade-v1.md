@@ -121,6 +121,8 @@ Compartilhamos dados com empresas terceirizadas que nos auxiliam na operação d
 - Serviços de email e comunicação
 - Ferramentas de análise e monitoramento
 
+Para viabilizar cobranças e recebimentos, um **processador de pagamentos terceirizado** pode receber dados como seu CPF ou CNPJ, nome e e-mail para criar e manter o cadastro (e, no caso de quem recebe pela plataforma, a subconta de recebimento) necessários às transações. Esse compartilhamento ocorre apenas na medida necessária à operação financeira da plataforma.
+
 Todos os prestadores de serviço são contratualmente obrigados a proteger seus dados e usá-los apenas para os fins especificados.
 
 ### Por Exigência Legal:

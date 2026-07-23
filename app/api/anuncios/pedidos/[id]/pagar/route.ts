@@ -4,11 +4,13 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { gerarLinkPagamento } from "@features/anuncios/self-service/pedido-service";
 import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
-import { unformatCpfCnpj } from "@shared/lib/masks";
+import { unformatCpfCnpj, isCpfCnpjValid } from "@shared/lib/masks";
 
 const bodySchema = z.object({
-  cpfCnpj: z.string().transform(unformatCpfCnpj).refine((v) => v.length === 11 || v.length === 14, {
-    message: "CPF (11) ou CNPJ (14) dígitos.",
+  // Valida o dígito verificador (não só o comprimento), alinhando com o restante
+  // do app (cadastro/configurações) — evita mandar CPF/CNPJ inválido ao Asaas.
+  cpfCnpj: z.string().transform(unformatCpfCnpj).refine((v) => isCpfCnpjValid(v), {
+    message: "CPF ou CNPJ inválido.",
   }),
 });
 

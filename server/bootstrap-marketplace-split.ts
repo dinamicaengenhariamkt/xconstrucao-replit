@@ -74,6 +74,9 @@ export async function bootstrapMarketplaceSplitSchema(): Promise<void> {
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    // J56 — guarda a URL de pagamento p/ reusar em reentrância (double-click),
+    // evitando 2ª cobrança Asaas para o mesmo lançamento. Idempotente em bancos legados.
+    await db.execute(sql`ALTER TABLE pagamentos_split ADD COLUMN IF NOT EXISTS invoice_url TEXT`);
     // Idempotência do webhook: um registro por asaas_payment_id (quando presente).
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_pagamentos_split_asaas_payment ON pagamentos_split(asaas_payment_id) WHERE asaas_payment_id IS NOT NULL`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_pagamentos_split_obra_status ON pagamentos_split(obra_id, status)`);

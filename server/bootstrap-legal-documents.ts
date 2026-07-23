@@ -62,6 +62,13 @@ export async function bootstrapLegalDocumentsSchema(): Promise<void> {
         SELECT 'privacidade', 1, 'Política de Privacidade', ${privacidade}
         WHERE NOT EXISTS (SELECT 1 FROM legal_documents WHERE tipo = 'privacidade')
       `);
+      // J55 — o .md é a fonte de verdade do seed da v1. Sincroniza o conteúdo da v1
+      // com o arquivo (esclarecimento sobre processador de pagamentos), sem bump de
+      // versão. Só toca a v1 seedada; versões publicadas (>1) são imutáveis e intactas.
+      await db.execute(sql`
+        UPDATE legal_documents SET conteudo = ${privacidade}
+        WHERE tipo = 'privacidade' AND versao = 1 AND conteudo <> ${privacidade}
+      `);
     }
   } catch (err) {
     console.error("[bootstrap-legal-documents] falha:", err);

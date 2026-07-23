@@ -113,6 +113,18 @@ export async function iniciarCheckoutSplit(args: {
       };
     }
 
+    // J56 — reentrância (double-click): se já existe um split PENDENTE com link de
+    // pagamento para este lançamento, reusa em vez de criar 2ª cobrança no Asaas.
+    // Espelha o guard idempotente do anúncio (gerarLinkPagamento → invoiceUrl existente).
+    const [existente] = await db
+      .select({ id: pagamentosSplit.id, invoiceUrl: pagamentosSplit.invoiceUrl, asaasPaymentId: pagamentosSplit.asaasPaymentId })
+      .from(pagamentosSplit)
+      .where(and(eq(pagamentosSplit.financeiroId, lancamento.id), eq(pagamentosSplit.status, "pendente")))
+      .limit(1);
+    if (existente?.invoiceUrl) {
+      return { ok: true, invoiceUrl: existente.invoiceUrl, splitId: existente.id, asaasPaymentId: existente.asaasPaymentId ?? "" };
+    }
+
     // Customer Asaas do pagador (provisionado em J44; fallback lazy por email).
     const [pagador] = await db
       .select({ name: users.name, email: users.email, asaasCustomerId: users.asaasCustomerId })
@@ -177,6 +189,7 @@ export async function iniciarCheckoutSplit(args: {
       .set({
         asaasPaymentId: payment.id,
         billingType: payment.billingType ?? null,
+        invoiceUrl: payment.invoiceUrl ?? null,
         updatedAt: new Date(),
       })
       .where(eq(pagamentosSplit.id, split.id));

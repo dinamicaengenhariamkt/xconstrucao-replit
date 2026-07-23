@@ -136,6 +136,12 @@ export default function PagamentosPage() {
   async function handlePagarViaPlataforma(id: string) {
     try {
       const url = await checkoutSplit.mutateAsync(id);
+      // Guarda defensiva: sem URL não há para onde redirecionar (evita navegar
+      // para "undefined" caso um caminho futuro retorne ok sem invoiceUrl).
+      if (!url) {
+        toast({ title: 'Não foi possível abrir o pagamento. Tente novamente.', variant: 'destructive' });
+        return;
+      }
       window.location.assign(url);
     } catch (err) {
       toast({

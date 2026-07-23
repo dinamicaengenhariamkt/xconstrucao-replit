@@ -23,17 +23,27 @@ export function SiteFooter() {
             <p className="text-xs text-slate-400 text-center md:text-left">{config.descricao}</p>
           )}
         </div>
-        <div className="text-xs text-slate-400 font-medium text-center md:text-right">
-          &copy; 2026 xconstrução.lab. Todos os direitos reservados.<br />
-          Desenvolvido por{" "}
-          <a
-            href="https://ramongomes.com.br/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#333333] transition-colors"
-          >
-            Ramon Gomes
-          </a>
+        <div className="flex flex-col items-center md:items-end gap-2 text-xs text-slate-400 font-medium text-center md:text-right">
+          <nav className="flex items-center gap-4">
+            <Link href="/termos" className="hover:text-[#333333] dark:hover:text-white transition-colors">
+              Termos de Uso
+            </Link>
+            <Link href="/politica-privacidade" className="hover:text-[#333333] dark:hover:text-white transition-colors">
+              Política de Privacidade
+            </Link>
+          </nav>
+          <div>
+            &copy; 2026 xconstrução.lab. Todos os direitos reservados.<br />
+            Desenvolvido por{" "}
+            <a
+              href="https://ramongomes.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#333333] transition-colors"
+            >
+              Ramon Gomes
+            </a>
+          </div>
         </div>
       </div>
     </footer>

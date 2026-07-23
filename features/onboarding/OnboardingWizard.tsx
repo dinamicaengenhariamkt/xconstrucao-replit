@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   RiBuilding2Line,
@@ -209,9 +210,15 @@ function StepEmpresa({
             {isContratante ? 'Sobre você ou sua empresa' : 'Sobre sua empresa'}
           </h2>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
           Isso deixa seu cadastro pronto para publicar obras e emitir cobranças. Você pode ajustar
           depois nas Configurações.
+        </p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
+          Seus dados de cobrança são processados com segurança por um provedor externo de pagamentos.{" "}
+          <Link href="/politica-privacidade" className="underline hover:text-[#333333] dark:hover:text-white">
+            Saiba mais
+          </Link>.
         </p>
 
         <div className="space-y-5">
@@ -321,9 +328,15 @@ function StepRecebimento({ onNext }: { onNext: () => void }) {
             Como você vai receber
           </h2>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
           Configure seus dados de recebimento (PIX ou conta bancária) para receber pelas obras
           direto na plataforma. É opcional agora — dá para fazer depois nas Configurações.
+        </p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
+          Seus dados de recebimento são processados com segurança por um provedor externo de pagamentos.{" "}
+          <Link href="/politica-privacidade" className="underline hover:text-[#333333] dark:hover:text-white">
+            Saiba mais
+          </Link>.
         </p>
 
         <a

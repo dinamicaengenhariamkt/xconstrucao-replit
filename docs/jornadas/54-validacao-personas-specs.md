@@ -34,7 +34,9 @@ Configurações; menu do anunciante sem 404; botão Pagar visível e redirect. E
 - [x] J54.c — FAQ do anunciante responde
 - [x] J54.d — public-config expõe `adPaymentEnabled`
 - [x] `/pagar` 404 no modo manual
-- [ ] Browser E2E dos fluxos visuais (bloqueado por infra — J37)
+- [ ] Browser E2E dos fluxos visuais — **dependência de infra, não pendência de código**: o
+  Chromium do Playwright não sobe neste ambiente (`GLIBC_PRIVATE not found`). A parte de
+  integração (que roda headless) está 100% coberta e verde. O browser E2E é escopo da J37.
 
 ## 5. Critérios de aceite
 1. `npm run test:integration` verde incluindo os novos casos.

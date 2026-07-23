@@ -288,7 +288,11 @@ export default function CadastroPage() {
                     />
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Necessário para emitir cobranças e assinar planos.
+                    Necessário para emitir cobranças e assinar planos. Seus dados de pagamento
+                    são processados por um provedor externo de pagamentos.{" "}
+                    <Link href="/politica-privacidade" className="underline hover:text-[#333333] dark:hover:text-white">
+                      Saiba mais
+                    </Link>.
                   </p>
                   {cpfCnpjError && (
                     <p className="text-xs text-red-500 mt-1" data-testid="text-cpfcnpj-error">{cpfCnpjError}</p>

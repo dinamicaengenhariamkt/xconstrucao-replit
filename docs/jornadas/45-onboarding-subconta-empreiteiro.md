@@ -87,4 +87,9 @@ Reusa `asaas_subcontas` (J42). Sem novas tabelas. Persiste: `asaas_account_id`, 
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- **2026-07-22 — Uma conta de recebimento por empreiteiro (decisão, não gap)**: a auditoria ASAAS
+  confirmou que o modelo é **uma** subconta por titular (`uq_asaas_subcontas_user`, colunas
+  bancárias escalares, upsert por `user_id`). Suportar múltiplas contas de destino (ex.: Itaú +
+  Bradesco) seria um recurso grande (schema 1-N, escolha de destino no saque) e foge do modelo de
+  subconta única do ASAAS. Decisão do dono: **manter uma conta**. Trocar de banco = editar/
+  sobrescrever a conta existente. Múltiplas contas fica como follow-up de produto, se um dia.
