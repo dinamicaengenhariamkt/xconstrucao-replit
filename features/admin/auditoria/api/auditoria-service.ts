@@ -115,7 +115,14 @@ export async function obterAuditoriaKpi(): Promise<AuditoriaKpi> {
   const [row] = await db
     .select({
       acoesHoje: sql<number>`COUNT(*)::int`,
-      loginsHoje: sql<number>`COUNT(*) FILTER (WHERE ${auditLogs.action} IN ('impersonate.start'))::int`,
+      // J40 P1 #12: agregados no banco sobre TODAS as linhas de hoje. A UI
+      // calculava estes números no cliente a partir da lista de eventos, que é
+      // truncada em EVENTOS_LIMIT — em dia com mais de 100 ações, os KPIs
+      // ficavam silenciosamente subestimados.
+      usuariosAtivosHoje: sql<number>`COUNT(DISTINCT ${auditLogs.actorId})::int`,
+      pagamentosHoje: sql<number>`COUNT(*) FILTER (WHERE ${auditLogs.action} IN (
+        'pagamentos.quitar','pagamentos.checkout-split'
+      ))::int`,
       alertas: sql<number>`COUNT(*) FILTER (WHERE ${auditLogs.action} IN (
         'admin.cliente.bloqueado','admin.empreiteira.bloqueada','user.deactivate',
         'conta.desativar','disputas.abrir','obras.moderar.rejeitar'
@@ -127,7 +134,8 @@ export async function obterAuditoriaKpi(): Promise<AuditoriaKpi> {
 
   return {
     acoesHoje: row?.acoesHoje ?? 0,
-    loginsHoje: row?.loginsHoje ?? 0,
+    usuariosAtivosHoje: row?.usuariosAtivosHoje ?? 0,
+    pagamentosHoje: row?.pagamentosHoje ?? 0,
     alertas: row?.alertas ?? 0,
     erros: row?.erros ?? 0,
   };

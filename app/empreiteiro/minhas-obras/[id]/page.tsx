@@ -28,7 +28,7 @@ import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/compon
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
-import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconPhotoCamera, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
 
@@ -69,8 +69,6 @@ export default function MinhaObraDetalhePage() {
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
@@ -84,11 +82,6 @@ export default function MinhaObraDetalhePage() {
       return () => clearTimeout(timer);
     }
   }, [searchParams, obra]);
-
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setCoverUrl(URL.createObjectURL(file));
-  };
 
   if (isLoading) {
     return (
@@ -149,27 +142,20 @@ export default function MinhaObraDetalhePage() {
         className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
         data-testid="hero-minha-obra"
       >
-        <div className="aspect-[16/7] relative overflow-hidden group">
+        {/*
+          Sem "Alterar foto de capa" aqui: a capa pertence à obra, e a obra é do
+          contratante — `PATCH /api/obras/[id]` recusa empreiteiro por design
+          ("empreiteiro nunca edita"). O controle existia mas só trocava a imagem
+          via `URL.createObjectURL`, um blob local que sumia no F5 (J40 P0 #3).
+          O empreiteiro registra imagens da obra pela aba Fotos, que persiste.
+        */}
+        <div className="aspect-[16/7] relative overflow-hidden">
           <img
-            src={coverUrl ?? obra.imagemUrl}
+            src={obra.imagemUrl}
             alt={obra.titulo}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleFotoChange}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute top-4 right-4 px-4 py-2 bg-white/20 backdrop-blur-md text-white border border-white/30 rounded-xl text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 cursor-pointer"
-          >
-            <IconPhotoCamera className="text-sm" />
-            Alterar foto de capa
-          </button>
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>

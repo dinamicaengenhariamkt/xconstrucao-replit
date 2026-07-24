@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
@@ -104,6 +104,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
   const isContratante = guard.user.role === "contratante";
   const isAdmin = isAdminLike(guard.user.role);
+  const isEmpreiteiro = guard.user.role === "empreiteiro";
 
   // Queries em paralelo: candidaturas, medições, empreiteira, foto capa.
   const [
@@ -111,6 +112,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     medicoesRows,
     empreiteiraRow,
     fotoCapa,
+    minhaCandidaturaRows,
   ] = await Promise.all([
     // Contagem de candidaturas pendentes (só útil ao contratante/admin).
     isContratante || isAdmin
@@ -169,6 +171,21 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
           .where(and(eq(userFiles.id, access.obra.fotoCapaFileId), isNull(userFiles.deletedAt)))
           .limit(1)
       : Promise.resolve([]),
+
+    // Candidatura DO PRÓPRIO empreiteiro logado nesta obra (J40 P0 #1).
+    // Sem isto o adapter caía em `applicationStatus: 'nao_aplicado'` fixo, e o
+    // empreiteiro que já se candidatou continuava vendo o CTA "Candidatar-se",
+    // com o chat travado mesmo após a candidatura ser aceita.
+    // Usa idx_candidaturas_obra_empreiteiro. Escopado ao user do JWT — nunca
+    // expõe candidatura de concorrente.
+    isEmpreiteiro
+      ? db
+          .select({ status: candidaturas.status })
+          .from(candidaturas)
+          .where(and(eq(candidaturas.obraId, id), eq(candidaturas.empreiteiroId, guard.user.id)))
+          .orderBy(desc(candidaturas.createdAt))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
 
   const candidaturasCount = Number((candidaturasCountResult[0] as { c: number | string } | undefined)?.c ?? 0);
@@ -196,10 +213,24 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     ? (() => { const { clienteId, ...rest } = access.obra; return rest; })()
     : access.obra;
 
+  // Enum do banco (`pendente|aceita|rejeitada`) → enum da UI (`ApplicationStatus`).
+  // Sem candidatura → 'nao_aplicado'. Só é computado para empreiteiro.
+  const minhaCandidaturaStatus = (minhaCandidaturaRows[0] as { status: string } | undefined)?.status;
+  const applicationStatus = !isEmpreiteiro
+    ? undefined
+    : minhaCandidaturaStatus === "pendente"
+      ? "aplicado"
+      : minhaCandidaturaStatus === "aceita"
+        ? "aceito"
+        : minhaCandidaturaStatus === "rejeitada"
+          ? "rejeitado"
+          : "nao_aplicado";
+
   const r = NextResponse.json({
     ...obraOut,
     anexos,
     candidaturasCount,
+    ...(applicationStatus ? { applicationStatus } : {}),
     medicoes: medicoesRows,
     empreiteiraInfo: empreiteiraRow[0]
     ? {

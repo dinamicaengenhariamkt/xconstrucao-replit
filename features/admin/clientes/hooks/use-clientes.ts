@@ -236,6 +236,96 @@ export function useAprovarCliente() {
   });
 }
 
+/** Anexa um arquivo já commitado (`userFiles.id`) ao dossiê do cliente. */
+export function useAdicionarDocumentoCliente(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ fileId, nome }: { fileId: string; nome: string }) => {
+      const res = await fetch(`/api/admin/clientes/${id}/documentos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fileId, nome }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'Erro ao anexar documento');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clientes', id, 'documentos'] });
+    },
+  });
+}
+
+export function useRemoverDocumentoCliente(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (documentoId: string) => {
+      const res = await fetch(
+        `/api/admin/clientes/${id}/documentos?documentoId=${encodeURIComponent(documentoId)}`,
+        { method: 'DELETE', credentials: 'include' },
+      );
+      if (!res.ok) throw new Error('Erro ao remover documento');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clientes', id, 'documentos'] });
+    },
+  });
+}
+
+/** Nota interna do admin sobre o cliente (`clientes.observacoes`). */
+export function useSalvarObservacoesCliente(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (observacoes: string) => {
+      const res = await fetch(`/api/admin/clientes/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ observacoes }),
+      });
+      if (!res.ok) throw new Error('Erro ao salvar observações');
+      return res.json() as Promise<AdminCliente>;
+    },
+    onSuccess: (cliente) => {
+      queryClient.setQueryData<AdminCliente | undefined>(['admin', 'clientes', id], cliente);
+      // A nota vira entrada de audit → o feed de atividades pode ter mudado.
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clientes', id, 'atividades'] });
+    },
+  });
+}
+
+export interface EditarObraClienteInput {
+  obraId: string;
+  status: AdminClienteObra['status'];
+  previsaoFim: string | null;
+}
+
+export function useEditarObraCliente(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: EditarObraClienteInput) => {
+      const res = await fetch(`/api/admin/clientes/${id}/obras`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'Erro ao atualizar obra');
+      }
+      return res.json() as Promise<AdminClienteObra[]>;
+    },
+    onSuccess: (obras) => {
+      queryClient.setQueryData<AdminClienteObra[]>(['admin', 'clientes', id, 'obras'], obras);
+    },
+  });
+}
+
 export function useResetarSenhaCliente() {
   return useMutation({
     mutationFn: async (_id: string) => {

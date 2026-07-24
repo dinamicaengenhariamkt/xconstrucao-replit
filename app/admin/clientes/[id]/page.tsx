@@ -29,7 +29,12 @@ import {
   useAdminClienteDocumentos,
   useAdminClienteAtividades,
   useAprovarCliente,
+  useAdicionarDocumentoCliente,
+  useRemoverDocumentoCliente,
+  useSalvarObservacoesCliente,
+  useEditarObraCliente,
 } from '@features/admin/clientes/hooks/use-clientes';
+import { useUpload } from '@features/shared/hooks/use-uploads';
 import {
   RiArrowLeftLine,
   RiArrowRightSLine,
@@ -53,7 +58,7 @@ import {
   RiCloseCircleLine,
 } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
-import type { ClienteStatus, ClienteAtividade, AdminClienteObra, ClienteDocumento } from '@features/admin/clientes/types';
+import type { ClienteStatus, AdminClienteObra } from '@features/admin/clientes/types';
 import { formatCurrency, getInitials } from '@shared/lib/formatters';
 
 const STATUS_CONFIG: Record<ClienteStatus, { label: string; className: string }> = {
@@ -107,14 +112,9 @@ export default function AdminClienteDetailPage() {
   const [resetarOpen, setResetarOpen] = useState(false);
   const [bloquearOpen, setBloquearOpen] = useState(false);
   const [obsValue, setObsValue] = useState<string | null>(null);
-  const [isSavingObs, setIsSavingObs] = useState(false);
-  const [localAtividades, setLocalAtividades] = useState<ClienteAtividade[]>([]);
   const [editarObraOpen, setEditarObraOpen] = useState(false);
   const [editingObra, setEditingObra] = useState<AdminClienteObra | null>(null);
-  const [obraOverrides, setObraOverrides] = useState<Record<string, AdminClienteObra>>({});
   const [addDocumentoOpen, setAddDocumentoOpen] = useState(false);
-  const [addedDocumentos, setAddedDocumentos] = useState<ClienteDocumento[]>([]);
-  const [deletedDocumentoIds, setDeletedDocumentoIds] = useState<string[]>([]);
 
   const { data: cliente, isLoading: loadingCliente } = useAdminCliente(id);
   const { mutateAsync: aprovarCliente, isPending: aprovando } = useAprovarCliente();
@@ -153,53 +153,69 @@ export default function AdminClienteDetailPage() {
   const { data: documentos = [], isLoading: loadingDocumentos } = useAdminClienteDocumentos(id);
   const { data: atividades = [], isLoading: loadingAtividades } = useAdminClienteAtividades(id);
 
-  const allAtividades = [...localAtividades, ...atividades];
-  const obrasComOverrides = obras.map((o) => obraOverrides[o.id] ?? o);
-  const allDocumentos = [
-    ...addedDocumentos,
-    ...documentos.filter((d) => !deletedDocumentoIds.includes(d.id)),
-  ];
+  // Mutações reais (J40 P0 #4). Antes eram `setTimeout` + `setState` com toast
+  // de sucesso: o admin achava ter anexado documento e editado obra, e nada
+  // era persistido. As listas agora vêm só do servidor — sem overrides locais.
+  const { upload } = useUpload();
+  const { mutateAsync: adicionarDocumento } = useAdicionarDocumentoCliente(id);
+  const { mutateAsync: removerDocumento } = useRemoverDocumentoCliente(id);
+  const { mutateAsync: salvarObservacoes, isPending: isSavingObs } = useSalvarObservacoesCliente(id);
+  const { mutateAsync: editarObra } = useEditarObraCliente(id);
 
   function handleEditObraClick(obra: AdminClienteObra) {
     setEditingObra(obra);
     setEditarObraOpen(true);
   }
 
-  function handleSaveObra(updated: AdminClienteObra) {
-    setObraOverrides((prev) => ({ ...prev, [updated.id]: updated }));
-  }
+  const handleSaveObra = useCallback(
+    async (data: { obraId: string; status: AdminClienteObra['status']; previsaoFim: string | null }) => {
+      await editarObra(data);
+    },
+    [editarObra],
+  );
 
-  function handleAddDocumento(doc: ClienteDocumento) {
-    setAddedDocumentos((prev) => [doc, ...prev]);
-  }
+  const handleAddDocumento = useCallback(
+    async ({ file, nome }: { file: File; nome: string }) => {
+      const commit = await upload({ kind: 'cliente_documento', file });
+      await adicionarDocumento({ fileId: commit.id, nome });
+      toast({ title: 'Documento anexado', description: `"${nome}" foi salvo no dossiê.` });
+    },
+    [upload, adicionarDocumento, toast],
+  );
 
-  function handleDeleteDocumento(id: string) {
-    setAddedDocumentos((prev) => prev.filter((d) => d.id !== id));
-    setDeletedDocumentoIds((prev) => [...prev, id]);
-  }
+  const handleDeleteDocumento = useCallback(
+    async (documentoId: string) => {
+      try {
+        await removerDocumento(documentoId);
+        toast({ title: 'Documento removido' });
+      } catch (err) {
+        toast({
+          title: 'Não foi possível remover',
+          description: err instanceof Error ? err.message : 'Tente novamente.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [removerDocumento, toast],
+  );
 
   const handleSalvarObservacoes = useCallback(async () => {
-    setIsSavingObs(true);
-    await new Promise((r) => setTimeout(r, 800));
-    const saved = obsValue ?? '';
-    setIsSavingObs(false);
-    setLocalAtividades((prev) => [
-      {
-        id: `nota-${Date.now()}`,
-        tipo: 'nota' as const,
-        titulo: 'Observação atualizada',
-        descricao: saved.length > 80 ? `${saved.slice(0, 80)}...` : saved || 'Observação removida.',
-        dataHora: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    toast({ title: 'Observações salvas', description: 'Alterações registradas com sucesso.' });
-  }, [obsValue, toast]);
+    try {
+      await salvarObservacoes(obsValue ?? '');
+      toast({ title: 'Observações salvas', description: 'Alterações registradas com sucesso.' });
+    } catch (err) {
+      toast({
+        title: 'Não foi possível salvar',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }, [obsValue, salvarObservacoes, toast]);
 
   const kpis = useMemo(() => {
     const obrasAtivas = obras.filter((o) => o.status === 'em_andamento').length;
     const obrasConcluidas = obras.filter((o) => o.status === 'concluida').length;
-    const ultimaAtividade = allAtividades[0];
+    const ultimaAtividade = atividades[0];
 
     return [
       {
@@ -235,7 +251,7 @@ export default function AdminClienteDetailPage() {
         iconColor: 'text-amber-600 dark:text-amber-400',
       },
     ];
-  }, [obras, allAtividades, cliente]);
+  }, [obras, atividades, cliente]);
 
   if (loadingCliente) {
     return (
@@ -469,7 +485,7 @@ export default function AdminClienteDetailPage() {
 
             <TabsContent value="obras" className="mt-0">
               <ClienteObrasTab
-                obras={obrasComOverrides}
+                obras={obras}
                 isLoading={loadingObras}
                 onEditObra={handleEditObraClick}
               />
@@ -479,14 +495,14 @@ export default function AdminClienteDetailPage() {
             </TabsContent>
             <TabsContent value="documentos" className="mt-0">
               <ClienteDocumentosTab
-                documentos={allDocumentos}
+                documentos={documentos}
                 isLoading={loadingDocumentos}
                 onAddDocumento={() => setAddDocumentoOpen(true)}
                 onDeleteDocumento={handleDeleteDocumento}
               />
             </TabsContent>
             <TabsContent value="historico" className="mt-0">
-              <ClienteHistoricoTab atividades={allAtividades} isLoading={loadingAtividades} />
+              <ClienteHistoricoTab atividades={atividades} isLoading={loadingAtividades} />
             </TabsContent>
             <TabsContent value="bloqueios" className="mt-0">
               <div className="py-2">

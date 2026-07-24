@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "@shared/db/db";
+import { medicoes, obras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listLancamentosEmpreiteiro, type LancamentoRow } from "@features/financeiro/lancamentos-service";
 
@@ -32,7 +35,28 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
-  const lancamentos = await listLancamentosEmpreiteiro(guard.user.id);
+  // Ver comentário em ./kpi/route.ts: `financeiro` só tem lançamento após a
+  // medição ser aprovada, então medições pendentes (o estado
+  // "aguardando_aprovacao") só existem em `medicoes`. Sem elas, o card KPI
+  // linkava para `?status=aguardando_aprovacao` — um filtro que nunca casava.
+  const [lancamentos, medicoesPendentes] = await Promise.all([
+    listLancamentosEmpreiteiro(guard.user.id),
+    db
+      .select({
+        id: medicoes.id,
+        obraId: medicoes.obraId,
+        obraNome: obras.nome,
+        numero: medicoes.numero,
+        etapa: medicoes.etapa,
+        descricao: medicoes.descricao,
+        valor: medicoes.valor,
+        createdAt: medicoes.createdAt,
+      })
+      .from(medicoes)
+      .innerJoin(obras, eq(obras.id, medicoes.obraId))
+      .where(and(eq(medicoes.empreiteiroId, guard.user.id), eq(medicoes.status, "pendente")))
+      .orderBy(desc(medicoes.createdAt)),
+  ]);
 
   // Numeração sequencial por obra (ordem cronológica).
   const byObra = new Map<string, number>();
@@ -64,7 +88,24 @@ export async function GET(request: NextRequest) {
     })
     .filter(Boolean);
 
-  const r = NextResponse.json(payload);
+  // Medições aguardando decisão do contratante. `numero` vem do próprio registro
+  // (sequencial por obra, atribuído no POST de /api/empreiteiro/medicoes).
+  const aguardando = medicoesPendentes.map((m) => ({
+    id: m.id,
+    obraId: m.obraId,
+    obraNome: m.obraNome ?? "(sem obra)",
+    numero: m.numero,
+    periodo: periodoFromIso(
+      (m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt ?? "")).slice(0, 10),
+    ),
+    valor: Number(m.valor),
+    status: "aguardando_aprovacao" as const,
+    dataEnvio: (m.createdAt instanceof Date ? m.createdAt.toISOString() : String(m.createdAt ?? "")).slice(0, 10),
+    dataRecebimento: undefined,
+    descricao: m.descricao ?? m.etapa,
+  }));
+
+  const r = NextResponse.json([...aguardando, ...payload]);
   setNoCacheHeaders(r);
   return r;
 }

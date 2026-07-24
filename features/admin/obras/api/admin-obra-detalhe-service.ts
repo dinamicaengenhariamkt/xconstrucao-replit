@@ -47,16 +47,16 @@ const VISIBILIDADE_LABEL: Record<string, string> = {
   arquivada: 'Arquivada',
 };
 
+/** Espelha `obraStatusEnum` do schema — 'cancelada' nunca existiu no banco. */
 function mapStatus(s: string): AdminObraDetalhe['status'] {
   switch (s) {
     case 'em_andamento':
     case 'concluida':
     case 'pausada':
-    case 'cancelada':
-      return s;
     case 'planejamento':
+      return s;
     default:
-      return 'pausada';
+      return 'em_andamento';
   }
 }
 

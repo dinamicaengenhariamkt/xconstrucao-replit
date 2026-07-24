@@ -29,7 +29,8 @@ export interface AdminClienteObra {
   id: string;
   nome: string;
   codigo: string;
-  status: 'em_andamento' | 'concluida' | 'pausada' | 'cancelada';
+  /** Espelha `obraStatusEnum` do schema (não existe 'cancelada' no banco). */
+  status: 'em_andamento' | 'concluida' | 'pausada' | 'planejamento';
   valorContratado: number;
   percentConcluido: number;
   dataInicio: string;

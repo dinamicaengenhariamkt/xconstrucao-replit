@@ -11,7 +11,6 @@ export type AnuncianteStatus = 'ativo' | 'inativo';
 
 export interface AnuncioKpi {
   receitaAnuncios: number;
-  receitaCrescimentoPercent: number;
   campanhasAtivas: number;
   impressoes: number;
   cliques: number;

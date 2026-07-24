@@ -222,9 +222,14 @@ export default function AdminEntradasPage() {
         value: formatCurrency(kpi.totalEntradas),
         icon: RiArrowUpLine,
         iconBgColor: 'bg-[#22846D]/10 text-[#22846D]',
+        // Sinal e cor derivados do valor (J40 P1 #9): antes o '+' e o
+        // variant eram fixos, então uma queda de 15% renderizava
+        // "+-15,0% vs. anterior" com badge verde de sucesso.
         badge: {
-          label: `+${kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% vs. anterior`,
-          variant: 'success' as const,
+          label: `${kpi.crescimentoPercent > 0 ? '+' : ''}${kpi.crescimentoPercent
+            .toFixed(1)
+            .replace('.', ',')}% vs. anterior`,
+          variant: kpi.crescimentoPercent < 0 ? ('error' as const) : ('success' as const),
         },
       },
       {

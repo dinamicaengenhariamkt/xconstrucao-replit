@@ -69,6 +69,8 @@ export type DbObra = {
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
   anexosCount?: number | null;
+  /** Curadoria do admin (`/admin/obras-destaque`). Já vem de GET /api/obras via getTableColumns. */
+  destaque?: boolean | null;
   /** Computado server-side em GET /api/obras (role=empreiteiro): intersecção da UF/cidade da obra com zona de atuação. */
   naMinhaZona?: boolean | null;
   // ── Campos agregados por GET /api/obras/[id] ──────────────────────────────
@@ -89,6 +91,13 @@ export type DbObra = {
   fotoCapaUrl?: string | null;
   /** Dias restantes até dataPrevisao (calculado server-side). */
   diasRestantes?: number | null;
+  /**
+   * Status da candidatura DO PRÓPRIO empreiteiro logado nesta obra.
+   * Só presente em GET /api/obras/[id] com role=empreiteiro — a listagem
+   * (`GET /api/obras`) filtra fora obras já candidatadas (anti-self), então
+   * lá o valor é sempre 'nao_aplicado' por construção.
+   */
+  applicationStatus?: 'nao_aplicado' | 'aplicado' | 'aceito' | 'rejeitado' | null;
 };
 
 export type DbObraAnexo = {
@@ -346,8 +355,14 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     prazo: o.dataPrevisao ? formatDate(o.dataPrevisao) : '—',
     descricao: o.descricao ?? '',
     contratante: { nome: 'Contratante', iniciais: 'CT', cor: 'bg-primary' },
-    destaque: false,
-    applicationStatus: 'nao_aplicado',
+    // Curadoria do admin: a coluna já chega via `getTableColumns(obras)` em
+    // /api/obras (o strip por role remove só clienteId/candidaturasCount).
+    // Antes era `false` fixo — o selo em NovaObraCard era código inalcançável.
+    destaque: o.destaque ?? false,
+    // Vem de /api/obras/[id] (detalhe). Na listagem o campo não é enviado e o
+    // fallback 'nao_aplicado' é correto: obras já candidatadas são filtradas
+    // fora pelo anti-self do GET /api/obras.
+    applicationStatus: o.applicationStatus ?? 'nao_aplicado',
     dataPublicacao: formatRelative(o.createdAt ?? null),
     // Grid de browse do empreiteiro não expõe contagem de propostas de
     // concorrentes (por design) — usa `candidaturasCount` só quando a origem

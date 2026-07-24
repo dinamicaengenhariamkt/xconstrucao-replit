@@ -5,6 +5,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import {
   obterEmpreiteiraAdmin,
   editarEmpreiteiraAdmin,
+  atualizarObservacoesDaEmpreiteira,
 } from "@features/admin/empreiteiras/api/empreiteiras-admin-service";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -54,6 +55,33 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   await recordAudit({
     actorId: guard.userId,
     action: "admin.empreiteira.editada",
+    payload: { empreiteiraId: id },
+    request,
+  });
+  return NextResponse.json(await obterEmpreiteiraAdmin(id));
+}
+
+/** PATCH parcial — hoje só a nota interna do admin. */
+const patchEmpreiteiraSchema = z.object({
+  observacoes: z.string().max(5000).nullable(),
+});
+
+export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = requireAdmin(request);
+  if (!guard.ok) return guard.response;
+
+  const { id } = await ctx.params;
+  const parsed = patchEmpreiteiraSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const ok = await atualizarObservacoesDaEmpreiteira(id, parsed.data.observacoes?.trim() || null);
+  if (!ok) return NextResponse.json({ message: "Empreiteira não encontrada" }, { status: 404 });
+
+  await recordAudit({
+    actorId: guard.userId,
+    action: "admin.empreiteira.observacoes.atualizadas",
     payload: { empreiteiraId: id },
     request,
   });

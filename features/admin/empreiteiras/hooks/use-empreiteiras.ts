@@ -205,6 +205,29 @@ export function useAprovarEmpreiteira() {
   });
 }
 
+/** Nota interna do admin (`empreiteiras.observacoesInternas`). */
+export function useSalvarObservacoesEmpreiteira(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (observacoes: string) => {
+      const res = await fetch(`/api/admin/empreiteiras/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ observacoes }),
+      });
+      if (!res.ok) throw new Error('Erro ao salvar observações');
+      return res.json() as Promise<AdminEmpreiteira>;
+    },
+    onSuccess: (empreiteira) => {
+      queryClient.setQueryData<AdminEmpreiteira | undefined>(
+        ['admin', 'empreiteiras', id],
+        empreiteira,
+      );
+    },
+  });
+}
+
 export function useResetarAcessoEmpreiteira() {
   return useMutation({
     mutationFn: async (_id: string) => {

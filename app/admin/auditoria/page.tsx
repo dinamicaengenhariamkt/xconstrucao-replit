@@ -20,7 +20,6 @@ import {
   RiHistoryLine,
   RiSearchLine,
   RiFlashlightLine,
-  RiShieldUserLine,
   RiAlertLine,
   RiErrorWarningLine,
   RiGroupLine,
@@ -41,16 +40,6 @@ import {
   MODULO_OPTIONS,
   CATEGORIA_OPTIONS,
 } from '@features/admin/auditoria/constants';
-
-function isToday(iso: string): boolean {
-  const d = new Date(iso);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
-}
 
 function formatDataHora(isoString: string): string {
   const date = new Date(isoString);
@@ -174,37 +163,27 @@ export default function AdminAuditoriaPage() {
     return '';
   };
 
-  // ─── KPIs derivados de eventos (hoje) ─────────────────────────────────
-  const todayMetrics = useMemo(() => {
-    const todayEvents = (eventos ?? []).filter((e) => isToday(e.dataHora));
-    const usuariosUnicos = new Set(todayEvents.map((e) => e.usuario)).size;
-    const pagamentos = todayEvents.filter((e) => e.tipo === 'pagamento_registrado').length;
-    const logins = todayEvents.filter((e) => e.tipo === 'login').length;
-    return { totalHoje: todayEvents.length, usuariosUnicos, pagamentos, logins };
-  }, [eventos]);
-
+  // KPIs vêm agregados do servidor (J40 P1 #12). Antes eram calculados aqui a
+  // partir de `eventos`, que a rota trunca em EVENTOS_LIMIT=100 — em dia com
+  // mais de 100 ações os números ficavam silenciosamente subestimados.
+  // O card "Logins hoje" foi removido: nenhuma action de login é registrada em
+  // audit_logs (o ACTION_MAP não define nenhuma), então era sempre 0.
   const kpis: { label: string; value: string | number; icon: IconType; iconBgColor: string }[] = [
     {
       label: 'Ações hoje',
-      value: kpiLoading ? '—' : todayMetrics.totalHoje,
+      value: kpiLoading ? '—' : (kpi?.acoesHoje ?? 0),
       icon: RiFlashlightLine,
       iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20',
     },
     {
-      label: 'Logins hoje',
-      value: kpiLoading ? '—' : todayMetrics.logins,
-      icon: RiShieldUserLine,
-      iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20',
-    },
-    {
       label: 'Usuários ativos',
-      value: kpiLoading ? '—' : todayMetrics.usuariosUnicos,
+      value: kpiLoading ? '—' : (kpi?.usuariosAtivosHoje ?? 0),
       icon: RiGroupLine,
       iconBgColor: 'bg-primary/10 text-primary',
     },
     {
       label: 'Pagamentos hoje',
-      value: kpiLoading ? '—' : todayMetrics.pagamentos,
+      value: kpiLoading ? '—' : (kpi?.pagamentosHoje ?? 0),
       icon: RiMoneyDollarCircleLine,
       iconBgColor: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20',
     },

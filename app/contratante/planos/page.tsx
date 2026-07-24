@@ -16,7 +16,7 @@ import {
   RiArrowRightLine,
 } from 'react-icons/ri';
 import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
-import type { PlanoTier } from '@shared/lib/plans-catalog';
+import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@shared/components/ui/button';
@@ -64,9 +64,44 @@ interface Feature {
   enterprise: string | boolean;
 }
 
+/**
+ * Limites numéricos derivados de PLANS_CATALOG — a MESMA fonte que
+ * `getLimitesUsuario` usa para barrar o usuário (J40 P1 #8). Antes eram
+ * literais na página, e divergiam do enforcement: a tabela prometia "2 obras"
+ * no free enquanto o gate aplicava 1. `/configuracoes` já mostrava o número
+ * certo, então o mesmo usuário via dois contratos diferentes.
+ */
+function limiteLabel(slot: PlanId, chave: string): string {
+  const valor = PLANS_CATALOG.contratante[SLOT_TIER[slot]].limites[chave];
+  if (valor === undefined) return '—';
+  return valor >= 9999 ? 'Ilimitado' : String(valor);
+}
+
 const FEATURES: Feature[] = [
-  { label: 'Obras publicadas simultâneas',        starter: '2',         empresarial: '10',        enterprise: 'Ilimitado' },
-  { label: 'Propostas recebidas por obra',        starter: '5',         empresarial: 'Ilimitado', enterprise: 'Ilimitado' },
+  {
+    label: 'Obras publicadas simultâneas',
+    starter: limiteLabel('starter', 'obrasAbertas'),
+    empresarial: limiteLabel('empresarial', 'obrasAbertas'),
+    enterprise: limiteLabel('enterprise', 'obrasAbertas'),
+  },
+  {
+    label: 'Propostas recebidas por obra',
+    starter: limiteLabel('starter', 'propostasRecebidas'),
+    empresarial: limiteLabel('empresarial', 'propostasRecebidas'),
+    enterprise: limiteLabel('enterprise', 'propostasRecebidas'),
+  },
+  {
+    label: 'Empreiteiros contratados',
+    starter: limiteLabel('starter', 'empreiteirosContratados'),
+    empresarial: limiteLabel('empresarial', 'empreiteirosContratados'),
+    enterprise: limiteLabel('enterprise', 'empreiteirosContratados'),
+  },
+  {
+    label: 'Contratos ativos',
+    starter: limiteLabel('starter', 'contratosAtivos'),
+    empresarial: limiteLabel('empresarial', 'contratosAtivos'),
+    enterprise: limiteLabel('enterprise', 'contratosAtivos'),
+  },
   { label: 'Acesso ao diretório de empreiteiros', starter: 'Básico',    empresarial: 'Completo',  enterprise: 'Premium' },
   { label: 'Contratos digitais',                  starter: false,       empresarial: true,        enterprise: true },
   { label: 'Gestão de medições',                  starter: false,       empresarial: true,        enterprise: true },

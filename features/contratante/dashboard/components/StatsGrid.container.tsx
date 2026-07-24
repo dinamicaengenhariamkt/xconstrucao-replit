@@ -2,7 +2,6 @@
 
 import {
   RiBuilding2Line,
-  RiTimeLine,
   RiCheckboxCircleLine,
   RiAlertLine,
   RiMoneyDollarCircleLine,
@@ -30,23 +29,29 @@ export function StatsGridContainer({ data }: StatsGridContainerProps) {
       value: data.obrasAtivas,
       icon: RiBuilding2Line,
       iconBgColor: 'bg-primary/10 text-primary',
-      badge: { label: `+${data.obrasAtivasDelta} este mês`, variant: 'success' },
+      // Só mostra o delta quando há variação real — mesmo padrão do
+      // dashboard do empreiteiro. Antes exibia "+0 este mês" sempre (J40 P1 #7).
+      badge:
+        data.obrasAtivasDelta > 0
+          ? { label: `+${data.obrasAtivasDelta} este mês`, variant: 'success' }
+          : undefined,
       href: '/contratante/minhas-obras?status=em_execucao',
       testId: 'kpi-obras-ativas',
     },
-    {
-      label: 'Percentual Previsto',
-      value: `${data.percentualPrevisto}%`,
-      icon: RiTimeLine,
-      iconBgColor: 'bg-blue-50 text-blue-600',
-      badge: { label: 'Meta', variant: 'blue' },
-    },
+    // "Percentual Previsto" foi removido: o servidor define
+    // `percentualPrevisto = percentualConcluido` (não há cronograma baseline),
+    // então o card exibia o MESMO número do "Percentual Concluído" ao lado,
+    // rotulado como "Meta" — sugeria uma meta independente que não existe.
+    // Reintroduzir quando houver baseline planejado em obra_etapas.
     {
       label: 'Percentual Concluído',
       value: `${data.percentualConcluido}%`,
       icon: RiCheckboxCircleLine,
       iconBgColor: 'bg-[#22846D]/10 text-[#22846D]',
-      badge: { label: `${data.desvioPercentual}% do prev.`, variant: 'amber' },
+      badge:
+        data.desvioPercentual !== 0
+          ? { label: `${data.desvioPercentual}% do prev.`, variant: 'amber' }
+          : undefined,
       href: '/contratante/minhas-obras?status=finalizada',
       testId: 'kpi-percentual-concluido',
     },

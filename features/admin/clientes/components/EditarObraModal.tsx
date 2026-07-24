@@ -27,25 +27,26 @@ import { useToast } from '@shared/hooks/use-toast';
 import type { AdminClienteObra } from '../types';
 
 const editarObraSchema = z.object({
-  status: z.enum(['em_andamento', 'concluida', 'pausada', 'cancelada']),
-  empreiteira: z.string().min(2, 'Informe a empreiteira responsável'),
+  status: z.enum(['em_andamento', 'concluida', 'pausada', 'planejamento']),
   previsaoFim: z.string().min(1, 'Informe a data de previsão de término'),
 });
 
 type EditarObraFormData = z.infer<typeof editarObraSchema>;
 
+// Espelha `obraStatusEnum` do schema — 'cancelada' não existe no banco.
 const STATUS_OPTIONS: { value: AdminClienteObra['status']; label: string }[] = [
+  { value: 'planejamento', label: 'Planejamento' },
   { value: 'em_andamento', label: 'Em andamento' },
   { value: 'concluida', label: 'Concluída' },
   { value: 'pausada', label: 'Pausada' },
-  { value: 'cancelada', label: 'Cancelada' },
 ];
 
 interface EditarObraModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   obra: AdminClienteObra;
-  onSave: (updated: AdminClienteObra) => void;
+  /** Persiste via PATCH /api/admin/clientes/[id]/obras. */
+  onSave: (data: { obraId: string; status: AdminClienteObra['status']; previsaoFim: string | null }) => Promise<void>;
 }
 
 export function EditarObraModal({ open, onOpenChange, obra, onSave }: EditarObraModalProps) {
@@ -56,7 +57,6 @@ export function EditarObraModal({ open, onOpenChange, obra, onSave }: EditarObra
     resolver: zodResolver(editarObraSchema),
     defaultValues: {
       status: obra.status,
-      empreiteira: obra.empreiteira,
       previsaoFim: obra.previsaoFim,
     },
   });
@@ -64,7 +64,6 @@ export function EditarObraModal({ open, onOpenChange, obra, onSave }: EditarObra
   const handleClose = () => {
     form.reset({
       status: obra.status,
-      empreiteira: obra.empreiteira,
       previsaoFim: obra.previsaoFim,
     });
     onOpenChange(false);
@@ -72,14 +71,22 @@ export function EditarObraModal({ open, onOpenChange, obra, onSave }: EditarObra
 
   const onSubmit = async (data: EditarObraFormData) => {
     setIsPending(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsPending(false);
-    onSave({ ...obra, ...data });
-    toast({
-      title: 'Obra atualizada',
-      description: `Dados de "${obra.nome}" salvos com sucesso.`,
-    });
-    onOpenChange(false);
+    try {
+      await onSave({ obraId: obra.id, status: data.status, previsaoFim: data.previsaoFim || null });
+      toast({
+        title: 'Obra atualizada',
+        description: `Dados de "${obra.nome}" salvos com sucesso.`,
+      });
+      onOpenChange(false);
+    } catch (err) {
+      toast({
+        title: 'Não foi possível salvar',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -149,22 +156,25 @@ export function EditarObraModal({ open, onOpenChange, obra, onSave }: EditarObra
                 )}
               />
 
-              {/* Empreiteira */}
-              <FormField
-                control={form.control}
-                name="empreiteira"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Empreiteira responsável <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome da empreiteira" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/*
+                Empreiteira é somente-leitura: vem da FK `obras.empreiteiraId`,
+                atribuída pelo aceite de candidatura (J05). Editá-la como texto
+                livre aqui não teria onde persistir.
+              */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Empreiteira responsável
+                </p>
+                <p
+                  className="mt-1 px-4 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400"
+                  data-testid="text-empreiteira-obra"
+                >
+                  {obra.empreiteira}
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  Definida quando o contratante aceita uma candidatura.
+                </p>
+              </div>
 
               {/* Previsão de Término */}
               <FormField

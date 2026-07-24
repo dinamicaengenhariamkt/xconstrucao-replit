@@ -137,6 +137,8 @@ export const clientes = pgTable("clientes", {
   obrasCount: integer("obras_count").default(0),
   volumeFinanceiro: numeric("volume_financeiro", { precision: 15, scale: 2 }).default("0"),
   status: statusEnum("status").notNull().default("ativo"),
+  /** Nota interna do admin sobre o cliente (nunca exposta ao próprio cliente). */
+  observacoes: text("observacoes"),
 });
 
 export const empreiteiras = pgTable("empreiteiras", {
@@ -170,6 +172,11 @@ export const empreiteiras = pgTable("empreiteiras", {
   obrasCount: integer("obras_count").default(0),
   avaliacao: numeric("avaliacao", { precision: 3, scale: 1 }).default("0"),
   status: statusEnum("status").notNull().default("ativo"),
+  /**
+   * Nota interna do admin (nunca exposta à empreiteira nem ao público).
+   * Distinta de `descricao`, que é a bio pública do perfil.
+   */
+  observacoesInternas: text("observacoes_internas"),
 });
 
 // ---------------------------------------------------------------------------
@@ -620,6 +627,23 @@ export const empreiteiroDocumentos = pgTable("empreiteiro_documentos", {
   status: text("status").notNull().default("enviado"),
   observacao: text("observacao"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/**
+ * Documentos anexados pelo admin ao dossiê de um cliente (contrato social,
+ * procuração, etc.). Espelha `empreiteiroDocumentos`, mas o vínculo é com
+ * `clientes.id` — o admin anexa a partir de `/admin/clientes/[id]`.
+ * Soft-delete via `deletedAt` (o arquivo em `userFiles` tem o seu próprio).
+ */
+export const clienteDocumentos = pgTable("cliente_documentos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clienteId: varchar("cliente_id").notNull().references(() => clientes.id, { onDelete: "cascade" }),
+  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  nome: text("nome").notNull(),
+  tipo: text("tipo").notNull().default("outro"),
+  uploadedBy: varchar("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const empreiteiroPortfolio = pgTable("empreiteiro_portfolio", {

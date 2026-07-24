@@ -55,6 +55,29 @@ export function resolverIntervalo(
   }
 }
 
+/**
+ * Dias do período sem nenhuma movimentação (J40 P1 #9 — antes era `0` fixo,
+ * exibido como insight "N dias no período").
+ *
+ * O `chart` só contém dias COM movimento, então o resultado é o span do
+ * intervalo menos os dias presentes. Sem `inicio` definido (período "todos"),
+ * a janela é aberta e o número não teria significado → devolve 0.
+ */
+function contarDiasSemMovimento(
+  chart: Array<{ dia: string }>,
+  periodo: string | null,
+  agoraMs: number,
+): number {
+  const { inicio, fim } = resolverIntervalo(periodo, agoraMs);
+  if (!inicio || !fim) return 0;
+  const inicioMs = Date.parse(`${inicio}T00:00:00Z`);
+  const fimMs = Date.parse(`${fim}T00:00:00Z`);
+  if (Number.isNaN(inicioMs) || Number.isNaN(fimMs) || fimMs < inicioMs) return 0;
+  const totalDias = Math.floor((fimMs - inicioMs) / DIA_MS) + 1;
+  const diasComMovimento = new Set(chart.map((p) => p.dia)).size;
+  return Math.max(0, totalDias - diasComMovimento);
+}
+
 function condsPeriodo(intervalo: Intervalo) {
   const conds: any[] = [];
   if (intervalo.inicio) conds.push(sql`${financeiro.data} >= ${intervalo.inicio}`);
@@ -515,7 +538,10 @@ export async function getEntradaChart(periodo: string | null, agoraMs: number): 
       maiorDia = p.dia;
     }
   }
-  return { chart, insights: { maiorDia, maiorDiaValor, diasSemEntrada: 0 } };
+  return {
+    chart,
+    insights: { maiorDia, maiorDiaValor, diasSemEntrada: contarDiasSemMovimento(chart, periodo, agoraMs) },
+  };
 }
 
 export interface SaidaChartData {
@@ -544,7 +570,10 @@ export async function getSaidaChart(periodo: string | null, agoraMs: number): Pr
       maiorDia = p.dia;
     }
   }
-  return { chart, insights: { maiorDia, maiorDiaValor, diasSemSaida: 0 } };
+  return {
+    chart,
+    insights: { maiorDia, maiorDiaValor, diasSemSaida: contarDiasSemMovimento(chart, periodo, agoraMs) },
+  };
 }
 
 // ─── Top entidades ──────────────────────────────────────────────────────────

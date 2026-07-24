@@ -19,6 +19,7 @@ import {
   useAdminEmpreiteira,
   useAdminEmpreiteiraObras,
   useAprovarEmpreiteira,
+  useSalvarObservacoesEmpreiteira,
 } from '@features/admin/empreiteiras/hooks/use-empreiteiras';
 import { useToast } from '@shared/hooks/use-toast';
 import {
@@ -109,8 +110,25 @@ export default function AdminEmpreiteiraDetailPage() {
   const [editarOpen, setEditarOpen] = useState(false);
   const [resetarOpen, setResetarOpen] = useState(false);
   const [bloquearOpen, setBloquearOpen] = useState(false);
+  const [obsValue, setObsValue] = useState<string | null>(null);
   const { toast } = useToast();
   const { mutateAsync: aprovarEmpreiteira, isPending: aprovando } = useAprovarEmpreiteira();
+  // Antes o botão "Salvar Alterações" não tinha onClick nenhum (J40 P0 #5).
+  const { mutateAsync: salvarObservacoes, isPending: isSavingObs } =
+    useSalvarObservacoesEmpreiteira(id);
+
+  const handleSalvarObservacoes = useCallback(async () => {
+    try {
+      await salvarObservacoes(obsValue ?? '');
+      toast({ title: 'Observações salvas', description: 'Alterações registradas com sucesso.' });
+    } catch (err) {
+      toast({
+        title: 'Não foi possível salvar',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }, [obsValue, salvarObservacoes, toast]);
 
   const handleCuradoria = useCallback(
     async (decisao: 'aprovar' | 'reprovar') => {
@@ -160,7 +178,8 @@ export default function AdminEmpreiteiraDetailPage() {
       {
         label: 'Obras Ativas',
         value: String(empreiteira.obrasEmAndamento),
-        sublabel: '+2 nos últimos 3 meses',
+        // Antes: '+2 nos últimos 3 meses' — literal inventado, sem fonte (J40).
+        sublabel: 'Em execução agora',
         icon: RiHammerLine,
         iconBg: 'bg-primary/10 dark:bg-primary/20',
         iconColor: 'text-primary',
@@ -176,7 +195,9 @@ export default function AdminEmpreiteiraDetailPage() {
       {
         label: 'Obras Concluídas',
         value: String(obrasConcluidas),
-        sublabel: 'Nos últimos 24 meses',
+        // A contagem é all-time; o rótulo "Nos últimos 24 meses" restringia
+        // uma janela que a query não aplica.
+        sublabel: 'Total na plataforma',
         icon: RiCheckboxCircleLine,
         iconBg: 'bg-blue-50 dark:bg-blue-900/20',
         iconColor: 'text-blue-600 dark:text-blue-400',
@@ -485,16 +506,22 @@ export default function AdminEmpreiteiraDetailPage() {
             <Textarea
               className="h-32 bg-gray-50 dark:bg-gray-800/50 resize-none text-sm"
               placeholder="Adicione observações internas sobre esta empreiteira..."
-              defaultValue={empreiteira.observacoes ?? ''}
+              value={obsValue ?? (empreiteira.observacoes ?? '')}
+              onChange={(e) => setObsValue(e.target.value)}
               data-testid="textarea-observacoes"
             />
             <div className="flex justify-end mt-4">
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                onClick={handleSalvarObservacoes}
+                disabled={
+                  isSavingObs ||
+                  (obsValue ?? (empreiteira.observacoes ?? '')) === (empreiteira.observacoes ?? '')
+                }
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="button-salvar-observacoes"
               >
                 <RiSaveLine className="w-4 h-4" />
-                Salvar Alterações
+                {isSavingObs ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </div>

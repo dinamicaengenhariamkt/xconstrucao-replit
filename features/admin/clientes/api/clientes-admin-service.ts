@@ -1,16 +1,19 @@
 // Admin Clientes — camada real (substitui o mock). Agrega obras/financeiro e
 // deriva historicoBloqueios de audit_logs. Mapeia o schema DB → contrato de UI.
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   atividades,
   auditLogs,
+  clienteDocumentos,
   clientes,
   empreiteiras,
   financeiro,
   obras,
+  userFiles,
   users,
 } from "@shared/db/schema";
+import { createSignedReadUrl } from "@shared/lib/storage";
 import type {
   AdminCliente,
   AdminClienteObra,
@@ -96,6 +99,7 @@ export async function obterClienteAdmin(id: string): Promise<AdminCliente | null
       estado: clientes.estado,
       avatarUrl: clientes.avatarUrl,
       status: clientes.status,
+      observacoes: clientes.observacoes,
       dataCadastro: users.createdAt,
       totalObras: sql<number>`COUNT(DISTINCT ${obras.id})::int`,
       valorContratado: sql<number>`COALESCE(SUM(${obras.valorTotal}), 0)`,
@@ -128,6 +132,7 @@ export async function obterClienteAdmin(id: string): Promise<AdminCliente | null
     totalObras: num(r.totalObras),
     valorTotalContratado: num(r.valorContratado),
     valorTotalPago: num(r.valorPago),
+    observacoes: r.observacoes ?? undefined,
     historicoBloqueios,
   };
 }
@@ -209,8 +214,10 @@ function mapObraStatusCliente(status: string): AdminClienteObra["status"] {
       return "concluida";
     case "pausada":
       return "pausada";
+    case "planejamento":
+      return "planejamento";
     default:
-      return "em_andamento"; // planejamento → tratado como em andamento na UI do cliente
+      return "em_andamento";
   }
 }
 
@@ -273,10 +280,135 @@ export async function obterFinanceiroDoCliente(id: string): Promise<ClienteFinan
   };
 }
 
-// ─── Documentos (sem tabela própria de doc do cliente → vazio por ora) ───────
-export async function listarDocumentosDoCliente(_id: string): Promise<ClienteDocumento[]> {
-  // Não há fonte de documentos vinculada ao cliente no schema atual.
-  return [];
+// ─── Documentos do dossiê (tabela `cliente_documentos`) ─────────────────────
+/** Deriva o `tipo` de UI a partir do MIME do arquivo. */
+function tipoDocumentoUi(mime: string | null | undefined): ClienteDocumento["tipo"] {
+  if (!mime) return "outro";
+  if (mime.startsWith("image/")) return "imagem";
+  if (mime === "application/pdf") return "pdf";
+  return "outro";
+}
+
+export async function listarDocumentosDoCliente(id: string): Promise<ClienteDocumento[]> {
+  const rows = await db
+    .select({
+      id: clienteDocumentos.id,
+      nome: clienteDocumentos.nome,
+      createdAt: clienteDocumentos.createdAt,
+      bucketKey: userFiles.bucketKey,
+      originalName: userFiles.originalName,
+      mime: userFiles.mime,
+    })
+    .from(clienteDocumentos)
+    .innerJoin(userFiles, eq(userFiles.id, clienteDocumentos.fileId))
+    .where(
+      and(
+        eq(clienteDocumentos.clienteId, id),
+        isNull(clienteDocumentos.deletedAt),
+        isNull(userFiles.deletedAt),
+      ),
+    )
+    .orderBy(desc(clienteDocumentos.createdAt));
+
+  // `cliente_documento` é sempre privado → URL assinada por item.
+  return Promise.all(
+    rows.map(async (r) => ({
+      id: r.id,
+      nome: r.nome,
+      tipo: tipoDocumentoUi(r.mime),
+      dataEnvio: ymd(r.createdAt),
+      url:
+        (await createSignedReadUrl({ key: r.bucketKey, filename: r.originalName }).catch(
+          () => null,
+        )) ?? undefined,
+    })),
+  );
+}
+
+/** Vincula um arquivo já commitado (`userFiles.id`) ao dossiê do cliente. */
+export async function criarDocumentoDoCliente(args: {
+  clienteId: string;
+  fileId: string;
+  nome: string;
+  uploadedBy: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const [cli] = await db
+    .select({ id: clientes.id })
+    .from(clientes)
+    .where(eq(clientes.id, args.clienteId))
+    .limit(1);
+  if (!cli) return { ok: false, reason: "CLIENTE_NAO_ENCONTRADO" };
+
+  // Anti-IDOR: o arquivo precisa existir, estar vivo e ser do kind esperado.
+  const [file] = await db
+    .select({ id: userFiles.id, kind: userFiles.kind })
+    .from(userFiles)
+    .where(and(eq(userFiles.id, args.fileId), isNull(userFiles.deletedAt)))
+    .limit(1);
+  if (!file) return { ok: false, reason: "ARQUIVO_NAO_ENCONTRADO" };
+  if (file.kind !== "cliente_documento") return { ok: false, reason: "KIND_INVALIDO" };
+
+  await db.insert(clienteDocumentos).values({
+    clienteId: args.clienteId,
+    fileId: args.fileId,
+    nome: args.nome,
+    tipo: "outro",
+    uploadedBy: args.uploadedBy,
+  });
+  return { ok: true };
+}
+
+/** Soft-delete do vínculo (o arquivo em `userFiles` é preservado). */
+export async function removerDocumentoDoCliente(args: {
+  clienteId: string;
+  documentoId: string;
+}): Promise<{ ok: boolean }> {
+  const result = await db
+    .update(clienteDocumentos)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        eq(clienteDocumentos.id, args.documentoId),
+        eq(clienteDocumentos.clienteId, args.clienteId),
+        isNull(clienteDocumentos.deletedAt),
+      ),
+    )
+    .returning({ id: clienteDocumentos.id });
+  return { ok: result.length > 0 };
+}
+
+/**
+ * Edição pontual de uma obra do cliente pelo admin.
+ * Só campos que pertencem à própria obra — `empreiteira` é derivada de JOIN
+ * (FK `obras.empreiteiraId`, atribuída pelo aceite de candidatura em J05) e
+ * por isso não é editável como texto livre aqui.
+ */
+export async function editarObraDoCliente(args: {
+  clienteId: string;
+  obraId: string;
+  status: "em_andamento" | "concluida" | "pausada" | "planejamento";
+  previsaoFim: string | null;
+}): Promise<boolean> {
+  const result = await db
+    .update(obras)
+    .set({ status: args.status, dataPrevisao: args.previsaoFim })
+    // Escopo duplo: a obra tem de ser deste cliente (anti-IDOR entre dossiês).
+    .where(and(eq(obras.id, args.obraId), eq(obras.clienteId, args.clienteId)))
+    .returning({ id: obras.id });
+  return result.length > 0;
+}
+
+/** Nota interna do admin. Devolve false se o cliente não existe. */
+export async function atualizarObservacoesDoCliente(
+  id: string,
+  observacoes: string | null,
+): Promise<boolean> {
+  const result = await db
+    .update(clientes)
+    .set({ observacoes })
+    .where(eq(clientes.id, id))
+    .returning({ id: clientes.id });
+  return result.length > 0;
 }
 
 // ─── Atividades (feed J07 do cliente) ────────────────────────────────────────

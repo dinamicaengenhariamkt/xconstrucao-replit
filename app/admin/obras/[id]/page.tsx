@@ -48,7 +48,8 @@ import { MultiSelectDropdown } from '@features/shared/components/filters/MultiSe
 import { RangeNumberInput } from '@features/shared/components/filters/RangeNumberInput';
 import { RangeDateInput } from '@features/shared/components/filters/RangeDateInput';
 
-type ObraStatus = 'em_andamento' | 'concluida' | 'pausada' | 'cancelada';
+// Espelha `obraStatusEnum` do schema — 'cancelada' não existe no banco.
+type ObraStatus = 'em_andamento' | 'concluida' | 'pausada' | 'planejamento';
 
 const STATUS_CONFIG: Record<ObraStatus, { label: string; className: string }> = {
   em_andamento: {
@@ -63,9 +64,9 @@ const STATUS_CONFIG: Record<ObraStatus, { label: string; className: string }> = 
     label: 'Pausada',
     className: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
   },
-  cancelada: {
-    label: 'Cancelada',
-    className: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400',
+  planejamento: {
+    label: 'Planejamento',
+    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
   },
 };
 

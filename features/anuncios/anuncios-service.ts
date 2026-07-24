@@ -170,7 +170,6 @@ export async function registrarEvento(args: {
 // ─── KPIs e listagens admin (mapeadas ao contrato de UI) ────────────────────
 export interface AnuncioKpi {
   receitaAnuncios: number;
-  receitaCrescimentoPercent: number;
   campanhasAtivas: number;
   impressoes: number;
   cliques: number;
@@ -189,12 +188,16 @@ export async function getAnuncioKpi(hoje: string): Promise<AnuncioKpi> {
     })
     .from(anuncios);
 
+  // Janela de 30 dias — os cards rotulam "Últimos 30 dias" (J40 P1 #10).
+  // Antes a query era all-time e o label mentia sobre o recorte.
+  const inicioJanela = addDays(hoje, -30);
   const [evRow] = await db
     .select({
       impressoes: sql<number>`COUNT(*) FILTER (WHERE ${anuncioEventos.tipo} = 'impressao')::int`,
       cliques: sql<number>`COUNT(*) FILTER (WHERE ${anuncioEventos.tipo} = 'clique')::int`,
     })
-    .from(anuncioEventos);
+    .from(anuncioEventos)
+    .where(sql`${anuncioEventos.criadoEm} >= ${inicioJanela}`);
 
   const [anuncianteRow] = await db
     .select({ ativos: sql<number>`COUNT(*) FILTER (WHERE ${anunciantes.status} = 'ativo')::int` })
@@ -206,7 +209,6 @@ export async function getAnuncioKpi(hoje: string): Promise<AnuncioKpi> {
 
   return {
     receitaAnuncios: Number(campanhaRow?.receita ?? 0),
-    receitaCrescimentoPercent: 0,
     campanhasAtivas: campanhaRow?.ativas ?? 0,
     impressoes,
     cliques,

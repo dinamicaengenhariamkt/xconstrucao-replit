@@ -270,9 +270,13 @@ export default function AdminSaidasPage() {
         value: formatCurrency(kpi.totalSaidas),
         icon: RiArrowDownLine,
         iconBgColor: 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400',
+        // Sinal derivado do valor (J40 P1 #9). Semântica invertida em relação
+        // a entradas: saída subindo é ruim (error), caindo é bom (success).
         badge: {
-          label: `+${kpi.crescimentoPercent.toFixed(1).replace('.', ',')}% vs. anterior`,
-          variant: 'error' as const,
+          label: `${kpi.crescimentoPercent > 0 ? '+' : ''}${kpi.crescimentoPercent
+            .toFixed(1)
+            .replace('.', ',')}% vs. anterior`,
+          variant: kpi.crescimentoPercent < 0 ? ('success' as const) : ('error' as const),
         },
       },
       {

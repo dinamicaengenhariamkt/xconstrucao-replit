@@ -10,7 +10,7 @@ import {
 } from "@shared/lib/storage";
 
 const bodySchema = z.object({
-  kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "obra_capa", "candidatura_anexo", "obra_foto", "anuncio_criativo"]),
+  kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "obra_capa", "candidatura_anexo", "obra_foto", "anuncio_criativo", "cliente_documento"]),
   mime: z.string().min(3).max(120),
   size: z.number().int().min(1).max(20_000_000),
   // contrato: presign usa `filename`; aceitamos `originalName` por compat.

@@ -62,7 +62,10 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
   // Obra do marketplace: o chat 1:1 só existe após o vínculo firmado (aceite J05).
   // Enquanto o empreiteiro não é a empreiteira contratada desta obra, não há thread
   // (o mesmo estado que trava o endereço completo).
-  const addressLocked = !['aprovado', 'em_execucao'].includes(obra.applicationStatus ?? '');
+  // `ApplicationStatus` = 'nao_aplicado' | 'aplicado' | 'aceito' | 'rejeitado'.
+  // Antes testava 'aprovado'/'em_execucao' — valores fora do enum, então o chat
+  // ficava travado para sempre, mesmo com a candidatura aceita.
+  const addressLocked = obra.applicationStatus !== 'aceito';
 
   const handleEnviarMensagem = useCallback(async () => {
     if (addressLocked) {

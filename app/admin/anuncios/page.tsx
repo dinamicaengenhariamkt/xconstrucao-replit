@@ -325,10 +325,10 @@ export default function AdminAnunciosPage() {
         value: formatCurrency(kpi.receitaAnuncios),
         icon: RiMoneyDollarCircleLine,
         iconBgColor: 'bg-[#22846D]/10 text-[#22846D]',
-        badge: {
-          label: `+${kpi.receitaCrescimentoPercent.toFixed(1).replace('.', ',')}% vs. anterior`,
-          variant: 'success' as const,
-        },
+        // Sem badge de variação: `receitaAnuncios` é o orçamento das campanhas
+        // ATIVAS agora (estoque, não fluxo de período), então "vs. anterior" não
+        // é bem definido. Antes o campo era `0` fixo e exibia "+0,0%" (J40 P1 #10).
+        badge: { label: 'Campanhas ativas', variant: 'info' as const },
       },
       {
         label: 'Campanhas ativas',
@@ -1045,14 +1045,12 @@ function CampanhaRow({
           >
             <RiEditLine className="w-5 h-5" />
           </button>
-          {isExpirada ? (
-            <button
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-primary transition-colors"
-              title="Duplicar"
-            >
-              <RiFileCopyLine className="w-5 h-5" />
-            </button>
-          ) : isPausada ? (
+          {/*
+            Campanha expirada não tem ação secundária: o botão "Duplicar" que
+            existia aqui não tinha onClick nem endpoint por trás (J40 P3 #27).
+            Reintroduzir junto com POST /api/admin/anuncios/campanhas/[id]/duplicar.
+          */}
+          {isExpirada ? null : isPausada ? (
             <button
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-[#22846D] transition-colors"
               title="Retomar"

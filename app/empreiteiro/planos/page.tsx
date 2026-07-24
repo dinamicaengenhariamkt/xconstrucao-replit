@@ -16,7 +16,7 @@ import {
   RiArrowRightLine,
 } from 'react-icons/ri';
 import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
-import type { PlanoTier } from '@shared/lib/plans-catalog';
+import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@shared/components/ui/button';
@@ -64,10 +64,43 @@ interface Feature {
   enterprise: string | boolean;
 }
 
+/**
+ * Limites numéricos derivados de PLANS_CATALOG — a MESMA fonte que
+ * `getLimitesUsuario` usa para barrar o usuário (J40 P1 #8). Antes eram
+ * literais e divergiam do enforcement (a tabela prometia 20 fotos no free,
+ * o gate aplicava 10).
+ */
+function limiteLabel(slot: PlanId, chave: string): string {
+  const valor = PLANS_CATALOG.empreiteiro[SLOT_TIER[slot]].limites[chave];
+  if (valor === undefined) return '—';
+  return valor >= 9999 ? 'Ilimitado' : String(valor);
+}
+
 const FEATURES: Feature[] = [
-  { label: 'Obras ativas simultâneas', basico: '2', profissional: '10', enterprise: 'Ilimitado' },
-  { label: 'Propostas por mês', basico: '5', profissional: '30', enterprise: 'Ilimitado' },
-  { label: 'Fotos no portfólio', basico: '20', profissional: '100', enterprise: 'Ilimitado' },
+  {
+    label: 'Obras ativas simultâneas',
+    basico: limiteLabel('basico', 'obrasAtivas'),
+    profissional: limiteLabel('profissional', 'obrasAtivas'),
+    enterprise: limiteLabel('enterprise', 'obrasAtivas'),
+  },
+  {
+    label: 'Propostas por mês',
+    basico: limiteLabel('basico', 'propostasMes'),
+    profissional: limiteLabel('profissional', 'propostasMes'),
+    enterprise: limiteLabel('enterprise', 'propostasMes'),
+  },
+  {
+    label: 'Fotos no portfólio',
+    basico: limiteLabel('basico', 'fotosPortfolio'),
+    profissional: limiteLabel('profissional', 'fotosPortfolio'),
+    enterprise: limiteLabel('enterprise', 'fotosPortfolio'),
+  },
+  {
+    label: 'Contratos ativos',
+    basico: limiteLabel('basico', 'contratosAtivos'),
+    profissional: limiteLabel('profissional', 'contratosAtivos'),
+    enterprise: limiteLabel('enterprise', 'contratosAtivos'),
+  },
   { label: 'Visibilidade no diretório', basico: 'Básica', profissional: 'Destacada', enterprise: 'Premium' },
   { label: 'Destaque em novas obras', basico: false, profissional: true, enterprise: true },
   { label: 'Relatórios de desempenho', basico: false, profissional: true, enterprise: true },

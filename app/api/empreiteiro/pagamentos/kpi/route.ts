@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { and, eq, sql } from "drizzle-orm";
+import { db } from "@shared/db/db";
+import { medicoes } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listLancamentosEmpreiteiro } from "@features/financeiro/lancamentos-service";
 
@@ -17,7 +20,21 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
-  const lancamentos = await listLancamentosEmpreiteiro(guard.user.id);
+  // Duas fontes distintas, por desenho do fluxo (J40 P0 #2):
+  //  - `financeiro` só recebe lançamento DEPOIS da medição ser aprovada
+  //    (`criarLancamentoFromMedicao`), então medição pendente não existe lá;
+  //  - `medicoes` é a fonte com o estado real de "aguardando aprovação" — a
+  //    mesma que o contratante lê. Antes este KPI era `0` fixo, e o empreiteiro
+  //    via R$ 0 enquanto o contratante via a medição pendente na tela dele.
+  const [lancamentos, [aguardandoAgg]] = await Promise.all([
+    listLancamentosEmpreiteiro(guard.user.id),
+    db
+      .select({ total: sql<string>`COALESCE(SUM(${medicoes.valor}), 0)` })
+      .from(medicoes)
+      .where(and(eq(medicoes.empreiteiroId, guard.user.id), eq(medicoes.status, "pendente"))),
+  ]);
+
+  const aguardandoAprovacao = Number(aguardandoAgg?.total ?? 0);
 
   let totalContratado = 0;
   let totalRecebido = 0;
@@ -56,7 +73,7 @@ export async function GET(request: NextRequest) {
   const r = NextResponse.json({
     totalContratado,
     totalRecebido,
-    aguardandoAprovacao: 0,
+    aguardandoAprovacao,
     aLiberar,
     rejeitado,
     prazoMedioRecebimentoDias,

@@ -48,7 +48,8 @@ function detectTipo(file: File): DocumentoTipo {
 interface AdicionarDocumentoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (doc: ClienteDocumento) => void;
+  /** Faz upload real + POST no dossiê. Rejeita em erro (o modal exibe). */
+  onSave: (args: { file: File; nome: string }) => Promise<void>;
 }
 
 export function AdicionarDocumentoModal({ open, onOpenChange, onSave }: AdicionarDocumentoModalProps) {
@@ -88,17 +89,15 @@ export function AdicionarDocumentoModal({ open, onOpenChange, onSave }: Adiciona
       return;
     }
     setIsPending(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setIsPending(false);
-    const url = URL.createObjectURL(selectedFile);
-    onSave({
-      id: `doc-${Date.now()}`,
-      nome: data.nome,
-      tipo: data.tipo,
-      dataEnvio: new Date().toISOString().split('T')[0],
-      url,
-    });
-    handleClose();
+    setFileError(null);
+    try {
+      await onSave({ file: selectedFile, nome: data.nome });
+      handleClose();
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : 'Falha ao enviar o documento.');
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -182,49 +181,34 @@ export function AdicionarDocumentoModal({ open, onOpenChange, onSave }: Adiciona
                 )}
               />
 
-              {/* Tipo */}
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Tipo <span className="text-red-500">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <div className="grid grid-cols-3 gap-2">
-                        {TIPO_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          return (
-                            <label
-                              key={opt.value}
-                              className={cn(
-                                'flex items-center gap-2 px-3 py-3 rounded-lg cursor-pointer border-2 transition-all',
-                                field.value === opt.value
-                                  ? 'border-primary bg-primary/5'
-                                  : 'border-transparent bg-gray-100 dark:bg-gray-800 hover:border-primary/30',
-                              )}
-                            >
-                              <input
-                                type="radio"
-                                value={opt.value}
-                                checked={field.value === opt.value}
-                                onChange={() => field.onChange(opt.value)}
-                                className="w-4 h-4 text-primary focus:ring-primary/20"
-                              />
-                              <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {opt.label}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/*
+                Tipo é derivado do MIME do arquivo (aqui e no servidor, em
+                `listarDocumentosDoCliente`). Exibido como leitura para não
+                divergir do que fica gravado.
+              */}
+              {selectedFile && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tipo</p>
+                  <div
+                    className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800"
+                    data-testid="text-tipo-documento"
+                  >
+                    {(() => {
+                      const tipo = detectTipo(selectedFile);
+                      const opt = TIPO_OPTIONS.find((o) => o.value === tipo) ?? TIPO_OPTIONS[2];
+                      const Icon = opt.icon;
+                      return (
+                        <>
+                          <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {opt.label}
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </form>
           </Form>
         </div>

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@features/admin/shared/api/admin-guard";
 import { recordAudit } from "@features/auth/api/audit";
-import { obterClienteAdmin, editarClienteAdmin } from "@features/admin/clientes/api/clientes-admin-service";
+import {
+  obterClienteAdmin,
+  editarClienteAdmin,
+  atualizarObservacoesDoCliente,
+} from "@features/admin/clientes/api/clientes-admin-service";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = requireAdmin(request);
@@ -44,6 +48,36 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
     payload: { clienteId: id },
     request,
   });
+  const cliente = await obterClienteAdmin(id);
+  return NextResponse.json(cliente);
+}
+
+/** PATCH parcial — hoje só a nota interna do admin (`clientes.observacoes`). */
+const patchClienteSchema = z.object({
+  observacoes: z.string().max(5000).nullable(),
+});
+
+export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const guard = requireAdmin(request);
+  if (!guard.ok) return guard.response;
+
+  const { id } = await ctx.params;
+  const parsed = patchClienteSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const observacoes = parsed.data.observacoes?.trim() || null;
+  const ok = await atualizarObservacoesDoCliente(id, observacoes);
+  if (!ok) return NextResponse.json({ message: "Cliente não encontrado" }, { status: 404 });
+
+  await recordAudit({
+    actorId: guard.userId,
+    action: "admin.cliente.observacoes.atualizadas",
+    payload: { clienteId: id },
+    request,
+  });
+
   const cliente = await obterClienteAdmin(id);
   return NextResponse.json(cliente);
 }

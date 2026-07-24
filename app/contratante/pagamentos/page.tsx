@@ -354,7 +354,6 @@ export default function PagamentosPage() {
               value={formatCurrency(kpi?.totalEntradas ?? 0)}
               icon={RiArrowUpCircleLine}
               iconBgColor="bg-[#22846D]/10 text-[#22846D]"
-              badge={{ label: '+12% mês', variant: 'success' }}
               luminous
             />
             <StatsCard
@@ -362,7 +361,6 @@ export default function PagamentosPage() {
               value={formatCurrency(kpi?.totalSaidas ?? 0)}
               icon={RiArrowDownCircleLine}
               iconBgColor="bg-red-50 text-red-600"
-              badge={{ label: '-8% mês', variant: 'red' }}
               luminous
             />
             <StatsCard

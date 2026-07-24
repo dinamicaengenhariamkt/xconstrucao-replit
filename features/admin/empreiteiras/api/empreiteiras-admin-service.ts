@@ -39,6 +39,7 @@ export async function listarEmpreiteirasAdmin(): Promise<AdminEmpreiteira[]> {
       avatarUrl: empreiteiras.avatarUrl,
       siteUrl: empreiteiras.siteUrl,
       descricao: empreiteiras.descricao,
+      observacoesInternas: empreiteiras.observacoesInternas,
       registroProfissional: empreiteiras.registroProfissional,
       avaliacao: empreiteiras.avaliacao,
       status: empreiteiras.status,
@@ -73,6 +74,7 @@ function mapEmpreiteira(r: {
   avatarUrl: string | null;
   siteUrl: string | null;
   descricao: string | null;
+  observacoesInternas: string | null;
   registroProfissional: string | null;
   avaliacao: string | null;
   status: "ativo" | "inativo" | "aprovacao";
@@ -107,7 +109,8 @@ function mapEmpreiteira(r: {
     valorTotalRecebido: num(r.valorRecebido),
     cep: r.cep ?? undefined,
     site: r.siteUrl ?? undefined,
-    observacoes: r.descricao ?? undefined,
+    // Nota interna do admin — não confundir com `descricao` (bio pública).
+    observacoes: r.observacoesInternas ?? undefined,
     responsavelRegistro: r.registroProfissional ?? undefined,
     historicoBloqueios: r.historicoBloqueios,
   };
@@ -132,6 +135,7 @@ export async function obterEmpreiteiraAdmin(id: string): Promise<AdminEmpreiteir
       avatarUrl: empreiteiras.avatarUrl,
       siteUrl: empreiteiras.siteUrl,
       descricao: empreiteiras.descricao,
+      observacoesInternas: empreiteiras.observacoesInternas,
       registroProfissional: empreiteiras.registroProfissional,
       avaliacao: empreiteiras.avaliacao,
       status: empreiteiras.status,
@@ -291,6 +295,19 @@ export async function editarEmpreiteiraAdmin(id: string, input: EditarEmpreiteir
       siteUrl: input.site,
       registroProfissional: input.responsavelRegistro,
     })
+    .where(eq(empreiteiras.id, id))
+    .returning({ id: empreiteiras.id });
+  return res.length > 0;
+}
+
+/** Nota interna do admin (`empreiteiras.observacoesInternas`). */
+export async function atualizarObservacoesDaEmpreiteira(
+  id: string,
+  observacoes: string | null,
+): Promise<boolean> {
+  const res = await db
+    .update(empreiteiras)
+    .set({ observacoesInternas: observacoes })
     .where(eq(empreiteiras.id, id))
     .returning({ id: empreiteiras.id });
   return res.length > 0;

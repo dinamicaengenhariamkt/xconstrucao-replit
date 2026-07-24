@@ -36,7 +36,8 @@ export interface AuditoriaEvento {
 
 export interface AuditoriaKpi {
   acoesHoje: number;
-  loginsHoje: number;
+  usuariosAtivosHoje: number;
+  pagamentosHoje: number;
   alertas: number;
   erros: number;
 }

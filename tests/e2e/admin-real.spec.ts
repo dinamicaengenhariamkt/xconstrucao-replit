@@ -57,7 +57,7 @@ test.describe("Admin real — FAQ e Auditoria", () => {
     const kpiRes = await request.get("/api/admin/auditoria/kpi");
     expect(kpiRes.ok()).toBeTruthy();
     const kpi = await kpiRes.json();
-    for (const k of ["acoesHoje", "loginsHoje", "alertas", "erros"]) {
+    for (const k of ["acoesHoje", "usuariosAtivosHoje", "pagamentosHoje", "alertas", "erros"]) {
       expect(typeof kpi[k], `kpi.${k} numérico`).toBe("number");
     }
 

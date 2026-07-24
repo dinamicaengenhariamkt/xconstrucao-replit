@@ -58,6 +58,12 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
     mimes: IMAGE_MIMES,
     roles: ["contratante", "empreiteiro", "superadmin"],
   },
+  // Documento do dossiê do cliente, anexado pelo admin em /admin/clientes/[id].
+  cliente_documento: {
+    maxBytes: 15_000_000,
+    mimes: [...IMAGE_MIMES, ...DOC_MIMES],
+    roles: ["admin", "superadmin"],
+  },
   // J24 — criativo de anúncio. J23 abriu para quem pode anunciar (self-service):
   // anunciante + cliente que anuncia. Imagem pública até 8 MB.
   anuncio_criativo: {

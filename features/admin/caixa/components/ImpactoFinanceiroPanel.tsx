@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { RiBarChartLine, RiAlertLine, RiCalendarLine } from 'react-icons/ri';
+import { RiBarChartLine, RiCalendarLine } from 'react-icons/ri';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { DateRange as DayPickerRange } from 'react-day-picker';
@@ -30,10 +30,14 @@ function formatRange(range: DateRange | undefined): string {
 }
 
 interface ImpactoFinanceiroPanelProps {
+  /** `undefined` enquanto a query não resolve → o badge exibe "—". */
   saldoAtual?: number;
 }
 
-export function ImpactoFinanceiroPanel({ saldoAtual = 2_450_000 }: ImpactoFinanceiroPanelProps) {
+// Sem default numérico (J40 P1 #11): o antigo `= 2_450_000` era renderizado
+// como "Saldo Atual: R$ 2.450.000,00" durante o loading e em caso de erro,
+// indistinguível de um saldo real.
+export function ImpactoFinanceiroPanel({ saldoAtual }: ImpactoFinanceiroPanelProps) {
   const [periodo, setPeriodo] = useState<CaixaPeriodoMacro>('30dias');
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -121,7 +125,7 @@ export function ImpactoFinanceiroPanel({ saldoAtual = 2_450_000 }: ImpactoFinanc
           </div>
 
           <span className="text-primary text-sm font-bold bg-primary/10 px-4 py-2 rounded-full whitespace-nowrap">
-            Saldo Atual: {formatCurrency(saldoAtual)}
+            Saldo Atual: {saldoAtual === undefined ? '—' : formatCurrency(saldoAtual)}
           </span>
         </div>
 
@@ -151,23 +155,14 @@ export function ImpactoFinanceiroPanel({ saldoAtual = 2_450_000 }: ImpactoFinanc
           })}
         </div>
 
-        {/* Alerta */}
-        <div className="flex items-start gap-3 p-4 bg-amber-500/5 rounded-xl border border-amber-500/20 mt-6">
-          <div className="flex-shrink-0 w-8 h-8 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
-            <RiAlertLine className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-amber-500 uppercase tracking-wider">
-              Alerta Automático
-            </p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-              Se Selic cair para <span className="font-bold text-gray-900 dark:text-gray-100">10%</span>,
-              rendimento cai{' '}
-              <span className="font-bold text-red-600">R$ 80k/ano</span>.
-              Recomenda-se reavaliar estratégia de alocação do caixa.
-            </p>
-          </div>
-        </div>
+        {/*
+          O bloco "Alerta Automático" que existia aqui era 100% inventado
+          ("Se Selic cair para 10%, rendimento cai R$ 80k/ano") — nem a Selic
+          nem os R$ 80k vinham de query alguma (J40 P1 #11). Ficava logo abaixo
+          dos cards que honestamente exibem "—" por falta de fonte externa.
+          Reintroduzir quando houver integração de indicadores macro (ver
+          `macro-impacto-placeholder.ts`).
+        */}
       </CardContent>
     </Card>
   );
