@@ -81,6 +81,26 @@ export async function liberarCotaObras(
   await logout(request);
 }
 
+/**
+ * Apaga as obras E2E do contratante (e as candidaturas delas) via endpoint
+ * test-only. Best-effort — nunca lança.
+ *
+ * Diferente de `liberarCotaObras`, que apenas CONCLUI as obras: o limite de
+ * propostas/mês do plano (J11) conta candidaturas criadas no mês corrente,
+ * independente do estado da obra. Concluir não devolve a cota do empreiteiro —
+ * só apagar a candidatura devolve. Specs que criam propostas com o empreiteiro
+ * seed devem chamar isto no `afterAll`, senão a cota free (5/mês) se esgota
+ * após poucas execuções e os runs seguintes skipam em silêncio.
+ */
+export async function limparObrasE2E(
+  request: APIRequestContext,
+  { contratanteEmail = SEED_CONTRATANTE_EMAIL }: { contratanteEmail?: string } = {}
+): Promise<void> {
+  await request
+    .delete(`/api/test/cleanup-obras?email=${encodeURIComponent(contratanteEmail)}`)
+    .catch(() => {});
+}
+
 /** Conclui (via admin) uma obra específica para liberar a cota. Best-effort. */
 export async function concluirObra(
   request: APIRequestContext,

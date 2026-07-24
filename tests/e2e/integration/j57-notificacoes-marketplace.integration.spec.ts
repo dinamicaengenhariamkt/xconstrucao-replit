@@ -3,6 +3,7 @@ import {
   loginAs,
   logout,
   liberarCotaObras as liberarCotaObrasBase,
+  limparObrasE2E,
   concluirObra as concluirObraBase,
 } from "../helpers";
 
@@ -108,8 +109,37 @@ async function esperarNotificacao(
 test.describe.serial("Integração — J57: notificações & indicadores do marketplace", () => {
   const stamp = Date.now().toString(36);
 
+  // Apaga obras E2E + candidaturas delas. Concluir a obra devolve a cota de OBRAS
+  // do contratante, mas não a de PROPOSTAS/mês do empreiteiro — essa conta
+  // candidaturas criadas no mês, independente do estado da obra. Sem isto a cota
+  // free esgota após poucas execuções e os testes passam a skipar em silêncio.
+  test.beforeAll(async ({ request }) => {
+    await limparObrasE2E(request, { contratanteEmail: CONTRATANTE_EMAIL });
+  });
+
   test.afterAll(async ({ request }) => {
+    await limparObrasE2E(request, { contratanteEmail: CONTRATANTE_EMAIL });
     await liberarCotaObras(request);
+  });
+
+  // ---- obras-health: mapa de saúde do portfólio inteiro (admin-only) --------
+
+  test("GET /api/admin/obras-health: admin recebe o mapa; não-admin é barrado", async ({ request }) => {
+    // Contratante não enxerga a saúde do portfólio inteiro.
+    await loginAs(request, CONTRATANTE_EMAIL);
+    const negado = await request.get("/api/admin/obras-health");
+    expect(negado.status(), "contratante deve receber 403").toBe(403);
+    await logout(request);
+
+    await loginAs(request, ADMIN_EMAIL);
+    const res = await request.get("/api/admin/obras-health");
+    expect(res.status(), `admin: ${await res.text()}`).toBe(200);
+
+    // O contrato é um mapa obraId → ObraHealth, não uma lista.
+    const mapa = (await res.json()) as Record<string, unknown>;
+    expect(Array.isArray(mapa), "resposta deve ser um objeto-mapa, não array").toBeFalsy();
+    expect(typeof mapa, "resposta deve ser objeto").toBe("object");
+    await logout(request);
   });
 
   // ---- Item 1: aprovação notifica o contratante ----------------------------

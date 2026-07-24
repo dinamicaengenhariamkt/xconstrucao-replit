@@ -237,3 +237,45 @@ Cada item: jornada de origem, descoberto em (data/contexto), motivação, priori
 - **Descoberto:** 2026-06-01
 - **Motivação:** NPS/CSAT não têm fonte de dados; o bloco foi ocultado no dashboard admin (nada inventado). Virou a **[Jornada 20](20-satisfacao-nps-csat.md)** (`bloqueada`): aguarda o cliente final definir a estratégia de coleta. Quando definido, criar `surveys`/`survey_respostas` + endpoint e reconectar `SatisfactionMetricsSection`.
 - **Prioridade:** P2 (decisão de produto)
+
+---
+
+## Wave 12 — Camada contratual & percepção do marketplace (2026-07-24)
+
+Descobertos ao documentar as J57–J60, que foram implementadas antes de terem doc.
+
+### Email nos eventos de contrato e de moderação de obra
+- **Origem:** J57 §13 e J58 §13
+- **Descoberto:** 2026-07-24
+- **Motivação:** nem os dispatchers de moderação (obra aprovada/rejeitada) nem os de contrato (vez de assinar, cancelado, efetivado) enviam email — a notificação existe só in-app, então só é vista por quem entra na plataforma. Um contratante que teve a obra rejeitada, ou um empreiteiro esperando a vez de assinar, não descobre até abrir o app. A assinatura de contrato é o evento mais relevante juridicamente da plataforma e hoje não deixa trilha fora do sistema. Infra já existe (`features/notificacoes/emails/` com 5 templates + Brevo).
+- **Prioridade:** P1 (o contrato trava o início da obra; ninguém é lembrado)
+
+### Lembrete/expiração de contrato parado
+- **Origem:** J58 §13
+- **Descoberto:** 2026-07-24
+- **Motivação:** se o contratante assina e o empreiteiro nunca assina, a obra fica em `pendente_empreiteiro` **indefinidamente** — sem job de expiração, sem re-lembrete, sem visibilidade para o admin de quantos contratos estão parados. O contratante fica preso: a obra não anda e ele não sabe se deve cancelar. Casa com o email acima (o lembrete natural é por email).
+- **Prioridade:** P1
+
+### J60 — paginação, detalhe do contrato e exportação
+- **Origem:** J60 §13
+- **Descoberto:** 2026-07-24
+- **Motivação:** três lacunas da área de Contratos do admin. (a) `LISTA_LIMIT = 500` trunca **em silêncio** — a tela não avisa que há mais (mesma dívida já registrada para o chat). (b) Não há visão de detalhe: o admin vê "fulano aceitou contrato_obra v1" mas não consegue abrir o conteúdo assinado. (c) Sem exportação CSV/PDF, que uso jurídico real vai exigir.
+- **Prioridade:** P2 (vira P1 quando o volume de aceites crescer ou houver demanda jurídica)
+
+### PDF do contrato é imagem, não texto
+- **Origem:** J58 §13
+- **Descoberto:** 2026-07-24
+- **Motivação:** `generate-contrato-pdf.ts` usa `html2canvas`, então o PDF sai como imagem — sem texto selecionável nem pesquisável, e pesado. Aceitável enquanto o registro legal for o aceite eletrônico com IP/UA (que é o caso), mas ruim para quem precisa arquivar ou buscar dentro do documento.
+- **Prioridade:** P2
+
+### Suítes de integração que consomem cota de plano se auto-envenenam
+- **Origem:** J58 §13 (descoberto ao rodar o spec)
+- **Descoberto:** 2026-07-24
+- **Motivação:** o limite de propostas/mês (J11) conta candidaturas criadas no mês corrente, independente do estado da obra — concluir a obra **não** devolve a cota. As suítes J57/J58 esgotavam as 5 propostas do plano free da maria em ~2 execuções e, a partir daí, todos os testes passavam a skipar em silêncio: **falso verde**. Resolvido nessas duas suítes (o `cleanup-obras` test-only passou a apagar as candidaturas das obras E2E, exposto pelo helper `limparObrasE2E`). O padrão precisa valer para qualquer spec futuro que crie propostas — e o mesmo raciocínio vale para outros recursos com cota mensal. Vale considerar um guard que falhe a suíte quando o skip for por cota, em vez de passar silenciosamente.
+- **Prioridade:** P1 (um teste que skipa parece verde e não protege contra regressão)
+
+### `?tab=contrato` confirma o P1 de coalescing por href
+- **Origem:** J13 review → J58 §13
+- **Descoberto:** 2026-07-24
+- **Motivação:** o item "Coalescing por `threadId` em coluna dedicada" (P1 acima) previa que o dedupe por `eq(notificacoes.href, href)` quebraria quando o href ganhasse parâmetros. **Aconteceu**: a J58 introduziu `?tab=contrato` no href e o aviso de cancelamento, com href fixo, era descartado pelo índice parcial enquanto o primeiro não fosse lido — um empreiteiro nunca seria avisado do cancelamento de uma segunda obra. Contornado com href discriminante (`?obra=<id>`), mas o problema estrutural continua: o discriminador de dedupe é o href, que é também um dado de navegação e muda por motivos de UI. Reforça a proposta da coluna dedicada.
+- **Prioridade:** P1

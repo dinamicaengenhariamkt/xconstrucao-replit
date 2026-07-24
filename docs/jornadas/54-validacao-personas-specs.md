@@ -1,7 +1,11 @@
 # Jornada — Validação Ponta-a-Ponta das 3 Personas & Specs
 
-> Status: em andamento | Prioridade: alta | Wave: 11
-> Última atualização: 2026-07-22
+> Status: pronto (integração); browser bloqueado por infra | Prioridade: alta | Wave: 11
+> Última atualização: 2026-07-24
+>
+> **Revisão de status (2026-07-24):** o que era possível cobrir sem browser está 100%
+> coberto e verde. O único item aberto do checklist depende do Chromium, que não sobe
+> neste ambiente — é escopo da [J37](37-testes-e2e.md), não pendência desta jornada.
 >
 > Jornada de verificação transversal das J51/J52/J53. Seu artefato é teste, não feature.
 > Prova, no banco, os contratos de onboarding por persona e o comportamento condicional

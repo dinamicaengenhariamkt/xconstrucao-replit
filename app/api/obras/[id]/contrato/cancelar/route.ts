@@ -5,6 +5,7 @@ import { clientes, obras } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { cancelarContrato } from "@features/contratos/contrato-service";
+import { dispararNotificacaoContratoCancelado } from "@features/notificacoes/contrato-dispatcher";
 
 /**
  * POST /api/obras/[id]/contrato/cancelar  (J58)
@@ -44,6 +45,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
 
   void recordAudit({ actorId: guard.user.id, action: "contrato.cancelar", payload: { obraId }, request });
+
+  // O empreiteiro perde o vínculo aqui — avisar é obrigatório (fire-and-forget:
+  // uma falha de notificação não pode desfazer o cancelamento já commitado).
+  if (res.empreiteiroUserId) {
+    void dispararNotificacaoContratoCancelado({
+      empreiteiroUserId: res.empreiteiroUserId,
+      obraId,
+      obraNome: res.obraNome,
+    });
+  }
 
   const r = NextResponse.json({ ok: true });
   setNoCacheHeaders(r);

@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
@@ -8,6 +8,7 @@ import {
   obras,
 } from "@shared/db/schema";
 import { getVersaoVigente } from "@features/legal/legal-service";
+import { MOTIVO_REJEICAO_CASCATA } from "./constants";
 
 /**
  * J58 — Serviço do contrato entre contratante e empreiteiro.
@@ -216,14 +217,17 @@ export async function assinarContrato(args: {
 }
 
 export type CancelarResultado =
-  | { ok: true }
+  | { ok: true; empreiteiroUserId: string | null; obraNome: string }
   | { ok: false; code: "SEM_CONTRATO" | "JA_ASSINADO" | "OBRA_NAO_ENCONTRADA" };
 
 /**
  * Contratante cancela o aceite enquanto o contrato não foi totalmente assinado:
  * desfaz o vínculo (empreiteiraId), zera `contratoStatus`, remove assinaturas e
- * reabre as candidaturas (a aceita volta a `pendente`; as rejeitadas em cascata
- * também). A obra volta a `planejamento`.
+ * reabre as candidaturas decididas pelo aceite. A obra volta a `planejamento`.
+ *
+ * Devolve `empreiteiroUserId` + `obraNome` porque o vínculo é desfeito aqui dentro:
+ * depois do commit não há mais como descobrir QUEM perdeu a obra. Quem chama usa
+ * esses dados para notificar a parte afetada (o cancelamento não pode ser silencioso).
  */
 export async function cancelarContrato(args: { obraId: string }): Promise<CancelarResultado> {
   return db.transaction(async (tx) => {
@@ -236,8 +240,43 @@ export async function cancelarContrato(args: { obraId: string }): Promise<Cancel
     if (atual == null) return { ok: false as const, code: "SEM_CONTRATO" as const };
     if (atual === "assinado") return { ok: false as const, code: "JA_ASSINADO" as const };
 
-    // Reabre as candidaturas decididas no aceite (aceita + rejeitadas em cascata).
-    await tx.update(candidaturas).set({ status: "pendente", decididaEm: null, motivoRejeicao: null }).where(eq(candidaturas.obraId, args.obraId));
+    // Captura a parte afetada ANTES de desfazer o vínculo (o UPDATE abaixo zera
+    // `empreiteiraId` e a informação se perde).
+    const [obraAtual] = await tx
+      .select({ nome: obras.nome, empreiteiraId: obras.empreiteiraId })
+      .from(obras)
+      .where(eq(obras.id, args.obraId));
+    let empreiteiroUserId: string | null = null;
+    if (obraAtual?.empreiteiraId) {
+      const [emp] = await tx
+        .select({ userId: empreiteiras.userId })
+        .from(empreiteiras)
+        .where(eq(empreiteiras.id, obraAtual.empreiteiraId));
+      empreiteiroUserId = emp?.userId ?? null;
+    }
+
+    // Reabre SOMENTE as candidaturas decididas pelo aceite: a que foi aceita e as
+    // que o próprio aceite rejeitou em cascata (marcadas com o motivo padrão de
+    // `aceitar/route.ts`). Sem esse filtro, candidaturas rejeitadas manualmente pelo
+    // contratante — ou canceladas pelo empreiteiro — ressuscitariam como `pendente`.
+    await tx
+      .update(candidaturas)
+      .set({ status: "pendente", decididaEm: null, motivoRejeicao: null })
+      .where(
+        and(
+          eq(candidaturas.obraId, args.obraId),
+          or(
+            eq(candidaturas.status, "aceita"),
+            and(
+              eq(candidaturas.status, "rejeitada"),
+              eq(candidaturas.motivoRejeicao, MOTIVO_REJEICAO_CASCATA),
+              // Cinto de segurança: o empreiteiro que desistiu por conta própria
+              // nunca é reaberto, qualquer que seja o motivo gravado.
+              eq(candidaturas.canceladaPeloEmpreiteiro, false),
+            ),
+          ),
+        ),
+      );
 
     await tx
       .update(obras)
@@ -246,6 +285,6 @@ export async function cancelarContrato(args: { obraId: string }): Promise<Cancel
 
     await tx.delete(contratoAssinaturas).where(eq(contratoAssinaturas.obraId, args.obraId));
 
-    return { ok: true as const };
+    return { ok: true as const, empreiteiroUserId, obraNome: obraAtual?.nome ?? "" };
   });
 }

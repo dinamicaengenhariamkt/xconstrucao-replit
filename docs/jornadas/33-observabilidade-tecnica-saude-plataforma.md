@@ -1,7 +1,14 @@
 # Jornada — Observabilidade Técnica & Saúde da Plataforma (erros, logs e painel admin)
 
-> Status: planejada | Prioridade: alta | Wave: 8
-> Última atualização: 2026-06-20
+> Status: parcial (falta só config de deploy) | Prioridade: alta | Wave: 8
+> Última atualização: 2026-07-24
+>
+> **Revisão de status (2026-07-24):** o status "planejada" estava desatualizado. As
+> frentes A.1 (Sentry SDK + scrubbing de PII), A.2 (Pino, `app_errors`/`job_runs`,
+> wrapper de log, error boundary) e B (painel + endpoint admin-only) **já existem no
+> código**. O que resta não é desenvolvimento: `SENTRY_DSN` nos Secrets do Replit,
+> validar um erro de teste chegando, configurar alertas e monitorar o volume vs. free
+> tier. O performance monitoring segue como fase 2.
 >
 > **Decisão tomada (2026-06-20):** abordagem **híbrida confirmada** — **Sentry (free tier)**
 > para captura/alerta de erros front+back (rápido, completo, alertas prontos) **+ infra
@@ -187,8 +194,8 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
 - [x] Jobs reportam falha em `job_runs` (não só console) — `runBootstrap()` wraps todos os 25+ bootstraps. _(Task #105)_
 
 **Frente B — Painel "Saúde da Plataforma":**
-- [ ] Painel no admin: erros recentes (de `app_errors`), usuários ativos, status de jobs (`job_runs`), indicadores, atalho p/ auditoria.
-- [ ] Endpoint `GET /api/admin/saude` admin-only, lendo da **nossa** tabela (funciona sem Sentry).
+- [x] Painel no admin: erros recentes (de `app_errors`), usuários ativos, status de jobs (`job_runs`), indicadores, atalho p/ auditoria. _([app/admin/saude/page.tsx](../../app/admin/saude/page.tsx) → `SaudePage`)_
+- [x] Endpoint `GET /api/admin/saude` admin-only, lendo da **nossa** tabela (funciona sem Sentry). _([app/api/admin/saude/route.ts](../../app/api/admin/saude/route.ts))_
 - [ ] (fase 2) Performance monitoring (telas/endpoints lentos).
 
 ## 13. Critérios de aceite

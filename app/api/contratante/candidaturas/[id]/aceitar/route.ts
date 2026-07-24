@@ -8,6 +8,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { dispararNotificacaoCandidaturaDecidida } from "@features/notificacoes/candidatura-dispatcher";
 import { dispararNotificacaoObraContratadaAdmin } from "@features/notificacoes/marketplace-admin-dispatcher";
 import { dispararNotificacaoVezDeAssinar } from "@features/notificacoes/contrato-dispatcher";
+import { MOTIVO_REJEICAO_CASCATA } from "@features/contratos/constants";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { garantirChatThread } from "@features/chat/service";
 
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         .update(candidaturas)
         .set({
           status: "rejeitada",
-          motivoRejeicao: "Outra proposta foi selecionada",
+          motivoRejeicao: MOTIVO_REJEICAO_CASCATA,
           decididaEm: now,
         })
         .where(

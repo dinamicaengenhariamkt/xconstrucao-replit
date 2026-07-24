@@ -120,6 +120,12 @@ export async function register() {
     const { bootstrapFaqSchema } = await import("./server/bootstrap-faq");
     await runBootstrap("faq", bootstrapFaqSchema);
 
+    // J58/J59 — contrato entre as partes + termo do anunciante. Roda DEPOIS de
+    // obras/candidaturas/users (FKs de contrato_assinaturas) e ANTES de
+    // legal-documents, que insere linhas com os valores de enum criados aqui.
+    const { bootstrapContratosSchema } = await import("./server/bootstrap-contratos");
+    await runBootstrap("contratos", bootstrapContratosSchema);
+
     // J28 — documentos legais versionados + seed v1 (depende do enum consent_document).
     const { bootstrapLegalDocumentsSchema } = await import("./server/bootstrap-legal-documents");
     await runBootstrap("legal-documents", bootstrapLegalDocumentsSchema);

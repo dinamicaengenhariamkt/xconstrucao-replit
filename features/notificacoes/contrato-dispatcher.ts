@@ -53,6 +53,39 @@ export async function dispararNotificacaoVezDeAssinar(
   }
 }
 
+/**
+ * Contratante cancelou o aceite antes da assinatura completa → avisa o empreiteiro
+ * que perdeu o vínculo. Recebe `userId`/`obraNome` já resolvidos por
+ * `cancelarContrato`, porque no momento desta chamada a obra JÁ não aponta mais
+ * para a empreiteira — não há como redescobrir a parte afetada pelo obraId.
+ *
+ * O href carrega `?obra=<id>` de propósito. O índice único parcial da J13
+ * (`user_id, href` WHERE `lida = false`) faz o `onConflictDoNothing` de
+ * `criarNotificacao` descartar uma segunda notificação com href idêntico enquanto
+ * a primeira não for lida. Com um href fixo (`/empreiteiro/minhas-candidaturas`),
+ * um empreiteiro que não leu o aviso de um cancelamento NUNCA seria avisado do
+ * cancelamento de OUTRA obra — o dedupe de chat vazando para um evento que não é
+ * repetição. Discriminar por obra mantém o dedupe onde ele faz sentido (re-cancelar
+ * a mesma obra não gera aviso novo) e ainda leva o usuário à obra certa.
+ */
+export async function dispararNotificacaoContratoCancelado(args: {
+  empreiteiroUserId: string;
+  obraId: string;
+  obraNome: string;
+}): Promise<void> {
+  try {
+    await criarNotificacao({
+      userId: args.empreiteiroUserId,
+      tipo: "alerta",
+      titulo: "Contrato cancelado",
+      descricao: `O contratante cancelou o contrato da obra "${args.obraNome}" antes da assinatura das duas partes. A obra voltou ao marketplace.`,
+      href: `/empreiteiro/minhas-candidaturas?obra=${args.obraId}`,
+    });
+  } catch (err) {
+    console.error("[contrato-dispatcher] falha em contratoCancelado:", err);
+  }
+}
+
 /** Contrato assinado por ambos → notifica as duas partes + admins (observam). */
 export async function dispararNotificacaoContratoEfetivado(obraId: string): Promise<void> {
   try {

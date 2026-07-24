@@ -223,4 +223,15 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["pedido_id", "tipo", "gateway_event_id"],
     label: "pedido_pagamento_eventos (J31 idempotência)",
   },
+  // Contrato entre as partes (bootstrap-contratos, J58)
+  {
+    table: "obras",
+    columns: ["contrato_status"],
+    label: "obras (J58 contrato_status)",
+  },
+  {
+    table: "contrato_assinaturas",
+    columns: ["obra_id", "papel", "user_id", "versao_template"],
+    label: "contrato_assinaturas (J58)",
+  },
 ];

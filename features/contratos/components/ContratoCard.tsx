@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@shared/components/ui/button';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -30,6 +31,9 @@ interface ContratoApi {
 export function ContratoCard({ obraId }: { obraId: string }) {
   const qc = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const querContrato = searchParams.get('tab') === 'contrato';
 
   const { data, isLoading } = useQuery<ContratoApi>({
     queryKey: ['obra', 'contrato', obraId],
@@ -86,6 +90,15 @@ export function ContratoCard({ obraId }: { obraId: string }) {
     }
   };
 
+  // Deep link das notificações do contrato (`?tab=contrato`): rola até o card.
+  // Sem isto o usuário clica em "Assine o contrato" e cai no topo da página,
+  // tendo que procurar o card. Depende de `data` para só rolar depois que o
+  // card existe no DOM — antes disso `cardRef` ainda é null.
+  useEffect(() => {
+    if (!querContrato || !data || data.contratoStatus == null) return;
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [querContrato, data]);
+
   if (isLoading) return <Skeleton className="h-40 w-full rounded-2xl" />;
   // Sem fluxo de contrato (obra legada ou não contratada) → não renderiza.
   if (!data || data.contratoStatus == null) return null;
@@ -99,7 +112,7 @@ export function ContratoCard({ obraId }: { obraId: string }) {
         : 'Aguardando assinatura do contratante';
 
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4" data-testid="contrato-card">
+    <div ref={cardRef} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4" data-testid="contrato-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <RiFileList3Line className="w-5 h-5 text-primary" />
