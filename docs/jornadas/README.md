@@ -29,7 +29,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 17 | [Dashboards Reais (contratante + saúde/lucro)](17-dashboards-reais.md) | contratante, empreiteiro, admin | 3 | pronto | alta |
 | 18 | [Dashboard Financeiro Admin Completo](18-financeiro-admin-completo.md) | admin | 3 | pronto | média |
 | 19 | [Hardening de Segurança](19-hardening-seguranca.md) | todas | 3 | pronto | alta |
-| 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | bloqueada | baixa |
+| 20 | [Satisfação & NPS/CSAT (surveys)](20-satisfacao-nps-csat.md) | contratante, empreiteiro, admin | 4 | pronto | baixa |
 | 21 | [Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md) | admin | 4 | pronto | média |
 | 22 | [Autenticação Forte (2FA)](22-autenticacao-forte-2fa.md) | todas | 4 | pronto | média |
 | 23 | [Self-Service de Anúncios (Visão Anunciante + Meus Anúncios)](23-meus-anuncios-self-service.md) | anunciante, contratante, empreiteiro, admin | 6 | pronto | alta |
@@ -45,8 +45,8 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | parcial (falta só config de deploy) | alta |
 | 34 | [Ajustes Finos de UX (Visão Admin)](34-ajustes-finos-ux-admin.md) | admin | 8 | pronto | média |
 | 35 | [Testes Unitários (fundação de qualidade)](35-testes-unitarios.md) | dev/sistema | 9 | planejada | alta |
-| 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | em andamento (4 fases ok, expansão p/ 100%) | alta |
-| 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial | alta |
+| 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | pronto (baseline de cobertura zerada) | alta |
+| 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial (bloqueado por infra — limitação documentada; cobertura via integração) | alta |
 | 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | concluída | média |
 | 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
 | 40 | [Ajustes Finos de UX: Nova Obra (Contratante)](40-ajustes-finos-nova-obra-contratante.md) | contratante | 8 | pronto | média |
@@ -93,7 +93,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **Wave 1 — Marketplace funcional**: 01, 03, 04, 05. Saída: contratante posta obra → empreiteiro candidata → contratante aceita → vínculo persistido.
 - **Wave 2 — Execução, dinheiro e comunicação**: 06, 08, 13, 12.
 - **Wave 3 — Back-office e refinamento**: 11, 09, 02, 07, 10, 12, 14. (09/10/11/12 entregues 2026-06; **14: adapter Asaas real escrito — desbloqueada; auditoria 2026-07-19 confirmou que a integração existe. Hardening de produção e recebimento/split ficam na Wave 10**.)
-- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); 20 (bloqueada). *(23 movida p/ Wave 6 após reestruturação.)*
+- **Wave 4 — Segurança e observabilidade**: 19, 21, 22 (entregues 2026-06); **20 (NPS/CSAT — desbloqueada e implementada 2026-07-24** com premissas de coleta padrão: NPS pós-conclusão de obra, CSAT pós-pagamento; coleta pulável nas notificações; card admin só aparece com respostas reais). *(23 movida p/ Wave 6 após reestruturação.)*
 - **Wave 5 — Vitrine dinâmica e controle admin** (pós primeiro deploy): **25 (obras em destaque + carrossel), 26 (config real anti-fantasma), 27 (gestão de leads), 24 (templates + home dinâmica de anúncios) — entregues 2026-06-05/06**. Frente de "tirar o estático/fantasma da plataforma" — nenhuma depende do gateway (J14). A J24 é pré-requisito da J23 (reuso de templates/preview).
 - **Wave 6 — Compliance, histórico e segurança crítica** (pós-MVP): **29 (observabilidade histórica/snapshots) — entregue 2026-06-05** (deltas reais aparecem após ≥1 mês de coleta); 28 (docs legais versionados — bloqueada por jurídico), 30 (configurações críticas de segurança — desmembrada da J26; mexe no fluxo de auth, exige plano de não-bloqueio); **23 (self-service de anúncios — reestruturada e planejada 2026-06-07**: multi-role + visão anunciante + pedido multi-slot + checkout-protótipo; cobrança real extraída p/ a J31).
 - **Wave 7 — Monetização do marketplace de mídia**: **31 (pagamento real de anúncios — pronto MVP 2026-07-22)**: liga o gateway Asaas ao checkout da J23. Cobrança one-off (100% conta-mãe), moderar-antes-de-pagar, período obrigatório, início hoje..+7d, expiração automática, sem pausa em anúncio pago. Gated por `AD_PAYMENT_GATEWAY=asaas`+`PAYMENT_GATEWAY=asaas`; protótipo é fallback dev. Backlog: pausa-com-crédito, sobreposição de período, recorrência, estorno.

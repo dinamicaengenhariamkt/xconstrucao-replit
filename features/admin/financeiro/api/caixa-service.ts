@@ -1,6 +1,7 @@
 import { and, desc, eq, lte, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { candidaturas, clientes, empreiteiras, financeiro, kpiSnapshots, obras, users } from "@shared/db/schema";
+import { candidaturas, clientes, empreiteiras, financeiro, kpiSnapshots, obras, surveys, surveyRespostas, users } from "@shared/db/schema";
+import type { SatisfactionMetrics } from "../types";
 
 /**
  * Service de leitura do Financeiro Admin (J09). Caixa CONSOLIDADO = dinheiro de
@@ -997,6 +998,74 @@ export async function getAdoptionMetrics(agoraMs: number): Promise<AdoptionMetri
     aplicacoes7dDeltaPercent: deltaAplic,
     taxaConversaoCandidatura: conversao,
     churnEmpreiteirosPercent,
+  };
+}
+
+/**
+ * J20 — Métricas de satisfação (NPS/CSAT) reais, agregadas no banco.
+ *
+ * Janela: últimos 90 dias (`npsDelta` compara com os 90 dias anteriores). NPS =
+ * %promotores (nota ≥ 9) − %detratores (nota ≤ 6), escala -100..100. CSAT = média
+ * das notas 0-5, segmentada por persona.
+ *
+ * Retorna `null` quando NÃO há nenhuma resposta na janela — o caller responde 204
+ * e a UI mostra o estado honesto "dados pendentes", nunca zeros falsos.
+ */
+export async function getSatisfactionMetrics(agoraMs: number): Promise<SatisfactionMetrics | null> {
+  const ini90 = new Date(agoraMs - 90 * DIA_MS).toISOString();
+  const ini180 = new Date(agoraMs - 180 * DIA_MS).toISOString();
+
+  const [row] = await db
+    .select({
+      // Janela atual (0-90d) — NPS.
+      npsTotal: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+      npsPromotores: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.nota} >= 9 AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+      npsNeutros: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.nota} BETWEEN 7 AND 8 AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+      npsDetratores: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.nota} <= 6 AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+      // Janela anterior (90-180d) — para o delta.
+      npsTotalPrev: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.respondidoEm} >= ${ini180} AND ${surveyRespostas.respondidoEm} < ${ini90})::int`,
+      npsPromotoresPrev: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.nota} >= 9 AND ${surveyRespostas.respondidoEm} >= ${ini180} AND ${surveyRespostas.respondidoEm} < ${ini90})::int`,
+      npsDetratoresPrev: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'nps' AND ${surveyRespostas.nota} <= 6 AND ${surveyRespostas.respondidoEm} >= ${ini180} AND ${surveyRespostas.respondidoEm} < ${ini90})::int`,
+      // CSAT por persona (0-90d).
+      csatClientesSoma: sql<number>`COALESCE(SUM(${surveyRespostas.nota}) FILTER (WHERE ${surveys.tipo} = 'csat' AND ${surveys.persona} = 'contratante' AND ${surveyRespostas.respondidoEm} >= ${ini90}), 0)::int`,
+      csatClientesQtd: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'csat' AND ${surveys.persona} = 'contratante' AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+      csatEmpreiteirasSoma: sql<number>`COALESCE(SUM(${surveyRespostas.nota}) FILTER (WHERE ${surveys.tipo} = 'csat' AND ${surveys.persona} = 'empreiteiro' AND ${surveyRespostas.respondidoEm} >= ${ini90}), 0)::int`,
+      csatEmpreiteirasQtd: sql<number>`COUNT(*) FILTER (WHERE ${surveys.tipo} = 'csat' AND ${surveys.persona} = 'empreiteiro' AND ${surveyRespostas.respondidoEm} >= ${ini90})::int`,
+    })
+    .from(surveyRespostas)
+    .innerJoin(surveys, eq(surveys.id, surveyRespostas.surveyId));
+
+  const npsTotal = row?.npsTotal ?? 0;
+  const csatClientesQtd = row?.csatClientesQtd ?? 0;
+  const csatEmpreiteirasQtd = row?.csatEmpreiteirasQtd ?? 0;
+
+  // Sem nenhuma resposta na janela → dados pendentes.
+  if (npsTotal === 0 && csatClientesQtd === 0 && csatEmpreiteirasQtd === 0) {
+    return null;
+  }
+
+  const npsScore = npsTotal > 0
+    ? Math.round((((row?.npsPromotores ?? 0) - (row?.npsDetratores ?? 0)) / npsTotal) * 100)
+    : 0;
+
+  const npsTotalPrev = row?.npsTotalPrev ?? 0;
+  const npsScorePrev = npsTotalPrev > 0
+    ? Math.round((((row?.npsPromotoresPrev ?? 0) - (row?.npsDetratoresPrev ?? 0)) / npsTotalPrev) * 100)
+    : 0;
+
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+
+  return {
+    npsScore,
+    npsDelta: npsScore - npsScorePrev,
+    npsResponses: npsTotal,
+    csatClientes: csatClientesQtd > 0 ? round1((row?.csatClientesSoma ?? 0) / csatClientesQtd) : 0,
+    csatEmpreiteiras: csatEmpreiteirasQtd > 0 ? round1((row?.csatEmpreiteirasSoma ?? 0) / csatEmpreiteirasQtd) : 0,
+    breakdown: {
+      promotores: npsTotal > 0 ? Math.round(((row?.npsPromotores ?? 0) / npsTotal) * 100) : 0,
+      neutros: npsTotal > 0 ? Math.round(((row?.npsNeutros ?? 0) / npsTotal) * 100) : 0,
+      detratores: npsTotal > 0 ? Math.round(((row?.npsDetratores ?? 0) / npsTotal) * 100) : 0,
+    },
   };
 }
 

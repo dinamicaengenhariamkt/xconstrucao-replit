@@ -1,7 +1,7 @@
 # Jornada — Testes End-to-End (E2E, navegador)
 
-> Status: parcial | Prioridade: alta | Wave: 9
-> Última atualização: 2026-06-20
+> Status: parcial (bloqueado por infra — limitação documentada) | Prioridade: alta | Wave: 9
+> Última atualização: 2026-07-24
 >
 > Parte do trio de testes (J35 unitários · J36 integração · **J37 E2E**). É o **topo da
 > pirâmide**: testa o fluxo inteiro pelo navegador, como o usuário real faz (abre tela,
@@ -100,3 +100,44 @@ usar produção).
   helpers, endpoints test-only, captura de email em memória) — por isso status
   **parcial**, não planejada. Foco da jornada é **expandir** cobertura para os fluxos
   críticos restantes, não montar do zero.
+- 2026-07-24: **Bloqueio de infra confirmado e reproduzido ao vivo** (ver §11). O
+  Chromium do Playwright não sobe neste ambiente. Decisão: documentar como limitação
+  ambiental e tirar J37 da fila acionável; a cobertura equivalente dos fluxos críticos
+  fica a cargo dos specs de integração HTTP browserless (J36/J51/J54). E2E de navegador
+  reentra na fila quando houver runner com glibc consistente (CI externo / Docker).
+
+## 11. Limitação de infra (confirmada 2026-07-24)
+
+**O Chromium do Playwright não sobe neste ambiente (Nix/Replit).** Reproduzido ao vivo:
+lançar o browser falha com
+
+```
+.../chrome-headless-shell: /lib/x86_64-linux-gnu/libpthread.so.0:
+version `GLIBC_PRIVATE' not found (required by .../glibc-2.33-47/lib/librt.so.1)
+```
+
+**Causa-raiz.** O ambiente Replit define `REPLIT_LD_AUDIT` (um `rtld` audit loader) que
+força o dynamic loader a resolver a `libpthread` do **sistema base**
+(`/lib/x86_64-linux-gnu/libpthread.so.0`), que **não exporta** símbolos `GLIBC_PRIVATE`.
+Mas a `librt.so.1` da **glibc-2.33 do Nix** — contra a qual o binário do Chromium é
+resolvido — **exige** esses símbolos privados. O conflito entre as duas glibc mata o
+processo no launch. **Não é problema de download**: o binário está presente em
+`.cache/ms-playwright/chromium-1217/chrome-linux64/chrome` e `npx playwright --version`
+funciona (1.59.1). As libs de sistema (glib, nss, X11, gbm) estão declaradas em
+`replit.nix` — o problema é exclusivamente o conflito de glibc via `LD_AUDIT`.
+
+**Specs de navegador represados** (usam `page.goto`, precisam do browser):
+`onboarding.spec.ts` (J01), `j03-nova-obra-aparece-imediato.spec.ts` (J03),
+`admin-aprovacao.spec.ts` (moderação, regressão Task #115), `curadoria-warning.spec.ts`,
+`j40-financeiro-totais.spec.ts`, `planos-redirect.spec.ts`. Os testes são **descobertos**
+por `playwright test --list` — a falha é 100% no launch, não na definição.
+
+**Estratégia adotada.** Enquanto o browser não sobe, a cobertura ponta-a-ponta dos fluxos
+críticos é feita por **specs de integração HTTP browserless** (`tests/e2e/integration/*`)
+— exatamente o que J36, J51 e J54 já fazem para não ficarem bloqueadas. Eles exercitam
+API + banco sem navegador e rodam verdes hoje.
+
+**Contorno conhecido (não adotado).** Rodar a suíte na imagem oficial
+`mcr.microsoft.com/playwright:v1.59.1` via Docker (daemon disponível no ambiente) dá uma
+glibc consistente e sem o `LD_AUDIT` do Replit. É o caminho para reativar E2E de navegador
+num CI externo no futuro; fora do escopo atual por decisão de produto.

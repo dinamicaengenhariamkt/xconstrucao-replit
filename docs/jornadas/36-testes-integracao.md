@@ -1,7 +1,7 @@
 # Jornada — Testes de Integração (API + banco)
 
-> Status: em andamento — 4 fases + G1–G4 concluídos, expansão para 100% | Prioridade: alta | Wave: 9
-> Última atualização: 2026-07-18
+> Status: pronto — baseline de cobertura ZERADA (0 endpoints críticos/mutação sem cobertura) | Prioridade: alta | Wave: 9
+> Última atualização: 2026-07-24
 >
 > Parte do trio de testes (J35 unitários · **J36 integração** · J37 E2E). É o **meio
 > da pirâmide**: testa vários pedaços juntos — tipicamente um endpoint de API
@@ -311,6 +311,31 @@ do número "sem cobertura" no radar.
   (+404 id fake em planos), **sem** exercitar o efeito — evita sujar ambiente compartilhado.
 - 2026-07-19: **PAREI AQUI: próximo = G9 (anúncios admin — `admin-anuncios.integration.spec.ts`)**. Ordem de
   execução acordada (barato→caro): ✅G10 → ✅G11 → ✅G8 → **G9** → G6 → G7 → G5 → G12.
+- 2026-07-24: **Baseline ZERADA — expansão para 100% concluída.** O radar
+  (`npm run test:integration:gaps`) reporta **0 endpoints críticos/mutação sem cobertura**
+  (baseline `scripts/integration-coverage-baseline.json` = `[]`). Levada de fechamento (6 specs
+  novos, ~122 testes, todos verdes, `tsc` limpo):
+  - `disputas.integration.spec.ts` (7) — domínio antes 100% descoberto: fluxo abrir→assumir→
+    mensagens→resolver com asserts de banco + idempotência 409.
+  - `obras-subrecursos.integration.spec.ts` (24) — anexos/checklists/diário/equipe/etapas/fotos/
+    ocorrências/tarefas + health/destaque. Caminho feliz em todos (anexos/fotos usam `userFiles`
+    inserido via db em vez de upload real ao R2 — justificado no spec).
+  - `empreiteiro-medicoes-candidaturas.integration.spec.ts` (25) — medições, candidatura/anexos/
+    cancelar/rejeitar/contestar, KPIs de pagamento/medição.
+  - `auth-mutacoes.integration.spec.ts` (12) — 2fa/verificar (fluxo TOTP completo), trocar-email +
+    confirmar-novo-email (efeito real no banco).
+  - `admin-operacional.integration.spec.ts` (24) — impersonate/exit, clientes/[id]/{documentos,
+    obras,atividades,financeiro}, admin/saude.
+  - `admin-anuncios-selfservice.integration.spec.ts` (4) + `perfil-notificacoes-consent.integration.spec.ts` (17).
+  - **Helper novo** `tests/e2e/helpers-marketplace.ts` (`criarObraVinculadaE2E`, `criarLancamentoE2E`,
+    `userIdByEmail`) — setup de obra real vinculando contratante+empreiteiro seed, reusado pelos specs.
+  - **Descobertas de contrato:** (a) cookies de sessão real / impersonação são `Secure` → não
+    reaproveitados pelo jar do Playwright sob HTTP; efeito validado via `Set-Cookie` bruto. (b)
+    `POST /api/anuncios/pedidos` tem gate do Termo do Anunciante (J59) **antes** do Zod — aceitar o
+    termo no setup. (c) `GET /api/admin/anuncios/pedidos/[id]` não existe (só PATCH).
+  - **Nota sobre falso-positivos do radar:** como é heurístico por substring de path, alguns dos 82
+    da baseline antiga já eram exercitados indiretamente; ainda assim escrevemos asserts reais
+    (status + estado no banco) para todos, não só o literal do path.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).

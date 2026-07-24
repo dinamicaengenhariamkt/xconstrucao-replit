@@ -1,13 +1,16 @@
 # Jornada — Satisfação & NPS/CSAT (surveys)
 
-> Status: bloqueada | Prioridade: baixa | Wave: 4
-> Última atualização: 2026-06-01
+> Status: pronto | Prioridade: baixa | Wave: 4
+> Última atualização: 2026-07-24
 >
-> **BLOQUEADA**: aguarda decisão de negócio + validação com o cliente final
-> sobre COMO coletar satisfação (sistema de surveys: quando perguntar, a quem,
-> com que frequência). Não há fonte de dados real hoje — por isso o card de
-> satisfação foi **ocultado** na UI (nada de número inventado). Quando a forma
-> de coleta for definida, desbloquear e implementar.
+> **DESBLOQUEADA e implementada** (2026-07-24) com premissas de negócio padrão
+> confirmadas com o dono: **NPS** disparado pós-conclusão de obra (às duas
+> personas, 0-10) e **CSAT** disparado pós-pagamento (0-5, segmentado por
+> persona). A coleta é **pulável** (o convite fica pendente nas notificações, não
+> intercepta o fluxo). O card do admin volta a aparecer, mas só quando há
+> respostas reais na janela — sem respostas, some (estado "dados pendentes"),
+> nunca número inventado. Se o negócio quiser outra estratégia de coleta
+> (momentos/frequência), ajustar os gatilhos em [features/surveys/triggers.ts](../../features/surveys/triggers.ts).
 
 ## 1. Contexto & Objetivo
 Durante a J18 (Dashboard Financeiro Admin) ficou claro que NPS/CSAT **não têm
@@ -96,3 +99,25 @@ flowchart LR
 - 2026-06-03: O mock `satisfaction-metrics.mock.ts` foi removido no cleanup de mocks
   órfãos da J18 (não era importado por código). O shape de referência permanece vivo
   em `features/admin/financeiro/types` (`SatisfactionMetrics`), usado pelo componente.
+- 2026-07-24: **Desbloqueada e implementada** com premissas padrão aprovadas pelo
+  dono. Entregue:
+  - **Schema**: `surveys` + `survey_respostas` ([shared/db/schema.ts](../../shared/db/schema.ts)),
+    aplicado via SQL idempotente (o `db:push` interativo não roda headless neste ambiente).
+  - **Service/gatilhos**: [features/surveys/service.ts](../../features/surveys/service.ts) e
+    [features/surveys/triggers.ts](../../features/surveys/triggers.ts). NPS na transição
+    `→concluida` (PATCH de obra + edição admin do dossiê); CSAT após `quitarLancamento`.
+    Idempotentes pela unique `uq_surveys_tipo_persona_origem` — reenvio do evento não duplica.
+  - **Endpoints**: `POST /api/surveys/[id]/responder` (authz por dono, 404/403/409/422),
+    `GET /api/surveys/pendentes`, `GET /api/admin/financeiro/satisfacao` (204 quando não há base).
+  - **Agregação**: `getSatisfactionMetrics` em
+    [caixa-service.ts](../../features/admin/financeiro/api/caixa-service.ts) — NPS/CSAT reais,
+    janela 90d, `npsDelta` vs 90d anteriores.
+  - **UI**: card de coleta pulável nas notificações das duas personas
+    ([features/surveys/components/SurveyPendenteCard.tsx](../../features/surveys/components/SurveyPendenteCard.tsx));
+    `SatisfactionMetricsSection` reconectada no admin via `useSatisfacao()` (Bloco 2.45 reexibido).
+  - **Testes**: [tests/e2e/integration/j20-satisfacao.integration.spec.ts](../../tests/e2e/integration/j20-satisfacao.integration.spec.ts) — 9 casos verdes.
+  - **Decisão pendente de negócio (não-bloqueante)**: a estratégia de coleta ficou na premissa
+    padrão. Se o dono quiser NPS trimestral, frequência limitada, ou outros gatilhos, é ajuste
+    localizado em `triggers.ts` — a fundação já está pronta.
+- 2026-07-24: **`empreiteiras.avaliacao` NÃO virou fonte de NPS/CSAT** — é seed-only,
+  cosmético, sem write-path real. NPS/CSAT usam exclusivamente `survey_respostas`.

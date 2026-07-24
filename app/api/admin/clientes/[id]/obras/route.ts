@@ -6,6 +6,7 @@ import {
   listarObrasDoCliente,
   editarObraDoCliente,
 } from "@features/admin/clientes/api/clientes-admin-service";
+import { dispararSurveyObraConcluida } from "@features/surveys/triggers";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = requireAdmin(request);
@@ -39,6 +40,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     previsaoFim: parsed.data.previsaoFim?.trim() || null,
   });
   if (!ok) return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+
+  // J20 — se o admin concluiu a obra, dispara NPS. Idempotente (unique de origem).
+  if (parsed.data.status === "concluida") {
+    void dispararSurveyObraConcluida(parsed.data.obraId);
+  }
 
   await recordAudit({
     actorId: guard.userId,

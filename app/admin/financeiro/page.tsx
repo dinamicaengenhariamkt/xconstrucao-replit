@@ -11,6 +11,7 @@ import { TopEmpreiteirasTable } from '@features/admin/financeiro/components/TopE
 import { ReceitasPlataformaTable } from '@features/admin/financeiro/components/ReceitasPlataformaTable';
 import { DashboardSkeleton } from '@features/admin/financeiro/components/DashboardSkeleton';
 import { AdoptionMetricsSection } from '@features/admin/financeiro/components/AdoptionMetricsSection';
+import { SatisfactionMetricsSection } from '@features/admin/financeiro/components/SatisfactionMetricsSection';
 import { MarketplaceSplitSection } from '@features/admin/financeiro/components/MarketplaceSplitSection';
 import { useDashboardStats } from '@features/admin/financeiro/hooks/use-dashboard-stats';
 import {
@@ -19,6 +20,7 @@ import {
   useTopEmpreiteiras,
   useReceitasPlataforma,
   useAdoptionMetrics,
+  useSatisfacao,
   usePortfolioSummary,
   usePaymentEvolution,
   useStatusDistribution,
@@ -45,6 +47,7 @@ export default function AdminFinanceiroPage() {
   const { data: topEmpreiteiras } = useTopEmpreiteiras();
   const { data: receitasData } = useReceitasPlataforma();
   const { data: adoptionMetrics } = useAdoptionMetrics();
+  const { data: satisfacao } = useSatisfacao();
   const { data: portfolioSummary } = usePortfolioSummary();
   const { data: paymentEvolution } = usePaymentEvolution(periodo);
   const { data: statusDistribution } = useStatusDistribution();
@@ -84,8 +87,9 @@ export default function AdminFinanceiroPage() {
       {/* Bloco 2.4: Saúde da plataforma (adoção, conversão, churn) — real (J18) */}
       {adoptionMetrics && <AdoptionMetricsSection metrics={adoptionMetrics} luminous />}
 
-      {/* Bloco 2.45: Satisfação (NPS/CSAT) OCULTO — sem fonte de dados real.
-          Reativar quando houver sistema de surveys. Ver docs/jornadas/20-satisfacao-nps-csat.md. */}
+      {/* Bloco 2.45: Satisfação (NPS/CSAT) — real (J20). Só renderiza quando há
+          respostas na janela; 204 → `satisfacao` null → seção oculta (dados pendentes). */}
+      {satisfacao && <SatisfactionMetricsSection metrics={satisfacao} luminous />}
 
       {/* Bloco 2.5: Saúde do portfólio + Lucro consolidado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

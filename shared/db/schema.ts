@@ -415,6 +415,12 @@ export const insertMedicaoSchema = createInsertSchema(medicoes).omit({
 export type InsertMedicao = z.infer<typeof insertMedicaoSchema>;
 export type Medicao = typeof medicoes.$inferSelect;
 
+// J20 — Satisfação (NPS/CSAT). `tipo` = qual métrica; `persona` = qual ponta do
+// marketplace responde; `status` = ciclo de vida do convite (enviado → respondido).
+export const surveyTipoEnum = pgEnum("survey_tipo", ["nps", "csat"]);
+export const surveyPersonaEnum = pgEnum("survey_persona", ["contratante", "empreiteiro"]);
+export const surveyStatusEnum = pgEnum("survey_status", ["pendente", "respondido", "expirado"]);
+
 export const notificacaoTipoEnum = pgEnum("notificacao_tipo", ["lembrete", "alerta", "info", "sucesso"]);
 
 export const notificacoes = pgTable("notificacoes", {
@@ -463,6 +469,52 @@ export const chatMensagens = pgTable("chat_mensagens", {
 });
 
 export type ChatMensagem = typeof chatMensagens.$inferSelect;
+
+// J20 — Satisfação (NPS/CSAT).
+// `surveys` = convites de pesquisa gerados por gatilho (obra concluída → NPS;
+// pagamento quitado → CSAT). `survey_respostas` = a resposta (única por survey).
+// A idempotência do gatilho é garantida pela unique (tipo, persona, origem*):
+// reenviar o mesmo evento não duplica o convite.
+export const surveys = pgTable("surveys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tipo: surveyTipoEnum("tipo").notNull(),
+  persona: surveyPersonaEnum("persona").notNull(),
+  // dono do convite (a quem foi enviado). O POST /responder valida contra isto.
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // obra que originou o gatilho. set null p/ não bloquear a exclusão da obra.
+  obraId: varchar("obra_id").references(() => obras.id, { onDelete: "set null" }),
+  // origem idempotente: ("obra_concluida", <obraId>) | ("pagamento_quitado", <lancamentoId>).
+  origemTipo: text("origem_tipo").notNull(),
+  origemId: varchar("origem_id").notNull(),
+  status: surveyStatusEnum("status").notNull().default("pendente"),
+  enviadoEm: timestamp("enviado_em").defaultNow().notNull(),
+}, (t) => ({
+  // Um convite por (tipo, persona, origem) — idempotência do gatilho.
+  uniqOrigem: uniqueIndex("uq_surveys_tipo_persona_origem").on(t.tipo, t.persona, t.origemTipo, t.origemId),
+  // Listagem de pendências por usuário (card "responder pesquisa").
+  idxUserStatus: index("idx_surveys_user_status").on(t.userId, t.status),
+}));
+
+export type Survey = typeof surveys.$inferSelect;
+
+export const surveyRespostas = pgTable("survey_respostas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  surveyId: varchar("survey_id").notNull().references(() => surveys.id, { onDelete: "cascade" }),
+  // NPS 0-10 | CSAT 0-5. Faixa validada por tipo no endpoint (Zod).
+  nota: integer("nota").notNull(),
+  comentario: text("comentario"), // LGPD: texto livre opcional.
+  // Consentimento implícito ao responder (molde user_consents: IP/UA).
+  ip: text("ip"),
+  userAgent: text("user_agent"),
+  respondidoEm: timestamp("respondido_em").defaultNow().notNull(),
+}, (t) => ({
+  // Uma resposta por convite (critério de aceite §5).
+  uniqSurvey: uniqueIndex("uq_survey_respostas_survey").on(t.surveyId),
+  // Agregação por janela temporal (NPS/CSAT dos últimos 90 dias).
+  idxRespondidoEm: index("idx_survey_respostas_respondido_em").on(t.respondidoEm),
+}));
+
+export type SurveyResposta = typeof surveyRespostas.$inferSelect;
 
 // J22 — Autenticação Forte (2FA / TOTP).
 // Tabela dedicada (não engorda `users`): uma linha por conta com 2FA configurado.
@@ -667,6 +719,7 @@ export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
 export const insertFinanceiroSchema = createInsertSchema(financeiro).omit({ id: true });
 export const insertCandidaturaSchema = createInsertSchema(candidaturas).omit({ id: true, createdAt: true });
 export const insertMarketplaceLeadSchema = createInsertSchema(marketplaceLeads).omit({ id: true, createdAt: true, status: true });
+export const insertSurveySchema = createInsertSchema(surveys).omit({ id: true, status: true, enviadoEm: true });
 export const insertUserConsentSchema = createInsertSchema(userConsents).omit({ id: true, aceitoEm: true, revogadoEm: true });
 export const insertUserPreferenciasSchema = createInsertSchema(userPreferencias).omit({ updatedAt: true });
 export const insertPlatformSettingSchema = createInsertSchema(platformSettings).omit({ updatedAt: true });

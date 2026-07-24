@@ -5,6 +5,7 @@ import type {
   TopEmpreiteira,
   ReceitaPlataforma,
   AdoptionMetrics,
+  SatisfactionMetrics,
   PaymentEvolutionData,
   StatusDistributionData,
   PeriodoSeletor,
@@ -68,6 +69,23 @@ export function useAdoptionMetrics() {
     queryFn: async () => {
       const res = await fetch('/api/admin/financeiro/adoption');
       if (!res.ok) throw new Error('Erro ao buscar métricas de adoção');
+      return res.json();
+    },
+    ...CFG,
+  });
+}
+
+/**
+ * J20 — NPS/CSAT reais. 204 (sem base de respostas) → `null`, e a página não
+ * renderiza a seção (estado "dados pendentes" honesto, sem zeros falsos).
+ */
+export function useSatisfacao() {
+  return useQuery<SatisfactionMetrics | null>({
+    queryKey: ['admin', 'financeiro', 'satisfacao'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/financeiro/satisfacao');
+      if (res.status === 204) return null;
+      if (!res.ok) throw new Error('Erro ao buscar métricas de satisfação');
       return res.json();
     },
     ...CFG,

@@ -16,6 +16,7 @@ import { insertObraSchema, insertObraSchemaStrict } from "@features/obras/schema
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { dispararSurveyObraConcluida } from "@features/surveys/triggers";
 
 /**
  * Helper de scoping: devolve a obra se o usuário tiver acesso de leitura,
@@ -408,6 +409,12 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
   // J07: a atividade "obra_publicada" agora é emitida pelo endpoint de
   // aprovação admin (Task #86), não mais aqui. Publicar só envia para moderação.
+
+  // J20 — dispara NPS quando a obra transita para 'concluida'. Fire-and-forget
+  // (padrão registrarAtividade): não bloqueia a resposta e é idempotente.
+  if (access.obra.status !== "concluida" && updated.status === "concluida") {
+    void dispararSurveyObraConcluida(id);
+  }
 
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

@@ -16,6 +16,7 @@ import { sendPagamentoRecebidoEmail } from "@shared/lib/email";
 import { emailPreferenceEnabled } from "@features/notificacoes/preferences";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { temDisputaAtivaNoAlvo } from "@features/disputas/disputas-service";
+import { dispararSurveyPagamentoQuitado } from "@features/surveys/triggers";
 
 const bodySchema = z.object({
   metodoPagamento: z.string().trim().min(2).max(80),
@@ -166,6 +167,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       metodoPagamento: parsed.data.metodoPagamento,
       medicaoId: lanc.medicaoId,
     },
+  });
+
+  // J20 — CSAT pós-pagamento. Fire-and-forget, idempotente por lançamento.
+  void dispararSurveyPagamentoQuitado({
+    lancamentoId: id,
+    obraId: updated?.obraId ?? lanc.obraId,
+    pagadorUserId: updated?.pagadorUserId ?? lanc.pagadorUserId ?? null,
+    recebedorUserId: updated?.recebedorUserId ?? lanc.recebedorUserId ?? null,
   });
 
   const r = NextResponse.json({ ok: true, lancamento: updated });
