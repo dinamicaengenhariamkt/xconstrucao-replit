@@ -13,6 +13,7 @@ import {
   RiFileTextLine,
   RiTimeLine,
 } from 'react-icons/ri';
+import { AvisoAmbienteTeste } from '@features/shared/components/AvisoAmbienteTeste';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -317,6 +318,8 @@ export default function PagamentosPage() {
           Controle financeiro de todas as suas obras.
         </p>
       </div>
+
+      <AvisoAmbienteTeste detalhe="Os pagamentos seguem o fluxo normal, mas nenhum valor é transferido de verdade." />
 
       {/* ─── Período (afeta KPIs + gráfico + tabela) ───────────────── */}
       <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex-wrap w-fit">

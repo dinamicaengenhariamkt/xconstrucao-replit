@@ -23,6 +23,7 @@ import {
   RiFolderOpenLine,
 } from 'react-icons/ri';
 import { formatDate } from '@shared/lib/formatters';
+import { useToast } from '@shared/hooks/use-toast';
 import type { ClienteDocumento, DocumentoTipo } from '../types';
 
 const TIPO_CONFIG: Record<DocumentoTipo, { icon: React.ElementType; iconBg: string; iconColor: string }> = {
@@ -58,6 +59,7 @@ export function ClienteDocumentosTab({
 }: ClienteDocumentosTabProps) {
   const [visualizarDoc, setVisualizarDoc] = useState<ClienteDocumento | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   function handleDownload(doc: ClienteDocumento) {
     if (doc.url) {
@@ -65,22 +67,19 @@ export function ClienteDocumentosTab({
       a.href = doc.url;
       a.download = doc.nome;
       a.click();
-    } else {
-      import('jspdf').then(({ default: jsPDF }) => {
-        const d = new jsPDF({ unit: 'mm', format: 'a5' });
-        d.setFont('helvetica', 'bold');
-        d.setFontSize(14);
-        d.text(doc.nome, 74, 20, { align: 'center' });
-        d.setFont('helvetica', 'normal');
-        d.setFontSize(10);
-        d.text(`Tipo: ${doc.tipo}`,                        14, 36);
-        d.text(`Enviado em: ${formatDate(doc.dataEnvio)}`, 14, 44);
-        d.setFontSize(8);
-        d.setTextColor(150);
-        d.text(`Documento simulado — ${doc.id}`, 74, 130, { align: 'center' });
-        d.save(`${doc.nome}.pdf`);
-      });
+      return;
     }
+    // Sem URL o arquivo não pôde ser assinado (credencial de storage expirada,
+    // bucket fora do ar, ou registro órfão). Antes gerávamos um PDF com o texto
+    // "Documento simulado" — o admin baixava um arquivo placebo achando que era
+    // o documento real do cliente, sem nenhum erro. Falhar é o comportamento
+    // correto: o documento existe, o que falhou foi o acesso a ele.
+    toast({
+      variant: 'destructive',
+      title: 'Não foi possível baixar o documento',
+      description:
+        'O arquivo não está acessível no momento. Verifique a configuração de armazenamento e tente novamente.',
+    });
   }
 
   function handleVisualizar(doc: ClienteDocumento) {

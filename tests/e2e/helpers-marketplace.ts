@@ -22,10 +22,21 @@ export interface ObraVinculada {
   empreiteiraId: string;
 }
 
-/** Resolve o userId de um email seed. */
+/**
+ * Resolve o userId de um email de persona.
+ *
+ * Diferente de `loginAs`, este caminho fala com o banco direto e não passa
+ * pelo `ensurePersonas`. Como specs de marketplace podem rodar antes de
+ * qualquer login, a mensagem de falha aponta o remédio em vez de só constatar
+ * a ausência.
+ */
 export async function userIdByEmail(email: string): Promise<string> {
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  expect(u?.id, `usuário seed ${email} deve existir`).toBeTruthy();
+  expect(
+    u?.id,
+    `usuário ${email} deve existir — se a base foi zerada, o setup do spec ` +
+      `precisa chamar ensurePersonas(request) (POST /api/test/ensure-users) antes.`,
+  ).toBeTruthy();
   return u!.id;
 }
 

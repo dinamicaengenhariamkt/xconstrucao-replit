@@ -8,6 +8,8 @@ export interface PublicConfig {
   anuncios: boolean;
   faq: boolean;
   adPaymentEnabled: boolean;
+  /** Gateway em sandbox: nenhuma cobrança é real, mesmo em produção. */
+  pagamentoSandbox: boolean;
 }
 
 const DEFAULTS: PublicConfig = {
@@ -17,6 +19,10 @@ const DEFAULTS: PublicConfig = {
   faq: true,
   // fail-safe: nunca prometer cobrança real que não está ligada.
   adPaymentEnabled: false,
+  // fail-safe na direção oposta ao de cima: avisar "é teste" quando na dúvida
+  // é inofensivo; omitir o aviso num ambiente que de fato é sandbox faria o
+  // usuário acreditar que pagou de verdade. Na dúvida, avisa.
+  pagamentoSandbox: true,
 };
 
 /**

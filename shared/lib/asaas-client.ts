@@ -10,9 +10,50 @@ const BASE_URLS: Record<string, string> = {
   production: "https://api.asaas.com/v3",
 };
 
+/**
+ * Resolve a base URL a partir de `ASAAS_ENVIRONMENT`.
+ *
+ * Note que a escolha é INDEPENDENTE de `NODE_ENV`: rodar sandbox no ambiente
+ * publicado é um cenário legítimo (clientes testando em produção sem cobrança
+ * real). Quem avisa o usuário disso é o banner de `getAsaasEnvironment()`.
+ *
+ * Um valor fora de `sandbox|production` é erro, não fallback. Antes,
+ * `ASAAS_ENVIRONMENT=prod` caía silenciosamente em sandbox — a plataforma
+ * pareceria em produção enquanto cobrava em ambiente de testes.
+ */
 function getBaseUrl(): string {
   const env = process.env.ASAAS_ENVIRONMENT ?? "sandbox";
-  return BASE_URLS[env] ?? BASE_URLS.sandbox;
+  const baseUrl = BASE_URLS[env];
+  if (!baseUrl) {
+    throw new Error(
+      `[asaas] ASAAS_ENVIRONMENT inválido: "${env}". ` +
+        `Valores aceitos: ${Object.keys(BASE_URLS).join(" | ")} (minúsculas).`,
+    );
+  }
+  return baseUrl;
+}
+
+/** Ambientes válidos do Asaas. */
+export type AsaasEnvironment = "sandbox" | "production";
+
+/**
+ * Ambiente Asaas em uso. Exportado para a UI decidir se mostra o aviso de
+ * "pagamentos simulados" e para o log de boot. Valida da mesma forma que
+ * `getBaseUrl()`, então uma config errada falha cedo e de forma visível.
+ */
+export function getAsaasEnvironment(): AsaasEnvironment {
+  const env = process.env.ASAAS_ENVIRONMENT ?? "sandbox";
+  if (env !== "sandbox" && env !== "production") {
+    throw new Error(
+      `[asaas] ASAAS_ENVIRONMENT inválido: "${env}". Valores aceitos: sandbox | production.`,
+    );
+  }
+  return env;
+}
+
+/** `true` quando os pagamentos são simulados (sandbox). */
+export function isAsaasSandbox(): boolean {
+  return getAsaasEnvironment() === "sandbox";
 }
 
 function getApiKey(): string {

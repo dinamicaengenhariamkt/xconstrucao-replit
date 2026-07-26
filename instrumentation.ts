@@ -3,6 +3,34 @@ export async function register() {
     // J33-B — Sentry server SDK (graceful: no-op se SENTRY_DSN ausente)
     await import("./sentry.server.config").catch(() => {});
 
+    // ----------------------------------------------------------------
+    // Aviso de ambiente de pagamento.
+    //
+    // `ASAAS_ENVIRONMENT` é independente de `NODE_ENV` — rodar sandbox no
+    // domínio publicado é intencional (clientes testando sem cobrança real).
+    // O risco é o inverso: virar a chave para valer e esquecer de trocar,
+    // com os pagamentos seguindo simulados sem ninguém perceber. Este bloco
+    // torna esse estado impossível de passar despercebido no boot.
+    // ----------------------------------------------------------------
+    {
+      const gateway = process.env.PAYMENT_GATEWAY ?? "(não definido)";
+      const asaasEnv = process.env.ASAAS_ENVIRONMENT ?? "sandbox";
+      const ehProd = process.env.NODE_ENV === "production";
+
+      if (ehProd && gateway === "asaas" && asaasEnv !== "production") {
+        const linha = "!".repeat(72);
+        console.warn(
+          `\n${linha}\n` +
+            `  ATENÇÃO: aplicação em PRODUÇÃO com Asaas em "${asaasEnv}".\n` +
+            `  Os pagamentos são SIMULADOS — nenhuma cobrança real será feita.\n` +
+            `  Para cobrar de verdade: ASAAS_ENVIRONMENT=production.\n` +
+            `${linha}\n`,
+        );
+      } else {
+        console.log(`[boot] pagamentos: gateway=${gateway} asaas_env=${asaasEnv}`);
+      }
+    }
+
     // Seed sempre primeiro (cria tabela users — necessária para FKs dos bootstraps)
     const { seedDatabase } = await import("./server/seed");
     await seedDatabase().catch((err) => {

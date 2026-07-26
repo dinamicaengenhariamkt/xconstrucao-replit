@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { loginAs, logout } from "../helpers";
+import { loginAs, logout, SEED_CONTRATANTE_2_EMAIL, SEED_EMPREITEIRO_2_EMAIL } from "../helpers";
 
 /**
  * Integração (J36) — Chat: autorização, IDOR e consistência de não-lidas.
@@ -36,8 +36,8 @@ const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 // Par de chat ALHEIO ao par joão/maria — usado para provar IDOR real: a maria
 // NÃO participa da thread deste par, então acessá-la deve dar 403. (Se o seed
 // não tiver esse par, os testes de IDOR usam test.skip defensivo.)
-const OUTRO_CONTRATANTE_EMAIL = "ramon.gds92@gmail.com";
-const OUTRO_EMPREITEIRO_EMAIL = "ramon_gds@hotmail.com";
+const OUTRO_CONTRATANTE_EMAIL = SEED_CONTRATANTE_2_EMAIL;
+const OUTRO_EMPREITEIRO_EMAIL = SEED_EMPREITEIRO_2_EMAIL;
 
 
 /** Primeiro conversationId da persona, ou null se não houver thread. */

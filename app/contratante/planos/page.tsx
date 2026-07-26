@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@shared/lib/utils';
 import {
   RiCheckLine,
@@ -18,6 +18,7 @@ import {
 import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
 import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
+import { AvisoAmbienteTeste } from '@features/shared/components/AvisoAmbienteTeste';
 import { useRouter } from 'next/navigation';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
@@ -310,6 +311,28 @@ export default function ContratantePlanosPage() {
     return n && n > 0 ? Math.round(n) : null;
   }
 
+  /**
+   * Maior desconto anual real entre os planos, em % inteiro — ou `null` quando
+   * nenhum plano tem `valor_anual` cadastrado.
+   *
+   * O selo antes dizia "Economize 20%" fixo, enquanto `valor_anual` nunca é
+   * populado pelo seed: o usuário via a promessa de 20% e, logo abaixo,
+   * "R$ —" no lugar do preço. Agora o selo só aparece quando existe desconto
+   * de verdade, e mostra o número que de fato vale.
+   */
+  const descontoAnualPercent = useMemo(() => {
+    if (!planos) return null;
+    let melhor = 0;
+    for (const p of planos) {
+      const mensal = Number(p.valorMensal ?? 0);
+      const anualEquivalente = p.valorAnual == null ? null : Number(p.valorAnual);
+      if (!mensal || !anualEquivalente || anualEquivalente <= 0) continue;
+      const desconto = Math.round((1 - anualEquivalente / mensal) * 100);
+      if (desconto > melhor) melhor = desconto;
+    }
+    return melhor > 0 ? melhor : null;
+  }, [planos]);
+
   function executarAssinar(slot: PlanId) {
     const p = planoDeSlot(slot);
     if (!p || checkout.isPending) return;
@@ -382,10 +405,16 @@ export default function ContratantePlanosPage() {
           </p>
         </div>
 
+        <AvisoAmbienteTeste className="mb-8" detalhe="Seu plano é ativado normalmente para você testar os recursos." />
+
         {/* ── Minha Assinatura ── */}
         <MinhaAssinaturaPainel />
 
-        {/* ── Toggle Mensal / Anual ── */}
+        {/* ── Toggle Mensal / Anual ──
+            Só faz sentido com preço anual cadastrado (`planos.valor_anual`).
+            Sem ele, alternar para "Anual" trocava todos os preços por "R$ —"
+            e ainda assim mandava `ciclo: 'anual'` no checkout. */}
+        {descontoAnualPercent != null && (
         <div className="flex items-center justify-center gap-4 mb-12">
           <span className={cn('text-sm font-medium transition-colors', !anual ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400')}>
             Mensal
@@ -412,11 +441,12 @@ export default function ContratantePlanosPage() {
             </span>
             {anual && (
               <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wide">
-                Economize 20%
+                Economize {descontoAnualPercent}%
               </span>
             )}
           </div>
         </div>
+        )}
 
         {/* ── Plan Cards ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-center mb-16">

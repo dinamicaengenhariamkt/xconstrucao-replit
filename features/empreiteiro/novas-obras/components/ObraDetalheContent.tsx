@@ -255,7 +255,10 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
         </div>
       </SectionCard>
 
-      {/* ── BLOCO 2: Escopo e Fases Previstas ── */}
+      {/* ── BLOCO 2: Escopo e Fases Previstas ──
+          Omitido quando o contratante não cadastrou etapas: antes o card
+          renderizava título e subtítulo com o corpo em branco. */}
+      {obra.etapas.length > 0 && (
       <SectionCard title="Escopo e Fases Previstas" subtitle="Atividades planejadas pelo contratante" Icon={IconChecklist}>
         <div className="flex flex-col gap-4">
           {obra.etapas.map((etapa, index) => {
@@ -279,6 +282,7 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
           })}
         </div>
       </SectionCard>
+      )}
 
       {/* ── BLOCO 3: Documentos Disponíveis ── */}
       <SectionCard title="Documentos Disponíveis" subtitle="Arquivos fornecidos pelo contratante" Icon={IconFolder}>
@@ -328,19 +332,13 @@ export function ObraDetalheContent({ obra }: ObraDetalheContentProps) {
         )}
       </SectionCard>
 
-      {/* ── BLOCO 5: Contato do Contratante ── */}
+      {/* ── BLOCO 5: Contato do Contratante ──
+          Sem avatar/nome: a identidade do contratante é PII e só é revelada
+          após a contratação (o backend faz strip de `clienteId` no marketplace).
+          Antes exibia "CT" + o literal "Contratante". O canal de contato — o
+          botão de chat abaixo — continua sendo o caminho real. */}
       <SectionCard title="Contato do Contratante" subtitle="Para dúvidas ou agendamento de visita técnica" Icon={IconPerson}>
         <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <div className={cn('w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold', obra.contratante.cor)}>
-              {obra.contratante.iniciais}
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{obra.contratante.nome}</p>
-              <p className="text-sm text-gray-500">Contratante</p>
-            </div>
-          </div>
-
           {obra.contratante.email && (
             <div className="flex-1">
               <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">

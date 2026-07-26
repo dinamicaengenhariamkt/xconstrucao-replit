@@ -42,20 +42,26 @@ export function ValoresContratados({ data, luminous = false }: ValoresContratado
           </div>
         </div>
 
-        {/* Aditivos */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-medium">Aditivos Contratuais</span>
-            <RiAddCircleLine className="text-gray-400 w-4 h-4" />
+        {/* Aditivos — só quando existem de fato.
+            Não há tabela de aditivos no schema, então o serviço devolve 0
+            fixo; exibir "R$ 0,00 / +0% do valor original" para todo mundo
+            sugeria um dado real que a plataforma não tem. Mesmo tratamento
+            que os blocos vizinhos já davam (TabFinanceiro, FinanceiroSection). */}
+        {data.aditivos > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">Aditivos Contratuais</span>
+              <RiAddCircleLine className="text-gray-400 w-4 h-4" />
+            </div>
+            <p className="text-2xl font-extrabold text-[#22846D]">
+              {formatCurrency(data.aditivos)}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="font-bold text-[#22846D]">+{data.aditivosPercent}%</span> do valor
+              original
+            </p>
           </div>
-          <p className="text-2xl font-extrabold text-[#22846D]">
-            {formatCurrency(data.aditivos)}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-bold text-[#22846D]">+{data.aditivosPercent}%</span> do valor
-            original
-          </p>
-        </div>
+        )}
 
         {/* Executado / A executar */}
         <div className="pt-4 border-t border-border-light dark:border-gray-800 grid grid-cols-2 gap-4">

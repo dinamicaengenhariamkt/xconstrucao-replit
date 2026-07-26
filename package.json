@@ -9,6 +9,8 @@
     "start": "next start -p 5000 -H 0.0.0.0",
     "check": "tsc",
     "db:push": "drizzle-kit push",
+    "db:limpar": "tsx scripts/limpar-base.ts",
+    "db:limpar:preview": "tsx scripts/limpar-base.ts --dry-run",
     "clean": "rm -rf .next",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

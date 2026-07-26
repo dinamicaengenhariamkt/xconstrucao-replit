@@ -337,6 +337,23 @@ do número "sem cobertura" no radar.
     da baseline antiga já eram exercitados indiretamente; ainda assim escrevemos asserts reais
     (status + estado no banco) para todos, não só o literal do path.
 
+- **2026-07-26 — Suíte desacoplada do `server/seed.ts`.**
+  A suíte autenticava com os usuários criados pelo seed, que só roda com a tabela `users` vazia.
+  Ao zerar a base para simular cenários reais ([scripts/limpar-base.ts](../../scripts/limpar-base.ts)),
+  **76 testes falhavam de uma vez** com `login-as ... 404` — nenhum por regressão de código.
+  - **Endpoint novo** `POST /api/test/ensure-users` (gate `E2E_TEST_AUTH=1`, como as demais
+    `/api/test/*`): cria as 5 personas + seus perfis `clientes`/`empreiteiras`. Idempotente, e
+    normaliza `ativo`/`mustChangePassword`/`emailVerified` de contas que um teste anterior
+    tenha deixado num estado que bloqueia rota autenticada.
+  - `loginAs()` chama `ensurePersonas()` (memoizado por worker) antes de autenticar — nenhum
+    spec precisou mudar por causa disso.
+  - **Duas contas REAIS estavam hardcoded** nos specs de chat e candidatura
+    (`ramon.gds92@gmail.com`, `ramon_gds@hotmail.com`), usadas como "par alheio" para provar
+    403 de não-dono. Substituídas por `SEED_CONTRATANTE_2_EMAIL` / `SEED_EMPREITEIRO_2_EMAIL`
+    (`*.e2e@xconstrucao.test`), agora criadas pelo endpoint. Os testes deixam de depender de
+    dados de usuários de verdade.
+  - Resultado: **390 passando, 0 falhas** partindo de uma base contendo apenas o admin.
+
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).
 > **Guia, não contrato:** ao implementar cada grupo, esperar refinamentos (status codes,

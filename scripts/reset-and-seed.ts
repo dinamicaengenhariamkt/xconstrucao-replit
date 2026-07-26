@@ -11,6 +11,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../server/db";
 import { seedDatabase } from "../server/seed";
+import { classificarDatabaseUrl } from "../shared/lib/db-env";
 
 const TABLES = [
   "financeiro",
@@ -27,12 +28,31 @@ const TABLES = [
 
 async function main() {
   const url = process.env.DATABASE_URL ?? "";
+  if (!url.trim()) {
+    console.error("[reset-and-seed] DATABASE_URL não está definido. Abortando.");
+    process.exit(1);
+  }
+
+  // Classificação compartilhada com tests/e2e/guards.ts e limpar-base.ts.
+  // A heurística anterior (`/\.prod\b|production/i`) não reconhecia hosts
+  // gerenciados (Neon/Supabase/Railway), então o TRUNCATE rodava contra
+  // produção sem pedir nada. Agora host desconhecido é fail-closed.
+  const classificacao = classificarDatabaseUrl(url);
   const looksProd =
-    /\.prod\b|production/i.test(url) || process.env.NODE_ENV === "production";
+    classificacao.tipo !== "dev" || process.env.NODE_ENV === "production";
 
   if (looksProd && process.env.CONFIRM_PROD_RESET !== "YES") {
+    const motivo =
+      classificacao.tipo === "producao"
+        ? `contém o marcador "${classificacao.marcador}"`
+        : classificacao.tipo === "desconhecido"
+          ? `o host "${classificacao.host}" não é reconhecido como de desenvolvimento`
+          : "NODE_ENV=production";
     console.error(
-      "[reset-and-seed] DATABASE_URL parece de produção e CONFIRM_PROD_RESET != YES. Abortando."
+      `[reset-and-seed] Abortado: ${motivo}.\n` +
+        "  Este script faz TRUNCATE e apaga TODOS os usuários, inclusive admins.\n" +
+        "  Se é realmente o que você quer, rode com CONFIRM_PROD_RESET=YES.\n" +
+        "  Para zerar preservando os administradores, use scripts/limpar-base.ts."
     );
     process.exit(1);
   }

@@ -144,14 +144,13 @@ export function NovaObraCard({ obra, isBlocked = false }: NovaObraCardProps) {
             </div>
 
             <div className="flex items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800 pt-4">
+              {/* A identidade do contratante não é exposta no marketplace:
+                  GET /api/obras faz strip de `clienteId` como PII para o
+                  empreiteiro. O card exibia avatar "CT" e o nome fixo
+                  "Contratante" — um dado falso no lugar de um dado ausente.
+                  Só a data de publicação, que é real, permanece. */}
               <div className="flex items-center gap-2">
-                <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold', obra.contratante.cor)}>
-                  {obra.contratante.iniciais}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{obra.contratante.nome}</p>
-                  <p className="text-[10px] text-gray-400">{obra.dataPublicacao}</p>
-                </div>
+                <p className="text-[10px] text-gray-400">{obra.dataPublicacao}</p>
               </div>
               <div className="flex items-center gap-1 text-gray-400">
                 <IconGroup className="text-sm" />

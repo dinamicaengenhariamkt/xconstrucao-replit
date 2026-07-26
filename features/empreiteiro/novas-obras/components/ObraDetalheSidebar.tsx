@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { cn } from '@shared/lib/utils';
 import type { ObraDetalheSidebarProps } from '../types';
 import { IconCheckCircle, IconVerified } from '@shared/components/icons';
 
@@ -43,18 +42,11 @@ export function ObraDetalheSidebar({ obra, onApply, isApplying }: ObraDetalheSid
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6" data-testid="sidebar-contratante">
-        <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Contratante</h4>
-        <div className="flex items-center gap-3 mb-4">
-          <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold', obra.contratante.cor)}>
-            {obra.contratante.iniciais}
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 dark:text-white text-sm" data-testid="text-contratante-nome">{obra.contratante.nome}</p>
-            <p className="text-xs text-gray-400">Contratante verificado</p>
-          </div>
-        </div>
-      </div>
+      {/* Bloco do contratante removido: a identidade é PII e o backend faz
+          strip de `clienteId` para o empreiteiro (ver GET /api/obras). O que
+          aparecia aqui era o literal "Contratante" com iniciais "CT" — dado
+          falso no lugar de dado ausente. A identificação real acontece após o
+          aceite da candidatura, pelo chat da obra. */}
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6" data-testid="sidebar-info">
         <h4 className="text-xs text-gray-400 uppercase tracking-wider mb-4">Informações</h4>

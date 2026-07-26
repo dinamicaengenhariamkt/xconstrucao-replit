@@ -51,6 +51,10 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
   const [slots, setSlots] = useState<SlotDraft[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [carregandoZonas, setCarregandoZonas] = useState(true);
+  // A tabela de preços do self-service ainda é de protótipo (valores a definir
+  // com os sócios — J23 §13). A API sinaliza isso em `simulacao`; sem consumir
+  // o campo, o anunciante via um preço em reais indistinguível de um definitivo.
+  const [precoSimulado, setPrecoSimulado] = useState(false);
   // J59 — gate do Termo do Anunciante: abre quando o POST responde 403 CONTRATO_ANUNCIANTE_NAO_ACEITO.
   const [contratoOpen, setContratoOpen] = useState(false);
 
@@ -69,6 +73,7 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
           }));
           setZonas(opts);
           setSlots([novoSlot(opts)]);
+          setPrecoSimulado(data.simulacao === true);
         }
       } finally {
         setCarregandoZonas(false);
@@ -162,6 +167,16 @@ export function MontadorPedido({ redirectTo }: { redirectTo: string }) {
               {config.adPaymentEnabled ? 'você paga após a aprovação' : 'simulação — sem cobrança real'}
             </span>
           </p>
+          {/* Preço provisório: distinto do aviso acima, que fala da COBRANÇA.
+              Aqui o alerta é sobre o VALOR em si — a tabela por zona ainda é
+              de protótipo, então mesmo com cobrança real ligada o número
+              exibido pode mudar. */}
+          {precoSimulado && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Valores de referência — a tabela de preços ainda está em definição
+              e pode ser ajustada antes da veiculação.
+            </p>
+          )}
         </div>
         <Button type="button" onClick={enviar} disabled={!podeEnviar || enviando} size="lg">
           <RiShoppingBag3Line className="w-5 h-5 mr-2" />

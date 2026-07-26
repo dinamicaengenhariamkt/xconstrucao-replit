@@ -1,12 +1,52 @@
 import { APIRequestContext, expect } from "@playwright/test";
 
 /**
- * Emails do seed usados como default pelos utilitários compartilhados. Um spec
- * pode sobrescrevê-los passando argumentos explícitos.
+ * Emails das personas usadas como default pelos utilitários compartilhados. Um
+ * spec pode sobrescrevê-los passando argumentos explícitos.
+ *
+ * Historicamente vinham de `server/seed.ts`, que só popula a base quando a
+ * tabela `users` está vazia. `ensurePersonas()` abaixo remove essa dependência.
  */
 export const SEED_CONTRATANTE_EMAIL = "joao@construtora.com";
 export const SEED_EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 export const SEED_ADMIN_EMAIL = "admin@xconstrucao.com";
+
+/**
+ * Segundo contratante, para specs que precisam de um dono DIFERENTE ao
+ * exercitar 403 de não-dono (IDOR em obra e chat). Criado por
+ * `ensurePersonas`; antes os specs apontavam para uma conta real da base.
+ */
+export const SEED_CONTRATANTE_2_EMAIL = "contratante2.e2e@xconstrucao.test";
+
+/** Par do contratante secundário — forma a "thread alheia" nos testes de chat. */
+export const SEED_EMPREITEIRO_2_EMAIL = "empreiteiro2.e2e@xconstrucao.test";
+
+/**
+ * Memoiza a garantia por processo-worker: dezenas de specs chamam `loginAs`,
+ * mas só a primeira precisa bater no endpoint.
+ */
+let personasProntas: Promise<void> | null = null;
+
+/**
+ * Garante que as três personas existam antes de autenticar.
+ *
+ * A suíte dependia dos usuários criados por `server/seed.ts` — que não roda
+ * com a base já populada nem é recriado após uma limpeza operacional
+ * (scripts/limpar-base.ts). O resultado era a suíte inteira falhando com
+ * `login-as ... 404` sempre que a base era zerada para simular cenários reais.
+ *
+ * Best-effort: se o endpoint test-only estiver desabilitado (E2E_TEST_AUTH≠1),
+ * segue adiante — o `loginAs` ainda pode autenticar via login real.
+ */
+export async function ensurePersonas(request: APIRequestContext): Promise<void> {
+  if (!personasProntas) {
+    personasProntas = request
+      .post("/api/test/ensure-users")
+      .then(() => undefined)
+      .catch(() => undefined);
+  }
+  return personasProntas;
+}
 
 /**
  * Autentica via endpoint test-only `POST /api/test/login-as` (habilitado por
@@ -19,6 +59,9 @@ export async function loginAs(
   email: string,
   password?: string
 ): Promise<void> {
+  // Recria as personas se a base tiver sido zerada. No-op quando já existem.
+  await ensurePersonas(request);
+
   const fast = await request.post("/api/test/login-as", { data: { email } });
   if (fast.ok()) return;
 

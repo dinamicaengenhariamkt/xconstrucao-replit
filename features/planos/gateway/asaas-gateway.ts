@@ -208,10 +208,21 @@ export class AsaasGateway implements PaymentGateway {
         console.warn("[asaas] webhook rejeitado: token inválido");
         throw new Error("[asaas] webhook token inválido");
       }
-    } else if (allowedIps.length === 0 && process.env.MARKETPLACE_SPLIT?.toLowerCase() === "on") {
-      // FAIL-CLOSED: com split ligado (dinheiro de obra trafega), recusar quando
-      // NENHUMA auth de webhook está configurada — nem token, nem IP whitelist.
-      console.error("[asaas] webhook recusado: sem ASAAS_WEBHOOK_TOKEN nem ASAAS_WEBHOOK_IPS com MARKETPLACE_SPLIT=on");
+    } else if (allowedIps.length === 0 && process.env.NODE_ENV === "production") {
+      // FAIL-CLOSED: sem token E sem IP whitelist, qualquer POST forjado
+      // confirmaria assinatura ou pedido de anúncio. Recusar em produção.
+      //
+      // O gate era `MARKETPLACE_SPLIT=on`, cujo default é `off` — então na
+      // configuração real da plataforma o fail-closed nunca disparava, mesmo
+      // com pagamentos de plano (J11) e de anúncio (J31) já ativos, que não
+      // dependem do split. Agora vale para qualquer aplicação publicada.
+      //
+      // Fora de produção segue permissivo de propósito: o simulador de
+      // webhook (app/api/test/webhooks/asaas) precisa disso em dev.
+      console.error(
+        "[asaas] webhook recusado: em produção é obrigatório configurar " +
+          "ASAAS_WEBHOOK_TOKEN (recomendado) ou ASAAS_WEBHOOK_IPS.",
+      );
       throw new Error("[asaas] webhook sem autenticação configurada");
     }
 

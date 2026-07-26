@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPlatformSetting } from "@features/admin/platform-settings/server/settings-reader";
 import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
+import { getAsaasEnvironment } from "@shared/lib/asaas-client";
 
 /**
  * GET /api/plataforma/public-config — config pública NÃO-sensível (J26).
@@ -24,6 +25,11 @@ export async function GET() {
     // J53 — cobrança real de anúncio ligada? (gate env AD_PAYMENT_GATEWAY + gateway
     // Asaas). Default false = protótipo; a UI só oferece "Pagar" quando true.
     adPaymentEnabled: isAdPaymentEnabled(),
+    // Ambiente do gateway. `sandbox` significa que nenhuma cobrança é real,
+    // mesmo com a aplicação publicada — a UI usa isso para avisar o usuário
+    // antes que ele informe dados de pagamento. Não é sensível: só diz em que
+    // modo o gateway está, nunca chaves ou credenciais.
+    pagamentoSandbox: getAsaasEnvironment() !== "production",
   };
 
   const r = NextResponse.json(body);

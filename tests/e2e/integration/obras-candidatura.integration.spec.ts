@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase } from "../helpers";
+import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase, SEED_CONTRATANTE_2_EMAIL } from "../helpers";
 
 /**
  * Integração (J36) — Obras + Candidatura/Aceite.
@@ -24,7 +24,7 @@ import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase } from "../he
 const CONTRATANTE_EMAIL = "joao@construtora.com";
 const EMPREITEIRO_EMAIL = "maria@empreiteira.com";
 const ADMIN_EMAIL = "admin@xconstrucao.com";
-const OUTRO_CONTRATANTE_EMAIL = "ramon.gds92@gmail.com"; // dono diferente → testar 403 não-dono
+const OUTRO_CONTRATANTE_EMAIL = SEED_CONTRATANTE_2_EMAIL; // dono diferente → testar 403 não-dono
 
 /** Libera a cota do plano free concluindo as obras abertas do contratante seed. */
 async function liberarCotaObras(request: APIRequestContext) {

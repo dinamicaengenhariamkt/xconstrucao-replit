@@ -15,6 +15,7 @@ import type {
 import type {
   NovaObra,
   ObraDetalhe,
+  ObraEtapa,
 } from '@features/empreiteiro/novas-obras/types';
 import type {
   ObraStatus,
@@ -354,7 +355,11 @@ export function dbToNovaObra(o: DbObra): NovaObra {
     orcamento: toNumber(o.valorTotal),
     prazo: o.dataPrevisao ? formatDate(o.dataPrevisao) : '—',
     descricao: o.descricao ?? '',
-    contratante: { nome: 'Contratante', iniciais: 'CT', cor: 'bg-primary' },
+    // Identidade do contratante NÃO é exposta no marketplace: GET /api/obras
+    // faz strip de `clienteId` (PII) para o empreiteiro, então não há dado
+    // real a mapear aqui. Campos vazios — a UI omite os blocos que dependiam
+    // deles em vez de exibir o antigo literal 'Contratante' / 'CT'.
+    contratante: { nome: '', iniciais: '', cor: 'bg-primary' },
     // Curadoria do admin: a coluna já chega via `getTableColumns(obras)` em
     // /api/obras (o strip por role remove só clienteId/candidaturasCount).
     // Antes era `false` fixo — o selo em NovaObraCard era código inalcançável.
@@ -375,10 +380,31 @@ export function dbToNovaObra(o: DbObra): NovaObra {
   };
 }
 
+/**
+ * Linha de `obra_etapas` como devolvida por GET /api/obras/[id].
+ *
+ * `prazo` é `string` e não `Date`: o adapter roda no client, sobre o payload
+ * já serializado em JSON, onde timestamps chegam como ISO string.
+ */
+interface DbObraEtapa {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  ordem?: number;
+  status?: string | null;
+  prazo?: string | null;
+}
+
+/** Status do banco → status da UI. Qualquer valor inesperado vira 'pendente'. */
+function mapEtapaStatus(s: string | null | undefined): ObraEtapa['status'] {
+  return s === 'em_andamento' || s === 'concluida' ? s : 'pendente';
+}
+
 /** DB row → ObraDetalhe (página de detalhe do empreiteiro). */
 export function dbToObraDetalheEmpreiteiro(
   o: DbObra,
   anexos: DbObraAnexo[] = [],
+  etapas: DbObraEtapa[] = [],
 ): ObraDetalhe {
   const base = dbToNovaObra(o);
   const area = o.areaM2 ? `${o.areaM2} m²` : '—';
@@ -405,8 +431,18 @@ export function dbToObraDetalheEmpreiteiro(
       complemento: o.complemento ?? undefined,
       cep: o.cep ?? undefined,
     },
-    etapas: [],
+    // Escopo real definido pelo contratante (tabela obra_etapas). Lista vazia
+    // é legítima — o componente omite o bloco inteiro nesse caso.
+    etapas: etapas.map((e) => ({
+      id: e.id,
+      nome: e.nome,
+      descricao: e.descricao ?? '',
+      prazo: e.prazo ? formatDate(e.prazo) : '—',
+      status: mapEtapaStatus(e.status),
+    })),
     documentos,
+    // Requisitos não têm origem no schema hoje; o componente já guarda por
+    // `.length > 0`, então a lista vazia simplesmente não renderiza nada.
     requisitos: [],
   };
 }

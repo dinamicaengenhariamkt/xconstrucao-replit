@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, count, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
@@ -8,6 +8,7 @@ import {
   medicoes,
   obras,
   obraAnexos,
+  obraEtapas,
   users,
   userFiles,
 } from "@shared/db/schema";
@@ -227,9 +228,26 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
           ? "rejeitado"
           : "nao_aplicado";
 
+  // Escopo planejado pelo contratante. Alimenta o bloco "Escopo e Fases
+  // Previstas" no detalhe da obra — antes o adapter devolvia `[]` fixo e o
+  // card aparecia sempre vazio para o empreiteiro.
+  const etapasRows = await db
+    .select({
+      id: obraEtapas.id,
+      nome: obraEtapas.nome,
+      descricao: obraEtapas.descricao,
+      ordem: obraEtapas.ordem,
+      status: obraEtapas.status,
+      prazo: obraEtapas.prazo,
+    })
+    .from(obraEtapas)
+    .where(eq(obraEtapas.obraId, id))
+    .orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt));
+
   const r = NextResponse.json({
     ...obraOut,
     anexos,
+    etapas: etapasRows,
     candidaturasCount,
     ...(applicationStatus ? { applicationStatus } : {}),
     medicoes: medicoesRows,

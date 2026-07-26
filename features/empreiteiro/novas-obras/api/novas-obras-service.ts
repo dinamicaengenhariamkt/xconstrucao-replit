@@ -83,5 +83,6 @@ export async function getObraDetalhe(id: string): Promise<ObraDetalhe> {
   const payload = await response.json();
   const obra: DbObra = payload?.obra ?? payload;
   const anexos = Array.isArray(payload?.anexos) ? payload.anexos : [];
-  return dbToObraDetalheEmpreiteiro(obra, anexos);
+  const etapas = Array.isArray(payload?.etapas) ? payload.etapas : [];
+  return dbToObraDetalheEmpreiteiro(obra, anexos, etapas);
 }
