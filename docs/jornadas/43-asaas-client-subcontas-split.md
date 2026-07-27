@@ -65,14 +65,14 @@ Chamadas à **API externa do Asaas** (não são endpoints internos):
 Nenhum (camada nova, ainda sem caller).
 
 ## 9. Checklist de implementação
-- [ ] `apiKeyOverride?` no transporte (`asaasRequest`) ou `asaasRequestAs`
-- [ ] `createSubaccount` + tipos `AsaasSubaccount`/`AsaasSubaccountInput`
-- [ ] `getSubaccount`
-- [ ] `createPaymentWithSplit` + tipo `AsaasSplit`; estender `AsaasPayment`/`AsaasCheckout`
-- [ ] `getBalance` (contexto de subconta via apiKeyOverride)
-- [ ] `requestTransfer` + tipos `AsaasTransfer`/`AsaasTransferInput`
-- [ ] Testes unitários com mock de `fetch` (feliz + erro HTTP) para cada método
-- [ ] `npm run check` limpo
+- [x] `apiKeyOverride?` no transporte (`asaasRequest`) ou `asaasRequestAs`
+- [x] `createSubaccount` + tipos `AsaasSubaccount`/`AsaasSubaccountInput`
+- [x] `getSubaccount`
+- [x] `createPaymentWithSplit` + tipo `AsaasSplit`; estender `AsaasPayment`/`AsaasCheckout`
+- [x] `getBalance` (contexto de subconta via apiKeyOverride)
+- [x] `requestTransfer` + tipos `AsaasTransfer`/`AsaasTransferInput`
+- [x] ~~Testes unitários com mock de `fetch` (feliz + erro HTTP) para cada método~~ _(**adiado por decisão de produto** — ver cabeçalho. Os métodos são exercitados de ponta a ponta pelos specs de integração de subconta/split/saldo. Reentra junto com a **J35**, que traz o runner unitário: hoje não existe Vitest no projeto.)_
+- [x] `npm run check` limpo
 
 ## 10. Critérios de aceite
 1. Cada método compila e é testável com `fetch` mockado (não requer credencial real).

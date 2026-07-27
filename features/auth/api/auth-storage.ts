@@ -114,7 +114,18 @@ export async function createUserWithProfile(
   const tipoCliente = cpfCnpj && cpfCnpj.length > 11 ? "Pessoa Jurídica" : "Pessoa Física";
 
   return await db.transaction(async (tx) => {
-    const [user] = await tx.insert(users).values(data).returning();
+    // `users.cpf_cnpj` (J42/J44) é a fonte de verdade do documento fiscal do
+    // usuário — distinta das cópias em `clientes.cnpjCpf`/`empreiteiras.cnpj`,
+    // que são dados do PERFIL e podem ser editados depois.
+    //
+    // Sem esta linha a coluna nascia sempre NULL: `subconta-service.ts` a lê
+    // para abrir a subconta Asaas do empreiteiro (J45) e devolvia
+    // PERFIL_INCOMPLETO — "Informe seu CPF/CNPJ" num formulário onde o dado já
+    // tinha sido informado, sem saída possível pela UI.
+    const [user] = await tx
+      .insert(users)
+      .values({ ...data, cpfCnpj: data.cpfCnpj ?? cpfCnpj })
+      .returning();
 
     if (user.role === "contratante") {
       await tx

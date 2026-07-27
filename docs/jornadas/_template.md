@@ -1,6 +1,6 @@
 # Jornada — {Nome}
 
-> Status: {mock | parcial | revisão | pronto} | Prioridade: {alta | média | baixa} | Wave: {1 | 2 | 3}
+> Status: {planejada | pendente | mock | parcial | revisão | pronto | bloqueada} | Prioridade: {alta | média | baixa} | Wave: {1 | 2 | 3}
 > Última atualização: AAAA-MM-DD
 
 ## 1. Contexto & Objetivo

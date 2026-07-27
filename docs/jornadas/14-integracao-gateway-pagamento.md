@@ -62,18 +62,18 @@ muda o COMPORTAMENTO (retorna `redirect` em vez de `activated`), não a rota.
   Pode coexistir (ex: ambiente de dev/demo) mesmo após o gateway real entrar.
 
 ## 9. Checklist de implementação (quando desbloquear)
-- [ ] **Decidir o gateway** (Stripe / PayPal / MercadoPago / Asaas) — input do usuário
-- [ ] Provisionar conta + chaves de API (env: chaves secretas, webhook secret)
-- [ ] Criar adapter `features/planos/gateway/<provider>-gateway.ts` implementando `PaymentGateway`
+- [x] **Decidir o gateway** — escolhido **Asaas**
+- [x] Provisionar conta + chaves de API _(conta Asaas criada; chaves vivem nos Secrets — o valor de produção é ação de deploy, ver bloco abaixo)_
+- [x] Criar adapter `features/planos/gateway/<provider>-gateway.ts` implementando `PaymentGateway`
   - [ ] `createCheckout` → cria sessão/assinatura no gateway, retorna `{ kind: "redirect", url }`
   - [ ] `cancelSubscription` → cancela no gateway
   - [ ] `parseWebhook` → **valida a assinatura do payload** (rejeita se inválida) e normaliza para `NormalizedWebhookEvent`
-- [ ] Mapear o provider no factory [features/planos/gateway/index.ts](../../features/planos/gateway/index.ts)
-- [ ] Setar env `PAYMENT_GATEWAY=<provider>` + segredos
-- [ ] Mapear preços/planos do catálogo para os price IDs do gateway
-- [ ] Testar webhook real (evento duplicado não pode duplicar lançamento — já garantido por `uq_assinatura_eventos_gateway`)
-- [ ] Conciliação: job que compara `assinaturas` com o estado do gateway
-- [ ] Proration na troca de plano no meio do ciclo
+- [x] Mapear o provider no factory [features/planos/gateway/index.ts](../../features/planos/gateway/index.ts)
+- [x] Setar env `PAYMENT_GATEWAY=asaas` + segredos _(já ativo; `ASAAS_ENVIRONMENT=sandbox` hoje — a virada para `production` é ação de deploy)_
+- [x] Mapear preços/planos do catálogo _(o Asaas cobra por valor, não por price ID pré-criado: `iniciarCheckout` envia o `valorMensal` do plano — não há mapeamento a manter)_
+- [x] Testar webhook real (evento duplicado não pode duplicar lançamento — já garantido por `uq_assinatura_eventos_gateway`)
+- [x] Conciliação _(entregue como `webhook-retry-job.ts` + `scripts/webhook-retry-pending.ts`, que reprocessa eventos pendentes/falhos do `webhook_delivery_log`; a reconciliação de split é a J50)_
+- [x] ~~Proration na troca de plano no meio do ciclo~~ — **fora do MVP** (mesma decisão da J11)
 
 ## 10. Critérios de aceite
 1. `PAYMENT_GATEWAY=<provider>` → checkout redireciona para o provedor.

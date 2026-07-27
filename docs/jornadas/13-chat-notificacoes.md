@@ -61,7 +61,7 @@ Comunicação assíncrona entre contratante e empreiteiro vinculada a uma obra (
 - [x] Plugar helper em J05, J06, J08 (geradoras) _(J05 candidatura-dispatcher; J06 medicao-dispatcher 2026-05-29; J08 Task #52)_
 - [x] Componente sino no header com contagem de não-lidas _(hooks de notif real em ambas as personas)_
 - [x] Real-time: avaliar polling (simples) vs. SSE/WebSocket (correto). MVP: polling 30s. _(2026-05-29 — `refetchInterval` 30s contratante / 60s empreiteiro)_
-- [ ] Email para tipos críticos (respeitar preferências J02) _(parcial: J05 candidatura usa Brevo; chat não envia email — decisão MVP. Aplicação uniforme de `user_preferencias` nos dispatchers → **movido para J02**)_
+- [x] ~~Email para tipos críticos~~ — (respeitar preferências J02) _(parcial: J05 candidatura usa Brevo; chat não envia email — decisão MVP. Aplicação uniforme de `user_preferencias` nos dispatchers → **movido para J02**)_
 - [x] Nova obra aprovada → notificação in-app + email para empreiteiros na zona de atuação (respeita `email_novaObra`) _(Task #94)_
 - [~] Tela admin de monitoramento (auditoria) → **movida para [J21 — Observabilidade de Comunicação (Admin)](21-observabilidade-comunicacao-admin.md)** _(2026-06-02 — escopo cresceu o suficiente p/ jornada própria: leitura read-only de chats + painel de notificações reais + trilha de auditoria)_
 

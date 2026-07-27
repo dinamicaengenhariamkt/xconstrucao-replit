@@ -1,7 +1,7 @@
 # Jornada — Configurações Críticas de Segurança
 
-> Status: concluído | Prioridade: média | Wave: 6
-> Última atualização: 2026-06-08
+> Status: parcial (2FA obrigatório, webhooks reais e auditoria do PATCH: fase 2) | Prioridade: média | Wave: 6
+> Última atualização: 2026-07-26
 >
 > **Criada em 2026-06-05**, desmembrada da J26. Reúne os controles de
 > configuração que **alteram o fluxo de autenticação/sessão de todos os usuários**.
@@ -65,14 +65,14 @@ Itens em escopo (todos hoje ocultos na página de configurações):
 - Nenhum mock — os controles já existem na UI (ocultos). É implementação de efeito real.
 
 ## 9. Checklist de implementação
-- [ ] Timeout de sessão: ler `seguranca.timeout` no fluxo de sessão/refresh; **teste de não-bloqueio** (sessão normal não expira cedo demais)
-- [ ] Máx tentativas: `rate-limit` do login lê `maxTentativas`; testar lockout + desbloqueio
-- [ ] 2FA obrigatório (admins/todos): forçar setup no login conforme flag; **não trancar admin sem 2FA configurado** (fluxo de setup obrigatório guiado)
-- [ ] Bloqueio por perfil (empreiteiras/clienteLogin): negar cadastro/login + proxy; mensagem clara
-- [ ] Relatórios exportáveis: gate na UI + endpoints de export
-- [ ] Webhooks reais: dispatcher + (se necessário) fila/retry; remover o estado "em breve"
-- [ ] `ConfirmImpactDialog` em cada toggle de alto impacto
-- [ ] Auditoria de cada alteração crítica em `audit_logs`
+- [x] Timeout de sessão: ler `seguranca.timeout` no fluxo de sessão/refresh; **teste de não-bloqueio** (sessão normal não expira cedo demais)
+- [x] Máx tentativas: `rate-limit` do login lê `maxTentativas`; testar lockout + desbloqueio
+- [ ] 2FA obrigatório (admins/todos): forçar setup no login conforme flag; **não trancar admin sem 2FA configurado** (fluxo de setup obrigatório guiado) — **fase 2, decisão de produto** (2FA segue opcional; infra da J22 disponível). A UI já diz "será liberado em uma próxima fase".
+- [x] Bloqueio por perfil (empreiteiras/clienteLogin): negar cadastro/login + proxy; mensagem clara
+- [ ] Relatórios exportáveis: gate na UI + endpoints de export — **parcial**: o gate existe (`isRelatoriosHabilitado`), mas nenhum endpoint de export o consome ainda. Casa com a exportação CSV pendente na **J09**.
+- [ ] Webhooks reais: dispatcher + (se necessário) fila/retry; remover o estado "em breve" — **fase 2, decisão de produto** (seção ocultada da UI; a config persiste. Só será construído quando houver integração externa concreta consumindo os eventos).
+- [x] `ConfirmImpactDialog` em cada toggle de alto impacto
+- [ ] Auditoria de cada alteração crítica em `audit_logs` — **lacuna real, sem decisão de produto por trás.** `PATCH /api/admin/configuracoes` não chama `recordAudit`: hoje uma mudança de timeout de sessão ou de máx. tentativas não deixa rastro de quem alterou. O `settings-reader` foi escrito de propósito sem importar `audit`/`auth-utils` (evitar ciclo), então o `recordAudit` cabe no route handler. Único item desta jornada que ainda é trabalho de engenharia.
 
 ## 10. Critérios de aceite
 1. Cada controle reexibido tem efeito real e demonstrável; nenhum volta a ser "fantasma".
@@ -112,3 +112,12 @@ Itens em escopo (todos hoje ocultos na página de configurações):
   explícita, timeout e maxTentativas NÃO se aplicam** (mantêm 7/30 dias e o limite
   histórico). Pisos (5 min / 3 tentativas) previnem auto-bloqueio por config absurda.
   **Fora desta leva:** 2FA obrigatório e webhooks reais (próxima fase).
+- **2026-07-26 — Status rebaixado de `concluído` para `parcial`.** Auditoria de
+  código encontrou 4 dos 8 itens do checklist sem implementação, sob um cabeçalho
+  que dizia "concluído". Três têm decisão de produto por trás (2FA opcional,
+  webhooks em stand-by, export junto da J09) — mas a **auditoria do PATCH de
+  configurações** não tem: `PATCH /api/admin/configuracoes` não chama `recordAudit`,
+  então alterar timeout de sessão ou máx. tentativas não deixa rastro de autoria.
+  Motivo do rebaixamento: quem lê "concluído" numa jornada chamada *Configurações
+  Críticas de Segurança* assume que alterações críticas estão auditadas. Não estão.
+  Rótulo honesto vale mais que checklist fechado.

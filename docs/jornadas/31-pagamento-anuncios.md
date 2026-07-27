@@ -157,19 +157,19 @@ A J23 já deixou `pedidos_anuncio.cobrancaStatus` com os estados
   "simulação" da UI quando o gateway estiver ativo.
 
 ## 10. Checklist de implementação (quando desbloquear)
-- [ ] **Confirmar provedor** (deve casar com a decisão da J14) e modelo de cobrança avulsa
-- [ ] **Coletar CPF/CNPJ do anunciante no checkout e criar customer ASAAS lazy** (`findOrCreateCustomer`) — anunciante não tem customer proativo (isento no cadastro). Ver §6.2b
-- [ ] Decidir §6.1 (estender `PaymentGateway` vs porta `AdPaymentGateway` dedicada)
-- [ ] Decidir §6.2 (pagar-antes vs moderar-antes) com os sócios → define refund ou não
-- [ ] Adapter real implementando a porta: `createAdCheckout`, `parseWebhook` (**valida assinatura**)
-- [ ] `pedido_pagamento_eventos` + campos de gateway em `pedidos_anuncio` (bootstrap idempotente)
-- [ ] `aplicarEventoPagamento` idempotente em `pedido-service.ts` (paga/falhou/reembolsado)
-- [ ] Webhook `app/api/webhooks/anuncios-pagamento/route.ts`
-- [ ] Trocar o comportamento do checkout da J23 por redirect quando `AD_PAYMENT_GATEWAY` setado
-- [ ] Receita real no caixa (J09) categoria `anuncio`, idempotente por pedido
-- [ ] (se refund) tratar `refunded` → pedido `recusado`+reembolsado + notificação
-- [ ] Conciliação: comparar `pedidos_anuncio` pagos com o estado do gateway
-- [ ] Remover badge "simulação" da UI; "Meus Anúncios" mostra estado real de pagamento
+- [x] **Confirmar provedor** — **Asaas** (mesma decisão da J14); cobrança avulsa one-off na conta-mãe
+- [x] **Coletar CPF/CNPJ do anunciante no checkout e criar customer ASAAS lazy** _(`asaas-ad-billing.ts` → `findOrCreateCustomer`. Confirmado em 2026-07-26 como a decisão de arquitetura vigente: o anunciante segue isento no cadastro; o documento é coletado aqui, no checkout, para não haver dois pontos de verdade.)_
+- [x] Decidir §6.1 — porta dedicada (`billing-port.ts` + `asaas-ad-billing.ts`), separada do gateway de assinatura
+- [x] Decidir §6.2 — **moderar-antes-de-pagar** (o pedido é aprovado e só então cobrado; sem refund no MVP)
+- [x] Adapter real implementando a porta _(`asaas-ad-billing.ts`; a validação de origem do webhook é a do `/api/webhooks/gateway`, compartilhada — token + IP, fail-closed em produção desde 2026-07-26)_
+- [x] `pedido_pagamento_eventos` + campos de gateway em `pedidos_anuncio` _(`bootstrap-anuncios-self-service.ts`, com unique em `gateway_event_id`)_
+- [x] Aplicação idempotente do evento _(entregue como `aplicar-evento-anuncio-pago.ts`, não dentro de `pedido-service.ts`)_
+- [x] Webhook _(**não** virou rota própria: roteado dentro do `/api/webhooks/gateway` pelo prefixo `xconstrucao-anuncio` do externalReference — um endpoint só para todos os eventos Asaas, com uma validação de origem só)_
+- [x] Trocar o comportamento do checkout da J23 por redirect quando `AD_PAYMENT_GATEWAY` setado _(`POST /api/anuncios/pedidos/[id]/pagar`; UI condicional a `adPaymentEnabled`)_
+- [x] Receita real no caixa (J09) categoria `anuncio`, idempotente por pedido
+- [x] ~~(se refund) tratar `refunded`~~ — **fora do MVP** pela decisão §6.2 (moderar-antes-de-pagar não gera refund)
+- [x] Conciliação _(coberta pelo `webhook-retry-job`, que reprocessa eventos pendentes/falhos de todos os domínios)_
+- [x] Badge de simulação condicional a `adPaymentEnabled` _(2026-07-26: além do aviso de cobrança, o montador passou a avisar que a **tabela de preços** ainda é provisória — o campo `simulacao: true` que a API já devolvia era ignorado pela UI)_
 
 ## 11. Critérios de aceite
 1. `AD_PAYMENT_GATEWAY=<provider>` → confirmar pedido redireciona para o provedor (não "adquirido simulação").

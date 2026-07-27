@@ -39,6 +39,8 @@ import {
 
 const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
 const CPF_VALIDO = "52998224725";
+// Empreiteiro se cadastra como pessoa jurídica (registerSchema exige CNPJ).
+const CNPJ_VALIDO = "11222333000181";
 const URL_SUBCONTA = "/api/empreiteiro/recebimento/subconta";
 
 function splitEnabledInThisEnv(): boolean {
@@ -71,7 +73,7 @@ async function registrarEmpreiteiro(
       password: "Xconstr@E2E2026!",
       role: "empreiteiro",
       phone: "11988880000",
-      cpfCnpj: CPF_VALIDO,
+      cpfCnpj: CNPJ_VALIDO,
       acceptTerms: true,
       ...ANTI_BOT,
     },

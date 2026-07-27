@@ -62,9 +62,9 @@ Existente: `financeiro` (genérica).
 - [x] Substituir mocks de caixa/entradas/saídas (deletados; hooks → API real)
 - [x] Filtros por período (7/30/90 dias, ano, custom range)
 - [x] KPIs reais do dashboard financeiro (`/api/admin/financeiro/dashboard-stats`)
-- [ ] Plug assinatura (J11) gerando entrada — depende de Fase 3 (categoria `assinatura` já reconhecida)
-- [ ] Plug J12 (anúncios) gerando entrada — depende de Fase 4 (categoria `anuncio` já reconhecida)
-- [ ] Exportação CSV (item arquivado — recuperar em fase futura)
+- [x] Plug assinatura (J11) gerando entrada _(entregue: ativar assinatura lança entrada de escopo plataforma, categoria `assinatura`, idempotente — ver checklist da J11)_
+- [x] Plug J12 (anúncios) gerando entrada _(entregue pela **J31**: `asaas-ad-billing.ts` + confirmação por webhook do pedido de anúncio)_
+- [ ] Exportação CSV — **fase 2**: casa com o gate `isRelatoriosHabilitado` da **J30**, que hoje existe sem nenhum endpoint de export consumindo. Fazer as duas pontas juntas.
 
 ## 10. Critérios de aceite
 1. Assinar plano em J11 → aparece como entrada em `/admin/entradas`.

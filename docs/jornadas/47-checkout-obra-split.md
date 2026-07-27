@@ -45,7 +45,7 @@ flowchart LR
 - [app/contratante/pagamentos/page.tsx](../../app/contratante/pagamentos/page.tsx) — CTA condicional "Pagar via plataforma" (coexiste com "quitar manual").
 
 ## 5. Componentes-chave
-- `features/marketplace/split-gateway.ts` — **a criar**: monta o payload de split, calcula valores.
+- [features/marketplace/split-service.ts](../../features/marketplace/split-service.ts) — monta o payload de split, calcula valores. _(planejado como `split-gateway.ts`; renomeado na implementação)_
 - `app/api/contratante/pagamentos/[id]/checkout-split/route.ts` — **a criar**.
 - Reusar validações existentes: `isContratanteOwnerOfLancamento` e `temDisputaAtivaNoAlvo` ([features/financeiro/lancamentos-service.ts](../../features/financeiro/lancamentos-service.ts)).
 - [shared/lib/asaas-client.ts](../../shared/lib/asaas-client.ts) — `createPaymentWithSplit` (J43).
@@ -61,15 +61,15 @@ Reusa `pagamentos_split` (J42). Insere registro `pendente` com snapshot de `perc
 - Nenhum mock removido nesta jornada — o manual é **fallback legítimo**, não mock. `MARKETPLACE_SPLIT` off = comportamento atual preservado.
 
 ## 9. Checklist de implementação
-- [ ] Flag `MARKETPLACE_SPLIT` (env + `platform_settings`), default off
-- [ ] `features/marketplace/split-gateway.ts` (cálculo de split + payload)
-- [ ] `POST /api/contratante/pagamentos/[id]/checkout-split` (valida ownership/disputa/subconta)
-- [ ] Config de `percentual_plataforma` (comissão) em `platform_settings`
-- [ ] Insert `pagamentos_split` status `pendente` com snapshots
-- [ ] externalReference `xconstrucao-obra|financeiroId|obraId|splitId`
-- [ ] UI condicional na tela de pagamentos do contratante
-- [ ] Bloqueio amigável quando empreiteiro sem subconta `aprovada`
-- [ ] Teste de integração (`tests/e2e/integration/`): inicia checkout-split, assert `pagamentos_split` pendente + redirect; bloqueio sem subconta
+- [x] Flag `MARKETPLACE_SPLIT`, default off _(entregue só via env em [features/marketplace/flags.ts](../../features/marketplace/flags.ts) — o gate por `platform_settings` (piloto por-usuário) foi adiado; ver §13 e `_rollout-marketplace-split.md`)_
+- [x] Cálculo de split + payload _(entregue em [features/marketplace/split-service.ts](../../features/marketplace/split-service.ts) `iniciarCheckoutSplit`, não em um `split-gateway.ts` — arquivo renomeado durante a implementação)_
+- [x] `POST /api/contratante/pagamentos/[id]/checkout-split` (valida ownership/disputa/subconta)
+- [x] Config de `percentual_plataforma` (comissão) em `platform_settings`
+- [x] Insert `pagamentos_split` status `pendente` com snapshots
+- [x] externalReference `xconstrucao-obra|financeiroId|obraId|splitId`
+- [x] UI condicional na tela de pagamentos do contratante
+- [x] Bloqueio amigável quando empreiteiro sem subconta `aprovada`
+- [x] Teste de integração (`tests/e2e/integration/`): inicia checkout-split, assert `pagamentos_split` pendente + redirect; bloqueio sem subconta
 
 ## 10. Critérios de aceite
 1. Contratante inicia checkout-split de medição aprovada (empreiteiro aprovado) → `pagamentos_split` `pendente` + URL de redirect.

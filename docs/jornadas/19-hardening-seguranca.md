@@ -48,7 +48,7 @@ Nenhum novo. As rotas `/api/**` já validam server-side via `requireVerifiedUser
 - [x] Manter guard client como UX (evita flash) — preservado nos layouts
 - [x] Neutralizar a flag de mock em produção _(superado pela remoção física — ver item abaixo)_
 - [x] Remover os ~28 branches `if (ENABLE_MOCK)` _(2026-06 — remoção física concluída; `ENABLE_MOCK`/`isMockEnabled` não existem mais no código, `mock-flag.ts` e os diretórios `mocks/` foram deletados. Verificado: 0 ocorrências em `--include=*.ts,*.tsx`)_
-- [ ] Confirmar adapter de gateway `manual` bloqueado em prod (validar quando J14 desbloquear)
+- [x] Confirmar adapter de gateway `manual` bloqueado em prod _(hard fail em [features/planos/gateway/index.ts](../../features/planos/gateway/index.ts) — `throw` quando `PAYMENT_GATEWAY=manual` e `NODE_ENV=production`. A premissa "validar quando J14 desbloquear" caiu: a J14 está pronta. Confirmação de env de produção segue no checklist de go-live, como o `TRUST_PROXY_HEADERS`.)_
 - [x] Revisar `getClientIp` (confia em `x-forwarded-for`) _(código concluído com safeguard `TRUST_PROXY_HEADERS` em [rate-limit.ts](../../features/auth/api/rate-limit.ts): sem a flag, ignora `x-forwarded-for` forjável e usa só `x-real-ip`. **Resta apenas a ação de deploy** `TRUST_PROXY_HEADERS=1` em produção atrás de proxy confiável — registrada no [backlog](_backlog-paralelo.md) como checklist de infra, não código)_
 
 ## 10. Critérios de aceite

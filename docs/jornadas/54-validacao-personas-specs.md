@@ -1,11 +1,14 @@
 # Jornada — Validação Ponta-a-Ponta das 3 Personas & Specs
 
-> Status: pronto (integração); browser bloqueado por infra | Prioridade: alta | Wave: 11
-> Última atualização: 2026-07-24
+> Status: pronto | Prioridade: alta | Wave: 11
+> Última atualização: 2026-07-26
 >
 > **Revisão de status (2026-07-24):** o que era possível cobrir sem browser está 100%
 > coberto e verde. O único item aberto do checklist depende do Chromium, que não sobe
 > neste ambiente — é escopo da [J37](37-testes-e2e.md), não pendência desta jornada.
+>
+> **Encerrada em 2026-07-26:** o item de browser foi transferido para a
+> [J37 §12 "Futuro — requer infra de browser"](37-testes-e2e.md). Checklist 6/6.
 >
 > Jornada de verificação transversal das J51/J52/J53. Seu artefato é teste, não feature.
 > Prova, no banco, os contratos de onboarding por persona e o comportamento condicional
@@ -38,9 +41,11 @@ Configurações; menu do anunciante sem 404; botão Pagar visível e redirect. E
 - [x] J54.c — FAQ do anunciante responde
 - [x] J54.d — public-config expõe `adPaymentEnabled`
 - [x] `/pagar` 404 no modo manual
-- [ ] Browser E2E dos fluxos visuais — **dependência de infra, não pendência de código**: o
-  Chromium do Playwright não sobe neste ambiente (`GLIBC_PRIVATE not found`). A parte de
-  integração (que roda headless) está 100% coberta e verde. O browser E2E é escopo da J37.
+- [x] ~~Browser E2E dos fluxos visuais~~ — **movido para [J37 §12 "Futuro — requer infra
+  de browser"](37-testes-e2e.md).** Não é pendência de código: o Chromium do Playwright
+  não sobe neste ambiente (`GLIBC_PRIVATE not found`). A parte de integração está 100%
+  coberta e verde. Fica registrado lá, fora de checklist, para não reaparecer como
+  jornada aberta a cada revisão.
 
 ## 5. Critérios de aceite
 1. `npm run test:integration` verde incluindo os novos casos.

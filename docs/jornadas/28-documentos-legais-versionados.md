@@ -76,14 +76,14 @@ flowchart LR
   para `legal_documents` (a versão atual vira a v1).
 
 ## 9. Checklist de implementação
-- [ ] Tabela `legal_documents` + bootstrap idempotente + espelho no schema
-- [ ] Seed da versão atual (migrar o texto hardcoded de termos/privacidade para v1)
-- [ ] `GET /api/legal/[tipo]` público + páginas lendo a versão vigente
-- [ ] Tela admin para publicar nova versão (com data de vigência)
-- [ ] Detecção de "versão aceita < vigente" para o usuário logado
-- [ ] Modal/fluxo de re-consentimento + `POST /api/legal/consentir`
-- [ ] Gate (decisão jurídica): re-consentimento é obrigatório/bloqueante ou apenas avisado?
-- [ ] Auditoria: publicação de versão e re-consentimentos em `audit_logs`
+- [x] Tabela `legal_documents` + bootstrap idempotente + espelho no schema
+- [x] Seed da versão atual (migrar o texto hardcoded de termos/privacidade para v1)
+- [x] `GET /api/legal/[tipo]` público + páginas lendo a versão vigente
+- [x] Tela admin para publicar nova versão (com data de vigência)
+- [x] Detecção de "versão aceita < vigente" para o usuário logado
+- [x] Modal/fluxo de re-consentimento + `POST /api/legal/consentir`
+- [x] Gate: re-consentimento obrigatório/bloqueante ou apenas avisado _(a decisão virou **configuração** em vez de constante de código: `legal.reconsentModo` = `avisar` (default) | `bloquear`, editável em `/admin/legal`. O jurídico escolhe pelo painel, sem PR. **Atenção:** `bloquear` hoje é UX de front — o backend não recusa requisição por consentimento desatualizado; ver observação abaixo.)_
+- [x] Auditoria: publicação de versão e re-consentimentos em `audit_logs`
 
 ## 10. Critérios de aceite
 1. Páginas públicas de termos/privacidade exibem o conteúdo da versão vigente vinda do banco.
@@ -93,9 +93,10 @@ flowchart LR
 5. Query de verificação: `SELECT tipo, versao, vigente_em FROM legal_documents` reflete o publicado; `SELECT versao FROM user_consents WHERE user_id=…` reflete o aceite.
 
 ## 11. Riscos / Pontos de atenção
-- **Decisão jurídica é pré-requisito:** o conteúdo dos documentos, a política de
+- **Decisão jurídica é dado, não código:** o conteúdo dos documentos, a política de
   re-consentimento (bloqueante vs avisado) e a retroatividade são decisões do
-  jurídico/sócios. Engenharia não decide isso — daí o status `bloqueada`.
+  jurídico/sócios — todas configuráveis pelo painel admin. Por isso a jornada está
+  `pronto` e não `bloqueada`: engenharia entregou o mecanismo; falta o texto revisado.
 - **Não bloquear o usuário indevidamente:** re-consentimento bloqueante mal calibrado
   trava o uso. Definir claramente quais ações exigem re-aceite.
 - **Markdown vs HTML:** decidir o formato de armazenamento do conteúdo legal (Markdown
@@ -126,3 +127,29 @@ flowchart LR
   com **padrão `avisar`** (não-bloqueante); `bloquear` é UX (backend não tranca acesso).
   **Decisões:** conteúdo é dado editável pelo jurídico (não código); re-consent default
   avisar. **Plug pendente:** jurídico publica a v2 revisada quando quiser.
+- **2026-07-26 — Jornada encerrada (`pronto`). Checklist 8/8 marcado.** Auditoria
+  confirmou no código que os 8 itens estavam implementados desde 2026-06-07 e só não
+  tinham sido marcados no PR. Corrigida a contradição do §11, que ainda dizia
+  "status `bloqueada`" enquanto o cabeçalho dizia `pronto (infra)`.
+
+  > ### Observação — revisão jurídica (não é pendência de engenharia)
+  >
+  > **Não abrir jornada nova para isto.** O texto v1 já está em produção, é real e
+  > substancial (~23 KB de Markdown em `server/legal-seed/`: Termos com 10 seções
+  > citando o CDC; Privacidade citando a Lei 13.709/2018 e os 8 direitos do titular).
+  > Não é placeholder. Quando o jurídico revisar, a v2 é publicada **pelo painel
+  > admin, sem tocar em código**.
+  >
+  > Três pontos para levar junto na revisão:
+  >
+  > 1. **Placeholders de contato.** `[Nome do DPO]`, `(11) 0000-0000`,
+  >    `[Endereço completo]`, `[CEP]` em `server/legal-seed/privacidade-v1.md` e
+  >    `termos-v1.md`. Nomear o DPO é exigência formal do art. 41 da LGPD.
+  > 2. **`bloquear` é UX de front.** Se o jurídico escolher bloquear esperando
+  >    barreira real, o backend hoje não recusa requisição por consentimento
+  >    desatualizado — vira trabalho de engenharia (guard server-side).
+  > 3. **Assimetria no bootstrap.** `privacidade`, `termo_anunciante` e
+  >    `contrato_obra` têm `UPDATE ... WHERE versao = 1` que sincroniza edições do
+  >    `.md`; **`termos-v1.md` não tem** — editar o arquivo não propaga para bancos
+  >    já semeados. Corrigir placeholders de contato em Termos exige publicar v2
+  >    pelo painel, ou acrescentar o UPDATE.

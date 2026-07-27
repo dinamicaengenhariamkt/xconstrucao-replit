@@ -279,3 +279,15 @@ Descobertos ao documentar as J57–J60, que foram implementadas antes de terem d
 - **Descoberto:** 2026-07-24
 - **Motivação:** o item "Coalescing por `threadId` em coluna dedicada" (P1 acima) previa que o dedupe por `eq(notificacoes.href, href)` quebraria quando o href ganhasse parâmetros. **Aconteceu**: a J58 introduziu `?tab=contrato` no href e o aviso de cancelamento, com href fixo, era descartado pelo índice parcial enquanto o primeiro não fosse lido — um empreiteiro nunca seria avisado do cancelamento de uma segunda obra. Contornado com href discriminante (`?obra=<id>`), mas o problema estrutural continua: o discriminador de dedupe é o href, que é também um dado de navegação e muda por motivos de UI. Reforça a proposta da coluna dedicada.
 - **Prioridade:** P1
+
+### Empreiteiros legados com CPF sob a nova regra de CNPJ
+- **Origem:** J44 (regra de negócio definida em 2026-07-26)
+- **Descoberto:** 2026-07-26
+- **Motivação:** o cadastro passou a exigir **CNPJ** para empreiteiro (contratante e anunciante seguem aceitando CPF ou CNPJ). Contas de empreiteiro criadas antes disso podem ter CPF em `users.cpf_cnpj` — a validação só roda no `registerSchema`, então elas continuam funcionando, mas ficam inconsistentes com a regra. Hoje o impacto é zero (a base foi zerada); vira relevante depois que houver empreiteiros reais cadastrados. Decidir: migrar, pedir atualização no perfil, ou aceitar a coexistência. Não bloqueia nada.
+- **Prioridade:** P2
+
+### Auditoria ausente no PATCH de configurações críticas
+- **Origem:** J30 (auditoria de documentação 2026-07-26)
+- **Descoberto:** 2026-07-26
+- **Motivação:** `PATCH /api/admin/configuracoes` altera timeout de sessão, máx. tentativas de login e bloqueio de cadastro por perfil — e **não chama `recordAudit`**. Não há rastro de quem mudou o quê. O `settings-reader` foi escrito de propósito sem importar `audit`/`auth-utils` (evitar ciclo de import), então o `recordAudit` cabe no route handler, que já tem o guard de admin. É o único item da J30 que não tem decisão de produto por trás — os outros três (2FA obrigatório, webhooks reais, export) são fase 2 declarada.
+- **Prioridade:** P1 (é a jornada de *Configurações Críticas de Segurança*; alteração de auth sem trilha de auditoria é lacuna de compliance)

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAs, logout } from "./helpers";
+import { loginAs, logout, BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL } from "./helpers";
 
 /**
  * Aprovação de clientes, empreiteiras e obras pelo admin (Task #114 regression guard).
@@ -24,6 +24,7 @@ test.describe("Admin aprovação — Cliente", () => {
     page,
     request,
   }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     // 1. Obtém qualquer cliente via API para ter o ID.
     await loginAs(request, ADMIN_EMAIL);
     const listRes = await request.get("/api/admin/clientes");
@@ -89,6 +90,7 @@ test.describe("Admin aprovação — Empreiteira", () => {
     page,
     request,
   }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     // 1. Obtém qualquer empreiteira via API.
     await loginAs(request, ADMIN_EMAIL);
     const listRes = await request.get("/api/admin/empreiteiras");
@@ -154,6 +156,7 @@ test.describe("Admin aprovação — Moderação de Obras", () => {
     page,
     request,
   }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     // 1. Cria uma obra como contratante (em rascunho).
     await loginAs(request, CONTRATANTE_EMAIL);
     const timestamp = Date.now().toString(36);

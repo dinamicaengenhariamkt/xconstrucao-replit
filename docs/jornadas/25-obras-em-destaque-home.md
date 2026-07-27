@@ -101,7 +101,7 @@ flowchart LR
 - [x] `PATCH /api/admin/obras/[id]/destaque` com guard admin + **validação de limite 10** (transação `FOR UPDATE`) + validação de capa + auditoria `admin.obra.destaque.toggle`
 - [x] `GET /api/admin/obras/destaque` (curadoria + contador) e `GET /api/obras/destaque` (público, whitelist de campos seguros, cacheável 60s)
 - [x] Tela [app/admin/obras-destaque/](../../app/admin/obras-destaque/page.tsx) — lista de obras (publicadas+aprovadas) + switch por linha + **contador "X/10"** + bloqueio ao atingir o limite
-- [ ] (opcional) Reordenar destaques (drag-and-drop) gravando `destaque_ordem` — **follow-up**: a coluna existe; o PATCH aceita `ordem`, mas a UI de reordenar fica para depois
+- [x] ~~(opcional) Reordenar destaques~~ — (drag-and-drop) gravando `destaque_ordem` — **follow-up**: a coluna existe; o PATCH aceita `ordem`, mas a UI de reordenar fica para depois
 - [x] [ObraDestaqueCard](../../features/landing/components/ObraDestaqueCard.tsx) apresentacional (extraído do markup hardcoded)
 - [x] [ObrasDestaqueCarousel](../../features/landing/components/ObrasDestaqueCarousel.tsx) com `embla-carousel-react` (via `Carousel` shadcn): responsivo (1/2/3 por breakpoint), setas, acessível, loop quando >3
 - [x] Imagem de capa: **congelada** via `foto_capa_file_id` — admin escolhe entre as fotos da obra ([SelecionarCapaModal](../../features/admin/obras-destaque/components/SelecionarCapaModal.tsx)); não muda se o contratante alterar as fotos

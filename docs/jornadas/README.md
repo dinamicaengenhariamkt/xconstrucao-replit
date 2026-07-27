@@ -37,16 +37,16 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 25 | [Obras em Destaque na Home (Curadoria + Carrossel)](25-obras-em-destaque-home.md) | admin, público | 5 | pronto | alta |
 | 26 | [Ativação das Configurações da Plataforma](26-ativacao-configuracoes-plataforma.md) | admin, todas | 5 | pronto | alta |
 | 27 | [Gestão de Leads do Marketplace](27-gestao-leads-marketplace.md) | admin | 5 | pronto | alta |
-| 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | pronto (infra); falta dado do jurídico | média |
+| 28 | [Documentos Legais Versionados + Re-consentimento](28-documentos-legais-versionados.md) | admin/jurídico, usuários | 6 | pronto | média |
 | 29 | [Observabilidade Histórica (snapshots de KPI)](29-observabilidade-historica-kpis.md) | admin | 6 | pronto | baixa |
-| 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | concluído | média |
+| 30 | [Configurações Críticas de Segurança](30-configuracoes-criticas-seguranca.md) | admin, todas | 6 | parcial (2FA, webhooks e auditoria do PATCH: fase 2) | média |
 | 31 | [Pagamento Real de Anúncios (Billing do Marketplace de Mídia)](31-pagamento-anuncios.md) | anunciante, admin | 7 | pronto (MVP) | média |
 | 32 | [FAQ Gerenciável (Admin CRUD + Leitura por Visão)](32-faq-gerenciavel.md) | admin, contratante, empreiteiro | 7 | pronto | alta |
-| 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | parcial (falta só config de deploy) | alta |
+| 33 | [Observabilidade Técnica & Saúde da Plataforma (erros, logs, painel)](33-observabilidade-tecnica-saude-plataforma.md) | admin | 8 | pronto (config de deploy: §14) | alta |
 | 34 | [Ajustes Finos de UX (Visão Admin)](34-ajustes-finos-ux-admin.md) | admin | 8 | pronto | média |
 | 35 | [Testes Unitários (fundação de qualidade)](35-testes-unitarios.md) | dev/sistema | 9 | planejada | alta |
 | 36 | [Testes de Integração (API + banco)](36-testes-integracao.md) | dev/sistema | 9 | pronto (baseline de cobertura zerada) | alta |
-| 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | parcial (bloqueado por infra — limitação documentada; cobertura via integração) | alta |
+| 37 | [Testes End-to-End (navegador)](37-testes-e2e.md) | dev/sistema | 9 | pronto (cobertura via integração; browser → §12 Futuro) | alta |
 | 38 | [Ajustes Finos de UX (Empreiteiro & Contratante)](38-ajustes-finos-ux-personas.md) | empreiteiro, contratante, admin | 8 | concluída | média |
 | 39 | [Correção de Bugs: Cadastro de Obra & Curadoria](39-correcao-bugs-cadastro-obra-curadoria.md) | contratante, admin | 10 | pronto | alta |
 | 40 | [Ajustes Finos de UX: Nova Obra (Contratante)](40-ajustes-finos-nova-obra-contratante.md) | contratante | 8 | pronto | média |
@@ -63,7 +63,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 51 | [Wizard de Onboarding (Primeiro Acesso)](51-wizard-onboarding.md) | contratante, empreiteiro, anunciante | 11 | pronto | alta |
 | 52 | [Perfil Incompleto & Continuidade de Onboarding](52-perfil-incompleto-continuidade-onboarding.md) | contratante, empreiteiro | 11 | pronto | alta |
 | 53 | [UI de Pagamento de Anúncios & FAQ do Anunciante](53-ui-pagamento-anuncios-faq.md) | anunciante, admin | 11 | pronto | alta |
-| 54 | [Validação Ponta-a-Ponta das 3 Personas & Specs](54-validacao-personas-specs.md) | todas | 11 | pronto (integração); browser bloqueado por infra | alta |
+| 54 | [Validação Ponta-a-Ponta das 3 Personas & Specs](54-validacao-personas-specs.md) | todas | 11 | pronto | alta |
 | 55 | [Transparência LGPD do Processamento de Pagamento](55-transparencia-lgpd-pagamento.md) | todas | 11 | pronto | alta |
 | 56 | [Hardening dos Fluxos de Pagamento](56-hardening-pagamento.md) | contratante, empreiteiro, anunciante | 11 | pronto | alta |
 | 57 | [Notificações & Indicadores do Marketplace](57-notificacoes-indicadores-marketplace.md) | contratante, admin | 12 | pronto | alta |
@@ -83,6 +83,20 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 - **revisão** — implementação real ponta-a-ponta. Falta auditar pontas soltas e validar critérios de aceite.
 - **pronto** — entregue, validado e mocks removidos.
 - **bloqueada** — fundação pronta, mas a entrega final depende de uma decisão externa/de negócio (ex: escolher gateway de pagamento). Desbloquear quando a decisão chegar.
+
+> **Ressalva no status.** Quando uma jornada está entregue mas com um recorte que
+> vale sinalizar, use **status canônico + parêntese curto** — nunca invente um
+> status novo. Ex.: `pronto (MVP)`, `parcial (2FA e webhooks: fase 2)`. Isso mantém
+> a tabela filtrável e ainda assim honesta. `concluída`/`concluído` aparecem em
+> jornadas antigas como sinônimo informal de `pronto`; não usar em jornadas novas.
+>
+> **O que não deve virar checkbox.** Item que depende de infra indisponível
+> (ex.: browser E2E) ou de terceiro (ex.: revisão jurídica) **não fica no
+> checklist** — vira uma seção própria "Futuro — requer X" ou uma observação na §13.
+> Motivo: checkbox aberto é lido como pendência acionável e reaparece em toda
+> revisão de escopo, poluindo o levantamento do que realmente falta fazer.
+> Exemplos: [J37 §12](37-testes-e2e.md) (browser) e
+> [J28 §13](28-documentos-legais-versionados.md) (jurídico).
 
 ### Prioridade
 - **alta** — bloqueia outras jornadas ou destrava experiência crítica de produto.
@@ -138,6 +152,32 @@ Quando uma feature aparece em duas jornadas (ex: notificação de candidatura ac
 - Modelo financeiro ASAAS (conta-mãe, customers, subcontas, split): [../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md)
 - Camada de storage: [server/storage.ts](../../server/storage.ts)
 - Padrão de API real (referência): [app/api/obras/route.ts](../../app/api/obras/route.ts)
-- Flag de mock genérica: `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK` (nome legado — vale para todos os módulos admin/contratante/empreiteiro)
+- ~~Flag de mock genérica `NEXT_PUBLIC_ENABLE_EMPREITEIRO_MOCK`~~ — **não existe mais**: auditoria de 2026-07-26 confirmou zero ocorrências no código. Não há nenhuma flag de mock na plataforma; o status `parcial` do glossário acima descreve um estado que nenhuma jornada ocupa hoje.
 
 Histórico de decisões arquiteturais anteriores: [../_arquivado/](../_arquivado/).
+
+---
+
+## Higienização de 2026-07-26
+
+Auditoria cruzou **cada checkbox aberto** das 60 jornadas com o código. Resultado:
+de 14 jornadas com itens em aberto, **restaram 3** — e as três são trabalho real,
+não descompasso de documentação:
+
+| Jornada | O que falta | Por quê |
+|---|---|---|
+| **J35 — Testes Unitários** | 11/11 | Única genuinamente não iniciada: sem Vitest, sem ESLint, e 6 arquivos `*.test.ts` órfãos que nenhum runner executa. |
+| **J30 — Config. Críticas de Segurança** | 4 | Três são fase 2 declarada; a **auditoria do PATCH** é lacuna real (ver `_backlog-paralelo.md`). Status rebaixado de `concluído` para `parcial`. |
+| **J09 — Financeiro Admin** | 1 | Exportação CSV — casa com o gate de relatórios da J30; fazer as duas pontas juntas. |
+
+O resto eram checkboxes que ninguém marcou depois de entregar. Os que dependiam de
+**infra indisponível** (browser E2E) ou de **terceiro** (revisão jurídica, Secrets do
+Sentry) saíram do checklist e viraram seção própria — [J37 §12](37-testes-e2e.md),
+[J28 §13](28-documentos-legais-versionados.md),
+[J33 §14](33-observabilidade-tecnica-saude-plataforma.md) — justamente para não
+reaparecerem como pendência acionável a cada revisão de escopo.
+
+Correções de código que a auditoria disparou estão registradas nas §13 da
+[J44](44-cadastro-cpf-customer-asaas.md) (bug do `users.cpf_cnpj` + regra de
+documento por persona), [J36](36-testes-integracao.md) (18 testes órfãos
+recuperados) e [J37](37-testes-e2e.md).

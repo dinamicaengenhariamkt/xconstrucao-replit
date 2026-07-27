@@ -22,6 +22,53 @@ export const SEED_CONTRATANTE_2_EMAIL = "contratante2.e2e@xconstrucao.test";
 export const SEED_EMPREITEIRO_2_EMAIL = "empreiteiro2.e2e@xconstrucao.test";
 
 /**
+ * Documentos fiscais válidos (dígito verificador correto) para cadastro nos
+ * testes. A escolha entre eles NÃO é indiferente — `registerSchema` aplica
+ * regra por persona:
+ *
+ *   contratante → CPF ou CNPJ
+ *   empreiteiro → somente CNPJ (cadastro é de pessoa jurídica)
+ *   anunciante  → isento (documento coletado no checkout do anúncio)
+ *
+ * Use `DOC_VALIDO_POR_ROLE` para não precisar lembrar da regra em cada spec.
+ */
+export const CPF_VALIDO = "52998224725";
+export const CNPJ_VALIDO = "11222333000181";
+
+/** Documento aceito por persona no cadastro. */
+export const DOC_VALIDO_POR_ROLE: Record<string, string> = {
+  contratante: CPF_VALIDO,
+  empreiteiro: CNPJ_VALIDO,
+  anunciante: CPF_VALIDO,
+};
+
+/**
+ * `true` quando o Chromium do Playwright consegue subir neste ambiente.
+ *
+ * Aqui ele NÃO sobe: o `REPLIT_LD_AUDIT` faz o loader resolver a `libpthread`
+ * do sistema base, que não exporta `GLIBC_PRIVATE`, enquanto a `librt.so.1`
+ * da glibc do Nix exige — o launch falha com `GLIBC_PRIVATE not found`.
+ * Diagnóstico completo em docs/jornadas/37-testes-e2e.md §11.
+ *
+ * Alguns specs misturam testes de API e de UI no mesmo arquivo. Sem este
+ * guard, ou o arquivo inteiro fica fora da suíte (era o caso — e junto com
+ * ele iam testes de API que cobrem medição→pagamento), ou o arquivo inteiro
+ * falha no primeiro teste que abre página. Use assim:
+ *
+ *     test("algo visual", async ({ page }) => {
+ *       test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+ *       ...
+ *     });
+ *
+ * Ligue com `E2E_BROWSER=1` quando rodar num runner com glibc consistente
+ * (imagem `mcr.microsoft.com/playwright` ou CI externo).
+ */
+export const BROWSER_DISPONIVEL = process.env.E2E_BROWSER === "1";
+
+export const MOTIVO_BROWSER_INDISPONIVEL =
+  "Chromium não sobe neste ambiente (GLIBC_PRIVATE). Rode com E2E_BROWSER=1 num runner com browser — ver J37 §11.";
+
+/**
  * Memoiza a garantia por processo-worker: dezenas de specs chamam `loginAs`,
  * mas só a primeira precisa bater no endpoint.
  */

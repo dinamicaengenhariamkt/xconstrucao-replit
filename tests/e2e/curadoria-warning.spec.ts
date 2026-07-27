@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { loginAs, logout } from "./helpers";
+import { loginAs, logout, BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL } from "./helpers";
 
 /**
  * Testes de regressão: aviso de perfil incompleto na curadoria admin.
@@ -249,6 +249,7 @@ async function pageFirstAprovacaoId(
 
 test.describe("UI — toast de curadoria (cliente)", () => {
   test("toast amarelo ao aprovar cliente com perfil incompleto", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     await pageLoginAs(page, ADMIN_EMAIL);
 
     const id = await pageFirstAprovacaoId(page, "/api/admin/clientes");
@@ -281,6 +282,7 @@ test.describe("UI — toast de curadoria (cliente)", () => {
   });
 
   test("toast padrão ao aprovar cliente com perfil completo", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     await pageLoginAs(page, ADMIN_EMAIL);
 
     const id = await pageFirstAprovacaoId(page, "/api/admin/clientes");
@@ -321,6 +323,7 @@ test.describe("UI — toast de curadoria (cliente)", () => {
 
 test.describe("UI — toast de curadoria (empreiteira)", () => {
   test("toast amarelo ao aprovar empreiteira com perfil incompleto", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     await pageLoginAs(page, ADMIN_EMAIL);
 
     const id = await pageFirstAprovacaoId(page, "/api/admin/empreiteiras");
@@ -352,6 +355,7 @@ test.describe("UI — toast de curadoria (empreiteira)", () => {
   });
 
   test("toast padrão ao aprovar empreiteira com perfil completo", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     await pageLoginAs(page, ADMIN_EMAIL);
 
     const id = await pageFirstAprovacaoId(page, "/api/admin/empreiteiras");

@@ -57,13 +57,13 @@ Reusa `pagamentos_split`. Opcional: colunas de métrica/contadores (ex: `reconci
 - Auditar que nenhum resquício de mock/placeholder de recebimento sobrou nas telas (empreiteiro/contratante) após J45–J49. Documentar remoções aqui.
 
 ## 9. Checklist de implementação
-- [ ] `features/marketplace/reconciliacao-split-job.ts` idempotente
-- [ ] Recuperação de `pendente` antigo via status Asaas → reaplica `aplicarEventoSplit`
-- [ ] Métricas de split no painel admin
-- [ ] (Opcional) endpoints de reconciliação manual e métricas
-- [ ] Documentar flags (`MARKETPLACE_SPLIT`, `PAYMENT_GATEWAY=asaas`) e IPs de webhook
-- [ ] Plano de rollout gradual (subconjunto → geral) documentado
-- [ ] Teste de integração: split preso em `pendente` com pagamento confirmado no Asaas → reconciliado
+- [x] `features/marketplace/reconciliacao-split-job.ts` idempotente
+- [x] Recuperação de `pendente` antigo via status Asaas → reaplica `aplicarEventoSplit`
+- [x] Métricas de split no painel admin
+- [x] (Opcional) endpoints de reconciliação manual e métricas
+- [x] Documentar flags (`MARKETPLACE_SPLIT`, `PAYMENT_GATEWAY=asaas`) e IPs de webhook
+- [x] Plano de rollout gradual (subconjunto → geral) documentado
+- [x] Teste de integração: split preso em `pendente` com pagamento confirmado no Asaas → reconciliado
 
 ## 10. Critérios de aceite
 1. Job identifica `pagamentos_split` pago no Asaas mas `pendente` local e corrige (idempotente).

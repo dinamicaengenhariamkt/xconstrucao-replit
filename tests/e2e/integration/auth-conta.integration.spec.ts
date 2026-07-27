@@ -9,6 +9,9 @@ import {
   clearCapturedEmails,
   type CapturedEmail,
 } from "../helpers";
+import { eq } from "drizzle-orm";
+import { db } from "@shared/db/db";
+import { users } from "@shared/db/schema";
 
 /**
  * Integração (J36) — G2: auth-conta & 2FA.
@@ -50,6 +53,8 @@ function antiBotFields() {
 // CPF válido (dígito verificador correto) — obrigatório para contratante/empreiteiro
 // desde que `registerSchema` passou a exigir cpfCnpj para essas roles (ASAAS).
 const CPF_VALIDO = "52998224725";
+// Empreiteiro se cadastra como pessoa jurídica (registerSchema exige CNPJ).
+const CNPJ_VALIDO = "11222333000181";
 
 /** Registra um usuário novo (fica NÃO verificado) e devolve email/senha, ou null se indisponível. */
 async function registrarUsuario(
@@ -438,6 +443,80 @@ test.describe("Integração — G2: register", () => {
       },
     });
     expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+  });
+
+  // ---- Regra por persona: empreiteiro é pessoa jurídica (só CNPJ) ----
+
+  test("empreiteiro com CPF (documento válido, mas pessoa física) → 400", async ({ request }) => {
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Emp Com CPF",
+        email: uniqueEmail("reg-emp-cpf"),
+        username: uniqueUsername("regempcpf"),
+        password: "Xc0nstru! Forte#2026",
+        role: "empreiteiro",
+        phone: "11999990000",
+        cpfCnpj: CPF_VALIDO, // dígito verificador OK — recusado por ser CPF
+        acceptTerms: true,
+        ...antiBotFields(),
+      },
+    });
+    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+  });
+
+  test("contratante com CNPJ → 201 (aceita os dois documentos)", async ({ request }) => {
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Contratante PJ",
+        email: uniqueEmail("reg-contr-cnpj"),
+        username: uniqueUsername("regcontrcnpj"),
+        password: "Xc0nstru! Forte#2026",
+        role: "contratante",
+        phone: "11999990000",
+        cpfCnpj: CNPJ_VALIDO,
+        acceptTerms: true,
+        ...antiBotFields(),
+      },
+    });
+    expect(res.status(), `esperado 201; corpo: ${await res.text()}`).toBe(201);
+  });
+
+  // ---- J44: o documento precisa chegar em users.cpf_cnpj ----
+  //
+  // Regressão de um bug real: `createUserWithProfile` gravava o documento
+  // apenas em `clientes.cnpj_cpf`/`empreiteiras.cnpj`, e a coluna `users.
+  // cpf_cnpj` nascia sempre NULL. Como `subconta-service.ts` lê justamente
+  // essa coluna para abrir a subconta Asaas (J45), todo empreiteiro recebia
+  // PERFIL_INCOMPLETO ao configurar recebimento — num formulário onde já
+  // tinha informado o documento.
+  test("cadastro persiste o documento em users.cpf_cnpj (não só no perfil)", async ({ request }) => {
+    const email = uniqueEmail("reg-persiste-doc");
+    const res = await request.post("/api/auth/register", {
+      data: {
+        name: "E2E Persiste Doc",
+        email,
+        username: uniqueUsername("regpersistedoc"),
+        password: "Xc0nstru! Forte#2026",
+        role: "empreiteiro",
+        phone: "11999990000",
+        cpfCnpj: CNPJ_VALIDO,
+        acceptTerms: true,
+        ...antiBotFields(),
+      },
+    });
+    expect(res.status(), `esperado 201; corpo: ${await res.text()}`).toBe(201);
+
+    const [row] = await db
+      .select({ cpfCnpj: users.cpfCnpj })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    expect(row, "usuário recém-criado deve existir").toBeTruthy();
+    expect(
+      row?.cpfCnpj,
+      "users.cpf_cnpj deve receber o documento normalizado (só dígitos)",
+    ).toBe(CNPJ_VALIDO);
   });
 
   test("cpfCnpj com dígito verificador inválido → 400", async ({ request }) => {

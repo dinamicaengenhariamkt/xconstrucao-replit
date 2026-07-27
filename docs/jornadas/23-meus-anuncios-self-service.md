@@ -352,35 +352,35 @@ decisão de §13).
 ## 10. Checklist de implementação (por etapas)
 
 ### Etapa A — Fundação multi-role + perfil de anunciante
-- [ ] Enum estendido com `anunciante`; tabela `user_roles` + backfill idempotente
-- [ ] Helper `userHasRole` em [features/auth/api/auth-utils.ts](../../features/auth/api/auth-utils.ts) sem quebrar guards atuais
-- [ ] Tabela `anunciantes_perfil` (1:1 users) via bootstrap
-- [ ] Signup com papel `anunciante` (estende `/api/auth/register` ou rota dedicada) — reusa forgot/reset/verify/2FA
+- [x] Enum estendido com `anunciante`; tabela `user_roles` + backfill idempotente
+- [x] Helper `userHasRole` em [features/auth/api/auth-utils.ts](../../features/auth/api/auth-utils.ts) sem quebrar guards atuais
+- [x] Perfil de anunciante 1:1 com `users` via bootstrap _(entregue como `anunciantes.user_id` nullable + índice único parcial, não como tabela `anunciantes_perfil` separada — decisão (2) da §14: unificar em vez de duplicar a entidade)_
+- [x] Signup com papel `anunciante` (estende `/api/auth/register` ou rota dedicada) — reusa forgot/reset/verify/2FA
 
 ### Etapa B — Pedido multi-slot + checkout-protótipo
-- [ ] Schema `pedidos_anuncio` + `pedido_slots` + `anuncios.solicitanteUserId` (bootstrap idempotente); espelhar em [schema.ts](../../shared/db/schema.ts)
-- [ ] `pedido-service.ts`, `precificacao.ts`, `billing-port.ts` (`PrototipoBilling`), `schemas/` Zod
-- [ ] `MontadorPedido` + `SlotEditor` (preview via `AdCreativeCard` + upload R2) + `CheckoutPrototipo`
-- [ ] Endpoints `POST/GET /api/anuncios/pedidos`, `GET /api/anuncios/precos`
+- [x] Schema `pedidos_anuncio` + `pedido_slots` + `anuncios.solicitanteUserId` (bootstrap idempotente); espelhar em [schema.ts](../../shared/db/schema.ts)
+- [x] `pedido-service.ts`, `precificacao.ts`, `billing-port.ts` (`PrototipoBilling`), `schemas/` Zod
+- [x] `MontadorPedido` + `SlotEditor` (preview via `AdCreativeCard` + upload R2) _(o `CheckoutPrototipo` previsto aqui não chegou a existir: a J31 entregou cobrança real antes, via `POST /api/anuncios/pedidos/[id]/pagar` + `asaas-ad-billing.ts`)_
+- [x] Endpoints `POST/GET /api/anuncios/pedidos`, `GET /api/anuncios/precos`
 
 ### Etapa C — Visão Anunciante + "Meus Anúncios" nos clientes
-- [ ] `app/anunciante/*` (layout+guard, dashboard, novo-pedido, meus-anuncios, configuracoes)
-- [ ] `MeusAnunciosLista` compartilhado; embrulhar nos **3 pontos de entrada** (`contratante`/`empreiteiro`/`anunciante`) — §6.4
-- [ ] **Item de menu condicional** "Meus Anúncios" nas visões de cliente quando `userHasRole('anunciante')` (D6)
-- [ ] **Convergência** no `app/anunciante/layout.tsx`: se também é cliente, redireciona p/ a área de cliente (§6.4)
-- [ ] `GET /api/anuncios/meus` + `PATCH /api/anuncios/meus/[id]` (gestão: pausar/reativar/editar; guard de posse)
-- [ ] Upgrade de papel: `app/anunciante/configuracoes` + `POST /api/anunciante/upgrade`
+- [x] `app/anunciante/*` (layout+guard, dashboard, novo-pedido, meus-anuncios, configuracoes)
+- [x] `MeusAnunciosLista` compartilhado; embrulhar nos **3 pontos de entrada** (`contratante`/`empreiteiro`/`anunciante`) — §6.4
+- [x] **Item de menu condicional** "Meus Anúncios" nas visões de cliente quando `userHasRole('anunciante')` (D6)
+- [x] **Convergência** no `app/anunciante/layout.tsx`: se também é cliente, redireciona p/ a área de cliente (§6.4)
+- [x] `GET /api/anuncios/meus` + `PATCH /api/anuncios/meus/[id]` (gestão: pausar/reativar/editar; guard de posse)
+- [x] Upgrade de papel: `app/anunciante/configuracoes` + `POST /api/anunciante/upgrade`
 
 ### Etapa D — Entrada pela landing
-- [ ] Seção "Anuncie na X-Construção" em [app/page.tsx](../../app/page.tsx) (padrão visual das seções atuais; CTA por estado de login)
+- [x] Seção "Anuncie na X-Construção" em [app/page.tsx](../../app/page.tsx) (padrão visual das seções atuais; CTA por estado de login)
 
 ### Etapa E — Moderação (admin) + notificações
-- [ ] Aba "Solicitações" em [app/admin/anuncios/page.tsx](../../app/admin/anuncios/page.tsx) + `ModeracaoPedidoModal`
-- [ ] `GET/PATCH /api/admin/anuncios/pedidos[...]` (aprovar/recusar/ajustar preço/publicar → materializa)
-- [ ] `anuncio-dispatcher.ts` (recebido/aprovado/recusado/no ar/pausado)
+- [x] Aba "Solicitações" em [app/admin/anuncios/page.tsx](../../app/admin/anuncios/page.tsx) + `ModeracaoPedidoModal`
+- [x] `GET/PATCH /api/admin/anuncios/pedidos[...]` (aprovar/recusar/ajustar preço/publicar → materializa)
+- [x] `anuncio-dispatcher.ts` (recebido/aprovado/recusado/no ar/pausado)
 
 ### Fora desta jornada (→ J31)
-- [ ] Cobrança real via gateway (J14). `billing-port` já está pronta para receber.
+- [x] Cobrança real via gateway (J14). `billing-port` já está pronta para receber.
 
 ## 11. Critérios de aceite
 

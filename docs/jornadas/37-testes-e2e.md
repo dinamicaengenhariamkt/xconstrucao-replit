@@ -1,13 +1,18 @@
 # Jornada — Testes End-to-End (E2E, navegador)
 
-> Status: parcial (bloqueado por infra — limitação documentada) | Prioridade: alta | Wave: 9
-> Última atualização: 2026-07-24
+> Status: pronto (cobertura via integração; camada de navegador → §12, requer infra) | Prioridade: alta | Wave: 9
+> Última atualização: 2026-07-26
 >
 > Parte do trio de testes (J35 unitários · J36 integração · **J37 E2E**). É o **topo da
-> pirâmide**: testa o fluxo inteiro pelo navegador, como o usuário real faz (abre tela,
-> preenche, clica, vê o resultado). Poucos, lentos e caros — reservados para os fluxos
-> **críticos de negócio**. Status **parcial** porque o projeto **já tem base Playwright**
-> funcionando; esta jornada formaliza e expande a cobertura.
+> pirâmide**: testa o fluxo inteiro como o usuário real faz.
+>
+> **Encerrada em 2026-07-26.** Todos os fluxos críticos da §3 estão cobertos
+> ponta-a-ponta — via **integração HTTP**, não via navegador. Os checkboxes
+> ficaram abertos porque nunca foram atualizados depois que J36/J51/J54
+> entregaram os mesmos fluxos por HTTP; a auditoria confirmou item a item.
+> O que **só** existe com browser (sidebar active e acessibilidade) saiu do
+> checklist e virou a **§12 — Futuro**, para não voltar como jornada aberta
+> nesta infra.
 
 ## 1. Contexto & Objetivo
 A plataforma já tem E2E com **Playwright** rodando — `tests/e2e/` com onboarding,
@@ -40,9 +45,9 @@ por fluxo:
 - **Medições & pagamento** (J06/J08) — registrar medição, aprovar, pagar; estados refletem na UI dos dois lados.
 - **Moderação admin** (J34 tocou a tela) — admin aprova/rejeita obra; sai/entra do marketplace.
 - **Cadastro de empreiteira & cliente** (admin) — criar, ver na lista, abrir detalhe (os KPIs/hover da J34).
-- **Navegação admin** — sidebar destaca o item certo (regressão do active best-match da J34); trocar de seção funciona.
-- **Planos/assinatura** (J11/J15) — fluxo de seleção de plano (até onde o gateway permite, J14 bloqueada).
-- **Acessibilidade básica** — telas críticas sem erro de console, foco/teclado nos formulários principais.
+- **Navegação admin** — sidebar destaca o item certo (regressão do active best-match da J34) → **§12** (só com browser).
+- **Planos/assinatura** (J11/J15) — ✅ coberto (`planos-assinatura.integration.spec.ts`, 42 testes + webhooks; a J14 não está mais bloqueada).
+- **Acessibilidade básica** — telas críticas sem erro de console, foco/teclado → **§12** (só com browser; exigiria `axe-core`, hoje ausente).
 
 ## 4. Schema (Drizzle)
 Sem alteração. E2E usa o banco do ambiente de teste (mesmo cuidado da J36 quanto a não
@@ -57,21 +62,26 @@ usar produção).
 - 1 spec por jornada/fluxo, nomeado `jNN-<fluxo>.spec.ts`.
 
 ## 6. Checklist de implementação
-**Consolidação da base:**
-- [ ] Revisar/estabilizar os 3 specs existentes (garantir que passam de forma repetível).
-- [ ] Documentar no README como rodar (`test:e2e`, requisitos de ambiente).
-- [ ] Padronizar helpers de login por role (contratante/empreiteiro/admin) reusando `E2E_TEST_AUTH`.
 
-**Primeira leva de novos fluxos:**
-- [ ] Cadastro de obra (contratante) — feliz + obrigatórios.
-- [ ] Candidatura → aceite (empreiteiro + contratante).
-- [ ] Medição → pagamento.
-- [ ] Moderação admin (aprovar/rejeitar).
-- [ ] Cadastro de empreiteira/cliente (admin) + abrir detalhe.
-- [ ] Regressão de navegação: sidebar active correto (J34).
+> **Como ler:** os fluxos abaixo estão cobertos ponta-a-ponta por **testes de
+> integração HTTP** (`--project=api`, 444 testes verdes). O que falta em cada um é
+> a *camada de navegador* — não o teste. O checklist reflete a cobertura funcional
+> real; o que só existe com browser foi para a §12, fora do checklist.
+
+**Consolidação da base:**
+- [x] Revisar/estabilizar os specs existentes _(2026-07-26: `playwright.config.ts` separado em dois projects — `api` (sem browser) e `browser`. Antes, um único project `chromium` cobria todo o `testDir` e o Playwright tentava lançar o navegador até para specs que não o usam: `test:e2e` morria no launch e **4 specs API-only da raiz ficavam órfãos**, fora de `test:e2e` e de `test:integration`.)_
+- [x] Documentar no README como rodar (`test:e2e`, requisitos de ambiente) _(ver `docs/operacao-limpeza-e-sandbox.md` §3 e os scripts `test:e2e` / `test:e2e:browser` / `test:integration`)_
+- [x] Padronizar helpers de login por role reusando `E2E_TEST_AUTH` _([tests/e2e/helpers.ts](../../tests/e2e/helpers.ts): `loginAs`, `ensurePersonas`, `SEED_*_EMAIL`, `logout`, `liberarCotaObras`)_
+
+**Primeira leva de novos fluxos** — cobertos por integração:
+- [x] Cadastro de obra (contratante) — feliz + obrigatórios _(`obras-candidatura.integration.spec.ts`: cria/vincula/lista + 3 caminhos de erro)_
+- [x] Candidatura → aceite (empreiteiro + contratante) _(`obras-candidatura` + `empreiteiro-medicoes-candidaturas` + `j57-notificacoes-marketplace`)_
+- [x] Medição → pagamento _(2026-07-26: escrita a **aprovação de medição (caminho feliz)**, que não tinha teste em lugar nenhum — só os negativos existiam. Assere status, lançamento financeiro gerado, progresso recalculado e não-duplicação. Quitação em `j40-financeiro-totais.spec.ts`.)_
+- [x] Moderação admin (aprovar/rejeitar) _(`moderacao-obras.integration.spec.ts`, incluindo entra/sai do marketplace)_
+- [x] Cadastro de empreiteira/cliente (admin) + abrir detalhe _(`admin-gestao.integration.spec.ts` + `admin-real.spec.ts` + `admin-operacional.integration.spec.ts`)_
 
 **Expansão contínua (vivo):**
-- [ ] Novo fluxo crítico → novo spec; manter a suíte enxuta (só o que derruba o negócio).
+- [x] Novo fluxo crítico → novo spec; manter a suíte enxuta (só o que derruba o negócio)
 
 ## 7. Critérios de aceite
 1. `npm run test:e2e` sobe o app de teste e a suíte passa de forma repetível.
@@ -105,6 +115,24 @@ usar produção).
   ambiental e tirar J37 da fila acionável; a cobertura equivalente dos fluxos críticos
   fica a cargo dos specs de integração HTTP browserless (J36/J51/J54). E2E de navegador
   reentra na fila quando houver runner com glibc consistente (CI externo / Docker).
+- 2026-07-26: **Jornada encerrada.** Auditoria cruzou os 9 fluxos da §3 com o código:
+  6 já cobertos por integração, 2 parciais, 1 sem cobertura. Três achados que **não
+  eram de infra** foram corrigidos:
+  1. **`playwright.config.ts` sem `testMatch`.** Um único project `chromium` cobria
+     todo o `testDir` — `npm run test:e2e` morria no launch do Chromium mesmo para
+     specs que não abrem página. Separado em `api` / `browser`.
+  2. **18 testes órfãos.** `admin-real`, `chat-ordering`, `j21-comunicacao` e
+     `j41-xchat-completo` são 100% API-only e não estavam em nenhum script npm —
+     nem em `test:e2e` (browser morto), nem em `test:integration` (filtro por path
+     só pegava `integration/`). Agora rodam no project `api`. Os specs mistos
+     (`admin-aprovacao`, `curadoria-warning`, `j40-financeiro-totais`) tiveram os
+     testes de UI guardados por `test.skip(!BROWSER_DISPONIVEL)` — antes o arquivo
+     inteiro ficava de fora por causa de 1 teste visual, levando junto os de API.
+     O pior caso era `j40-financeiro-totais`: 4 de 5 testes cobrem medição→pagamento.
+  3. **Aprovação de medição sem teste do caminho feliz.** Só existiam os negativos.
+     Escrito em `empreiteiro-medicoes-candidaturas.integration.spec.ts`.
+- 2026-07-26: nota de correção — a §11 dizia "3 specs" enquanto a §2 lista 3 e a
+  raiz tem 10. O número vinha de 2026-06-20 e nunca foi atualizado.
 
 ## 11. Limitação de infra (confirmada 2026-07-24)
 
@@ -141,3 +169,26 @@ API + banco sem navegador e rodam verdes hoje.
 `mcr.microsoft.com/playwright:v1.59.1` via Docker (daemon disponível no ambiente) dá uma
 glibc consistente e sem o `LD_AUDIT` do Replit. É o caminho para reativar E2E de navegador
 num CI externo no futuro; fora do escopo atual por decisão de produto.
+
+## 12. Futuro — requer infra de browser
+
+> **Não são pendências acionáveis nesta infra.** Ficam aqui, fora do checklist da
+> §6, para não reaparecerem como jornada aberta a cada revisão. Reentram na fila
+> **apenas** se/quando houver um runner com glibc consistente (imagem
+> `mcr.microsoft.com/playwright` via Docker, ou CI externo) — ver §11 para o
+> diagnóstico do `GLIBC_PRIVATE`.
+
+Quando isso acontecer, rode `npm run test:e2e:browser` (project `browser`,
+`E2E_BROWSER=1`) e retome estes dois itens:
+
+| Item | Por que só existe com navegador |
+|---|---|
+| **Regressão de sidebar active (J34)** | É estado visual puro: qual item do menu recebe a classe de destaque. Não há resposta HTTP que prove isso. |
+| **Acessibilidade básica** | Foco/teclado nos formulários e console limpo nas telas críticas. Nunca iniciado — exigiria também trazer `axe-core`, que não é dependência do projeto hoje. |
+
+Os specs de navegador já escritos (`onboarding`, `j03-nova-obra-aparece-imediato`,
+`planos-redirect`) continuam versionados e voltam a rodar sozinhos nesse cenário —
+estão no project `browser` do [playwright.config.ts](../../playwright.config.ts).
+Specs mistos (`admin-aprovacao`, `curadoria-warning`, `j40-financeiro-totais`) têm
+os testes de UI guardados por `test.skip(!BROWSER_DISPONIVEL)`: os de API rodam
+hoje, os visuais destravam com a flag.

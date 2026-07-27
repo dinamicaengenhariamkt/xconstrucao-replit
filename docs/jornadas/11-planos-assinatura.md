@@ -65,17 +65,24 @@ Monetização da plataforma via assinatura. Admin define planos com preço e lim
 - [x] Lançamento de entrada em J09 ao ativar (escopo plataforma, categoria `assinatura`, idempotente)
 - [x] Cancelar (`POST /api/assinaturas/cancelar`) → rebaixa para free
 - [x] **Gateway REAL (Asaas) escrito e registrado na factory** (`features/planos/gateway/asaas-gateway.ts`) — checkout hospedado RECURRENT (PIX/Boleto/Cartão), cancelamento, checkPaymentStatus, parseWebhook. _(descoberto na auditoria 2026-07-19; a J14 não estava mais bloqueada)_
-- [ ] **[BLOQUEANTE PRODUÇÃO] Enviar CPF/CNPJ ao Asaas** — `CheckoutInput.userCpfCnpj` existe mas `iniciarCheckout` (`assinatura-service.ts`) nunca o popula; Asaas exige para cobrança real → **Jornada 44**
-- [ ] Criar página `app/planos/aguardando/page.tsx` (referenciada pelo modo pendente do adapter manual; Asaas real usa `/planos/sucesso`, que existe)
-- [ ] Configurar env vars de produção: `PAYMENT_GATEWAY=asaas`, `ASAAS_API_KEY`, `ASAAS_ENVIRONMENT=production`, `ASAAS_WEBHOOK_IPS` (IPs oficiais do Asaas — sem isso o webhook aceita sem verificação de IP), `TRUST_PROXY_HEADERS=1`, `NEXT_PUBLIC_BASE_URL`
-- [ ] Apontar o webhook do Asaas para `POST /api/webhooks/gateway`
-- [ ] Refund/estorno ativo (hoje só reação passiva a `PAYMENT_DELETED`) — baixa prioridade
+- [x] **[BLOQUEANTE PRODUÇÃO] Enviar CPF/CNPJ ao Asaas** — resolvido pela **J44**: `iniciarCheckout` popula `userCpfCnpj` ([assinatura-service.ts:126-141](../../features/planos/assinatura-service.ts)) e recusa com `PERFIL_INCOMPLETO` quando ausente em gateway real. _(2026-07-26: a J44 também corrigiu o bug de `users.cpf_cnpj` nunca ser gravado — ver §13 daquela jornada.)_
+- [x] Criar página `app/planos/aguardando/page.tsx` — **descartada**: só era referenciada pelo modo pendente do adapter `manual`, que é bloqueado em produção (J19). O Asaas real usa `/planos/sucesso`, que existe.
+
+> **Ações de deploy (não são código).** Vivem no checklist de go-live em
+> [docs/operacao-limpeza-e-sandbox.md](../operacao-limpeza-e-sandbox.md) §2, não aqui:
+> `PAYMENT_GATEWAY=asaas` · `ASAAS_API_KEY` · `ASAAS_ENVIRONMENT=production` ·
+> `ASAAS_WEBHOOK_TOKEN` (**obrigatório** desde 2026-07-26 — o webhook agora é
+> fail-closed em produção) · `ASAAS_WEBHOOK_IPS` · `TRUST_PROXY_HEADERS=1` ·
+> `NEXT_PUBLIC_BASE_URL` · apontar o webhook para `POST /api/webhooks/gateway`.
+
+**Fora do MVP (decisão de produto — não é débito):**
+- [x] ~~Refund/estorno ativo~~ — hoje só reação passiva a `PAYMENT_DELETED`; ativar quando houver demanda real de estorno.
 - [x] Tela "minha assinatura" persona-facing consumindo os endpoints _(Task #206)_
 - [x] Item "Planos" no nav lateral de empreiteiro e contratante _(Task #206)_
 - [x] CTA upgrade destacado na aba "Plano & Uso" das Configurações (banner free-only) _(Task #206)_
 - [x] Notificações admin in-app em eventos de assinatura (checkout, cancelamento, inadimplente, reativação) _(Task #206)_
 - [x] Testes E2E ponta-a-ponta: 5 fluxos (empreiteiro assina Pro, contratante upsell 402, downgrade, cancel 409, admin view) em `tests/e2e/integration/planos-assinatura.integration.spec.ts` _(Task #208)_
-- [ ] Proration na troca de plano no meio do ciclo (hoje: cancela a anterior + cria nova)
+- [x] ~~Proration na troca de plano no meio do ciclo~~ — **fora do MVP**: hoje cancela a anterior e cria a nova. Reavaliar se surgir reclamação de cobrança proporcional.
 
 ## 10. Critérios de aceite
 1. Admin cria plano "Empreiteiro Pro R$99/mês limite 30 candidaturas".

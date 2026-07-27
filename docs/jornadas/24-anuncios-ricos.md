@@ -86,17 +86,17 @@ flowchart LR
 - [app/page.tsx](../../app/page.tsx) — remover o markup hardcoded dos cards "Conteúdo de Marca" (vira template `conteudo-texto`) e "Widget de Cotação" (vira template `destaque-dados` preenchido pelo admin), substituindo a seção pela `MercadoEmFoco` dinâmica.
 
 ## 9. Checklist de implementação
-- [ ] **Registry de templates** em `features/shared/anuncios/templates/`: 4 templates iniciais (`imagem-card`, `banner-imagem`, `conteudo-texto`, `destaque-dados`) com campos exigidos + zonas compatíveis
-- [ ] Coluna `anuncios.template` (default `imagem-card`) + `anuncios.conteudo JSONB` via `bootstrap-anuncios.ts` (idempotente); espelhar em [schema.ts](../../shared/db/schema.ts)
-- [ ] `AdCreativeCard` dispatcher apresentacional (sem fetch) que renderiza por `template`
-- [ ] `AdSidebarSlot` passa a renderizar via `AdCreativeCard` respeitando o `template` (sem regressão no template default)
-- [ ] Seletor de template no [VincularZonaModal.tsx](../../features/admin/anuncios/components/VincularZonaModal.tsx), filtrado pelos compatíveis com a zona; campos do form mudam conforme o template
-- [ ] Preview ao vivo: renderiza o `AdCreativeCard` do template escolhido; estados loading/erro de imagem/vazio
-- [ ] Adicionar a(s) zona(s) da home ao catálogo `ZONAS` em [anuncios-service.ts](../../features/anuncios/anuncios-service.ts), declarando templates aceitos
-- [ ] `MercadoEmFoco` consome os anúncios ativos das zonas da home e renderiza cada um pelo template; `return null` quando vazia ou toggle off
-- [ ] Substituir o JSX hardcoded em [app/page.tsx](../../app/page.tsx) pela seção dinâmica
-- [ ] `anuncio_config` + `GET/PATCH /api/admin/anuncios/config` + toggle de seção/zona no painel admin (Opção B)
-- [ ] Tracking de impressão/clique continua funcionando nas novas zonas/templates da home
+- [x] **Registry de templates** em `features/shared/anuncios/templates/`: 4 templates iniciais (`imagem-card`, `banner-imagem`, `conteudo-texto`, `destaque-dados`) com campos exigidos + zonas compatíveis
+- [x] Coluna `anuncios.template` (default `imagem-card`) + `anuncios.conteudo JSONB` via `bootstrap-anuncios.ts` (idempotente); espelhar em [schema.ts](../../shared/db/schema.ts)
+- [x] `AdCreativeCard` dispatcher apresentacional (sem fetch) que renderiza por `template`
+- [x] `AdSidebarSlot` passa a renderizar via `AdCreativeCard` respeitando o `template` (sem regressão no template default)
+- [x] Seletor de template no [VincularZonaModal.tsx](../../features/admin/anuncios/components/VincularZonaModal.tsx), filtrado pelos compatíveis com a zona; campos do form mudam conforme o template
+- [x] Preview ao vivo: renderiza o `AdCreativeCard` do template escolhido; estados loading/erro de imagem/vazio
+- [x] Adicionar a(s) zona(s) da home ao catálogo `ZONAS` em [anuncios-service.ts](../../features/anuncios/anuncios-service.ts), declarando templates aceitos
+- [x] `MercadoEmFoco` consome os anúncios ativos das zonas da home e renderiza cada um pelo template; `return null` quando vazia ou toggle off
+- [x] Substituir o JSX hardcoded em [app/page.tsx](../../app/page.tsx) pela seção dinâmica
+- [x] `anuncio_config` + `GET/PATCH /api/admin/anuncios/config` + toggle de seção/zona no painel admin (Opção B)
+- [x] Tracking de impressão/clique continua funcionando nas novas zonas/templates da home
 
 ## 10. Critérios de aceite
 1. Admin cria anúncio, escolhe o template `imagem-card` e cola uma URL → vê o preview atualizar ao vivo; troca o template para `destaque-dados` → o form mostra campos de blocos de dados e o preview vira o card de dados; troca a zona p/ banner → só templates compatíveis aparecem no seletor.

@@ -91,12 +91,12 @@ Nenhum endpoint novo nesta jornada.
 Nenhum. (A fundação não remove mock; a remoção acontece em J45/J47/J48 ao ligar os fluxos reais.)
 
 ## 9. Checklist de implementação
-- [ ] Colunas `cpf_cnpj`, `asaas_customer_id` em `users` (`shared/db/schema.ts`)
-- [ ] Enums `asaas_subconta_status` e `split_pagamento_status`
-- [ ] Tabela `asaas_subcontas` com índices (unique `user_id`, index `asaas_account_id`, index `wallet_id`)
-- [ ] Tabela `pagamentos_split` com índices (unique `asaas_payment_id`, index `(obra_id,status)`, index `financeiro_id`)
-- [ ] `server/bootstrap-marketplace-split.ts` idempotente, registrado em `instrumentation.ts`
-- [ ] `npm run check` limpo; db-status sem divergência de schema
+- [x] Colunas `cpf_cnpj`, `asaas_customer_id` em `users` (`shared/db/schema.ts`)
+- [x] Enums `asaas_subconta_status` e `split_pagamento_status`
+- [x] Tabela `asaas_subcontas` com índices (unique `user_id`, index `asaas_account_id`, index `wallet_id`)
+- [x] Tabela `pagamentos_split` com índices (unique `asaas_payment_id`, index `(obra_id,status)`, index `financeiro_id`)
+- [x] `server/bootstrap-marketplace-split.ts` idempotente, registrado em `instrumentation.ts`
+- [x] `npm run check` limpo; db-status sem divergência de schema
 
 ## 10. Critérios de aceite
 1. Rodar o bootstrap duas vezes seguidas não gera erro nem duplica objetos (idempotência).

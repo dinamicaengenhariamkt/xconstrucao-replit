@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase } from "./helpers";
+import { loginAs, logout, liberarCotaObras as liberarCotaObrasBase, BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL } from "./helpers";
 
 /**
  * J40 — Totais financeiros (valorTotal e valorPago) após aceite e quitação.
@@ -276,6 +276,7 @@ test.describe.serial("J40 Financeiro — valorTotal e valorPago", () => {
     page,
     request,
   }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
     expect(obraId, "obraId deve estar preenchido pelo setup").toBeTruthy();
 
     // 1. Autentica no contexto de browser do Playwright

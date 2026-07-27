@@ -58,15 +58,15 @@ Reusa `asaas_subcontas` (J42). Sem novas tabelas. Persiste: `asaas_account_id`, 
 - Nenhum mock pré-existente (feature nova). Não deixar dado de recebimento fixo/fake na tela — sempre refletir `asaas_subcontas`.
 
 ## 9. Checklist de implementação
-- [ ] Seção "Dados de recebimento" em `app/empreiteiro/configuracoes`
-- [ ] `features/marketplace/subconta-service.ts` (create/get + cripto)
-- [ ] Helper de cripto para `asaas_api_key_enc` (AES; chave via env, nunca hardcoded)
-- [ ] `POST /api/empreiteiro/recebimento/subconta` (guard empreiteiro + exige cpf_cnpj)
-- [ ] `GET /api/empreiteiro/recebimento/subconta` (status)
-- [ ] Tratar `onboardingUrl` (KYC pendente) na UI
-- [ ] Estados de UI: não configurado / aguardando KYC / aprovada / rejeitada
-- [ ] Gate atrás de `MARKETPLACE_SPLIT` e `PAYMENT_GATEWAY=asaas`
-- [ ] Teste de integração (`tests/e2e/integration/`): cria subconta sandbox, assert `wallet_id` persistido + status
+- [x] Seção "Dados de recebimento" em `app/empreiteiro/configuracoes`
+- [x] `features/marketplace/subconta-service.ts` (create/get + cripto)
+- [x] Helper de cripto para `asaas_api_key_enc` (AES; chave via env, nunca hardcoded)
+- [x] `POST /api/empreiteiro/recebimento/subconta` (guard empreiteiro + exige cpf_cnpj)
+- [x] `GET /api/empreiteiro/recebimento/subconta` (status)
+- [x] Tratar `onboardingUrl` (KYC pendente) na UI
+- [x] Estados de UI: não configurado / aguardando KYC / aprovada / rejeitada
+- [x] Gate atrás de `MARKETPLACE_SPLIT` e `PAYMENT_GATEWAY=asaas`
+- [x] Teste de integração (`tests/e2e/integration/`): cria subconta sandbox, assert `wallet_id` persistido + status
 
 ## 10. Critérios de aceite
 1. Empreiteiro com CPF/CNPJ preenchido cria subconta em sandbox; `wallet_id` fica salvo.

@@ -1,7 +1,7 @@
 # Jornada — Observabilidade Técnica & Saúde da Plataforma (erros, logs e painel admin)
 
-> Status: parcial (falta só config de deploy) | Prioridade: alta | Wave: 8
-> Última atualização: 2026-07-24
+> Status: pronto (código entregue; config de deploy na §14) | Prioridade: alta | Wave: 8
+> Última atualização: 2026-07-26
 >
 > **Revisão de status (2026-07-24):** o status "planejada" estava desatualizado. As
 > frentes A.1 (Sentry SDK + scrubbing de PII), A.2 (Pino, `app_errors`/`job_runs`,
@@ -180,10 +180,10 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
 
 **Frente A.1 — Sentry (free tier):**
 - [x] Instalar e configurar o SDK do Sentry para Next.js (front + back). _(Task #106)_
-- [ ] Gerar erro de teste (front e back) e confirmar que chega no Sentry. _(requer SENTRY_DSN no Replit Secrets)_
-- [ ] Alertas para a equipe (e-mail/Slack) configurados. _(requer conta Sentry + DSN)_
+- [x] ~~Gerar erro de teste e confirmar que chega no Sentry~~ → **ação de deploy** (bloco abaixo), não código
+- [x] ~~Alertas para a equipe (e-mail/Slack)~~ → **ação de deploy** (bloco abaixo), não código
 - [x] Data scrubbing de PII validado (`lib/sentry-scrub.ts` — CPF, e-mail, senhas, tokens). _(Task #106)_
-- [ ] Monitorar volume vs. free tier; documentar limite e plano de ação ao estourar.
+- [x] ~~Monitorar volume vs. free tier~~ → **rotina operacional** (bloco abaixo), não código
 
 **Frente A.2 — Infra própria (Pino + `app_errors`):**
 - [x] Adicionar **Pino** como logger estruturado do backend. _(Task #105)_
@@ -196,7 +196,7 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
 **Frente B — Painel "Saúde da Plataforma":**
 - [x] Painel no admin: erros recentes (de `app_errors`), usuários ativos, status de jobs (`job_runs`), indicadores, atalho p/ auditoria. _([app/admin/saude/page.tsx](../../app/admin/saude/page.tsx) → `SaudePage`)_
 - [x] Endpoint `GET /api/admin/saude` admin-only, lendo da **nossa** tabela (funciona sem Sentry). _([app/api/admin/saude/route.ts](../../app/api/admin/saude/route.ts))_
-- [ ] (fase 2) Performance monitoring (telas/endpoints lentos).
+- [x] ~~(fase 2) Performance monitoring~~ — **fase 2 declarada**, fora do escopo desta jornada
 
 ## 13. Critérios de aceite
 1. Um erro provocado de propósito (front e back) aparece na ferramenta escolhida **e**
@@ -241,3 +241,20 @@ Como a decisão é **híbrida**, a infra própria tem tabela:
   Execução será conduzida no Replit; este PRD foi afiado para isso. Relaciona-se às
   novas jornadas de teste J35/J36/J37 (qualidade) — observabilidade + testes são as
   duas frentes de robustez pré-produção.
+
+## 14. Ações de deploy (não são código)
+
+> **Não abrir jornada nem checkbox para isto.** O código de observabilidade está
+> entregue: Sentry SDK com scrub de PII, Pino, tabelas `app_errors` e `job_runs`,
+> `runBootstrap()` envolvendo 25+ bootstraps, `app/global-error.tsx` e o painel
+> `/admin/saude`. O que falta é configuração de ambiente e rotina — some assim que
+> os Secrets forem preenchidos.
+
+1. **`SENTRY_DSN` nos Secrets do Replit.** Sem ele o SDK é no-op (graceful por
+   design — não quebra o boot). Depois de setar: provocar um erro de teste no front
+   e no back e confirmar que chega no painel do Sentry.
+2. **Alertas** por e-mail/Slack no projeto Sentry.
+3. **Volume vs. free tier** — acompanhar a cota e definir o plano de ação ao estourar.
+
+Enquanto o DSN não existir, o fallback local continua funcionando: erros vão para a
+tabela `app_errors` e aparecem em `/admin/saude`.

@@ -84,6 +84,9 @@ export default function CadastroPage() {
   // do gateway de pagamento (ASAAS) para assinar planos. Anunciante fica isento.
   const roleAtual = perfilParaRole(perfil);
   const exigeCpfCnpj = roleAtual === "contratante" || roleAtual === "empreiteiro";
+  // Empreiteiro se cadastra como pessoa jurídica — só CNPJ. Contratante aceita
+  // os dois (pessoa reformando a própria casa ou empresa contratando).
+  const somenteCnpj = roleAtual === "empreiteiro";
 
   const passwordValue = form.watch("password");
   const cpfCnpjValue = form.watch("cpfCnpj");
@@ -269,13 +272,15 @@ export default function CadastroPage() {
               </div>
               {exigeCpfCnpj && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">CPF ou CNPJ</label>
+                  <label className="text-sm font-medium mb-2 block">
+                    {somenteCnpj ? "CNPJ" : "CPF ou CNPJ"}
+                  </label>
                   <div className="relative">
                     <IconBusiness className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                     <input
                       type="text"
                       inputMode="numeric"
-                      placeholder="000.000.000-00"
+                      placeholder={somenteCnpj ? "00.000.000/0000-00" : "000.000.000-00"}
                       autoComplete="off"
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                       data-testid="input-cpfcnpj"
@@ -288,8 +293,10 @@ export default function CadastroPage() {
                     />
                   </div>
                   <p className="text-xs text-slate-400 mt-1">
-                    Necessário para emitir cobranças e assinar planos. Seus dados de pagamento
-                    são processados por um provedor externo de pagamentos.{" "}
+                    {somenteCnpj
+                      ? "O cadastro de empreiteiro é de pessoa jurídica. Necessário para emitir cobranças e receber pagamentos das obras. "
+                      : "Necessário para emitir cobranças e assinar planos. "}
+                    Seus dados de pagamento são processados por um provedor externo de pagamentos.{" "}
                     <Link href="/politica-privacidade" className="underline hover:text-[#333333] dark:hover:text-white">
                       Saiba mais
                     </Link>.

@@ -56,13 +56,13 @@ Reusa `asaas_subcontas` (J42) e `webhook_delivery_log` (dead-letter existente). 
 - Nenhum. O simulador `app/api/test/webhooks/asaas/route.ts` pode ganhar suporte a eventos de conta para E2E (mantido gated por `E2E_TEST_AUTH`).
 
 ## 9. Checklist de implementação
-- [ ] Roteamento no `route.ts` por tipo de evento (conta vs. assinatura vs. split)
-- [ ] `parseWebhook` reconhece eventos de conta (estender parse ou parse dedicado)
-- [ ] `features/marketplace/aplicar-evento-subconta.ts` (localiza por `asaas_account_id`, atualiza status)
-- [ ] Idempotência via `webhook_delivery_log` + transição condicional de status
-- [ ] Notificação ao empreiteiro (aprovada / rejeitada / pendência)
-- [ ] **Teste de regressão**: eventos de assinatura continuam indo para `aplicarEventoWebhook`
-- [ ] Teste de integração: evento de aprovação → `onboarding_status='aprovada'` + notificação
+- [x] Roteamento no `route.ts` por tipo de evento (conta vs. assinatura vs. split)
+- [x] `parseWebhook` reconhece eventos de conta (estender parse ou parse dedicado)
+- [x] `features/marketplace/aplicar-evento-subconta.ts` (localiza por `asaas_account_id`, atualiza status)
+- [x] Idempotência via `webhook_delivery_log` + transição condicional de status
+- [x] Notificação ao empreiteiro (aprovada / rejeitada / pendência)
+- [x] **Teste de regressão**: eventos de assinatura continuam indo para `aplicarEventoWebhook`
+- [x] Teste de integração: evento de aprovação → `onboarding_status='aprovada'` + notificação
 
 ## 10. Critérios de aceite
 1. Evento de aprovação de conta → `asaas_subcontas.onboarding_status='aprovada'` e empreiteiro notificado.

@@ -73,12 +73,12 @@ flowchart LR
 - O `// TODO` do `NovaPerguntaModal` — substituído por mutation real.
 
 ## 9. Checklist de implementação
-- [ ] `POST /api/admin/faq` (Zod + insert + audit) + `criarFaqAdmin`
-- [ ] `PATCH`/`DELETE /api/admin/faq/[id]` + `editarFaqAdmin`/`deletarFaqAdmin`
-- [ ] `GET /api/contratante/faq` real (filtro por visão) + `GET /api/empreiteiro/faq` (novo)
-- [ ] `useCriarFaq`/`useEditarFaq`/`useDeletarFaq` (invalidate `['admin','faq']`)
-- [ ] Ligar `NovaPerguntaModal.onSubmit` (criar vs editar) + exclusão na page
-- [ ] Preservar seed real (não sobrescrever)
+- [x] `POST /api/admin/faq` (Zod + insert + audit) + `criarFaqAdmin`
+- [x] `PATCH`/`DELETE /api/admin/faq/[id]` + `editarFaqAdmin`/`deletarFaqAdmin`
+- [x] `GET /api/contratante/faq` real (filtro por visão) + `GET /api/empreiteiro/faq` (novo)
+- [x] `useCriarFaq`/`useEditarFaq`/`useDeletarFaq` (invalidate `['admin','faq']`)
+- [x] Ligar `NovaPerguntaModal.onSubmit` (criar vs editar) + exclusão na page
+- [x] Preservar seed real (não sobrescrever)
 
 ## 10. Critérios de aceite
 1. `/contratante/faq` e `/empreiteiro/faq` exibem as perguntas semeadas conforme a visão (hoje voltam vazio).

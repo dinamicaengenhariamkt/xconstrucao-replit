@@ -38,6 +38,8 @@ const ENDPOINT = "/api/test/webhooks/asaas";
 
 const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
 const CPF_VALIDO = "52998224725";
+// Empreiteiro se cadastra como pessoa jurídica (registerSchema exige CNPJ).
+const CNPJ_VALIDO = "11222333000181";
 
 function uniqueEventId(tag: string): string {
   return `E2E-subconta-${tag}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -68,7 +70,7 @@ async function registrarNovoEmpreiteiro(
       password,
       role: "empreiteiro",
       phone: "11966660000",
-      cpfCnpj: CPF_VALIDO,
+      cpfCnpj: CNPJ_VALIDO,
       acceptTerms: true,
       ...ANTI_BOT,
     },

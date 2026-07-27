@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { medicoes, candidaturas, candidaturaAnexos, userFiles } from "@shared/db/schema";
+import { medicoes, candidaturas, candidaturaAnexos, userFiles, financeiro, obras } from "@shared/db/schema";
 import { loginAs, logout, SEED_CONTRATANTE_EMAIL, SEED_EMPREITEIRO_EMAIL } from "../helpers";
 import { criarObraVinculadaE2E, limparObraVinculadaE2E, type ObraVinculada } from "../helpers-marketplace";
 
@@ -31,6 +31,10 @@ import { criarObraVinculadaE2E, limparObraVinculadaE2E, type ObraVinculada } fro
 
 async function limparMedicoesDaObra(obraId: string | null | undefined): Promise<void> {
   if (!obraId) return;
+  // Aprovar uma medição gera o lançamento financeiro correspondente. Ele
+  // precisa sair ANTES: `financeiro.obra_id` não tem CASCADE, então a linha
+  // sobreviveria e depois bloquearia o DELETE da obra no cleanup seguinte.
+  await db.delete(financeiro).where(eq(financeiro.obraId, obraId)).catch(() => {});
   await db.delete(medicoes).where(eq(medicoes.obraId, obraId)).catch(() => {});
 }
 
@@ -345,6 +349,99 @@ test.describe("J36 — medições: fluxo ponta-a-ponta", () => {
     // KPI de pagamentos do contratante responde 200 (fluxo básico de leitura).
     const kpiPagamentosContratante = await request.get("/api/contratante/pagamentos/kpi");
     expect(kpiPagamentosContratante.status()).toBe(200);
+
+    await logout(request);
+  });
+
+  /**
+   * Aprovação de medição — caminho FELIZ.
+   *
+   * Havia uma lacuna real aqui: só existiam os caminhos negativos de
+   * `POST /api/contratante/medicoes/[id]/aprovar` (role errada, medição
+   * inexistente) em `financeiro-webhook.integration.spec.ts`. O sucesso —
+   * que move dinheiro — não era exercitado por nenhum teste.
+   *
+   * A rota faz quatro coisas numa transação só: muda o status, cria o
+   * lançamento financeiro (fatura), recalcula o progresso da obra e registra
+   * as atividades. O teste assere as quatro, não só o 200.
+   */
+  test("contratante aprova medição → status muda, gera lançamento financeiro e recalcula progresso", async ({
+    request,
+  }) => {
+    // 1. Empreiteiro registra a medição.
+    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+    const criar = await request.post("/api/empreiteiro/medicoes", {
+      data: {
+        obraId: obra.obraId,
+        etapa: "E2E Alvenaria",
+        descricao: "Medição E2E para aprovação",
+        percentual: 30,
+        valor: 7500,
+      },
+    });
+    expect(criar.status(), "criar medição deve retornar 201").toBe(201);
+    const { id: medicaoId } = (await criar.json()) as { id: string };
+    await logout(request);
+
+    // 2. Contratante aprova.
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const aprovar = await request.post(`/api/contratante/medicoes/${medicaoId}/aprovar`, {
+      data: {},
+    });
+    expect(
+      aprovar.status(),
+      `aprovar medição pendente deve retornar 200; corpo: ${await aprovar.text()}`,
+    ).toBe(200);
+
+    // 3. Estado no banco: aprovada, com quem decidiu e quando.
+    const [apos] = await db
+      .select({
+        status: medicoes.status,
+        decidedBy: medicoes.decidedBy,
+        decidedAt: medicoes.decidedAt,
+      })
+      .from(medicoes)
+      .where(eq(medicoes.id, medicaoId))
+      .limit(1);
+    expect(apos?.status, "status no banco deve ser aprovada").toBe("aprovada");
+    expect(apos?.decidedBy, "decidedBy deve registrar o contratante").toBeTruthy();
+    expect(apos?.decidedAt, "decidedAt deve ser preenchido").toBeTruthy();
+
+    // 4. A fatura foi criada e está amarrada à medição (UNIQUE medicao_id).
+    const [lancamento] = await db
+      .select({ id: financeiro.id, valor: financeiro.valor, status: financeiro.status })
+      .from(financeiro)
+      .where(eq(financeiro.medicaoId, medicaoId))
+      .limit(1);
+    expect(lancamento?.id, "aprovar deve gerar o lançamento financeiro da medição").toBeTruthy();
+    expect(Number(lancamento?.valor), "valor do lançamento deve espelhar a medição").toBe(7500);
+    expect(lancamento?.status, "lançamento nasce pendente de pagamento").toBe("pendente");
+
+    // 5. Progresso da obra recalculado a partir das medições aprovadas.
+    const [obraApos] = await db
+      .select({ progresso: obras.progresso })
+      .from(obras)
+      .where(eq(obras.id, obra.obraId))
+      .limit(1);
+    expect(
+      Number(obraApos?.progresso),
+      "progresso da obra deve refletir os 30% aprovados",
+    ).toBe(30);
+
+    // 6. Idempotência: aprovar de novo não duplica fatura nem reabre a medição.
+    const aprovarDeNovo = await request.post(`/api/contratante/medicoes/${medicaoId}/aprovar`, {
+      data: {},
+    });
+    expect(
+      aprovarDeNovo.status(),
+      "aprovar medição já decidida deve ser recusado (409)",
+    ).toBe(409);
+
+    const faturas = await db
+      .select({ id: financeiro.id })
+      .from(financeiro)
+      .where(eq(financeiro.medicaoId, medicaoId));
+    expect(faturas.length, "não pode haver fatura duplicada para a mesma medição").toBe(1);
 
     await logout(request);
   });

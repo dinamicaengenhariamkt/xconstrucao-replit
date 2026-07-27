@@ -1,6 +1,8 @@
 # Operação: limpar a base e testar com Asaas sandbox
 
-Guia das duas operações usadas para preparar a plataforma para testes com clientes reais.
+Guia das operações usadas para preparar a plataforma para testes com clientes reais:
+limpar a base, rodar sandbox no ambiente publicado, executar a suíte e corrigir o
+documento fiscal dos usuários existentes.
 
 ---
 
@@ -106,6 +108,43 @@ A suíte **não depende mais** do `server/seed.ts`: `POST /api/test/ensure-users
 personas necessárias, então ela roda normalmente sobre uma base recém-limpa.
 
 ```bash
-npm run test:integration          # ambiente dev
+npm run test:integration          # project "api" — 444 testes, sem browser
+npm run test:e2e                  # mesmo project (alias)
 npm run test:integration:gaps     # radar de endpoints sem cobertura
+
+# Só num runner com browser (Docker / CI externo — ver J37 §11):
+npm run test:e2e:browser          # project "browser", com E2E_BROWSER=1
 ```
+
+---
+
+## 4. Backfill de `users.cpf_cnpj` (rodar uma vez por banco)
+
+```bash
+npx tsx scripts/backfill-user-cpf-cnpj.ts --dry-run   # mostra o que faria
+npx tsx scripts/backfill-user-cpf-cnpj.ts            # aplica
+```
+
+**Por que existe.** Até 2026-07-26 o cadastro gravava o CPF/CNPJ apenas em
+`clientes.cnpj_cpf` / `empreiteiras.cnpj` — **nunca** em `users.cpf_cnpj`. Como
+`subconta-service.ts` lê justamente essa coluna para abrir a subconta Asaas do
+empreiteiro, o onboarding de recebimento respondia `PERFIL_INCOMPLETO` para quem já
+tinha informado o documento. O cadastro foi corrigido; o script recupera as contas
+anteriores, copiando do perfil e normalizando para dígitos.
+
+Só preenche onde está `NULL` — nunca sobrescreve. Idempotente.
+
+**Rodar antes de ligar `MARKETPLACE_SPLIT=on` em produção.** Conferir depois:
+
+```sql
+SELECT role, count(*) AS total, count(cpf_cnpj) AS com_doc
+FROM users GROUP BY role;
+```
+
+Contratantes e empreiteiros devem ter `com_doc = total`. Quem sobrar sem documento
+é porque o perfil também não tinha — precisa informar pelo perfil antes de
+configurar recebimento ou assinar plano.
+
+**Regra por persona no cadastro** (desde 2026-07-26): empreiteiro exige **CNPJ**
+(pessoa jurídica); contratante aceita **CPF ou CNPJ**; anunciante é isento no
+cadastro — o documento dele é coletado no checkout do anúncio.

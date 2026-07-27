@@ -56,13 +56,13 @@ Reusa `asaas_subcontas`. Opcional: tabela `saques` para histórico local (id, us
 - Nenhum mock pré-existente. Nunca exibir saldo fixo/fake — sempre `getBalance` real.
 
 ## 9. Checklist de implementação
-- [ ] Tela "Meu saldo" em `app/empreiteiro/saldo`
-- [ ] `GET /api/empreiteiro/recebimento/saldo` (getBalance com apiKey da subconta)
-- [ ] `POST /api/empreiteiro/recebimento/saque` (requestTransfer)
-- [ ] (Opcional) tabela/histórico local `saques`
-- [ ] Guards: subconta `aprovada`, saldo suficiente, valor > 0
-- [ ] Gate `MARKETPLACE_SPLIT`
-- [ ] Teste de integração (`tests/e2e/integration/`): saldo retorna valor; saque cria transfer em sandbox
+- [x] Tela "Meu saldo" em `app/empreiteiro/saldo`
+- [x] `GET /api/empreiteiro/recebimento/saldo` (getBalance com apiKey da subconta)
+- [x] `POST /api/empreiteiro/recebimento/saque` (requestTransfer)
+- [x] (Opcional) tabela/histórico local `saques`
+- [x] Guards: subconta `aprovada`, saldo suficiente, valor > 0
+- [x] Gate `MARKETPLACE_SPLIT`
+- [x] Teste de integração (`tests/e2e/integration/`): saldo retorna valor; saque cria transfer em sandbox
 
 ## 10. Critérios de aceite
 1. Empreiteiro com subconta aprovada vê o saldo real da subconta em sandbox.

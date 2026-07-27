@@ -58,14 +58,14 @@ Reusa `pagamentos_split` (idempotência via `asaas_payment_id` unique + transiç
 - Nenhum. Com J47+J48, o pagamento de obra passa a ter caminho **real** end-to-end; o manual permanece como fallback.
 
 ## 9. Checklist de implementação
-- [ ] Roteamento no `route.ts` por externalReference `xconstrucao-obra|...`
-- [ ] `features/marketplace/aplicar-evento-split.ts` transacional
-- [ ] Idempotência: `asaas_payment_id` unique + transição condicional (`pendente→confirmado`)
-- [ ] `financeiro.status='pago'`, `metodoPagamento='asaas_split'`
-- [ ] Recompute de `obras.valorPago` reusando lógica de `quitarLancamento`
-- [ ] Notificação ao empreiteiro (in-app + email)
-- [ ] **Teste de regressão**: eventos de assinatura NÃO caem em `aplicarEventoSplit`
-- [ ] Teste de integração: `PAYMENT_CONFIRMED` de obra → split confirmado + caixa pago; evento duplicado não duplica
+- [x] Roteamento no `route.ts` por externalReference `xconstrucao-obra|...`
+- [x] `features/marketplace/aplicar-evento-split.ts` transacional
+- [x] Idempotência: `asaas_payment_id` unique + transição condicional (`pendente→confirmado`)
+- [x] `financeiro.status='pago'`, `metodoPagamento='asaas_split'`
+- [x] Recompute de `obras.valorPago` reusando lógica de `quitarLancamento`
+- [x] Notificação ao empreiteiro (in-app + email)
+- [x] **Teste de regressão**: eventos de assinatura NÃO caem em `aplicarEventoSplit`
+- [x] Teste de integração: `PAYMENT_CONFIRMED` de obra → split confirmado + caixa pago; evento duplicado não duplica
 
 ## 10. Critérios de aceite
 1. Webhook `PAYMENT_CONFIRMED` de obra → `pagamentos_split.status='confirmado'` e `financeiro.status='pago'`.

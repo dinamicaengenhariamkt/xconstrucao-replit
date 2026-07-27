@@ -39,8 +39,43 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   projects: [
+    // ── api ──────────────────────────────────────────────────────────────
+    // Specs que falam só HTTP (`request`), sem abrir página. Rodam neste
+    // ambiente, onde o Chromium do Playwright não sobe (`GLIBC_PRIVATE not
+    // found` — ver docs/jornadas/37-testes-e2e.md §11).
+    //
+    // Antes existia um único project `chromium` cobrindo todo o testDir, e o
+    // Playwright tentava lançar o browser mesmo para specs que não o usam:
+    // `npm run test:e2e` morria no launch, e 4 specs API-only da raiz
+    // (18 testes) ficavam órfãos — fora de `test:e2e` e de `test:integration`.
     {
-      name: "chromium",
+      name: "api",
+      testMatch: [
+        "**/integration/**/*.spec.ts",
+        // API-only da raiz: verificado por ausência de `page.` nos arquivos.
+        "**/admin-real.spec.ts",
+        "**/chat-ordering.spec.ts",
+        "**/j21-comunicacao.spec.ts",
+        "**/j41-xchat-completo.spec.ts",
+        // Specs mistos: os testes de UI que eles contêm se auto-pulam via
+        // `test.skip(!BROWSER_DISPONIVEL)`. Sem isto, os testes de API que
+        // moram nesses arquivos — inclusive medição→pagamento — ficariam de
+        // fora da suíte.
+        "**/admin-aprovacao.spec.ts",
+        "**/curadoria-warning.spec.ts",
+        "**/j40-financeiro-totais.spec.ts",
+      ],
+    },
+    // ── browser ──────────────────────────────────────────────────────────
+    // Specs que navegam de verdade. Bloqueados neste ambiente; reentram na
+    // fila quando houver runner com glibc consistente (Docker/CI externo).
+    {
+      name: "browser",
+      testMatch: [
+        "**/onboarding.spec.ts",
+        "**/j03-nova-obra-aparece-imediato.spec.ts",
+        "**/planos-redirect.spec.ts",
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

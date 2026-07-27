@@ -78,7 +78,7 @@ Sem novas tabelas de produção. Pode exigir infra de **seed/fixtures** de teste
 - [x] Radar de gaps: `npm run test:integration:gaps` (`scripts/integration-coverage-gaps.ts`)
   cruza os endpoints de `app/api/**` com os specs e lista os críticos/mutação sem cobertura,
   priorizados. Rodar ao criar endpoint novo para saber o próximo teste a escrever.
-- [ ] Cobrir cada novo endpoint crítico conforme criado (usar o radar acima como guia).
+- [x] Cobrir cada novo endpoint crítico conforme criado (usar o radar acima como guia). _(processo vivo: `npm run test:integration:gaps` é o radar; baseline zerada)_
 
 **Grupos de expansão (mapa de rastreio — detalhe na §11):** 128 endpoints críticos
 mapeados em 2026-07-18 (`--json --all`), agrupados por tema e ordenados por risco de
@@ -89,14 +89,14 @@ do número "sem cobertura" no radar.
 - [x] **G2 · auth-conta & 2FA** — change-password(-forced), desativar-conta, refresh, register, 2fa/{setup,confirmar,desativar,status}, exportar-dados. → `auth-conta.integration.spec.ts` (22 testes). *(2fa/verificar fica no fluxo de login, não no G2 — ver §10.)*
 - [x] **G3 · moderação de obras (admin)** — admin/obras/[id]/{aprovar,rejeitar,destaque}, admin/obras/destaque, admin/obras/[id]/medicoes. → `moderacao-obras.integration.spec.ts` (10 testes; assert de marketplace após aprovar/rejeitar).
 - [x] **G4 · resets de acesso admin** — admin/clientes/[id]/reset-senha, admin/empreiteiras/[id]/reset-acesso, admin/usuarios/[id]/reset-password. → `reset-acesso-admin.integration.spec.ts` (11 testes; **fecha o G1**: definir-senha-inicial feliz + reuso single-use).
-- [ ] **G5 · disputas** — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
-- [ ] **G6 · obras — sub-recursos** — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
-- [ ] **G7 · candidaturas & medições (personas)** — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
+- [x] **G5 · disputas** _(`disputas.integration.spec.ts`, 7 testes)_ — — disputas + disputas/[id]/mensagens (persona) e admin/disputas/[id]/{assumir,resolver,mensagens} (admin) + GETs.
+- [x] **G6 · obras — sub-recursos** _(`obras-subrecursos.integration.spec.ts`, 24 testes)_ — — obras/[id]/{anexos,checklists,diario,equipe,etapas,fotos,ocorrencias,tarefas} (16 mutação + health/disputas).
+- [x] **G7 · candidaturas & medições (personas)** _(`empreiteiro-medicoes-candidaturas.integration.spec.ts`, 26 testes — inclui a aprovação de medição escrita em 2026-07-26)_ — — contratante/candidaturas/[id]/rejeitar, contratante/medicoes/[id]/contestar, empreiteiro/candidaturas/[id]/{anexos,cancelar}, empreiteiro/medicoes.
 - [x] **G8 · usuários & config admin** — admin/usuarios(+[id]/ativo), admin/configuracoes, admin/legal, admin/faq/[id], admin/integracoes/api-key, admin/marketplace-leads/[id], admin/planos/[id], perfil/admin. → `admin-gestao.integration.spec.ts` (9 testes + 1 skip; authz 15 endpoints × 3 personas + mutações com restauração).
-- [ ] **G9 · anúncios admin** — admin/anuncios/{anunciantes,campanhas(+[id]),config,pedidos/[id]} + KPIs.
+- [x] **G9 · anúncios admin** _(`admin-anuncios.integration.spec.ts` + `admin-anuncios-selfservice`)_ — — admin/anuncios/{anunciantes,campanhas(+[id]),config,pedidos/[id]} + KPIs.
 - [x] **G10 · financeiro admin (read-only shape+authz)** — admin/{financeiro,caixa,entradas,saidas}/** GETs (shape correto + admin-only). → `admin-financeiro-shape.integration.spec.ts` (32 testes; 26 endpoints × personas + `obras/[id]` 404 + `indicadores` `[]`).
 - [x] **G11 · uploads & assinaturas** — uploads/{presign,commit,sign,[id]}, chat/[threadId]/upload/presign, assinaturas/{checkout,cancelar}. → `uploads-assinaturas.integration.spec.ts` (18 testes; IDOR de DELETE/sign via `file-setup`, presign 503-tolerante, checkout/cancelar sem mutar seed).
-- [ ] **G12 · impersonate** — admin/impersonate/[id] + exit (fecha gap T2.4 da §10; exige helper test-only p/ montar cookie).
+- [x] **G12 · impersonate** _(`admin-operacional.integration.spec.ts` — impersonate/[id] + exit)_ — — admin/impersonate/[id] + exit (fecha gap T2.4 da §10; exige helper test-only p/ montar cookie).
 
 ## 7. Critérios de aceite
 1. `npm run test:integration` sobe banco de teste isolado, roda e passa — **sem tocar dados de dev/produção**.
@@ -353,6 +353,38 @@ do número "sem cobertura" no radar.
     (`*.e2e@xconstrucao.test`), agora criadas pelo endpoint. Os testes deixam de depender de
     dados de usuários de verdade.
   - Resultado: **390 passando, 0 falhas** partindo de uma base contendo apenas o admin.
+
+- **2026-07-26 — Suíte reorganizada em projects; 18 testes órfãos recuperados.**
+  `playwright.config.ts` tinha `testDir: "./tests/e2e"` **sem `testMatch`**, e um
+  único project `chromium`. Efeito colateral: `npm run test:e2e` tentava lançar o
+  navegador para todo o `testDir` e morria no launch (o Chromium não sobe aqui —
+  J37 §11), enquanto `test:integration` filtrava por path e só via `integration/`.
+  Os specs da **raiz** ficavam fora dos dois.
+  - Agora há dois projects: **`api`** (sem browser — `integration/**` + os specs
+    API-only da raiz) e **`browser`** (os que navegam de verdade).
+  - **18 testes recuperados**: `admin-real` (6), `chat-ordering` (4),
+    `j21-comunicacao` (3), `j41-xchat-completo` (5) — todos 100% HTTP, rodavam
+    sem browser e não estavam em nenhum script npm.
+  - Specs **mistos** (`admin-aprovacao`, `curadoria-warning`,
+    `j40-financeiro-totais`) tiveram os testes de UI guardados por
+    `test.skip(!BROWSER_DISPONIVEL)` — antes o arquivo inteiro ficava de fora por
+    causa de um teste visual, levando junto os de API. `j40-financeiro-totais` era
+    o pior caso: 4 de 5 testes cobrem **medição → pagamento**.
+  - Scripts: `test:integration` e `test:e2e` apontam para `--project=api`;
+    `test:e2e:browser` roda o project `browser` com `E2E_BROWSER=1`.
+
+- **2026-07-26 — Lacuna fechada: aprovação de medição (caminho feliz).** Só existiam
+  os caminhos negativos de `POST /api/contratante/medicoes/[id]/aprovar`. O sucesso
+  — que gera fatura — não era exercitado. O teste novo assere as quatro coisas que a
+  rota faz numa transação: status `aprovada`, lançamento em `financeiro` com o valor
+  certo, progresso da obra recalculado e não-duplicação (2ª chamada → 409, uma
+  fatura só). Cleanup do spec passou a apagar `financeiro` antes de `medicoes`:
+  `financeiro.obra_id` não tem CASCADE e a linha bloquearia o DELETE da obra.
+
+- **2026-07-26 — Personas ganharam documento fiscal.** `ensure-users` passou a
+  gravar `cpf_cnpj` (e a preenchê-lo em contas já existentes que estejam sem),
+  respeitando a regra por persona da J44: empreiteiro com **CNPJ**, contratante com
+  CPF. Sem isso os specs de subconta/split/saldo quebrariam no `PERFIL_INCOMPLETO`.
 
 ## 11. Mapa de expansão — grupos e o que asserir
 > Previsão de 2026-07-18 a partir do radar (`npm run test:integration:gaps --json --all`).

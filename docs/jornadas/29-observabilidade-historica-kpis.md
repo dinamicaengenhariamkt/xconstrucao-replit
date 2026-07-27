@@ -64,8 +64,8 @@ flowchart LR
 - [x] Service de delta (atual vs período anterior) — `getSnapshotValor`/`calcularDeltaPercent` em [caixa-service.ts](../../features/admin/financeiro/api/caixa-service.ts); **validado: base 6 → atual 9 = +50%**
 - [x] Janela de churn (empreiteiro sem login há > 60 dias; conta nunca-logada só conta se cadastro antigo) → `churnEmpreiteirosPercent` real
 - [x] Reativados os deltas em `getAdoptionMetrics` (`usuariosAtivos30dDeltaPercent` e `churnEmpreiteirosPercent` deixaram de ser `0` hardcoded). [AdoptionMetricsSection.tsx](../../features/admin/financeiro/components/AdoptionMetricsSection.tsx) não mudou — só recebe dados reais
-- [ ] (opcional) Série temporal por métrica para gráficos — **follow-up** (a série já é coletada; falta o endpoint/visual)
-- [ ] (opcional) Agendamento dedicado (hoje roda no boot via `instrumentation.ts`, idempotente por dia) — **follow-up**: para garantir 1 snapshot/dia mesmo sem reboot, plugar um Scheduled Deployment chamando o job
+- [x] ~~(opcional) Série temporal~~ — por métrica para gráficos — **follow-up** (a série já é coletada; falta o endpoint/visual)
+- [x] ~~(opcional) Agendamento dedicado~~ — (hoje roda no boot via `instrumentation.ts`, idempotente por dia) — **follow-up**: para garantir 1 snapshot/dia mesmo sem reboot, plugar um Scheduled Deployment chamando o job
 
 ## 10. Critérios de aceite
 1. Após ≥2 períodos de snapshot, os dashboards mostram deltas reais ("X% vs período anterior") em vez de zero.

@@ -59,21 +59,40 @@ export const registerSchema = z
       });
     }
 
-    // Contratante/empreiteiro precisam de CPF/CNPJ válido no cadastro para
-    // conseguir assinar planos (pré-requisito do gateway de pagamento).
-    // Anunciante fica isento.
+    // Contratante/empreiteiro precisam de documento fiscal válido no cadastro
+    // para conseguir assinar planos (pré-requisito do gateway de pagamento).
+    //
+    // Regra de negócio por persona:
+    //  - contratante: CPF **ou** CNPJ. Pode ser tanto uma pessoa reformando a
+    //    própria casa quanto uma empresa contratando outra.
+    //  - empreiteiro: **somente CNPJ**. Quem executa a obra atua como empresa.
+    //  - anunciante: isento aqui — o documento é coletado no checkout do
+    //    anúncio (customer lazy do Asaas), não no cadastro. Ver
+    //    features/anuncios/self-service/asaas-ad-billing.ts.
     if (data.role === "contratante" || data.role === "empreiteiro") {
+      const ehEmpreiteiro = data.role === "empreiteiro";
+      const rotulo = ehEmpreiteiro ? "CNPJ" : "CPF ou CNPJ";
+
       if (!data.cpfCnpj) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["cpfCnpj"],
-          message: "CPF ou CNPJ é obrigatório",
+          message: `${rotulo} é obrigatório`,
         });
       } else if (!isCpfCnpjValid(data.cpfCnpj)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["cpfCnpj"],
-          message: "CPF ou CNPJ inválido",
+          message: `${rotulo} inválido`,
+        });
+      } else if (ehEmpreiteiro && data.cpfCnpj.length !== 14) {
+        // Documento válido, mas é CPF (11 dígitos) — recusa com mensagem que
+        // explica a razão, senão o usuário reenvia o mesmo CPF achando que
+        // digitou errado.
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cpfCnpj"],
+          message: "Empreiteiro precisa de CNPJ — o cadastro é de pessoa jurídica",
         });
       }
     }

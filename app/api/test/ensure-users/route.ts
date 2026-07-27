@@ -30,6 +30,18 @@ function isEnabled(): boolean {
 }
 
 /**
+ * Documentos fiscais válidos (dígito verificador correto). Espelham
+ * `CPF_VALIDO`/`CNPJ_VALIDO` de `tests/e2e/helpers.ts`.
+ *
+ * A regra do `registerSchema` vale aqui também: empreiteiro é pessoa jurídica
+ * (só CNPJ); contratante aceita CPF ou CNPJ. Sem documento, o onboarding de
+ * subconta do empreiteiro (J45) responde PERFIL_INCOMPLETO e os specs de
+ * split/saldo/saque falham.
+ */
+const CPF_VALIDO = "52998224725";
+const CNPJ_VALIDO = "11222333000181";
+
+/**
  * Personas da suíte. As senhas espelham as de `server/seed.ts` porque
  * `loginAs()` faz fallback para o login real quando o test-auth está fora.
  */
@@ -41,6 +53,7 @@ const PERSONAS = [
     password: "Admin@2026!Constru",
     role: "admin" as const,
     phone: null,
+    cpfCnpj: null,
   },
   {
     email: "joao@construtora.com",
@@ -49,6 +62,7 @@ const PERSONAS = [
     password: "Joao@2026!Obras",
     role: "contratante" as const,
     phone: "(11) 98765-4321",
+    cpfCnpj: CPF_VALIDO,
   },
   {
     email: "maria@empreiteira.com",
@@ -57,6 +71,7 @@ const PERSONAS = [
     password: "Maria@2026!Reforma",
     role: "empreiteiro" as const,
     phone: "(21) 97654-3210",
+    cpfCnpj: CNPJ_VALIDO,
   },
   // Segundo contratante: os specs de chat e candidatura precisam de um dono
   // DIFERENTE para exercitar os 403 de não-dono (IDOR). Antes apontavam para
@@ -69,6 +84,7 @@ const PERSONAS = [
     password: "Contra2@2026!E2E",
     role: "contratante" as const,
     phone: "(11) 90000-0002",
+    cpfCnpj: CPF_VALIDO,
   },
   // Par do contratante secundário: juntos formam a "thread alheia" usada para
   // provar que um terceiro recebe 403 no chat.
@@ -79,6 +95,7 @@ const PERSONAS = [
     password: "Empre2@2026!E2E",
     role: "empreiteiro" as const,
     phone: "(11) 90000-0003",
+    cpfCnpj: CNPJ_VALIDO,
   },
 ];
 
@@ -97,11 +114,24 @@ export async function POST() {
     if (existente) {
       jaExistiam.push(p.email);
       // Um teste anterior pode ter desativado a conta ou marcado troca de senha
-      // obrigatória; ambos bloqueiam toda rota autenticada. Normaliza.
-      if (!existente.ativo || existente.mustChangePassword || !existente.emailVerified) {
+      // obrigatória; ambos bloqueiam toda rota autenticada. O documento pode
+      // estar NULL em contas criadas antes do fix da J44 — sem ele o onboarding
+      // de subconta responde PERFIL_INCOMPLETO. Normaliza os três.
+      const precisaNormalizar =
+        !existente.ativo ||
+        existente.mustChangePassword ||
+        !existente.emailVerified ||
+        (p.cpfCnpj !== null && !existente.cpfCnpj);
+
+      if (precisaNormalizar) {
         await db
           .update(users)
-          .set({ ativo: true, mustChangePassword: false, emailVerified: existente.emailVerified ?? now })
+          .set({
+            ativo: true,
+            mustChangePassword: false,
+            emailVerified: existente.emailVerified ?? now,
+            cpfCnpj: existente.cpfCnpj ?? p.cpfCnpj,
+          })
           .where(eq(users.id, existente.id));
       }
       continue;
@@ -116,6 +146,7 @@ export async function POST() {
         email: p.email,
         role: p.role,
         phone: p.phone,
+        cpfCnpj: p.cpfCnpj,
         emailVerified: now,
       })
       .returning();
@@ -127,9 +158,10 @@ export async function POST() {
       await db.insert(clientes).values({
         userId: novo.id,
         nome: p.name,
-        tipo: "Pessoa Física",
+        tipo: p.cpfCnpj && p.cpfCnpj.length > 11 ? "Pessoa Jurídica" : "Pessoa Física",
         email: p.email,
         telefone: p.phone,
+        cnpjCpf: p.cpfCnpj,
         status: "ativo",
       });
     } else if (p.role === "empreiteiro") {
@@ -139,6 +171,7 @@ export async function POST() {
         responsavel: p.name,
         email: p.email,
         telefone: p.phone,
+        cnpj: p.cpfCnpj,
         especialidade: "Acabamento e Pintura",
         status: "ativo",
       });

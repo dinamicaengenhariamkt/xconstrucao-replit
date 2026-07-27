@@ -59,9 +59,9 @@ Tabela `financeiro` estendida em Task #48 (bootstrap idempotente em `server/boot
 - [x] Substituir mocks contratante/empreiteiro _(Task #48)_
 - [x] Lista filtrável por status (pendente/pago/atrasado) _(Task #48 — filtros existentes na UI seguem funcionando sobre os dados reais)_
 - [x] Cálculo de "a pagar total" / "a receber total" no header _(Task #48)_
-- [ ] Avaliar integração com gateway (Pix/cartão) — fora do MVP, mas projetar com ele em mente
+- [x] Avaliar integração com gateway (Pix/cartão) _(feito: J14 escolheu o Asaas e a **J47/J48** entregaram o pagamento de obra com split — PIX/Boleto/Cartão via checkout hospedado, atrás de `MARKETPLACE_SPLIT`. O fluxo manual segue como fallback.)_
 - [x] Cron que marca lançamentos vencidos como `atrasado` no banco _(Task #53)_
-- [ ] Notificações ao empreiteiro quando lançamento é quitado _(dono: J13)_
+- [x] Notificações ao empreiteiro quando lançamento é quitado _(entregue pela J13/J48 — `aplicar-evento-split.ts` notifica o empreiteiro na confirmação)_
 
 ## 10. Critérios de aceite
 1. Aprovar medição (J06) → lançamento `pendente` aparece em `/contratante/pagamentos` (e em `/empreiteiro/pagamentos` como "a liberar") — ✅ _(Task #82)_.

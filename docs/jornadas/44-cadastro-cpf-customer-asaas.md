@@ -58,14 +58,14 @@ Reusa colunas criadas em J42: `users.cpf_cnpj`, `users.asaas_customer_id`. Sem n
 - Nenhum mock removido; porém elimina o **fallback frágil** de `findOrCreateCustomer` por email a cada checkout (passa a usar `asaas_customer_id` persistido quando existir).
 
 ## 9. Checklist de implementação
-- [ ] `cpfCnpj` no `registerSchema` com validação de formato
-- [ ] Coleta na tela de cadastro (ou etapa pós-cadastro) — decidir UX de fricção
-- [ ] `createUserWithProfile` cria customer Asaas **best-effort não-bloqueante** (falha do Asaas NÃO impede cadastro; fallback lazy mantido)
-- [ ] Persistir `users.asaas_customer_id`
-- [ ] `iniciarCheckout` popula `userCpfCnpj` a partir de `users.cpf_cnpj`
-- [ ] Guard: bloquear checkout de assinatura se `cpf_cnpj` ausente (mensagem amigável)
-- [ ] Gate atrás de `PAYMENT_GATEWAY=asaas` — não disparar chamadas Asaas em ambiente sem chave
-- [ ] Teste de integração em `tests/e2e/integration/` (registro persiste cpf_cnpj; checkout envia documento)
+- [x] `cpfCnpj` no `registerSchema` com validação de formato
+- [x] Coleta na tela de cadastro (ou etapa pós-cadastro) — decidir UX de fricção
+- [x] `createUserWithProfile` cria customer Asaas **best-effort não-bloqueante** (falha do Asaas NÃO impede cadastro; fallback lazy mantido)
+- [x] Persistir `users.asaas_customer_id`
+- [x] `iniciarCheckout` popula `userCpfCnpj` _(implementado lendo de `clientes.cnpj_cpf`/`empreiteiras.cnpj`, não de `users.cpf_cnpj` como o roteiro previa — funciona, mas diverge do desenho; ver §13)_
+- [x] Guard: bloquear checkout de assinatura se `cpf_cnpj` ausente (mensagem amigável)
+- [x] Gate atrás de `PAYMENT_GATEWAY=asaas` — não disparar chamadas Asaas em ambiente sem chave
+- [x] Teste de integração em `tests/e2e/integration/` (registro persiste cpf_cnpj; checkout envia documento)
 
 ## 10. Critérios de aceite
 1. Cadastro com CPF válido persiste `users.cpf_cnpj` e, com Asaas disponível, `asaas_customer_id`.
@@ -86,4 +86,33 @@ Reusa colunas criadas em J42: `users.cpf_cnpj`, `users.asaas_customer_id`. Sem n
 ## 13. Gaps descobertos durante execução
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
-- _(sem entradas ainda — jornada não iniciada)_
+- **2026-07-26 — BUG DE PRODUÇÃO: `users.cpf_cnpj` nunca era populado.** Encontrado
+  em auditoria de código. `createUserWithProfile` ([features/auth/api/auth-storage.ts](../../features/auth/api/auth-storage.ts))
+  recebia o documento e gravava em `clientes.cnpj_cpf` / `empreiteiras.cnpj`, mas
+  **não** na coluna `users.cpf_cnpj` criada pela J42 — não existia um único
+  `update`/`insert` dessa coluna no projeto inteiro. Prova no banco antes do fix:
+  `SELECT count(*), count(cpf_cnpj) FROM users` → **9 usuários, 0 com documento**.
+
+  **Impacto:** [features/marketplace/subconta-service.ts](../../features/marketplace/subconta-service.ts)
+  lê justamente essa coluna para abrir a subconta Asaas do empreiteiro (J45). Com
+  ela sempre NULL, o onboarding de recebimento respondia `PERFIL_INCOMPLETO` —
+  "Informe seu CPF/CNPJ" num formulário onde o dado já tinha sido informado, **sem
+  saída possível pela UI**. Estava latente só porque `MARKETPLACE_SPLIT=off`; teria
+  quebrado todo empreiteiro no dia do rollout do split. Também derrubava o critério
+  de aceite 4 desta jornada.
+
+  **Correção:** documento gravado no `insert(users)` da mesma transação do perfil +
+  [scripts/backfill-user-cpf-cnpj.ts](../../scripts/backfill-user-cpf-cnpj.ts) para
+  as contas anteriores (normaliza para dígitos, nunca sobrescreve valor existente,
+  tem `--dry-run`). Regressão coberta em `auth-conta.integration.spec.ts`
+  ("cadastro persiste o documento em users.cpf_cnpj").
+
+- **2026-07-26 — Regra de documento por persona (decisão de produto).**
+  `registerSchema` passou a diferenciar: **empreiteiro só aceita CNPJ** (cadastro é
+  de pessoa jurídica — quem executa a obra atua como empresa); **contratante** segue
+  aceitando CPF ou CNPJ (pode ser tanto alguém reformando a própria casa quanto uma
+  empresa contratando outra). **Anunciante** não muda: o documento continua sendo
+  coletado no *checkout do anúncio* (customer lazy do Asaas), não no cadastro —
+  duplicar a coleta criaria dois pontos de verdade para o mesmo dado. A tela de
+  cadastro adapta label, placeholder e texto de ajuda conforme a persona.
+  Empreiteiros legados com CPF ficam registrados no `_backlog-paralelo.md` (P2).
