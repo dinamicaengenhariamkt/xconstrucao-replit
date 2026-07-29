@@ -1,0 +1,87 @@
+-- Snippets are stored in browser storage with relation to opened database.
+-- You can create new snippets by clicking the "+" button and group them in folders.
+-- Playground is always available, regardless of the database.
+
+BEGIN;
+
+-- Preserva apenas admins
+CREATE TEMP TABLE _admin AS
+  SELECT DISTINCT user_id AS id FROM user_roles
+  WHERE role IN ('admin', 'super_admin');
+
+-- 1. Filhos de obras (mais profundos primeiro)
+DELETE FROM chat_mensagens;
+DELETE FROM disputa_mensagens;
+DELETE FROM candidatura_anexos;
+DELETE FROM medicoes;
+DELETE FROM obra_checklist_itens;
+DELETE FROM obra_checklists;
+DELETE FROM obra_diario;
+DELETE FROM obra_equipe;
+DELETE FROM obra_etapas;
+DELETE FROM obra_fotos;
+DELETE FROM obra_ocorrencias;
+DELETE FROM obra_tarefas;
+DELETE FROM obra_anexos;
+DELETE FROM obras_salvas;
+DELETE FROM surveys;
+DELETE FROM financeiro;
+DELETE FROM pagamentos_split;
+
+-- 2. Notificações (referenciam chat_threads)
+DELETE FROM notificacoes WHERE user_id NOT IN (SELECT id FROM _admin);
+
+-- 3. Threads e candidaturas
+DELETE FROM chat_threads;
+DELETE FROM contrato_assinaturas;
+DELETE FROM disputas;
+DELETE FROM candidaturas;
+
+-- 4. Obras
+DELETE FROM obras;
+
+-- 5. Dados financeiros / assinaturas
+DELETE FROM assinatura_eventos;
+DELETE FROM assinaturas WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM saques WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM pedido_pagamento_eventos;
+DELETE FROM pedido_slots;
+DELETE FROM pedidos_anuncio;
+
+-- 6. Anúncios / marketplace
+DELETE FROM anuncio_eventos;
+DELETE FROM anuncios;
+DELETE FROM anunciantes;
+DELETE FROM marketplace_leads;
+
+-- 7. Perfis de usuário
+DELETE FROM empreiteiro_portfolio WHERE empreiteiro_user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM empreiteiro_documentos WHERE empreiteiro_user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM empreiteiro_documentos WHERE empreiteiro_user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM cliente_documentos WHERE uploaded_by NOT IN (SELECT id FROM _admin);
+DELETE FROM empreiteiras WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM clientes WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM asaas_subcontas WHERE user_id NOT IN (SELECT id FROM _admin);
+
+-- 8. Auth / sessão
+DELETE FROM user_consents WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM user_preferencias WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM user_files WHERE owner_user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM user_totp WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM password_setup_tokens WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM verification_tokens;
+DELETE FROM sessions WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM accounts WHERE user_id NOT IN (SELECT id FROM _admin);
+
+-- 9. Logs e métricas (opcional — remova estas linhas se quiser manter histórico)
+DELETE FROM audit_logs WHERE actor_id NOT IN (SELECT id FROM _admin);
+DELETE FROM kpi_snapshots;
+DELETE FROM app_errors;
+DELETE FROM webhook_delivery_log;
+DELETE FROM job_runs;
+
+-- 10. Por último: roles e users (não-admin)
+DELETE FROM user_roles WHERE user_id NOT IN (SELECT id FROM _admin);
+DELETE FROM users WHERE id NOT IN (SELECT id FROM _admin);
+
+COMMIT;
