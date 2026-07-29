@@ -1,0 +1,301 @@
+Unexpected error happened 😕
+
+886896bc00434a2884be6493f9a1675b
+
+
+We're already looking into it! Feel free to reach out to our support team, make sure to copy error ID
+
+Invalid response from Replit driver
+DELETE FROM pagamentos_split
+WHERE
+  obra_id IN (
+    SELECT
+      o.id
+    FROM
+      obras o
+      JOIN clientes c ON o.cliente_id = c.id
+    WHERE
+      c.user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+  )
+  OR financeiro_id IN (
+    SELECT
+      id
+    FROM
+      financeiro
+    WHERE
+      pagador_user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+      OR recebedor_user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+  )
+  OR pagador_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  )
+  OR recebedor_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM candidaturas
+WHERE
+  empreiteiro_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  )
+  OR obra_id IN (
+    SELECT
+      o.id
+    FROM
+      obras o
+      JOIN clientes c ON o.cliente_id = c.id
+    WHERE
+      c.user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+  );
+
+DELETE FROM financeiro
+WHERE
+  obra_id IN (
+    SELECT
+      o.id
+    FROM
+      obras o
+      JOIN clientes c ON o.cliente_id = c.id
+    WHERE
+      c.user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+  )
+  OR pagador_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  )
+  OR recebedor_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM obras
+WHERE
+  cliente_id IN (
+    SELECT
+      id
+    FROM
+      clientes
+    WHERE
+      user_id NOT IN (
+        SELECT
+          id
+        FROM
+          users
+        WHERE
+          role IN ('admin', 'superadmin')
+      )
+  );
+
+DELETE FROM atividades
+WHERE
+  actor_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  )
+  OR target_user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM anunciantes
+WHERE
+  user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM clientes
+WHERE
+  user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM empreiteiras
+WHERE
+  user_id NOT IN (
+    SELECT
+      id
+    FROM
+      users
+    WHERE
+      role IN ('admin', 'superadmin')
+  );
+
+DELETE FROM users
+WHERE
+  role NOT IN ('admin', 'superadmin');
+
+DELETE FROM verification_tokens;
+
+DELETE FROM marketplace_leads;
+
+DELETE FROM app_errors
+WHERE
+  user_id IS NULL;
+
+SELECT
+  'usuarios' AS tabela,
+  COUNT(*) AS total
+FROM
+  users
+UNION ALL
+SELECT
+  'clientes',
+  COUNT(*)
+FROM
+  clientes
+UNION ALL
+SELECT
+  'empreiteiras',
+  COUNT(*)
+FROM
+  empreiteiras
+UNION ALL
+SELECT
+  'obras',
+  COUNT(*)
+FROM
+  obras
+UNION ALL
+SELECT
+  'candidaturas',
+  COUNT(*)
+FROM
+  candidaturas
+UNION ALL
+SELECT
+  'assinaturas',
+  COUNT(*)
+FROM
+  assinaturas
+UNION ALL
+SELECT
+  'financeiro',
+  COUNT(*)
+FROM
+  financeiro
+UNION ALL
+SELECT
+  'chat_threads',
+  COUNT(*)
+FROM
+  chat_threads
+UNION ALL
+SELECT
+  'notificacoes',
+  COUNT(*)
+FROM
+  notificacoes
+UNION ALL
+SELECT
+  'anunciantes',
+  COUNT(*)
+FROM
+  anunciantes
+UNION ALL
+SELECT
+  'disputas',
+  COUNT(*)
+FROM
+  disputas
+UNION ALL
+SELECT
+  'atividades',
+  COUNT(*)
+FROM
+  atividades
+ORDER BY
+  tabela;
+{
+  "sql": "DELETE FROM pagamentos_split\nWHERE obra_id IN (\n    SELECT o.id FROM obras o\n    JOIN clientes c ON o.cliente_id = c.id\n    WHERE c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n)\nOR financeiro_id IN (\n    SELECT id FROM financeiro\n    WHERE pagador_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n       OR recebedor_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n)\nOR pagador_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\nOR recebedor_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM candidaturas\nWHERE empreiteiro_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n   OR obra_id IN (\n       SELECT o.id FROM obras o\n       JOIN clientes c ON o.cliente_id = c.id\n       WHERE c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n   );\n\nDELETE FROM financeiro\nWHERE obra_id IN (\n    SELECT o.id FROM obras o\n    JOIN clientes c ON o.cliente_id = c.id\n    WHERE c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n)\nOR pagador_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\nOR recebedor_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM obras\nWHERE cliente_id IN (\n    SELECT id FROM clientes\n    WHERE user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n);\n\nDELETE FROM atividades\nWHERE actor_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'))\n   OR target_user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM anunciantes\nWHERE user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM clientes\nWHERE user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM empreiteiras\nWHERE user_id NOT IN (SELECT id FROM users WHERE role IN ('admin','superadmin'));\n\nDELETE FROM users\nWHERE role NOT IN ('admin','superadmin');\n\nDELETE FROM verification_tokens;\n\nDELETE FROM marketplace_leads;\n\nDELETE FROM app_errors WHERE user_id IS NULL;\n\nSELECT 'usuarios'        AS tabela, COUNT(*) AS total FROM users\nUNION ALL SELECT 'clientes',        COUNT(*) FROM clientes\nUNION ALL SELECT 'empreiteiras',    COUNT(*) FROM empreiteiras\nUNION ALL SELECT 'obras',           COUNT(*) FROM obras\nUNION ALL SELECT 'candidaturas',    COUNT(*) FROM candidaturas\nUNION ALL SELECT 'assinaturas',     COUNT(*) FROM assinaturas\nUNION ALL SELECT 'financeiro',      COUNT(*) FROM financeiro\nUNION ALL SELECT 'chat_threads',    COUNT(*) FROM chat_threads\nUNION ALL SELECT 'notificacoes',    COUNT(*) FROM notificacoes\nUNION ALL SELECT 'anunciantes',     COUNT(*) FROM anunciantes\nUNION ALL SELECT 'disputas',        COUNT(*) FROM disputas\nUNION ALL SELECT 'atividades',      COUNT(*) FROM atividades\nORDER BY tabela;"
+}
+[
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]",
+  "[Object]"
+]
