@@ -1,40 +1,30 @@
 #!/bin/bash
-# Garante que o PATH do Nix está disponível no container de produção.
-# O run command do Replit executa em um shell sem o profile do Nix carregado,
-# então 'node' e 'npm' não ficam acessíveis por padrão.
+# O path do node é gravado em .node-path durante o build (build command).
+# Isso evita depender do PATH do container de produção, que não carrega
+# o profile do Nix automaticamente.
 
 set -e
 
-# Carrega o profile do Nix se disponível
-if [ -f /etc/profile ]; then
-  # shellcheck disable=SC1091
-  source /etc/profile
+NODE_BIN=""
+
+# 1. Tenta ler o path capturado no build
+if [ -f .node-path ]; then
+  NODE_BIN=$(tr -d '[:space:]' < .node-path)
 fi
 
-# Fallback: adiciona diretórios comuns do Nix ao PATH
-for nix_bin in \
-  /nix/var/nix/profiles/default/bin \
-  ~/.nix-profile/bin \
-  /run/current-system/sw/bin; do
-  if [ -d "$nix_bin" ]; then
-    export PATH="$nix_bin:$PATH"
-  fi
-done
-
-# Verifica se o node está disponível
-if ! command -v node &>/dev/null; then
-  # Último recurso: procura node diretamente no nix store
-  NIX_NODE=$(find /nix/store -maxdepth 3 -name "node" -type f 2>/dev/null | grep "nodejs.*bin/node$" | head -1)
-  if [ -n "$NIX_NODE" ]; then
-    export PATH="$(dirname "$NIX_NODE"):$PATH"
-    echo "[start-prod] node encontrado em: $NIX_NODE"
+# 2. Fallback: node já está no PATH (ex: rodando localmente)
+if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then
+  if command -v node &>/dev/null; then
+    NODE_BIN=$(command -v node)
+    echo "[start-prod] aviso: usando node do PATH — $NODE_BIN"
   else
-    echo "[start-prod] ERRO: node não encontrado. Abortando." >&2
+    echo "[start-prod] ERRO: .node-path ausente/inválido e node não encontrado no PATH." >&2
+    echo "[start-prod] Rode um novo build para regenerar .node-path" >&2
     exit 1
   fi
 fi
 
-echo "[start-prod] node: $(command -v node) — $(node --version)"
-echo "[start-prod] Iniciando Next.js..."
+echo "[start-prod] node: $NODE_BIN — $("$NODE_BIN" --version)"
+echo "[start-prod] Iniciando Next.js na porta 5000..."
 
-exec node_modules/.bin/next start -p 5000 -H 0.0.0.0
+exec "$NODE_BIN" node_modules/next/dist/bin/next start -p 5000 -H 0.0.0.0

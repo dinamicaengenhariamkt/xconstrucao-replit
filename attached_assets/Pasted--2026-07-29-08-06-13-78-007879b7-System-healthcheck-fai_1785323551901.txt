@@ -1,0 +1,216 @@
+
+2026-07-29 08:06:13.78
+007879b7
+System
+healthcheck failed error=healthcheck /: Get "http://127.0.0.1:1104/": dial tcp 127.0.0.1:1104: connect: connection refused
+
+
+2026-07-29 08:06:13.79
+007879b7
+System
+healthcheck failed error=healthcheck /: Get "http://127.0.0.1:1104/": dial tcp 127.0.0.1:1104: connect: connection refused
+
+2026-07-29 08:06:13.84
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:13.85
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:13.99
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:14.05
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:14.05
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:14.14
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:14.14
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:14.21
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:14.22
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:14.22
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:14.59
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:14.59
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:14.59
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:14.96
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:15.22
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:19.20
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:21.15
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:21.19
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:22.73
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:22.73
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:23.01
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:24.26
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:26.18
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:27.47
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:28.17
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:29.50
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:30.20
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:30.81
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:31.37
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:31.37
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:32.65
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:33.04
+007879b7
+User
+[start-prod] ERRO: node não encontrado. Abortando.
+
+2026-07-29 08:06:33.04
+007879b7
+System
+command finished with error [bash scripts/start-prod.sh]: exit status 1
+
+2026-07-29 08:06:33.93
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:35.88
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:37.12
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:38.80
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:40.60
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:41.42
+007879b7
+System
+crash loop detected
+
+2026-07-29 08:06:41.66
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-07-29 08:06:42.79
+007879b7
+System
+healthcheck failed error=healthcheck / returned status 500

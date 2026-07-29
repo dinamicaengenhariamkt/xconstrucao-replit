@@ -32,3 +32,4 @@ playwright-report/
 
 # Turbopack incremental build cache (never commit — can reach several GiB)
 .next-sweep
+\n# Production build artifact — node binary path captured at build time\n.node-path
