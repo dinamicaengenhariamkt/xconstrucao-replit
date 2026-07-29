@@ -145,6 +145,15 @@ Contratantes e empreiteiros devem ter `com_doc = total`. Quem sobrar sem documen
 é porque o perfil também não tinha — precisa informar pelo perfil antes de
 configurar recebimento ou assinar plano.
 
-**Regra por persona no cadastro** (desde 2026-07-26): empreiteiro exige **CNPJ**
-(pessoa jurídica); contratante aceita **CPF ou CNPJ**; anunciante é isento no
-cadastro — o documento dele é coletado no checkout do anúncio.
+**Regra por persona** (desde 2026-07-26): empreiteiro exige **CNPJ** (pessoa
+jurídica); contratante aceita **CPF ou CNPJ**; anunciante é isento — o documento
+dele é coletado no checkout do anúncio.
+
+**Onde o documento é pedido** (mudou em 2026-07-29, [J61](jornadas/61-perfil-minimo-operar.md)):
+não é mais no cadastro. A primeira tela pede só os dados básicos; o CPF/CNPJ é
+coletado no **wizard de onboarding** (pulável) ou nas **Configurações**, e vira
+obrigatório na porta da ação — publicar obra, enviar proposta, assinar plano ou
+configurar recebimento. Consequência para os testes com clientes reais: um
+usuário recém-cadastrado **não terá documento** até passar pelo wizard, e
+`users.cpf_cnpj` nascerá nulo. Isso é esperado. Ao publicar a primeira obra ou
+enviar a primeira proposta, ele recebe um aviso listando o que falta preencher.

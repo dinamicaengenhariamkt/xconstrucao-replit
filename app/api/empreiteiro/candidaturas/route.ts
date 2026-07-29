@@ -2,13 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, desc, inArray, isNull, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { candidaturas, candidaturaAnexos, clientes, obras, userFiles } from "@shared/db/schema";
+import {
+  candidaturas,
+  candidaturaAnexos,
+  clientes,
+  empreiteiras,
+  obras,
+  userFiles,
+} from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { getLimiteRecurso } from "@features/planos/assinatura-service";
 import { criarNotificacao } from "@features/notificacoes/service";
+import {
+  empreiteiroPodeOperar,
+  mensagemPerfilIncompleto,
+  CODE_PERFIL_INCOMPLETO,
+} from "@shared/lib/perfil-operacional";
 
 /** Sinaliza estouro de limite de propostas/mês dentro da transação de criação. */
 class PropostaLimiteError extends Error {
@@ -139,6 +151,48 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = guard.user.id;
+
+  // J61 — perfil mínimo para operar. O CPF/CNPJ saiu do cadastro, então é aqui
+  // que o documento — junto com contato, endereço, especialidades e raio de
+  // atuação — vira obrigatório: uma proposta vira contrato e recebimento, e o
+  // contratante precisa saber quem está do outro lado para avaliá-la.
+  //
+  // A posição importa. Vem DEPOIS dos guards de autenticação (401) e de role
+  // (403), e ANTES do parse do corpo e da busca da obra — senão um perfil
+  // incompleto com obraId inexistente receberia 400/404 e o usuário nunca
+  // descobriria a causa real. O status é 422, nunca 402: a suíte trata 402 como
+  // cota de plano com `test.skip`, o que viraria verde silencioso.
+  const [perfil] = await db
+    .select({
+      nome: empreiteiras.nome,
+      responsavel: empreiteiras.responsavel,
+      email: empreiteiras.email,
+      telefone: empreiteiras.telefone,
+      cnpj: empreiteiras.cnpj,
+      cep: empreiteiras.cep,
+      endereco: empreiteiras.endereco,
+      cidade: empreiteiras.cidade,
+      estado: empreiteiras.estado,
+      especialidades: empreiteiras.especialidades,
+      raioKm: empreiteiras.raioKm,
+    })
+    .from(empreiteiras)
+    .where(eq(empreiteiras.userId, userId));
+
+  const podeOperar = empreiteiroPodeOperar(perfil);
+  if (!podeOperar.ok) {
+    const r = NextResponse.json(
+      {
+        code: CODE_PERFIL_INCOMPLETO,
+        message: mensagemPerfilIncompleto(podeOperar.faltando),
+        faltando: podeOperar.faltando,
+      },
+      { status: 422 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();

@@ -24,7 +24,13 @@ import {
 } from '@features/perfil/hooks/use-perfil';
 import { usePlanos, useCheckout, type PlanoApi } from '@features/planos/ui/use-planos';
 import { useRecebimento } from '@features/marketplace/hooks/use-recebimento';
-import { formatCep, unformatCep } from '@shared/lib/masks';
+import {
+  formatCep,
+  unformatCep,
+  formatCpfCnpj,
+  unformatCpfCnpj,
+  isCpfCnpjValid,
+} from '@shared/lib/masks';
 import { useConcluirOnboarding } from './useConcluirOnboarding';
 
 type Persona = 'contratante' | 'empreiteiro' | 'anunciante';
@@ -168,17 +174,57 @@ function StepEmpresa({
   // Contratante escolhe PF/PJ; empreiteiro é sempre PJ (tem CNPJ, sem coluna tipo).
   const [tipo, setTipo] = useState<'Pessoa Física' | 'Pessoa Jurídica'>('Pessoa Jurídica');
   const [nome, setNome] = useState('');
+  const [documento, setDocumento] = useState('');
+  const [erroDocumento, setErroDocumento] = useState<string | null>(null);
   const [cep, setCep] = useState('');
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const salvando = updateContratante.isPending || updateEmpreiteiro.isPending;
 
+  // J61 — o documento saiu do cadastro e é coletado aqui. Anunciante não informa:
+  // o documento dele é pedido no checkout do anúncio (customer lazy do Asaas), e
+  // duplicar a coleta criaria dois pontos de verdade para o mesmo dado.
+  const pedeDocumento = isContratante || role === 'empreiteiro';
+  // Empreiteiro é sempre pessoa jurídica — só CNPJ. Contratante segue o PF/PJ que
+  // acabou de escolher acima, como a tela de Configurações já faz: com "Pessoa
+  // Física" selecionada, um CNPJ é incoerente mesmo sendo um documento válido.
+  const somenteCnpj = role === 'empreiteiro' || (isContratante && tipo === 'Pessoa Jurídica');
+  const somenteCpf = isContratante && tipo === 'Pessoa Física';
+  const rotuloDocumento = somenteCnpj ? 'CNPJ' : 'CPF';
+
+  /**
+   * Vazio é válido — o wizard é pulável e a obrigatoriedade real fica na porta
+   * da ação (gate de `shared/lib/perfil-operacional.ts`). Só o formato errado
+   * barra: gravar documento malformado faz o Asaas recusar a cobrança depois,
+   * longe daqui, onde o usuário não tem como relacionar o erro à causa.
+   */
+  const validarDocumento = (): string | null => {
+    const digitos = unformatCpfCnpj(documento);
+    if (!digitos) return null;
+    if (!isCpfCnpjValid(digitos)) return `${rotuloDocumento} inválido`;
+    if (somenteCnpj && digitos.length !== 14) {
+      return role === 'empreiteiro'
+        ? 'Empreiteiro precisa de CNPJ — o cadastro é de pessoa jurídica'
+        : 'Você marcou Pessoa Jurídica — informe um CNPJ';
+    }
+    if (somenteCpf && digitos.length !== 11) {
+      return 'Você marcou Pessoa Física — informe um CPF';
+    }
+    return null;
+  };
+
   const salvarEavancar = async () => {
+    const problema = pedeDocumento ? validarDocumento() : null;
+    setErroDocumento(problema);
+    if (problema) return;
+
+    const digitos = unformatCpfCnpj(documento);
     try {
       if (isContratante) {
         await updateContratante.mutateAsync({
           ...(nome ? { nome } : {}),
           tipo,
+          ...(digitos ? { cnpjCpf: digitos } : {}),
           ...(cep ? { cep: unformatCep(cep) } : {}),
           ...(cidade ? { cidade } : {}),
           ...(estado ? { estado } : {}),
@@ -186,6 +232,7 @@ function StepEmpresa({
       } else if (role === 'empreiteiro') {
         await updateEmpreiteiro.mutateAsync({
           ...(nome ? { nome } : {}),
+          ...(digitos ? { cnpj: digitos } : {}),
           ...(cep ? { cep: unformatCep(cep) } : {}),
           ...(cidade ? { cidade } : {}),
           ...(estado ? { estado } : {}),
@@ -266,6 +313,41 @@ function StepEmpresa({
               data-testid="input-onboarding-nome"
             />
           </div>
+
+          {pedeDocumento && (
+            <div>
+              <Label htmlFor="ob-documento" className="mb-2 block">
+                {rotuloDocumento}
+              </Label>
+              <Input
+                id="ob-documento"
+                value={formatCpfCnpj(documento)}
+                onChange={(e) => {
+                  setDocumento(unformatCpfCnpj(e.target.value));
+                  if (erroDocumento) setErroDocumento(null);
+                }}
+                inputMode="numeric"
+                placeholder={somenteCnpj ? '00.000.000/0000-00' : '000.000.000-00'}
+                autoComplete="off"
+                aria-invalid={erroDocumento ? true : undefined}
+                data-testid="input-onboarding-documento"
+              />
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                {role === 'empreiteiro'
+                  ? 'Necessário para emitir cobranças e receber pelas obras.'
+                  : 'Necessário para emitir cobranças e assinar planos.'}{' '}
+                Você pode informar depois, nas Configurações.
+              </p>
+              {erroDocumento && (
+                <p
+                  className="mt-1 text-xs text-red-500"
+                  data-testid="text-onboarding-documento-error"
+                >
+                  {erroDocumento}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-1">

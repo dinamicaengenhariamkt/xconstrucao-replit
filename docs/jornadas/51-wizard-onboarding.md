@@ -120,4 +120,14 @@ flowchart LR
 - **2026-07-22 — Checkout `redirect` não avança passo**: quando o gateway real devolve `kind: 'redirect'`, o hook já faz `window.location.assign`; o wizard passou a NÃO chamar `onNext()` nesse caso (só em `activated`), evitando avanço-fantasma antes da navegação externa.
 - **2026-07-22 — Anunciante sem passo de plano/recebimento é intencional**: pelo modelo financeiro ([../asaas-modelo-financeiro.md](../asaas-modelo-financeiro.md)), o anunciante não assina plano nem recebe (não tem subconta), e o **customer ASAAS dele é criado lazy no checkout de anúncio (J31)**, não no cadastro nem neste wizard. Por isso o wizard do anunciante é enxuto (só empresa → concluir).
 - **2026-07-22 — E2E de navegador da J01 desatualizados pelo gate**: os fluxos `contratante`/`empreiteiro` em [../../tests/e2e/onboarding.spec.ts](../../tests/e2e/onboarding.spec.ts) esperavam `login → dashboard`; com o gate da J51 o usuário novo cai em `/onboarding` primeiro. Ajustados para esperar `/onboarding` e clicar em `button-onboarding-skip` antes do dashboard. Os demais casos (acesso direto ao dashboard; OAuth API) NÃO são afetados — não há gate server-side, o desvio é client-side no login. **Nota de infra:** os E2E de navegador não rodam no ambiente atual (Chromium do Playwright falha no launch com `GLIBC_PRIVATE not found`) — validação de browser fica para a J37; os testes de integração da J51 (HTTP puro, sem browser) rodam e passam.
+- **2026-07-29 — Passo 1 ganhou o CPF/CNPJ (J61).** O wizard nasceu sem campo de
+  documento porque a J44 o coletava no cadastro ("NÃO cria/toca conta Asaas",
+  comentário do `OnboardingWizard`). Com a [J61](61-perfil-minimo-operar.md)
+  tirando o campo do signup, o `StepEmpresa` passou a pedi-lo — rótulo e
+  validação por persona (contratante: CPF ou CNPJ; empreiteiro: CNPJ;
+  **anunciante não vê o campo**, mantendo a decisão de 2026-07-22 de não duplicar
+  a coleta que já ocorre no checkout do anúncio). Continua **pulável**: vazio
+  avança, só formato inválido barra. O provisionamento do customer Asaas, antes
+  exclusivo do cadastro, agora também dispara no PATCH de perfil.
+
 - **2026-07-22 — Continuidade extraída para a J52**: o "avisar quem pulou a completar o perfil depois" virou jornada própria — [J52 (Perfil Incompleto & Continuidade)](52-perfil-incompleto-continuidade-onboarding.md) — com banner global não-bloqueante (fonte = `perfil_completo`) e reforço client-side do gate (`OnboardingGate`). O fechamento visual do pagamento de anúncios (que o wizard só encaminha) foi para a [J53](53-ui-pagamento-anuncios-faq.md).

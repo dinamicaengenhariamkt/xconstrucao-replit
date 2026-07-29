@@ -2,7 +2,13 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { users } from "@shared/db/schema";
-import { loginAs, uniqueEmail, uniqueUsername, SEED_ADMIN_EMAIL } from "../helpers";
+import {
+  loginAs,
+  uniqueEmail,
+  uniqueUsername,
+  SEED_ADMIN_EMAIL,
+  DOC_VALIDO_POR_ROLE,
+} from "../helpers";
 
 /**
  * Integração (J51/J54) — Wizard de Onboarding (primeiro acesso) + validação
@@ -23,7 +29,6 @@ import { loginAs, uniqueEmail, uniqueUsername, SEED_ADMIN_EMAIL } from "../helpe
  */
 
 const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
-const CPF_VALIDO = "52998224725";
 const SENHA = "Xconstr@E2E2026!";
 
 async function registrarPersona(
@@ -40,7 +45,10 @@ async function registrarPersona(
       password: SENHA,
       role,
       phone: "11966660000",
-      cpfCnpj: CPF_VALIDO,
+      // O documento é opcional no cadastro (J61), mas quando enviado a regra por
+      // persona continua valendo: empreiteiro só aceita CNPJ. Este spec usava um
+      // CPF para as três personas — o registro do empreiteiro dava 400.
+      cpfCnpj: DOC_VALIDO_POR_ROLE[role],
       acceptTerms: true,
       ...ANTI_BOT,
     },

@@ -99,6 +99,90 @@ const PERSONAS = [
   },
 ];
 
+type Persona = (typeof PERSONAS)[number];
+
+/**
+ * Endereço fictício, porém válido, usado por todas as personas.
+ *
+ * J61 — o gate de perfil operacional (`shared/lib/perfil-operacional.ts`) exige
+ * contato, documento fiscal e endereço para publicar obra ou enviar proposta.
+ * As personas nasciam sem endereço nenhum, então TODA a suíte de marketplace
+ * (~18 pontos de criação de obra/candidatura em 9 arquivos) passaria a receber
+ * 422 assim que o gate entrasse.
+ */
+const ENDERECO_E2E = {
+  cep: "01310-100",
+  endereco: "Av. Paulista, 1000",
+  cidade: "São Paulo",
+  estado: "SP",
+} as const;
+
+/**
+ * Garante que a persona tenha o perfil de domínio criado E completo o bastante
+ * para operar. Idempotente nos dois sentidos: cria o que falta, e completa o que
+ * existe mas está incompleto (caso das personas criadas antes da J61).
+ *
+ * Não mexe em `perfilCompleto` — essa coluna é da curadoria do admin e exige
+ * perfil rico (avatar, portfólio). O gate de operar é deliberadamente mais
+ * enxuto; ver o cabeçalho de `shared/lib/perfil-operacional.ts`.
+ */
+async function garantirPerfilOperacional(userId: string, p: Persona): Promise<void> {
+  if (p.role === "contratante") {
+    const [existente] = await db
+      .select({ id: clientes.id })
+      .from(clientes)
+      .where(eq(clientes.userId, userId))
+      .limit(1);
+
+    const dados = {
+      nome: p.name,
+      tipo: p.cpfCnpj && p.cpfCnpj.length > 11 ? "Pessoa Jurídica" : "Pessoa Física",
+      email: p.email,
+      telefone: p.phone,
+      cnpjCpf: p.cpfCnpj,
+      ...ENDERECO_E2E,
+      status: "ativo" as const,
+    };
+
+    if (existente) {
+      await db.update(clientes).set(dados).where(eq(clientes.id, existente.id));
+    } else {
+      await db.insert(clientes).values({ userId, ...dados });
+    }
+    return;
+  }
+
+  if (p.role === "empreiteiro") {
+    const [existente] = await db
+      .select({ id: empreiteiras.id })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.userId, userId))
+      .limit(1);
+
+    const dados = {
+      nome: `${p.name} Empreiteira`,
+      responsavel: p.name,
+      email: p.email,
+      telefone: p.phone,
+      cnpj: p.cpfCnpj,
+      especialidade: "Acabamento e Pintura",
+      // `especialidades` (plural) é o array que o gate olha — `especialidade`
+      // acima é a coluna legada, singular, que não conta.
+      especialidades: ["Acabamento", "Pintura"],
+      raioKm: 50,
+      ...ENDERECO_E2E,
+      status: "ativo" as const,
+    };
+
+    if (existente) {
+      await db.update(empreiteiras).set(dados).where(eq(empreiteiras.id, existente.id));
+    } else {
+      await db.insert(empreiteiras).values({ userId, ...dados });
+    }
+  }
+  // admin não tem perfil de domínio.
+}
+
 export async function POST() {
   if (!isEnabled()) {
     return NextResponse.json({ error: "disabled" }, { status: 404 });
@@ -134,6 +218,12 @@ export async function POST() {
           })
           .where(eq(users.id, existente.id));
       }
+
+      // J61 — o gate de perfil operacional recusa criar obra / enviar proposta
+      // com o perfil incompleto. As personas já existentes na base foram criadas
+      // sem endereço, então precisam ser completadas AQUI também: mexer só no
+      // caminho de INSERT abaixo não conserta nada numa base já populada.
+      await garantirPerfilOperacional(existente.id, p);
       continue;
     }
 
@@ -154,28 +244,7 @@ export async function POST() {
 
     // Perfil correspondente ao papel. Sem ele o usuário loga mas não consegue
     // criar obra (contratante) nem se candidatar (empreiteiro).
-    if (p.role === "contratante") {
-      await db.insert(clientes).values({
-        userId: novo.id,
-        nome: p.name,
-        tipo: p.cpfCnpj && p.cpfCnpj.length > 11 ? "Pessoa Jurídica" : "Pessoa Física",
-        email: p.email,
-        telefone: p.phone,
-        cnpjCpf: p.cpfCnpj,
-        status: "ativo",
-      });
-    } else if (p.role === "empreiteiro") {
-      await db.insert(empreiteiras).values({
-        userId: novo.id,
-        nome: `${p.name} Empreiteira`,
-        responsavel: p.name,
-        email: p.email,
-        telefone: p.phone,
-        cnpj: p.cpfCnpj,
-        especialidade: "Acabamento e Pintura",
-        status: "ativo",
-      });
-    }
+    await garantirPerfilOperacional(novo.id, p);
   }
 
   return NextResponse.json({ ok: true, criados, jaExistiam });

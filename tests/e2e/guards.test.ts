@@ -96,6 +96,54 @@ describe("inspecionarDatabaseUrl", () => {
       else delete process.env.E2E_ALLOW_ANY_DB;
     }
   });
+
+  // ── Regressão: hosts gerenciados não podem passar como "dev" ──────────────
+  //
+  // A allowlist casava por PREFIXO (`host.startsWith("db.")`), pensando em
+  // subdomínios de docker-compose. Efeito colateral grave: o host padrão do
+  // Supabase é `db.<projeto>.supabase.co` — um banco de PRODUÇÃO era
+  // classificado como desenvolvimento. `pareceProducao()` retornava false,
+  // `scripts/limpar-base.ts` não exigia a segunda confirmação, e esta suíte
+  // rodaria contra a base real. Agora a comparação é por host exato.
+
+  it("bloqueia host Supabase (db.<projeto>.supabase.co) — não é dev", () => {
+    const original = process.env.E2E_ALLOW_ANY_DB;
+    delete process.env.E2E_ALLOW_ANY_DB;
+    try {
+      const result = inspecionarDatabaseUrl(
+        "postgresql://postgres:senha@db.abcdefgh.supabase.co:5432/postgres",
+      );
+      assert.equal(
+        result.ok,
+        false,
+        "host Supabase de produção não pode ser tratado como banco de dev",
+      );
+    } finally {
+      if (original !== undefined) process.env.E2E_ALLOW_ANY_DB = original;
+    }
+  });
+
+  it("bloqueia host com prefixo 'postgres.' (ex.: postgres.railway.internal)", () => {
+    const original = process.env.E2E_ALLOW_ANY_DB;
+    delete process.env.E2E_ALLOW_ANY_DB;
+    try {
+      const result = inspecionarDatabaseUrl(
+        "postgresql://user:pass@postgres.railway.internal:5432/railway",
+      );
+      assert.equal(result.ok, false);
+    } finally {
+      if (original !== undefined) process.env.E2E_ALLOW_ANY_DB = original;
+    }
+  });
+
+  it("continua permitindo os hosts de dev exatos (docker-compose)", () => {
+    for (const host of ["postgres", "db"]) {
+      const result = inspecionarDatabaseUrl(
+        `postgresql://user:pass@${host}:5432/app`,
+      );
+      assert.equal(result.ok, true, `host "${host}" deve ser reconhecido como dev`);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

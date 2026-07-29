@@ -145,6 +145,51 @@ function asRows(payload: unknown): Array<Record<string, unknown>> {
  * do plano free. Best-effort — nunca lança. Envia `numero` junto para satisfazer
  * a revalidação `insertObraSchemaStrict` em obras publicadas sem número.
  */
+/**
+ * Endereço fictício, porém válido, usado para completar perfis nos testes.
+ * Espelha o `ENDERECO_E2E` de `app/api/test/ensure-users/route.ts`.
+ */
+const ENDERECO_E2E = {
+  cep: "01310-100",
+  endereco: "Av. Paulista, 1000",
+  cidade: "São Paulo",
+  estado: "SP",
+} as const;
+
+/**
+ * Completa o perfil da sessão atual até passar no gate operacional da J61.
+ *
+ * Necessário para **usuários descartáveis** criados via `POST /api/auth/register`:
+ * `ensureProfileRow` cria a linha em `clientes`/`empreiteiras` só com nome,
+ * e-mail e telefone — sem endereço, e (no empreiteiro) sem especialidades nem
+ * raio de atuação. Sem isto, `POST /api/obras` e
+ * `POST /api/empreiteiro/candidaturas` respondem 422 `PERFIL_INCOMPLETO`.
+ *
+ * As personas fixas (`SEED_*_EMAIL`) já nascem completas via `ensure-users` —
+ * chamar aqui para elas é inofensivo, mas desnecessário.
+ *
+ * Use DEPOIS de `loginAs`, com a sessão do próprio usuário: o PATCH de perfil
+ * age sobre quem está autenticado.
+ */
+export async function completarPerfilOperacional(
+  request: APIRequestContext,
+  role: "contratante" | "empreiteiro",
+): Promise<void> {
+  const rota =
+    role === "contratante" ? "/api/perfil/contratante" : "/api/perfil/empreiteiro";
+
+  const extras =
+    role === "empreiteiro"
+      ? { especialidades: ["Acabamento", "Pintura"], raioKm: 50 }
+      : {};
+
+  const res = await request.patch(rota, { data: { ...ENDERECO_E2E, ...extras } });
+  expect(
+    res.ok(),
+    `completar perfil de ${role} deve responder ok (status ${res.status()}): ${await res.text()}`,
+  ).toBeTruthy();
+}
+
 export async function liberarCotaObras(
   request: APIRequestContext,
   {

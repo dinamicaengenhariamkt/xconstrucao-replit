@@ -116,3 +116,15 @@ Reusa colunas criadas em J42: `users.cpf_cnpj`, `users.asaas_customer_id`. Sem n
   duplicar a coleta criaria dois pontos de verdade para o mesmo dado. A tela de
   cadastro adapta label, placeholder e texto de ajuda conforme a persona.
   Empreiteiros legados com CPF ficam registrados no `_backlog-paralelo.md` (P2).
+
+- **2026-07-29 — A coleta SAIU do cadastro (revisado pela J61).** A decisão de
+  produto mudou: a primeira tela pede só os dados básicos. O documento passou a
+  ser coletado no wizard de onboarding (pulável) ou nas Configurações, e a
+  obrigatoriedade vive na porta da ação — exatamente a recomendação que o §11
+  desta jornada já fazia ("opcional no register, obrigatório na porta do
+  pagamento"), agora estendida também a publicar obra e enviar proposta.
+  `registerSchema.cpfCnpj` virou opcional; a **regra por persona e a validação de
+  dígito verificador continuam valendo quando o documento é informado**. O
+  provisionamento do customer Asaas ganhou um segundo ponto de disparo (o PATCH
+  de perfil), já que o cadastro pode não receber documento nenhum. Ver
+  [J61](61-perfil-minimo-operar.md).

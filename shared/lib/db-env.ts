@@ -18,7 +18,18 @@
 /** Marcadores que indicam produção de forma forte o suficiente para bloquear. */
 const PROD_MARKERS = ["prod", "production", "-live", ".live", "prd"];
 
-/** Hosts reconhecidos como banco local/de desenvolvimento. */
+/**
+ * Hosts reconhecidos como banco local/de desenvolvimento.
+ *
+ * A comparação é por **host exato** — nunca por prefixo. Antes aceitava
+ * `host.startsWith("db.")` (pensando em subdomínios de docker-compose), e isso
+ * abria um furo grave: `db.<projeto>.supabase.co` — o formato padrão de host do
+ * Supabase — era classificado como DESENVOLVIMENTO. Um banco de produção
+ * Supabase passava sem exigir `CONFIRM_LIMPAR_PROD`, e a suíte E2E rodaria
+ * contra ele. Mesmo raciocínio para `postgres.<algo>`.
+ *
+ * Hosts com domínio agora caem em `desconhecido`, que é fail-closed.
+ */
 const DEV_HOSTS = [
   "localhost",
   "127.0.0.1",
@@ -60,9 +71,10 @@ export function classificarDatabaseUrl(rawUrl: string): ClassificacaoDb {
     }
   }
 
-  const isDev = DEV_HOSTS.some(
-    (h) => host === h || host.startsWith(`${h}.`) || host.startsWith(`${h}:`),
-  );
+  // Host exato apenas. `extrairHost` já removeu a porta, então `host === h`
+  // cobre `postgres:5432`. Ver o comentário de DEV_HOSTS para o motivo de não
+  // aceitar prefixo.
+  const isDev = DEV_HOSTS.some((h) => host === h);
   if (isDev) return { tipo: "dev", host };
 
   return { tipo: "desconhecido", host };

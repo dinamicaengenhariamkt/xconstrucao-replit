@@ -70,6 +70,7 @@ Cada arquivo é um **checklist vivo**: ao avançar a implementação, marque os 
 | 58 | [Contrato entre as Partes (contratante ↔ empreiteiro)](58-contrato-entre-as-partes.md) | contratante, empreiteiro, admin | 12 | pronto | alta |
 | 59 | [Termo de Aceite do Anunciante (gate de entrada)](59-termo-aceite-anunciante.md) | anunciante, admin | 12 | pronto | média |
 | 60 | [Área de Contratos no Admin](60-contratos-admin.md) | admin | 12 | pronto | média |
+| 61 | [Perfil Mínimo para Operar (CPF/CNPJ sai do cadastro)](61-perfil-minimo-operar.md) | contratante, empreiteiro | 12 | pronto | alta |
 
 ---
 

@@ -153,6 +153,20 @@ export default function AplicarPage() {
           setUpsellOpen(true);
           return;
         }
+        // J61 — perfil sem os dados mínimos para operar (CNPJ, contato, endereço,
+        // especialidades, raio). O 422 traz os campos com rótulo em português;
+        // listá-los evita o "complete seu perfil" vago que não diz o que falta.
+        if (res.status === 422 && err.code === 'PERFIL_INCOMPLETO') {
+          const campos = (err.faltando ?? []) as Array<{ rotulo: string }>;
+          toast({
+            title: 'Complete seu perfil para enviar propostas',
+            description: campos.length
+              ? `Falta preencher: ${campos.map((c) => c.rotulo).join(', ')}. Vá em Configurações.`
+              : err.message || 'Complete seu perfil em Configurações antes de enviar propostas.',
+            variant: 'destructive',
+          });
+          return;
+        }
         throw new Error(err.message || 'Erro ao enviar candidatura');
       }
       const candidatura = await res.json();

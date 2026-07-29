@@ -41,7 +41,9 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11999990000");
-    await page.getByTestId("input-cpfcnpj").fill("52998224725");
+    // J61 — a tela de cadastro não tem mais campo de CPF/CNPJ. O documento é
+    // coletado no wizard (abaixo) ou nas Configurações.
+    await expect(page.getByTestId("input-cpfcnpj")).toHaveCount(0);
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
 
@@ -64,11 +66,17 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-password").fill(password);
     // J51 — usuário novo (onboarding_concluido=false) cai no wizard, não no
-    // dashboard. Pular por agora → dashboard da persona.
+    // dashboard. J61 — é no wizard que o documento é informado; contratante
+    // aceita CPF ou CNPJ.
     await Promise.all([
       page.waitForURL(/\/onboarding/),
       page.getByTestId("button-login").click(),
     ]);
+    // O wizard nasce em "Pessoa Jurídica"; marcar PF faz o campo pedir CPF.
+    await page.getByTestId("radio-pf").click();
+    await page.getByTestId("input-onboarding-documento").fill("52998224725");
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    // Pular o restante do wizard → dashboard da persona.
     await Promise.all([
       page.waitForURL(/\/contratante\/dashboard/),
       page.getByTestId("button-onboarding-skip").click(),
@@ -92,7 +100,8 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11988880000");
-    await page.getByTestId("input-cpfcnpj").fill("52998224725");
+    // J61 — sem campo de documento no cadastro (ver caso do contratante).
+    await expect(page.getByTestId("input-cpfcnpj")).toHaveCount(0);
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
 
@@ -112,11 +121,18 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.goto("/login?perfil=empreiteiro");
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-password").fill(password);
-    // J51 — wizard de onboarding intercepta o login do usuário novo. Pular → dashboard.
+    // J51 — wizard de onboarding intercepta o login do usuário novo.
     await Promise.all([
       page.waitForURL(/\/onboarding/),
       page.getByTestId("button-login").click(),
     ]);
+    // J61 — empreiteiro é pessoa jurídica: o wizard recusa CPF, mesmo válido.
+    await page.getByTestId("input-onboarding-documento").fill("52998224725"); // CPF válido
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    await expect(page.getByTestId("text-onboarding-documento-error")).toBeVisible();
+    await page.getByTestId("input-onboarding-documento").fill("11222333000181"); // CNPJ
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    // Pular o restante do wizard → dashboard da persona.
     await Promise.all([
       page.waitForURL(/\/empreiteiro\/dashboard/),
       page.getByTestId("button-onboarding-skip").click(),
@@ -139,7 +155,6 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await page.getByTestId("input-email").fill(email);
     await page.getByTestId("input-username").fill(username);
     await page.getByTestId("input-phone").fill("11977770000");
-    await page.getByTestId("input-cpfcnpj").fill("52998224725");
     await page.getByTestId("input-password").fill(password);
     await page.getByTestId("checkbox-terms").click();
     await Promise.all([

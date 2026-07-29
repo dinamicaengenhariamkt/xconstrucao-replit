@@ -7,6 +7,11 @@ import { insertObraSchemaStrict } from "@features/obras/schemas";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { getLimiteRecurso } from "@features/planos/assinatura-service";
+import {
+  contratantePodeOperar,
+  mensagemPerfilIncompleto,
+  CODE_PERFIL_INCOMPLETO,
+} from "@shared/lib/perfil-operacional";
 
 /** Sinaliza estouro de limite de plano dentro da transação de criação de obra. */
 class ObraLimiteError extends Error {
@@ -311,11 +316,47 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
-  const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
+  const [cli] = await db
+    .select({
+      id: clientes.id,
+      nome: clientes.nome,
+      email: clientes.email,
+      telefone: clientes.telefone,
+      cnpjCpf: clientes.cnpjCpf,
+      cep: clientes.cep,
+      endereco: clientes.endereco,
+      cidade: clientes.cidade,
+      estado: clientes.estado,
+    })
+    .from(clientes)
+    .where(eq(clientes.userId, guard.user.id));
   if (!cli) {
     const r = NextResponse.json(
       { message: "Perfil de cliente não encontrado. Complete seu cadastro antes de criar obras." },
       { status: 400 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // J61 — perfil mínimo para operar. O CPF/CNPJ saiu do cadastro (a primeira
+  // tela pede só os dados básicos), então é aqui que o documento — junto com
+  // contato e endereço — vira obrigatório: uma obra gera contrato e cobrança, e
+  // ambos precisam de partes identificadas.
+  //
+  // A posição importa. Vem DEPOIS dos guards de autenticação (401) e de role
+  // (403), senão um anônimo receberia "complete seu perfil" em vez de "não
+  // autenticado". E o status é 422, nunca 402: a suíte trata 402 como cota de
+  // plano com `test.skip`, o que transformaria uma falha em verde silencioso.
+  const podeOperar = contratantePodeOperar(cli);
+  if (!podeOperar.ok) {
+    const r = NextResponse.json(
+      {
+        code: CODE_PERFIL_INCOMPLETO,
+        message: mensagemPerfilIncompleto(podeOperar.faltando),
+        faltando: podeOperar.faltando,
+      },
+      { status: 422 },
     );
     setNoCacheHeaders(r);
     return r;

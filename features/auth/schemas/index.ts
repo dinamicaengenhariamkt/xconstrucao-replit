@@ -31,10 +31,15 @@ export const registerSchema = z
     password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
     role: z.enum(["contratante", "empreiteiro", "anunciante"]),
     phone: z.string().optional(),
-    // CPF/CNPJ coletado no cadastro (obrigatório p/ contratante e empreiteiro).
-    // O ASAAS exige esse dado para criar o customer e cobrar a assinatura; sem
-    // ele o checkout aborta com PERFIL_INCOMPLETO. Anunciante não assina plano,
-    // então o campo é opcional. Normalizado para dígitos no output.
+    // CPF/CNPJ é OPCIONAL no cadastro (J61). A primeira tela pede só os dados
+    // básicos; o documento é coletado depois, no wizard de onboarding (J51) ou
+    // nas Configurações, e só vira obrigatório na porta da ação que precisa
+    // dele — publicar obra, enviar proposta, assinar plano ou configurar
+    // recebimento (gate em shared/lib/perfil-operacional.ts).
+    //
+    // O campo continua aceito aqui porque o cadastro por admin
+    // (POST /api/admin/usuarios) o envia, e porque quando ele vem o customer
+    // Asaas já é provisionado no register. Normalizado para dígitos no output.
     cpfCnpj: z
       .string()
       .optional()
@@ -59,27 +64,22 @@ export const registerSchema = z
       });
     }
 
-    // Contratante/empreiteiro precisam de documento fiscal válido no cadastro
-    // para conseguir assinar planos (pré-requisito do gateway de pagamento).
+    // Documento AUSENTE é aceito (J61 — a coleta migrou para o wizard/perfil).
+    // Documento PRESENTE continua tendo de estar correto: gravar um CPF/CNPJ
+    // malformado significa o Asaas rejeitar a cobrança depois, longe daqui.
     //
-    // Regra de negócio por persona:
+    // Regra de negócio por persona (inalterada):
     //  - contratante: CPF **ou** CNPJ. Pode ser tanto uma pessoa reformando a
     //    própria casa quanto uma empresa contratando outra.
     //  - empreiteiro: **somente CNPJ**. Quem executa a obra atua como empresa.
-    //  - anunciante: isento aqui — o documento é coletado no checkout do
-    //    anúncio (customer lazy do Asaas), não no cadastro. Ver
+    //  - anunciante: isento — o documento é coletado no checkout do anúncio
+    //    (customer lazy do Asaas). Ver
     //    features/anuncios/self-service/asaas-ad-billing.ts.
-    if (data.role === "contratante" || data.role === "empreiteiro") {
+    if (data.cpfCnpj && (data.role === "contratante" || data.role === "empreiteiro")) {
       const ehEmpreiteiro = data.role === "empreiteiro";
       const rotulo = ehEmpreiteiro ? "CNPJ" : "CPF ou CNPJ";
 
-      if (!data.cpfCnpj) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["cpfCnpj"],
-          message: `${rotulo} é obrigatório`,
-        });
-      } else if (!isCpfCnpjValid(data.cpfCnpj)) {
+      if (!isCpfCnpjValid(data.cpfCnpj)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["cpfCnpj"],

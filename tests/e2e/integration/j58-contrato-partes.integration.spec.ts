@@ -11,6 +11,7 @@ import {
   uniqueEmail,
   uniqueUsername,
   waitForVerificationEmail,
+  completarPerfilOperacional,
   SEED_CONTRATANTE_EMAIL,
   SEED_EMPREITEIRO_EMAIL,
   SEED_ADMIN_EMAIL,
@@ -70,6 +71,15 @@ async function criarEmpreiteiroVerificado(
   expect(token, `token de verificação para ${email}`).toBeTruthy();
   const ver = await request.get(`/api/auth/verify-email?token=${encodeURIComponent(token!)}`, { maxRedirects: 0 });
   expect(ver.headers()["location"] ?? "", `verify-email de ${email}`).toContain("success=");
+
+  // J61 — `ensureProfileRow` cria a linha em `empreiteiras` só com nome/email/
+  // telefone. Sem endereço, especialidades e raio, o gate de perfil operacional
+  // recusa a candidatura com 422. Completa aqui para o spec exercitar o fluxo
+  // de contrato, que é o que ele existe para testar.
+  await loginAs(request, email);
+  await completarPerfilOperacional(request, "empreiteiro");
+  await logout(request);
+
   return { email, password };
 }
 

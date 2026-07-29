@@ -6,6 +6,7 @@ import { empreiteiras, users } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { ensureProfileRow } from "@features/auth/api/auth-storage";
 import { findMunicipio, loadMunicipios } from "@shared/lib/ibge-municipios";
+import { isCnpjValid, unformatCnpj } from "@shared/lib/masks";
 
 export const ESPECIALIDADES_PERMITIDAS = [
   "Alvenaria",
@@ -43,7 +44,19 @@ const updateSchema = z.object({
   nome: z.string().min(3).optional(),
   responsavel: z.string().min(3).optional(),
   telefone: z.string().min(8).optional().nullable(),
-  cnpj: z.string().optional().nullable(),
+  // J61 — com o documento saindo do cadastro, este PATCH virou a porta de
+  // entrada principal do dado. Antes aceitava qualquer string: um PATCH direto
+  // à API (fora das telas, que validam no client) gravava documento malformado
+  // e o Asaas só recusava depois, ao abrir a subconta, longe da causa.
+  // Empreiteiro é pessoa jurídica — só CNPJ. `null` limpa o campo.
+  cnpj: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v == null ? v : unformatCnpj(v)))
+    .refine((v) => !v || isCnpjValid(v), {
+      message: "CNPJ inválido — o cadastro de empreiteiro é de pessoa jurídica",
+    }),
   cep: z.string().optional().nullable(),
   endereco: z.string().optional().nullable(),
   cidade: z.string().optional().nullable(),
@@ -233,10 +246,31 @@ export async function PATCH(request: NextRequest) {
   if (bio !== undefined) userPatch.bio = bio;
   if (idioma !== undefined) userPatch.idioma = idioma;
   if (timezone !== undefined) userPatch.timezone = timezone;
+  // J44/J61 — `users.cpf_cnpj` é a fonte de verdade do documento fiscal:
+  // `subconta-service.ts:89` lê de lá para abrir a subconta Asaas. Este PATCH
+  // gravava apenas em `empreiteiras.cnpj`, então editar o perfil recriava a
+  // inconsistência que o backfill da J44 corrigiu. O valor já chega validado e
+  // em dígitos puros pelo `updateSchema`.
+  if (updated.cnpj) userPatch.cpfCnpj = updated.cnpj;
   if (Object.keys(userPatch).length > 0) {
     await db.update(users).set(userPatch).where(eq(users.id, payload.sub));
   }
   const u = await loadUser(payload.sub);
+
+  // J44/J61 — o customer Asaas era provisionado no cadastro, que agora pode não
+  // receber documento nenhum. Com a coleta migrada para cá, este é o momento em
+  // que o dado aparece. Best-effort e fora do caminho crítico: a função é
+  // idempotente, só age com PAYMENT_GATEWAY=asaas e engole qualquer falha (o
+  // fallback lazy no 1º checkout continua valendo).
+  if (updated.cnpj && !u?.asaasCustomerId) {
+    const { provisionarCustomerAsaas } = await import("@features/marketplace/customer-service");
+    void provisionarCustomerAsaas({
+      userId: payload.sub,
+      name: updated.nome ?? u?.name ?? "",
+      email: updated.email ?? u?.email ?? "",
+      cpfCnpj: updated.cnpj,
+    });
+  }
 
   return NextResponse.json(withUserFields(updated, u));
 }

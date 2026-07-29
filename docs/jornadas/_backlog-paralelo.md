@@ -284,7 +284,20 @@ Descobertos ao documentar as J57–J60, que foram implementadas antes de terem d
 - **Origem:** J44 (regra de negócio definida em 2026-07-26)
 - **Descoberto:** 2026-07-26
 - **Motivação:** o cadastro passou a exigir **CNPJ** para empreiteiro (contratante e anunciante seguem aceitando CPF ou CNPJ). Contas de empreiteiro criadas antes disso podem ter CPF em `users.cpf_cnpj` — a validação só roda no `registerSchema`, então elas continuam funcionando, mas ficam inconsistentes com a regra. Hoje o impacto é zero (a base foi zerada); vira relevante depois que houver empreiteiros reais cadastrados. Decidir: migrar, pedir atualização no perfil, ou aceitar a coexistência. Não bloqueia nada.
+- **Atualização 2026-07-29 (J61):** a brecha diminuiu — o `PATCH /api/perfil/empreiteiro` agora **recusa CPF** (antes aceitava qualquer string sem validar). Uma conta legada com CPF continua funcionando, mas não consegue mais salvar o perfil sem trocar por CNPJ. Resta decidir o que fazer com quem nunca editar o perfil.
 - **Prioridade:** P2
+
+### Teste aponta para `/api/admin/financeiro`, que não existe
+- **Origem:** J11 (`planos-assinatura.integration.spec.ts:800`)
+- **Descoberto:** 2026-07-29, durante a suíte da J61
+- **Motivação:** o teste "GET /api/admin/financeiro retorna dados do período corrente" aceita `200 ou 404` — e a rota **não existe**: `app/api/admin/financeiro/` só tem subrotas (`dashboard-stats`, `receitas-plataforma`, …), sem `route.ts` na raiz. Em dev o Next leva minutos para resolver o 404 dessa URL, e o teste estoura o timeout de 90s. Não é regressão (o spec não foi tocado pela J61), mas é um teste que não testa nada: um `expect` que aceita 404 passa mesmo com o endpoint ausente, e ainda por cima trava a suíte. Decidir: apontar para uma subrota real (`/dashboard-stats`) ou remover.
+- **Prioridade:** P2 (custo alto na suíte, valor de cobertura zero)
+
+### Fonte de verdade dividida do documento fiscal
+- **Origem:** J44 (bug de produção) / J61
+- **Descoberto:** 2026-07-29
+- **Motivação:** `subconta-service.ts` lê o documento de `users.cpf_cnpj`, enquanto `assinatura-service.ts:124-141` lê de `clientes.cnpj_cpf`/`empreiteiras.cnpj`. Foi exatamente essa divergência que causou o bug da J44 §13 (subconta respondia `PERFIL_INCOMPLETO` para quem já tinha informado o documento). A J61 fechou a porta pela qual a inconsistência entrava — cadastro e PATCH de perfil agora gravam nos dois lugares — mas o desenho continua com duas leituras para o mesmo dado, e qualquer caminho novo de escrita que esqueça uma delas reabre o bug. Unificar em `users.cpf_cnpj` (as cópias no perfil viram derivadas de exibição).
+- **Prioridade:** P1 (não é bug hoje, mas é a causa-raiz de um bug que já chegou a produção uma vez)
 
 ### Auditoria ausente no PATCH de configurações críticas
 - **Origem:** J30 (auditoria de documentação 2026-07-26)

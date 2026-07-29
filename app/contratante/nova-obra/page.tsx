@@ -426,6 +426,21 @@ export default function NovaObraPage() {
           setSubmitting(null);
           return;
         }
+        // J61 — perfil sem os dados mínimos para operar (documento, contato,
+        // endereço). O 422 traz a lista de campos com rótulo em português;
+        // exibi-la evita o "complete seu perfil" vago que não diz o que falta.
+        if (r.status === 422 && data?.code === 'PERFIL_INCOMPLETO') {
+          const campos = (data?.faltando ?? []) as Array<{ rotulo: string }>;
+          toast({
+            title: 'Complete seu perfil para publicar',
+            description: campos.length
+              ? `Falta preencher: ${campos.map((c) => c.rotulo).join(', ')}. Vá em Configurações.`
+              : data?.message || 'Complete seu perfil em Configurações antes de publicar.',
+            variant: 'destructive',
+          });
+          setSubmitting(null);
+          return;
+        }
         const fieldErrors = (data?.errors?.fieldErrors ?? {}) as Record<string, string[]>;
         const first = Object.entries(fieldErrors)[0];
         const msg = first

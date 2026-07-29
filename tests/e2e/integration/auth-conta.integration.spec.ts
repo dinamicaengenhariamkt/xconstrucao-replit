@@ -409,13 +409,23 @@ test.describe("Integração — G2: register", () => {
     expect(verifyUrl, "email de verificação deve ter chegado").toBeTruthy();
   });
 
-  // ---- cpfCnpj: obrigatório p/ contratante e empreiteiro, isento p/ anunciante ----
+  // ---- cpfCnpj: OPCIONAL no cadastro desde a J61 ----
+  //
+  // A primeira tela pede só os dados básicos. O documento é coletado depois, no
+  // wizard de onboarding (pulável) ou nas Configurações, e só vira obrigatório
+  // na porta da ação que precisa dele — publicar obra, enviar proposta, assinar
+  // plano ou configurar recebimento (gate em `shared/lib/perfil-operacional.ts`,
+  // coberto por j61-perfil-gate.integration.spec.ts).
+  //
+  // Estes dois testes travam justamente a mudança: antes exigiam 400, e um
+  // retorno a esse comportamento significaria a fricção de volta no funil.
 
-  test("contratante SEM cpfCnpj → 400", async ({ request }) => {
+  test("contratante SEM cpfCnpj → 201 (documento migrou p/ o wizard)", async ({ request }) => {
+    const email = uniqueEmail("reg-sem-cpf");
     const res = await request.post("/api/auth/register", {
       data: {
         name: "E2E Reg Sem CPF",
-        email: uniqueEmail("reg-sem-cpf"),
+        email,
         username: uniqueUsername("regsemcpf"),
         password: "Xc0nstru! Forte#2026",
         role: "contratante",
@@ -425,10 +435,20 @@ test.describe("Integração — G2: register", () => {
         // cpfCnpj propositalmente omitido
       },
     });
-    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+    expect(res.status(), `esperado 201; corpo: ${await res.text()}`).toBe(201);
+
+    // Sem documento informado, a coluna nasce nula — não pode ser preenchida
+    // com string vazia ou lixo, senão o gate da J61 a consideraria satisfeita.
+    const [row] = await db
+      .select({ cpfCnpj: users.cpfCnpj })
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()))
+      .limit(1);
+    expect(row, "usuário deve ter sido criado").toBeTruthy();
+    expect(row?.cpfCnpj, "sem documento informado, users.cpf_cnpj fica nulo").toBeFalsy();
   });
 
-  test("empreiteiro SEM cpfCnpj → 400", async ({ request }) => {
+  test("empreiteiro SEM cpfCnpj → 201 (documento migrou p/ o wizard)", async ({ request }) => {
     const res = await request.post("/api/auth/register", {
       data: {
         name: "E2E Reg Emp Sem CPF",
@@ -442,7 +462,7 @@ test.describe("Integração — G2: register", () => {
         // cpfCnpj propositalmente omitido
       },
     });
-    expect(res.status(), `esperado 400; corpo: ${await res.text()}`).toBe(400);
+    expect(res.status(), `esperado 201; corpo: ${await res.text()}`).toBe(201);
   });
 
   // ---- Regra por persona: empreiteiro é pessoa jurídica (só CNPJ) ----
