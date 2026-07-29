@@ -14,12 +14,18 @@ import * as React from 'react';
 interface WelcomeEmailProps {
   userName: string;
   userRole: 'contratante' | 'empreiteiro';
+  dashboardUrl?: string;
 }
 
 export default function WelcomeEmail({
   userName = 'Usuário',
   userRole = 'contratante',
+  dashboardUrl,
 }: WelcomeEmailProps) {
+  // dashboardUrl is resolved server-side by the caller (from NEXTAUTH_URL),
+  // so it works correctly at runtime in production — unlike NEXT_PUBLIC_BASE_URL
+  // which is baked in at build time and may be empty if not set during `next build`.
+  const resolvedDashboardUrl = dashboardUrl ?? (process.env.NEXTAUTH_URL ?? '') + '/dashboard';
   const roleText = userRole === 'empreiteiro' ? 'Empreiteiro' : 'Contratante';
 
   return (
@@ -43,7 +49,7 @@ export default function WelcomeEmail({
           </Text>
 
           <Section style={buttonContainer}>
-            <Button style={button} href={process.env.NEXT_PUBLIC_BASE_URL + '/dashboard'}>
+            <Button style={button} href={resolvedDashboardUrl}>
               Acessar Minha Conta
             </Button>
           </Section>

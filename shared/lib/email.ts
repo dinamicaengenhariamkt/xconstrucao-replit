@@ -96,7 +96,9 @@ export async function sendWelcomeEmail(
   userName: string,
   userRole: 'contratante' | 'empreiteiro'
 ) {
-  const html = await render(WelcomeEmail({ userName, userRole }));
+  const baseUrl = process.env.NEXTAUTH_URL ?? '';
+  const dashboardUrl = `${baseUrl}/dashboard`;
+  const html = await render(WelcomeEmail({ userName, userRole, dashboardUrl }));
   const subject = 'Bem-vindo à XConstrução!';
 
   if (isEmailTestMode()) {
