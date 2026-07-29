@@ -184,8 +184,16 @@ function isPasswordChangeAllowedPath(pathname: string): boolean {
 }
 
 export function getBaseUrl(request: Request): string {
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
   const url = new URL(request.url);
-  return process.env.NEXTAUTH_URL || `${url.protocol}//${url.host}`;
+  const fallback = `${url.protocol}//${url.host}`;
+  // NEXTAUTH_URL não configurada — usando host do request como fallback.
+  // Em produção isso gera links com o IP/porta interno (ex: 0.0.0.0:5000).
+  // Defina NEXTAUTH_URL=https://seu-dominio.com.br nas variáveis de ambiente.
+  console.warn(`[getBaseUrl] NEXTAUTH_URL não definida. Usando fallback: ${fallback}`);
+  return fallback;
 }
 
 /**
