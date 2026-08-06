@@ -109,11 +109,47 @@ export class AsaasGateway implements PaymentGateway {
     const name = input.userName ?? `Usuário ${input.userId.slice(0, 8)}`;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://xconstrucao.com.br";
 
-    // J44 — usa o customer já provisionado (users.asaasCustomerId) quando existir,
-    // evitando o lookup por email a cada checkout. Fallback lazy se ausente.
-    const customerId = input.userAsaasCustomerId
-      ? input.userAsaasCustomerId
-      : (await findOrCreateCustomer(email, name, input.userCpfCnpj)).id;
+    // J44 — resolve o customer Asaas. Prioridade: ID cacheado → lookup por email.
+    //
+    // O ID cacheado é VALIDADO contra o ambiente atual antes de ser usado:
+    // um ID de sandbox não existe em produção (e vice-versa), então a rota
+    // GET /customers/{id} retornaria HTTP 400/404. Nesse caso fazemos fallback
+    // silencioso para findOrCreateCustomer, que encontra ou cria o customer
+    // correto no ambiente atual.
+    //
+    // O ID resolvido é devolvido no CheckoutResult.redirect.gatewayCustomerId
+    // para que assinatura-service o persista em users.asaas_customer_id — assim
+    // o próximo checkout usa o ID correto sem precisar revalidar.
+    let customerId: string;
+    if (input.userAsaasCustomerId) {
+      try {
+        const cached = await asaasRequest<AsaasCustomer>("GET", `/customers/${input.userAsaasCustomerId}`);
+        // Customer válido no ambiente atual. Atualiza CPF se estava faltando.
+        if (input.userCpfCnpj && !cached.cpfCnpj) {
+          try {
+            await asaasRequest<AsaasCustomer>("PUT", `/customers/${cached.id}`, { name, email, cpfCnpj: input.userCpfCnpj });
+            console.info(`[asaas] cpfCnpj atualizado no customer ${cached.id}`);
+          } catch (e) {
+            console.warn(`[asaas] falha ao atualizar cpfCnpj do customer ${cached.id}:`, e);
+          }
+        }
+        customerId = cached.id;
+        console.info(`[asaas] customer cacheado válido: ${customerId}`);
+      } catch (err) {
+        // ID inválido no ambiente atual (ex: ID de sandbox reutilizado em produção
+        // ou vice-versa). Recria o customer via lookup por e-mail.
+        console.warn(
+          `[asaas] customer ID cacheado "${input.userAsaasCustomerId}" inválido no ambiente atual ` +
+            `— recriando via e-mail. Motivo: ${err}`,
+        );
+        const fresh = await findOrCreateCustomer(email, name, input.userCpfCnpj);
+        customerId = fresh.id;
+      }
+    } else {
+      const fresh = await findOrCreateCustomer(email, name, input.userCpfCnpj);
+      customerId = fresh.id;
+    }
+
     const externalRef = buildExternalRef(input.userId, input.planoId, input.ciclo);
 
     const tierLabel: Record<string, string> = { free: "Free", pro: "Pro", enterprise: "Enterprise" };
@@ -142,10 +178,15 @@ export class AsaasGateway implements PaymentGateway {
     // `assinaturas.gatewaySubscriptionId`. Devolver o checkout.id aqui faria
     // cancelSubscription/checkPaymentStatus baterem em /subscriptions/{id}
     // inexistente (404). O checkout.id é usado apenas para rastreio via log.
+    //
+    // Retornamos `gatewayCustomerId` para que assinatura-service persista o ID
+    // resolvido em users.asaas_customer_id — garantindo que checkouts futuros
+    // usem o ID correto para o ambiente atual sem precisar revalidar.
     console.info(`[asaas] checkout criado: checkoutId=${checkout.id} customer=${customerId}`);
     return {
       kind: "redirect",
       url: checkout.url,
+      gatewayCustomerId: customerId,
     };
   }
 

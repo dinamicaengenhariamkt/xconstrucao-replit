@@ -180,6 +180,17 @@ async function _iniciarCheckoutImpl(args: {
   });
 
   if (result.kind === "redirect") {
+    // Persiste o customer ID resolvido pelo gateway (pode ter mudado se o ID
+    // cacheado era de outro ambiente Asaas). Fire-and-forget: falha silenciosa,
+    // não bloqueia o redirect.
+    if (result.gatewayCustomerId && result.gatewayCustomerId !== userRow?.asaasCustomerId) {
+      void db
+        .update(users)
+        .set({ asaasCustomerId: result.gatewayCustomerId })
+        .where(eq(users.id, args.userId))
+        .catch((e) => console.warn("[checkout] falha ao cachear asaasCustomerId:", e));
+    }
+
     // Notifica admins e o usuário que o checkout foi iniciado (gateway externo).
     // A confirmação definitiva virá via webhook após o pagamento.
     void (async () => {

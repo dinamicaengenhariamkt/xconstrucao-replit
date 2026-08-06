@@ -41,7 +41,10 @@ export interface CheckoutInput {
 
 export type CheckoutResult =
   // Gateway hospedado: redireciona o usuário para pagar.
-  | { kind: "redirect"; url: string; gatewaySubscriptionId?: string }
+  // `gatewayCustomerId` é devolvido para que o service possa persistir o ID
+  // em `users.asaas_customer_id` (cache J44). Sem isso cada checkout refaz
+  // o lookup por e-mail, e IDs de ambientes cruzados nunca são corrigidos.
+  | { kind: "redirect"; url: string; gatewaySubscriptionId?: string; gatewayCustomerId?: string }
   // Ativação imediata (adapter manual / planos gratuitos): já confirma.
   | { kind: "activated"; gatewayCustomerId?: string; gatewaySubscriptionId?: string };
 
