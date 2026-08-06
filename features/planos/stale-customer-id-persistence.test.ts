@@ -8,8 +8,8 @@
  * Context: the gateway resolves a fresh customer ID when the cached one is stale
  * (e.g. from the wrong Asaas environment). The service is responsible for
  * persisting it so subsequent checkouts don't hit the stale-ID 404 path again.
- * The update is fire-and-forget (`void db.update(...)`) — if the call is missing
- * or broken the stale ID stays in the DB silently.
+ * The update is AWAITED — a DB failure is surfaced as INTERNAL_ERROR rather than
+ * silently dropped, preventing the stale ID from surviving indefinitely.
  *
  * Run:
  *   node --import tsx/esm --test features/planos/stale-customer-id-persistence.test.ts
@@ -121,9 +121,10 @@ async function getAsaasCustomerId(userId: string): Promise<string | null> {
  * Poll the DB until `users.asaas_customer_id` equals `expectedId` or
  * `timeoutMs` elapses. Returns the final value.
  *
- * The DB update in iniciarCheckout is fire-and-forget (`void db.update(...)`),
- * so it may not be flushed when iniciarCheckout returns. A short poll avoids a
- * brittle fixed sleep while still being fast on normal hardware.
+ * The DB update in iniciarCheckout is AWAITED, so the value is guaranteed to be
+ * committed (or an error surfaced) before iniciarCheckout returns. This helper
+ * is kept as a defensive fallback for any future revert to async, but a direct
+ * read immediately after iniciarCheckout should already return the expected value.
  */
 async function pollUntilCustomerId(
   userId: string,
@@ -219,7 +220,8 @@ describe("iniciarCheckout — stale customer ID persistence", () => {
       _overrideGatewayForTest(null);
     }
 
-    // The fire-and-forget update may not have committed yet. Poll briefly.
+    // The write is now AWAITED, so the value must be committed as soon as
+    // iniciarCheckout returns. Poll is kept as a defensive fallback only.
     const persisted = await pollUntilCustomerId(userId, FRESH_CUSTOMER_ID);
 
     assert.equal(
@@ -227,6 +229,34 @@ describe("iniciarCheckout — stale customer ID persistence", () => {
       FRESH_CUSTOMER_ID,
       `users.asaas_customer_id must be updated from the stale ID ("${STALE_CUSTOMER_ID}") ` +
         `to the fresh ID ("${FRESH_CUSTOMER_ID}") returned by the gateway. Got: "${persisted}"`,
+    );
+  });
+
+  it("persists the fresh customer ID synchronously — a direct read immediately after iniciarCheckout returns the updated value", async () => {
+    // This test asserts the synchronous guarantee: because the DB write is
+    // AWAITED (not fire-and-forget), the value is available without polling
+    // as soon as iniciarCheckout resolves.
+    const email = `sync-cid-${uid()}@test.xconstrucao`;
+    const userId = await createTestUser(email, STALE_CUSTOMER_ID);
+    createdUserIds.push(userId);
+
+    await createTestCliente(userId);
+
+    _overrideGatewayForTest(makeStubGateway(FRESH_CUSTOMER_ID));
+    try {
+      const result = await iniciarCheckout({ userId, planoId: testPlanoId, ciclo: "mensal" });
+      assert.equal(result.ok, true, `iniciarCheckout must succeed, got: ${JSON.stringify(result)}`);
+    } finally {
+      _overrideGatewayForTest(null);
+    }
+
+    // Direct read — no poll, no sleep. If the write were still fire-and-forget
+    // this would be a race; with the awaited write it is deterministic.
+    const persisted = await getAsaasCustomerId(userId);
+    assert.equal(
+      persisted,
+      FRESH_CUSTOMER_ID,
+      `users.asaas_customer_id must be written synchronously before iniciarCheckout returns. Got: "${persisted}"`,
     );
   });
 
