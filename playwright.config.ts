@@ -87,7 +87,9 @@ export default defineConfig({
     // run anterior pode ter deixado o Next.js rodando).
     // Use os alvos do Makefile para garantir estado limpo quando necessário.
     reuseExistingServer: true,
-    timeout: 180_000,
+    // 300 s: Next.js com Turbopack pode levar > 180 s na primeira compilação
+    // num ambiente frio (Replit sandbox sem cache). Aumentado de 180 s.
+    timeout: 300_000,
     env: {
       EMAIL_TEST_MODE: "1",
       E2E_TEST_AUTH: "1",

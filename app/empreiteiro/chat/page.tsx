@@ -117,8 +117,8 @@ export default function ChatPage() {
   // Merge server messages with locally sent messages.
   // 1) Dedupe por serverId: quando a versão do servidor da otimista já chegou,
   //    descarta a local (evita duplicata e faz a otimista sumir sem "gap").
-  // 2) Sort canônico por `seq` (fonte de verdade da ordem); otimistas sem seq
-  //    ficam no fim até o refetch — ordem cronológica estável, nada pula.
+  // 2) Sort canônico por timestamp; em empate retorna 0 (preserva ordem do banco).
+  //    Otimistas sem serverId ficam no fim até o refetch — nada pula ou some.
   const allMessages = useMemo(() => {
     const server = serverMessages ?? [];
     const serverIds = new Set(server.map((m) => m.id));

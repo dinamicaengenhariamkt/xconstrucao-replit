@@ -3,11 +3,18 @@ import type { Message } from '../types';
 /**
  * Ordena mensagens em ordem cronológica estável de chegada (antiga → nova).
  *
- * - Mensagens do servidor têm `timestamp` (ISO 8601) e `id` (UUID) como
- *   tiebreaker para mensagens criadas no mesmo instante.
- * - Mensagens otimistas locais (sem `serverId` confirmado) mantêm a ordem
- *   de append no store (ordem de envio real), pois `Array.prototype.sort`
- *   é estável desde ES2019.
+ * Regras de ordenação:
+ * 1. Mensagens do servidor (id sem prefixo `local-`) ou confirmadas
+ *    (`serverId` preenchido) são ordenadas pelo `timestamp` (ISO 8601).
+ *    Em caso de empate de timestamp, retornamos 0 para preservar a
+ *    ordem já vinda do banco (ORDER BY criada_em ASC, id ASC).
+ *    ⚠️ Não usar `id.localeCompare` como desempate: UUIDs v4 são
+ *    aleatórios e reordenam mensagens do mesmo milissegundo de forma
+ *    imprevisível a cada renderização.
+ * 2. Mensagens otimistas locais (sem `serverId`) mantêm a ordem
+ *    de append no store (ordem de envio real), pois `Array.prototype.sort`
+ *    é estável desde ES2019.
+ * 3. Mensagens server sempre precedem mensagens locais ainda não confirmadas.
  *
  * Não muta o array de entrada (`.slice()` antes de ordenar).
  */
@@ -17,9 +24,9 @@ export function sortMessagesCanonical(messages: Message[]): Message[] {
     const bIsServer = !!b.serverId || !b.id.startsWith('local-');
 
     if (aIsServer && bIsServer) {
-      const tsDiff = a.timestamp.localeCompare(b.timestamp);
-      if (tsDiff !== 0) return tsDiff;
-      return a.id.localeCompare(b.id);
+      // Em empate de timestamp, retorna 0: preserva a ordem de inserção
+      // do banco (sort estável) em vez de usar UUID como critério aleatório.
+      return a.timestamp.localeCompare(b.timestamp);
     }
     if (aIsServer) return -1;
     if (bIsServer) return 1;
