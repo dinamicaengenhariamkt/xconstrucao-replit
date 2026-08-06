@@ -1,0 +1,19 @@
+Meu amigo, meu amigo seguinte, eu peço que você dê uma analisada em relação aos docs de A Jornada e assim tudo que a gente precisar fazer. Seja um novo item um pouco estruturante, que seja grande, ou até fragmentos disso a gente precisa tratar nessas dox e sempre documentar lá, tanto documentando um PRD certinho quanto como que eu finalizo. Assim que a gente terminar de fato.
+Alguns dos pontos em que eu preciso da sua ajuda em relação a isso são os seguintes:
+- Eu fui reportado hoje e o usuário do meu sistema aqui em produção está mais se estendendo aqui para o desenvolvimento, que realmente está funcionando aqui. A gente sobra a produção e valida.
+- Eu até testei antes a parte de cadastrar um novo usuário, dar o cadastro no usuário, etc., seja empreiteiro, contratante, não chegou e meio para ele avaliar se a gente está com algum problema, algum erro em relação a isso.
+- Se você vê que realmente não tem nada, me reporta que eu avalio aqui e faço um teste depois manual para reportar.
+- O cliente está. A gente pode criar um PRD, uma jornada em relação a isso, porque vai ter esse ajuste. Tem um outro ajuste que eu lembro que assim a gente tentou e não resolveu. Seria a partir do chat do X, chat tudo bem.
+- Eu lembro que, por exemplo, quando eu mando uma mensagem como empreiteiro, a mensagem chega lá e, quando eu mando a segunda mensagem, ele apaga a mensagem anterior. Então alguma coisa a gente não está conseguindo fazer funcionar corretamente.
+- Se parece que você deu uma analisada, se algum arreio está sendo apagado, se a chamada do serviço está sobrepondo alguma informação, se alguma coisa que não está sendo persistida no banco corretamente.
+- Quando eu entrava lá, por exemplo, estava com o contratante ou entra como empreiteiro e aí eu, como empreiteiro, recebi a mensagem que chegou e aí eu, como empreiteiro, tento responder essa mensagem e ela sobrepõe. Aqui outra pessoa tinha mandado onde ela deveria mostrar lado a lado ali.
+- Se fosse uma conversa do WhatsApp ou no Telegram, você consegue estar me ajudando em relação a essa parte também do chat.
+- A gente pode ver e criar talvez uma jornada só com esses ajustes ou, se você achar interessante, uma nova jornada para cada assunto, tudo bem.
+- Como o terceiro item, eu lembro que, em produção, quando o cara faz um novo cadastro e tudo mais, eu tentava selecionar um plano e ele não estava deixando selecionar esse plano. Estava dando algum erro no serviço lá que a gente chamava em relação ao Asas.
+- Eu preciso até entender se, no Asas, eu peço que você dê uma olhada na documentação do Asas corretamente para ver se a gente tem ali cartão de crédito teste ou algo nesse sentido. Eles formidizam para a gente poder estar fazendo o teste de troca de plano, adicionando o cartão. Você consegue me trazer também essa informação para eu copiar aqui e passar para os meus clientes, para eles validarem.
+- Essa parte de adquirir um plano ou trocar de plano, ele estava dando um erro no serviço. Não lembro qual que era o serviço mas eu preciso da sua checagem aí de forma completa também.
+- Eu lembro que a gente, acho que tinha até esse unitário e tudo mais mas a gente precisa resolvendo isso. Você consegue ver se a gente adiciona numa jornada única ou em jornadas fragmentadas novas para resolvendo de uma vez por todas.
+- Peço que você valide como se fosse um usuário que trabalha aí corretamente. Você consegue estar me ajudando com tudo isso por gentileza.
+- Lá, na etapa de planejamento, você levanta todos esses pontos. Se ficou alguma dúvida, você me questiona e tudo mais.
+- A gente, com o plano ali criado, vai botar a mão na massa e assim que for finalizando vai marcando como feito tudo bem, sem quebrar nada dos testes, para você não ver se quebrou algum teste depois do ajuste.
+Assim por diante espero que a sua visão, como engenheiro de software, engenheiro civil, que você tem o conhecimento dos dois, consiga ajudando a resolver todos esses problemas.
