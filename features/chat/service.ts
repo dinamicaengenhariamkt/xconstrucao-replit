@@ -197,7 +197,22 @@ export async function listarConversasPorUsuario(userId: string): Promise<Convers
     ORDER BY t.ultima_mensagem_em DESC
   `);
 
-  return result.rows.map((row) => ({
+  type ConversaResultRow = {
+    thread_id: string;
+    obra_id: string;
+    obra_nome: string;
+    obra_status: string;
+    contratante_user_id: string;
+    empreiteiro_user_id: string;
+    counterpart_user_id: string;
+    counterpart_name: string | null;
+    counterpart_avatar_url: string | null;
+    ultima_mensagem_em: Date;
+    ultima_mensagem_texto: string | null;
+    ultima_mensagem_criada_em: Date | null;
+    nao_lidas: number;
+  };
+  return (result.rows as ConversaResultRow[]).map((row) => ({
     threadId: row.thread_id,
     obraId: row.obra_id,
     obraNome: row.obra_nome,
@@ -331,8 +346,26 @@ export async function listarMensagensDaThread(
         }
       : null;
 
+  type MensagemResultRow = {
+    id: string;
+    thread_id: string;
+    autor_user_id: string;
+    autor_name: string | null;
+    autor_avatar_url: string | null;
+    texto: string;
+    anexo_obra_id: string | null;
+    anexo_obra_nome: string | null;
+    anexo_obra_status: string | null;
+    anexo_obra_progresso: number | null;
+    anexo_obra_endereco: string | null;
+    lida_em: Date | null;
+    criada_em: Date;
+    arquivo_url: string | null;
+    arquivo_nome: string | null;
+    arquivo_mime: string | null;
+  };
   // Inverte para ASC (ordem cronológica esperada pela UI).
-  const messages = pageDesc
+  const messages = (pageDesc as MensagemResultRow[])
     .slice()
     .reverse()
     .map((row) => ({

@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
           warn: nivelMap["warn"] ?? 0,
           fatal: nivelMap["fatal"] ?? 0,
         },
-        recentes: recentes.rows.map((r) => ({
+        recentes: recentes.rows.map((r: { id: number; level: string; message: string; route: string | null; source: string; created_at: string }) => ({
           id: r.id,
           level: r.level,
           message: r.message,
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
           source: r.source,
           createdAt: r.created_at,
         })),
-        topRotas: topRotas.rows.map((r) => ({
+        topRotas: topRotas.rows.map((r: { route: string; count: string }) => ({
           route: r.route,
           count: parseInt(r.count, 10),
         })),
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
         totalAtivos: parseInt(usuariosRow?.total_ativos ?? "0", 10),
       },
       jobs: {
-        ultimaExecucao: jobs.rows.map((r) => ({
+        ultimaExecucao: jobs.rows.map((r: { job: string; status: string; finished_at: string | null; error: string | null }) => ({
           job: r.job,
           status: r.status,
           finishedAt: r.finished_at,
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
         })),
       },
       auditoria: {
-        ultimasAcoes: auditoria.rows.map((r) => ({
+        ultimasAcoes: auditoria.rows.map((r: { action: string; actor_id: string | null; created_at: string }) => ({
           action: r.action,
           actor: r.actor_id ?? "sistema",
           createdAt: r.created_at,
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
         failed: webhookStatusMap["failed"] ?? 0,
         processed: webhookStatusMap["processed"] ?? 0,
         dead: webhookStatusMap["dead"] ?? 0,
-        deadLetters: webhookDead.rows.map((r) => ({
+        deadLetters: webhookDead.rows.map((r: { id: string; gateway_event_id: string; event_type: string; retry_count: number; last_error: string | null; marked_dead_at: string | null; created_at: string }) => ({
           id: r.id,
           gatewayEventId: r.gateway_event_id,
           eventType: r.event_type,
