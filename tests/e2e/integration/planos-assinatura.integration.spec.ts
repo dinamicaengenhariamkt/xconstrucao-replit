@@ -1291,3 +1291,305 @@ test.describe("ASAAS Sandbox — checkout gera URL de redirect válida", () => {
     ).toBeVisible({ timeout: 20_000 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fluxo 7 — Checkout redirect + webhook: /planos/sucesso reflete tier correto
+//
+// Verifica que após o ciclo completo checkout-redirect → payment_succeeded
+// webhook, o endpoint GET /api/perfil/plano (que alimenta a página
+// /planos/sucesso e a navbar) reflete o tier ativado — e NÃO o tier free
+// cacheado de antes do checkout.
+//
+// Cobre os dois roles (empreiteiro e contratante) com usuários criados fresh
+// em cada execução para garantir isolamento total.
+//
+// Estratégia:
+//   1. Registra usuário fresh com CPF/CNPJ válido.
+//   2. Chama POST /api/assinaturas/checkout com header x-manual-gateway-pending:1
+//      → retorna kind:"redirect" com URL contendo externalReference.
+//   3. Confirma que GET /api/perfil/plano ainda retorna tier=free (sem webhook).
+//   4. Dispara POST /api/test/webhooks/asaas com type="payment_succeeded" +
+//      externalReference extraído da URL de redirect.
+//   5. Confirma que GET /api/perfil/plano agora retorna tier=pro + status=ativa.
+//
+// Nota: /api/test/webhooks/asaas chama diretamente aplicarEventoWebhook — o
+// mesmo pipeline do handler de produção — sem dependência de URL pública.
+// ---------------------------------------------------------------------------
+
+/** Extrai o query param "ext" da URL de redirect retornada pelo checkout. */
+function extrairExtRef(redirectUrl: string): string | null {
+  try {
+    return new URL(redirectUrl).searchParams.get("ext");
+  } catch {
+    return null;
+  }
+}
+
+test.describe("Fluxo 7 — Empreiteiro: redirect + webhook reflete tier=pro em /api/perfil/plano", () => {
+  test("checkout redirect → tier still free → webhook payment_succeeded → tier=pro + ativa", async ({
+    request,
+  }) => {
+    // 1. Registra empreiteiro fresh (CNPJ é obrigatório para empreiteiro no gateway)
+    const { email } = await registrarNovoEmpreiteiro(request);
+    await loginAs(request, email);
+
+    // Garante estado free inicial (sem assinatura ativa)
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    // 2. Lista planos e localiza o Pro do empreiteiro
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve retornar 200").toBe(200);
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+    const proPlan = planos.find(
+      (p) => p.tier === "pro" && (p.persona === "empreiteiro" || p.persona === "ambos"),
+    );
+    test.skip(!proPlan, "plano pro empreiteiro não encontrado — pular Fluxo 7 empreiteiro");
+
+    // 3. Tier deve ser free antes do checkout
+    const perfilAntes = await request.get("/api/perfil/plano");
+    expect(perfilAntes.status(), "GET /api/perfil/plano deve retornar 200").toBe(200);
+    const dadosAntes = (await perfilAntes.json()) as { plano: string };
+    expect(dadosAntes.plano, "empreiteiro fresh deve estar em tier free").toBe("free");
+
+    // 4. Checkout em modo redirect (simula gateway externo / ASAAS)
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan!.id, ciclo: "mensal" },
+      headers: { "x-manual-gateway-pending": "1" },
+    });
+    expect(
+      checkoutRes.status(),
+      `checkout redirect deve retornar 200, recebeu ${checkoutRes.status()}`,
+    ).toBe(200);
+
+    const checkoutBody = (await checkoutRes.json()) as {
+      kind?: string;
+      url?: string;
+    };
+    expect(checkoutBody.kind, "checkout deve retornar kind=redirect").toBe("redirect");
+    expect(
+      typeof checkoutBody.url === "string" && checkoutBody.url.length > 0,
+      "checkout redirect deve retornar url não vazia",
+    ).toBeTruthy();
+
+    // Extrai o externalReference da URL de redirect (parâmetro "ext")
+    const extRef = extrairExtRef(checkoutBody.url ?? "");
+    expect(
+      extRef,
+      "URL de redirect deve conter query param 'ext' com o externalReference",
+    ).not.toBeNull();
+    expect(
+      extRef,
+      "externalReference deve seguir o formato xconstrucao|userId|planoId|ciclo",
+    ).toMatch(/^xconstrucao\|.+\|.+\|mensal$/);
+
+    // 5. Sem webhook: tier ainda deve ser free (pagamento não confirmado)
+    const perfilPendente = await request.get("/api/perfil/plano");
+    expect(perfilPendente.status(), "perfil pós-redirect deve responder 200").toBe(200);
+    const dadosPendente = (await perfilPendente.json()) as { plano: string };
+    expect(
+      dadosPendente.plano,
+      "tier deve continuar free enquanto o pagamento está pendente (sem webhook ainda)",
+    ).toBe("free");
+
+    // 6. Dispara webhook de confirmação de pagamento (payment_succeeded)
+    const webhookRes = await request.post("/api/test/webhooks/asaas", {
+      data: {
+        type: "payment_succeeded",
+        externalReference: extRef,
+        valor: 99.9,
+      },
+    });
+    expect(
+      webhookRes.status(),
+      `POST /api/test/webhooks/asaas deve retornar 200, recebeu ${webhookRes.status()}`,
+    ).toBe(200);
+    const webhookBody = (await webhookRes.json()) as {
+      received?: boolean;
+      processed?: boolean;
+    };
+    expect(webhookBody.received, "webhook deve ser recebido").toBe(true);
+    expect(
+      webhookBody.processed,
+      "webhook deve ser processado (assinatura criada + tier atualizado)",
+    ).toBe(true);
+
+    // 7. Após o webhook: /api/perfil/plano (fonte da página /planos/sucesso)
+    //    deve refletir o tier pro ativado — NÃO o free cacheado de antes.
+    const perfilDepois = await request.get("/api/perfil/plano");
+    expect(perfilDepois.status(), "perfil pós-webhook deve responder 200").toBe(200);
+    const dadosDepois = (await perfilDepois.json()) as {
+      plano: string;
+      assinaturaStatus: string | null;
+    };
+    expect(
+      dadosDepois.plano,
+      "tier deve ser pro após webhook payment_succeeded (era free antes do checkout)",
+    ).toBe("pro");
+    expect(
+      dadosDepois.assinaturaStatus,
+      "assinaturaStatus deve ser ativa após confirmação do pagamento",
+    ).toBe("ativa");
+
+    // Cleanup: reverte para free
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+    await logout(request);
+  });
+});
+
+test.describe("Fluxo 7 — Contratante: redirect + webhook reflete tier=pro em /api/perfil/plano", () => {
+  test("checkout redirect → tier still free → webhook payment_succeeded → tier=pro + ativa", async ({
+    request,
+  }) => {
+    // 1. Registra contratante fresh (CPF obrigatório)
+    const { email } = await registrarNovoContratante(request);
+    await loginAs(request, email);
+
+    // Garante estado free inicial
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    // 2. Lista planos e localiza o Pro do contratante
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve retornar 200").toBe(200);
+    const planos = (await listRes.json()) as Array<{
+      id: string;
+      tier: string;
+      persona: string;
+    }>;
+    const proPlan = planos.find(
+      (p) => p.tier === "pro" && (p.persona === "contratante" || p.persona === "ambos"),
+    );
+    test.skip(!proPlan, "plano pro contratante não encontrado — pular Fluxo 7 contratante");
+
+    // 3. Tier deve ser free antes do checkout
+    const perfilAntes = await request.get("/api/perfil/plano");
+    expect(perfilAntes.status(), "GET /api/perfil/plano deve retornar 200").toBe(200);
+    const dadosAntes = (await perfilAntes.json()) as { plano: string };
+    expect(dadosAntes.plano, "contratante fresh deve estar em tier free").toBe("free");
+
+    // 4. Checkout em modo redirect
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan!.id, ciclo: "mensal" },
+      headers: { "x-manual-gateway-pending": "1" },
+    });
+    expect(
+      checkoutRes.status(),
+      `checkout redirect deve retornar 200, recebeu ${checkoutRes.status()}`,
+    ).toBe(200);
+
+    const checkoutBody = (await checkoutRes.json()) as {
+      kind?: string;
+      url?: string;
+    };
+    expect(checkoutBody.kind, "checkout deve retornar kind=redirect").toBe("redirect");
+
+    const extRef = extrairExtRef(checkoutBody.url ?? "");
+    expect(
+      extRef,
+      "URL de redirect deve conter query param 'ext' com o externalReference",
+    ).not.toBeNull();
+    expect(
+      extRef,
+      "externalReference deve seguir o formato xconstrucao|userId|planoId|ciclo",
+    ).toMatch(/^xconstrucao\|.+\|.+\|mensal$/);
+
+    // 5. Sem webhook: tier ainda free
+    const perfilPendente = await request.get("/api/perfil/plano");
+    const dadosPendente = (await perfilPendente.json()) as { plano: string };
+    expect(
+      dadosPendente.plano,
+      "tier deve continuar free enquanto o pagamento está pendente",
+    ).toBe("free");
+
+    // 6. Dispara webhook de confirmação de pagamento
+    const webhookRes = await request.post("/api/test/webhooks/asaas", {
+      data: {
+        type: "payment_succeeded",
+        externalReference: extRef,
+        valor: 99.9,
+      },
+    });
+    expect(
+      webhookRes.status(),
+      `POST /api/test/webhooks/asaas deve retornar 200, recebeu ${webhookRes.status()}`,
+    ).toBe(200);
+    const webhookBody = (await webhookRes.json()) as {
+      received?: boolean;
+      processed?: boolean;
+    };
+    expect(webhookBody.received, "webhook deve ser recebido").toBe(true);
+    expect(
+      webhookBody.processed,
+      "webhook deve ser processado (assinatura criada + tier atualizado)",
+    ).toBe(true);
+
+    // 7. Após o webhook: tier deve ser pro (não o free cacheado antes)
+    const perfilDepois = await request.get("/api/perfil/plano");
+    expect(perfilDepois.status(), "perfil pós-webhook deve responder 200").toBe(200);
+    const dadosDepois = (await perfilDepois.json()) as {
+      plano: string;
+      assinaturaStatus: string | null;
+    };
+    expect(
+      dadosDepois.plano,
+      "tier deve ser pro após webhook payment_succeeded",
+    ).toBe("pro");
+    expect(
+      dadosDepois.assinaturaStatus,
+      "assinaturaStatus deve ser ativa após confirmação",
+    ).toBe("ativa");
+
+    // Cleanup
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+    await logout(request);
+  });
+});
+
+test.describe("Fluxo 7 — Guard: pagamento pendente não ativa tier prematuramente", () => {
+  test("checkout redirect SEM webhook → /api/perfil/plano retorna free (não pro)", async ({
+    request,
+  }) => {
+    // Usa seed empreiteiro para evitar registro de novo usuário neste guard
+    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+
+    const listRes = await request.get("/api/planos");
+    expect(listRes.status(), "GET /api/planos deve retornar 200").toBe(200);
+    const planos = (await listRes.json()) as Array<{ id: string; tier: string }>;
+    const proPlan = planos.find((p) => p.tier === "pro");
+    test.skip(!proPlan, "plano pro não encontrado — pular guard test");
+
+    // Checkout em modo redirect (sem disparar webhook depois)
+    const checkoutRes = await request.post("/api/assinaturas/checkout", {
+      data: { planoId: proPlan!.id, ciclo: "mensal" },
+      headers: { "x-manual-gateway-pending": "1" },
+    });
+    expect(
+      checkoutRes.status(),
+      `checkout redirect deve retornar 200, recebeu ${checkoutRes.status()}`,
+    ).toBe(200);
+    const body = (await checkoutRes.json()) as { kind?: string };
+    expect(body.kind, "deve ser kind=redirect").toBe("redirect");
+
+    // Sem webhook: o tier NÃO deve ter sido promovido para pro.
+    // /api/perfil/plano é a mesma fonte de dados que /planos/sucesso usa
+    // para decidir o que exibir ao usuário.
+    const perfilRes = await request.get("/api/perfil/plano");
+    expect(perfilRes.status(), "perfil deve responder 200").toBe(200);
+    const perfil = (await perfilRes.json()) as {
+      plano: string;
+      assinaturaStatus: string | null;
+    };
+    expect(
+      perfil.plano,
+      "sem webhook de confirmação, tier NÃO deve ser promovido (pagamento não confirmado)",
+    ).toBe("free");
+
+    // Cleanup: sem assinatura ativa para cancelar, mas tenta mesmo assim
+    await request.post("/api/assinaturas/cancelar").catch(() => {});
+    await logout(request);
+  });
+});
