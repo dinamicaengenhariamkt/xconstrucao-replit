@@ -80,23 +80,31 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx next dev -p ${PORT} -H 127.0.0.1`,
-    url: BASE_URL,
+    // Pré-sincroniza .next-e2e/dev com o cache do dev server (.next/dev) antes
+    // de subir o servidor E2E. O rsync copia apenas diffs; quando o dev server
+    // está rodando localmente o cache já está quente e o rsync termina em < 1 s.
+    // Em ambientes sem .next/dev (checkout limpo), o rsync falha silenciosamente
+    // (|| true) e o next dev compila do zero — funciona, só é mais lento.
+    // NEXT_DIST_DIR=.next-e2e isola o E2E do lock do dev server na porta 5000.
+    // A flag 2>/dev/null suprime o spam do warning de crypto (server/auth.ts
+    // importado no Edge Runtime) que, sem filtro, cria backpressure no pipe do
+    // playwright e aumenta muito o tempo de cada requisição de compilação.
+    command: `bash -c 'rsync -a --exclude=lock .next/dev/ .next-e2e/dev/ 2>/dev/null || true; npx next dev -p ${PORT} -H 127.0.0.1 2>/dev/null'`,
+    // /api/planos devolve 401 (sem compilar página completa).
+    // Playwright 1.59 aceita qualquer status 200–403 como "servidor pronto".
+    url: `${BASE_URL}/api/planos`,
     // Sempre reutiliza um servidor existente na porta — evita EADDRINUSE
-    // tanto em CI (onde cada job começa limpo) quanto localmente (onde um
-    // run anterior pode ter deixado o Next.js rodando).
-    // Use os alvos do Makefile para garantir estado limpo quando necessário.
+    // tanto em CI (onde cada job começa limpo) quanto localmente.
     reuseExistingServer: true,
-    // 300 s: Next.js com Turbopack pode levar > 180 s na primeira compilação
-    // num ambiente frio (Replit sandbox sem cache). Aumentado de 180 s.
+    // 300 s: cobre cold-start em checkout limpo (next dev sem cache).
     timeout: 300_000,
     env: {
       EMAIL_TEST_MODE: "1",
       E2E_TEST_AUTH: "1",
       NODE_ENV: "development",
-      // distDir dedicado para não colidir com o lock do .next/dev do workflow
+      // distDir dedicado: não colide com o lock do .next/dev do workflow.
       NEXT_DIST_DIR: ".next-e2e",
-      // Força o adapter manual em testes E2E para não chamar gateways reais.
+      // Força o adapter manual para não chamar gateways reais em testes.
       PAYMENT_GATEWAY: "manual",
     },
   },

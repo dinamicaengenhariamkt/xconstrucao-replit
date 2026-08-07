@@ -20,6 +20,7 @@ import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
 import { AvisoAmbienteTeste } from '@features/shared/components/AvisoAmbienteTeste';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@shared/components/ui/button';
 import { Badge } from '@shared/components/ui/badge';
 import {
@@ -409,6 +410,26 @@ export default function ContratantePlanosPage() {
 
         {/* ── Minha Assinatura ── */}
         <MinhaAssinaturaPainel />
+
+        {/* ── Aviso CPF/CNPJ ausente ── */}
+        {perfilPlano && !perfilPlano.hasCpfCnpj && (
+          <div
+            className="mb-8 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-900/20 px-5 py-4"
+            data-testid="banner-cpf-cnpj-ausente"
+          >
+            <span className="text-amber-500 dark:text-amber-400 shrink-0 text-base leading-5 mt-0.5">⚠</span>
+            <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+              Para assinar um plano, informe seu <strong>CPF/CNPJ</strong> em{' '}
+              <Link
+                href="/contratante/configuracoes"
+                className="underline underline-offset-2 font-semibold hover:text-amber-900 dark:hover:text-amber-200 inline-flex items-center gap-0.5"
+              >
+                Configurações <RiArrowRightLine className="w-3.5 h-3.5" />
+              </Link>
+              {' '}antes de continuar.
+            </p>
+          </div>
+        )}
 
         {/* ── Toggle Mensal / Anual ──
             Só faz sentido com preço anual cadastrado (`planos.valor_anual`).

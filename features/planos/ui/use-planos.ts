@@ -35,6 +35,8 @@ export interface PerfilPlano {
     limites: Record<string, number>;
   };
   uso: Array<{ key: string; label: string; current: number; max: number }>;
+  /** true se o usuário tem CPF/CNPJ cadastrado (pré-requisito para assinar) */
+  hasCpfCnpj: boolean;
 }
 
 const CFG = { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } as const;

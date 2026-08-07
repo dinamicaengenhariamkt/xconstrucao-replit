@@ -39,7 +39,6 @@ function mockFetch(handler: FetchHandler): () => void {
   // @ts-expect-error — intentional global override for testing
   global.fetch = handler;
   return () => {
-    // @ts-expect-error — restore original
     global.fetch = original;
   };
 }

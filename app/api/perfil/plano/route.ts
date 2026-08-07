@@ -137,6 +137,24 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Verifica se o usuário tem CPF/CNPJ cadastrado (necessário para assinar).
+  let hasCpfCnpj = false;
+  if (persona === "empreiteiro") {
+    const [emp] = await db
+      .select({ cnpj: empreiteiras.cnpj })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.userId, user.id))
+      .limit(1);
+    hasCpfCnpj = Boolean(emp?.cnpj?.trim());
+  } else {
+    const [cli] = await db
+      .select({ cnpjCpf: clientes.cnpjCpf })
+      .from(clientes)
+      .where(eq(clientes.userId, user.id))
+      .limit(1);
+    hasCpfCnpj = Boolean(cli?.cnpjCpf?.trim());
+  }
+
   const response = NextResponse.json({
     persona,
     plano: tier,
@@ -145,6 +163,7 @@ export async function GET(request: NextRequest) {
     renovaEm,
     catalogo,
     uso,
+    hasCpfCnpj,
   });
   setNoCacheHeaders(response);
   return response;
