@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAccessToken, verifyAccessTokenAllowExpired } from "@features/auth/api/auth-service";
 import { isManutencaoAtiva } from "@features/admin/platform-settings/server/settings-reader";
+// XG06 — módulo PURO (sem DB, sem audit), seguro para o bundle do proxy.
+import { adminPodeAcessar } from "@features/auth/api/admin-scope";
 
 /** Inline (não importar de auth-utils, que puxa DB/audit p/ o bundle do proxy). */
 function isAdminLike(role: string): boolean {
@@ -127,6 +129,35 @@ export async function proxy(request: NextRequest) {
         },
       },
     );
+  }
+
+  // ── Escopo administrativo (XG06) ──────────────────────────────────────────
+  // Admin de escopo restrito ("xgestao") só alcança a allowlist de XGESTAO_ADMIN_
+  // PREFIXES. Para escopo "global" — que é o default de TODO admin existente e de
+  // todo token emitido antes desta coluna — a checagem é um no-op.
+  //
+  // Uma regra em um lugar, em vez de editar as 94 rotas de app/api/admin/**. A
+  // allowlist é positiva: rota admin nova, sem conhecimento de escopo, já nasce
+  // negada ao restrito e liberada ao global.
+  if (pathname.startsWith("/api/admin/") && accessToken) {
+    const claims =
+      verifyAccessToken(accessToken) ?? verifyAccessTokenAllowExpired(accessToken);
+    if (claims?.sub && !adminPodeAcessar(claims, pathname)) {
+      return NextResponse.json(
+        {
+          error: "ADMIN_ESCOPO_NEGADO",
+          message: "Seu perfil administrativo não tem acesso a esta área.",
+        },
+        {
+          status: 403,
+          headers: {
+            "Cache-Control": "no-store, no-cache, must-revalidate, private",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        },
+      );
+    }
   }
 
   // ── Modo manutenção (J26) ─────────────────────────────────────────────────

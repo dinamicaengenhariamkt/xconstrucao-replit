@@ -139,7 +139,7 @@ export const CRITICAL_PROBES: HealthProbe[] = [
   // Core user columns added by bootstrap-superadmin
   {
     table: "users",
-    columns: ["must_change_password", "ativo", "can_manage_users", "created_by"],
+    columns: ["must_change_password", "ativo", "can_manage_users", "created_by", "admin_escopo"],
     label: "users (superadmin columns)",
   },
   // Onboarding wizard gate (bootstrap-onboarding, J51)

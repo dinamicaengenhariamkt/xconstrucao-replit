@@ -37,6 +37,8 @@ interface UserRow {
   phone: string | null;
   ativo: boolean;
   canManageUsers?: boolean;
+  /** XG06 — "global" | "xgestao". Ausente ⇒ "global". */
+  adminEscopo?: string;
   mustChangePassword: boolean;
   emailVerified: string | null;
   createdAt: string;
@@ -379,6 +381,8 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
   const [phone, setPhone] = useState(user.phone ?? '');
   const [role, setRole] = useState<Role>(user.role);
   const [canManageUsers, setCanManageUsers] = useState<boolean>(user.canManageUsers === true);
+  // XG06 — escopo administrativo. Default "global" = comportamento histórico.
+  const [adminEscopo, setAdminEscopo] = useState<string>(user.adminEscopo ?? 'global');
 
   const save = useMutation({
     mutationFn: async () => {
@@ -391,7 +395,10 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
       }
       if (isSuper) {
         payload.role = role;
-        if (role === 'admin') payload.canManageUsers = canManageUsers;
+        if (role === 'admin') {
+          payload.canManageUsers = canManageUsers;
+          payload.adminEscopo = adminEscopo;
+        }
       }
       const r = await fetch(`/api/admin/usuarios/${user.id}`, {
         method: 'PATCH',
@@ -448,6 +455,22 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
                 <SelectItem value="empreiteiro">Empreiteiro</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        )}
+        {isSuper && role === 'admin' && (
+          <div>
+            <Label>Escopo administrativo</Label>
+            <Select value={adminEscopo} onValueChange={setAdminEscopo}>
+              <SelectTrigger data-testid="select-admin-escopo"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="global">Global — todas as seções</SelectItem>
+                <SelectItem value="xgestao">xgestão — apenas o recorte do xgestão</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              O escopo xgestão restringe o admin às seções do produto xgestão. Ele não
+              enxerga clientes, obras do marketplace, financeiro nem configurações.
+            </p>
           </div>
         )}
         {isSuper && role === 'admin' && (

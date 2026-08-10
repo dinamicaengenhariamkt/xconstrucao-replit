@@ -96,6 +96,8 @@ export interface AccessTokenPayload {
   email: string;
   role: string;
   name: string;
+  /** XG06 — opcional: tokens emitidos antes da coluna não têm a claim ⇒ "global". */
+  adminEscopo?: string;
   type: "access";
   iat: number;
   exp: number;
@@ -117,6 +119,8 @@ export interface UserData {
   image?: string | null;
   avatarUrl?: string | null;
   canManageUsers?: boolean;
+  /** XG06 — escopo administrativo. Ausente ⇒ "global" (retrocompatível). */
+  adminEscopo?: string;
   mustChangePassword?: boolean;
 }
 
@@ -147,6 +151,7 @@ export function createAccessToken(user: UserData): string {
     image: user.image,
     avatarUrl: user.avatarUrl,
     canManageUsers: user.canManageUsers === true,
+    adminEscopo: user.adminEscopo ?? "global",
     mustChangePassword: user.mustChangePassword === true,
     type: "access",
     iat: Math.floor(Date.now() / 1000),

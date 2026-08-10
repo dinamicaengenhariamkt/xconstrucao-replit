@@ -17,6 +17,8 @@ export interface SessionUserData {
   image: string | null;
   avatarUrl: string | null;
   canManageUsers: boolean;
+  /** XG06 — "global" | "xgestao". Ausente em tokens antigos ⇒ lido como "global". */
+  adminEscopo: string;
   mustChangePassword: boolean;
 }
 
@@ -30,6 +32,8 @@ export function montarUserData(user: User): SessionUserData {
     image: user.image,
     avatarUrl: user.avatarUrl,
     canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
+    // XG06 — superadmin nunca é restringível; ausência lê como "global".
+    adminEscopo: user.role === "superadmin" ? "global" : (user.adminEscopo ?? "global"),
     mustChangePassword: user.mustChangePassword === true,
   };
 }

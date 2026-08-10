@@ -1,0 +1,3544 @@
+00:00.000 --> 00:29.980
+eu vou botar um cabo aqui no computador só beleza beleza é primeiro falando
+00:29.980 --> 00:59.960
+dos planos ali tá bom primeiro falando dos planos ali que eu e o Edir a gente tinha definido em primeiro momento acho que ele te passou uma ele tinha te passado aquele documento inicial lá que teriam quatro planos né isso a gente reduziu para três planos e aí seriam seriam mantidos o plano do do freemium que tem ali no
+00:59.960 --> 01:18.780
+no documento, o plano básico e o plano PRO, a gente deixaria sem o personalizado nesse momento, até porque acho que a gente não tem tanta complexidade de operação para entregar agora nesse momento de teste, de mercado que a gente vai fazer.
+01:19.780 --> 01:33.500
+A gente vai alterar também os valores, os valores dos três ali para que fique mais, enfim, vai dar uma estratégia de precificação, já que vão ser só três produtos. Isso é importante a gente passar também o preço que eu tiver que colocar?
+01:33.500 --> 01:38.280
+Se você, porventura, se vocês tiverem anotado, me facilita.
+01:38.280 --> 01:42.140
+Tá, depois eu acho que tu vai alterar, a gente vai mandar para ele também?
+01:42.140 --> 01:45.140
+Tá mudo, tá mudo, tá mudo.
+01:47.640 --> 01:56.260
+Então, vamos daqui. Não, eu faço o seguinte, cara, eu altero aqui, depois te mando lá o Ramon. Fica tudo o documento que vai ficar atualizado para ti.
+01:56.260 --> 01:58.060
+Tá, tá claro.
+01:58.060 --> 02:12.840
+Então, tá bom. Aí, vocês, esses três planos, o que a gente quer ver contigo, que a gente estava com dúvida também, é que, por exemplo, no freemium, a gente teria uma limitação de uma obra por cliente, né?
+02:13.130 --> 02:18.840
+E para que ele possa fazer o teste lá, que tem um período de teste que é de graça, né?
+02:18.840 --> 02:29.910
+E depois, ao longo do escalonamento dos planos, o limite de obras, ele aumentaria para três no Basic e para dez no Pro.
+02:30.820 --> 02:40.000
+A gente queria ver uma coisa contigo, que é qual é a complexidade de a gente, por exemplo, alterar esse Pro para 15 obras.
+02:40.000 --> 02:47.720
+Isso afeta muito eu liberar mais obras para um cliente em relação à hospedagem, em relação aos custos que a gente teria com tecnologia?
+02:48.200 --> 02:52.660
+Como é que a escala disso, assim, pode dar um norte para nós nesse sentido?
+02:52.660 --> 02:59.740
+Olha, o fato de... eu precisava realmente dessas regras aí, no caso, né?
+02:59.740 --> 03:06.600
+Obviamente, o que contempla o quê, né? Qual tela o cara vai ter, quais as regras que ele vai precisar, quantidade de...
+03:06.600 --> 03:08.340
+Como você falou, né? De obras e tudo mais.
+03:08.340 --> 03:15.080
+Ele precisa ter isso segmentado, detalhado, para eu transformar isso num prompt para solicitar para estar desenvolvendo.
+03:16.620 --> 03:23.300
+O fato, assim, necessariamente, o gasto que, por exemplo, a Rappet hoje tem, é no caso do uso.
+03:23.300 --> 03:28.220
+Vai, se quando tem dez usuários, vai gastar um tanto ali, porque é o lance do tráfego, né?
+03:28.220 --> 03:35.260
+Na plataforma. Se tiver cem, vai gastar outro tanto maior, porque vai estar tendo consumação do banco de dados, etc.
+03:35.260 --> 03:38.200
+Então, o gasto é meio dinâmico, né?
+03:38.200 --> 03:44.040
+Tanto é que, depois eu sugeri, mas aí o Eder até comentou lá para a gente ver no segundo momento, depois sair do VBVP,
+03:44.040 --> 03:48.340
+que é o fato de sair do Rappet para uma plataforma própria, né?
+03:48.340 --> 03:53.320
+Que aí a gente consegue deixar a infra dimensionada já e, tipo, não vai ter um custo.
+03:53.320 --> 03:56.800
+Toda vez que eu subo, ah, eu fiz uma alteração que vocês pediram.
+03:56.800 --> 03:58.480
+Testo em dev, subo para a produção.
+03:58.480 --> 03:59.580
+Ele tem um gasto ali.
+03:59.580 --> 04:02.500
+Às vezes é centavos de dólar, às vezes é um dólar e pouco.
+04:02.500 --> 04:06.260
+Se dá alguns problemas, porque às vezes está dando algumas coisas no Rappet,
+04:06.740 --> 04:09.000
+e ele pede para ficar limpando o cash, essas coisas e tal.
+04:09.000 --> 04:10.980
+Então, gasta mais algumas coisinhas de dólar.
+04:10.980 --> 04:12.640
+Então, tipo assim, vai minando isso daí.
+04:12.640 --> 04:15.020
+Na infra própria, né?
+04:15.020 --> 04:19.940
+No máximo, eu utilizando o cloud, eu consigo fazer algo que não vai ter esse custo da plataforma.
+04:19.940 --> 04:21.600
+Que é daqueles cem dólares que pega, né?
+04:22.640 --> 04:28.320
+Então, hoje, você falava, pô, o cara básico para o premium, por exemplo, quantidade de obra e tudo mais,
+04:28.320 --> 04:30.140
+necessariamente não.
+04:30.140 --> 04:36.800
+Montar essa regra, etc e tal, eu uso o prompt tanto do Rappet quanto paralelo ao meu cloud aqui local.
+04:36.800 --> 04:38.450
+Então, eu não tenho gasto.
+04:38.450 --> 04:40.220
+O gasto vai ser realmente na hora do fluxo.
+04:40.220 --> 04:44.540
+Se vai ter realmente uma quantidade alta de usuário interagindo ou não, entendeu?
+04:44.540 --> 04:50.360
+Fazendo persistência no banco, ou seja, alterando coisas na obra, adicionando foto, etc, etc.
+04:50.360 --> 04:56.100
+Quanto mais movimentação, né, tirar na plataforma, mais vai ter um certo custo mensal.
+04:56.100 --> 04:58.560
+Não tenho um custo específico, assim, tá?
+04:58.560 --> 05:02.660
+Para te falar, pô, a cada 10 vai gastar 5 dólares no mês.
+05:02.660 --> 05:04.100
+Eu não consigo te precisar.
+05:04.100 --> 05:05.640
+Até nem a plataforma consegue.
+05:05.640 --> 05:09.440
+Aí é válido a gente tentar metrificar ali, né?
+05:09.440 --> 05:11.860
+Quando realmente sair do MVP, entendeu?
+05:11.860 --> 05:13.700
+Para a gente poder ter uma noção, infelizmente.
+05:13.700 --> 05:17.800
+Tá, e daí, no caso de eu ter um banco de dados próprio,
+05:17.800 --> 05:19.830
+aí eu conseguiria ter isso mais na mão?
+05:20.060 --> 05:21.420
+O custo eu teria mais na mão?
+05:21.420 --> 05:23.760
+Por exemplo, a minha questão é justamente essa.
+05:23.760 --> 05:26.160
+Tu falou que é mais dúvida a questão de uso, né?
+05:26.160 --> 05:30.160
+Porque se eu liberar, por exemplo, 15 obras em vez de 10 para o cara do pró,
+05:30.160 --> 05:33.440
+claramente ele vai ter muito mais ações dentro da plataforma,
+05:33.440 --> 05:37.940
+vai baixar mais relatório, vai ter um tráfego maior lá dentro,
+05:37.940 --> 05:41.700
+porque ele tem mais obras lá dentro e, naturalmente, vai gerar mais atividades.
+05:41.700 --> 05:45.160
+Isso é o que gera o aumento de custo nosso, é isso?
+05:45.380 --> 05:46.180
+Correto, correto.
+05:46.180 --> 05:51.660
+Só que, assim, pensando para um usuário, eu posso dizer que é quase irrisório, vai, digamos, vai.
+05:51.660 --> 05:54.900
+Supondo que um usuário, no meio, usando ativamente dessa forma,
+05:54.900 --> 05:56.660
+vou chutar, tá?
+05:56.660 --> 05:59.680
+Não é 100% preciso, mas talvez os 2 dólares ali.
+05:59.680 --> 06:01.820
+É baseado no dólar porque é a plataforma deles, né?
+06:01.820 --> 06:03.520
+2 dólares, talvez 3 dólares.
+06:04.240 --> 06:05.740
+Chutando, assim, o mais alto, tá?
+06:05.740 --> 06:07.340
+Mas talvez seja muito menos.
+06:07.340 --> 06:11.320
+Mas aí pensa, tipo assim, a 10 usuários, 20 usuários com o crescimento.
+06:11.320 --> 06:14.280
+No banco de dados aí, já numa infra própria,
+06:14.280 --> 06:20.580
+até um X dos usuários ali, eu preciso dar uma estudada no Hostinger lá específico,
+06:20.580 --> 06:25.620
+mas ele tem um plano que é o que eu coloquei na proposta lá.
+06:25.620 --> 06:29.480
+Por exemplo, a 100 usuários, a gente consegue deixar ali o banco de dados ok.
+06:29.720 --> 06:33.460
+Se supondo que fica um pouco mais dimensionável, muito mais usuários e tudo mais,
+06:33.460 --> 06:36.140
+e mais movimentação, a gente só muda o plano para o A+.
+06:36.140 --> 06:39.240
+Mas aí é algo que é palpável, é real e tudo mais.
+06:39.240 --> 06:41.400
+É claro que não é prioridade para agora, tá?
+06:41.400 --> 06:44.540
+Mas é só para vocês saberem que quando a gente começar a ter movimentação,
+06:44.540 --> 06:48.620
+a MVP e tudo mais, esse daí vai passar a ser um custo, né?
+06:48.620 --> 06:52.620
+Que vai ser dimensionável, pouco ou grande, ou muito, né?
+06:52.620 --> 06:56.720
+E se o dólar aumentar ou subir, infelizmente, o Rapplet é baseado no dólar,
+06:56.720 --> 06:59.520
+onde a Hostinger é só real mesmo, né?
+06:59.720 --> 07:01.460
+Então, tem esse plano de custo.
+07:01.460 --> 07:03.700
+Então, para a gente ter esse custo maior na mão,
+07:03.700 --> 07:06.720
+para a gente ter uma previsibilidade maior de custo,
+07:06.720 --> 07:12.440
+o ideal é que a gente faça essa migração, assim, logo que a gente tiver alguma escala, é isso?
+07:12.440 --> 07:13.520
+Isso, isso.
+07:13.520 --> 07:17.220
+Ou então, aí vocês podem analisar, o que eu coloquei lá para vocês,
+07:17.220 --> 07:22.540
+acho que já no curto barra médio prazo já tem ganho financeiro, assim, saving, né?
+07:22.540 --> 07:25.040
+De não ter tanto custo, mas aí depois vocês dão uma olhada,
+07:25.040 --> 07:27.980
+qualquer coisa a gente faz uma calça só para isso, né?
+07:27.980 --> 07:32.380
+Não precisa ser hoje exatamente, mas é basicamente tudo aí que você falou.
+07:32.380 --> 07:36.480
+E, assim, o que eu iria indicar, mas aí vocês veem com calma,
+07:36.480 --> 07:39.080
+a gente pode lançar MVP ainda no Rapplet, sem problemas,
+07:39.080 --> 07:45.040
+mas se começar a ter usuário, o tempo de migração e tudo mais,
+07:45.040 --> 07:47.140
+vai demorar um pouquinho mais, porque eu vou ter que ter mais cuidado
+07:47.140 --> 07:49.620
+com o que o cara já está mexendo em produção, né?
+07:50.160 --> 07:54.620
+Se for antes da migração, eu posso simplesmente limpar o banco de dados, enfim,
+07:54.620 --> 07:56.760
+e subir lá sem problema nenhum com ele vazio, entendeu?
+07:56.760 --> 08:00.720
+Então, antes de lançar o MVP, de fato, se fizer a migração,
+08:00.720 --> 08:05.320
+é um pouco mais rápida a migração e não vou ter tanto cuidado, assim, com os dados,
+08:05.320 --> 08:07.560
+porque não vai ter ninguém ativo ali, entendeu?
+08:07.560 --> 08:12.580
+Então, só vai ter esse nível de cuidado ou tempo, a depender se tiver usuário em produção mesmo, entendeu?
+08:13.540 --> 08:15.600
+Entendi. Então, isso é outra coisa que a gente tem que pensar.
+08:15.600 --> 08:16.600
+Pode falar, olha, pode falar.
+08:16.600 --> 08:21.960
+Não, eu acho que era bem isso, porque nos planos lá que a gente mandou para ti,
+08:21.960 --> 08:25.040
+era uma obra, três obras e dez obras.
+08:25.040 --> 08:27.420
+Aí, na nossa discussão, eu e o Hugo, a gente falaram,
+08:27.420 --> 08:29.500
+cara, vamos aumentar aqui, aumentar ali.
+08:29.500 --> 08:32.160
+Daí eu falei para ele, puta, vamos só entender com o Ramon,
+08:32.160 --> 08:36.550
+se, cara, esse fluxo do cara ali contínuo com dez obras,
+08:36.550 --> 08:39.760
+se isso vai ter um custo, sei lá, muito absurdo para a gente,
+08:39.760 --> 08:42.540
+ou se não vai ter custo, enfim, se está dentro do plano.
+08:43.220 --> 08:45.080
+Beleza, isso aí a gente entendeu, então está tranquilo.
+08:45.080 --> 08:47.380
+Agora, o Ramon, é que eu não lembro muito lá os valores lá,
+08:47.380 --> 08:52.160
+mas quanto ficaria para fazer, para a gente criar um banco de dados,
+08:52.160 --> 08:53.440
+uma infraestrutura própria?
+08:53.440 --> 08:57.140
+Levar para o Hostingator da vida, sei lá, HostGuer, sei lá.
+08:57.140 --> 09:00.540
+Deixa eu até ver se está fácil aqui, para não falar besteira, não, fala por cima.
+09:00.540 --> 09:05.540
+Vou pegar aqui, tatatã, propósito, propósito.
+09:05.540 --> 09:11.860
+Eu acho que quando os caras começarem a usar e tiver confiança, cara,
+09:12.040 --> 09:14.200
+aí a galera vai ver, ele vai passar para uma galera, entendeu?
+09:14.200 --> 09:16.740
+Então, eu estou com medo de, tipo, na hora que passar para a galera,
+09:16.740 --> 09:19.460
+aí vai estar nesse período de transição, entendeu?
+09:19.460 --> 09:23.880
+Então, não sei se de repente, beleza, cara, vamos testar nós aqui, os dinâmicos aqui mesmo,
+09:23.880 --> 09:29.000
+do jeito que está, mas já vamos tentar trabalhar, vamos viabilizar e ver como é que vai ser,
+09:29.410 --> 09:33.360
+para tentar viabilizar esse nosso banco próprio aqui, né?
+09:33.360 --> 09:37.790
+E outra coisa também, eu tinha, depois, é porque eu não vou mencionar todo o texto,
+09:37.790 --> 09:39.880
+porque aí tem bastante coisa, mas vocês veem com calma,
+09:39.880 --> 09:44.040
+mas eu estava vendo lá que durante as rotas, as jornadas que eu fiz,
+09:44.040 --> 09:48.840
+tem possibilidade de a gente trabalhar com outro tipo de banco de dados em paralelo,
+09:48.840 --> 09:51.280
+que é trabalhar em fila e tudo mais, com Redis,
+09:51.700 --> 09:54.620
+e hoje a plataforma do Rabbit, pelo que eu vi, não tem hoje,
+09:54.620 --> 09:56.360
+então, numa infra própria, você fala,
+09:56.360 --> 10:00.280
+puta, Ramon, vamos fazer uma melhoria nesse sentido,
+10:00.280 --> 10:04.200
+não vem à cabeça agora, mas ele me sugeriu estar na documentação,
+10:04.200 --> 10:09.040
+mas ou então vocês falam, puta, Ramon, vamos fazer um sistema apartado, paralelo,
+10:09.620 --> 10:14.120
+que vai dar suporte a ele, vai, supondo que uma outra interface ali,
+10:14.120 --> 10:18.100
+daria também, a gente não precisaria usar mais tokens específicos lá do Rabbit,
+10:18.100 --> 10:21.880
+o banco de dados específico, embora dá para fazer isso de forma local,
+10:21.880 --> 10:24.860
+é muito mais dinâmico do que no Rabbit, por exemplo,
+10:24.860 --> 10:27.670
+ou então vocês falam, puta, Ramon, a gente vai precisar subir alguma coisa
+10:27.670 --> 10:31.580
+que está em outra tecnologia, o Rabbit tem muita coisa que dá para fazer,
+10:31.580 --> 10:34.820
+mas numa infra própria, é muito mais palpável, né?
+10:34.820 --> 10:37.980
+A gente consegue ter algo um pouco mais rápido, para falar a verdade, tá?
+10:38.000 --> 10:41.820
+Eu consigo fazer toda a pipeline, esteira, tem muita coisa que realmente ali,
+10:41.820 --> 10:46.100
+o único problema é se o Hostinger, por exemplo, ficar fora, por exemplo, sabe?
+10:46.100 --> 10:49.080
+Aí é o que, aí a gente vai ter que cobrar lá a Hostinger,
+10:49.080 --> 10:51.160
+que seria a mesma coisa que roubar o Rappi,
+10:51.160 --> 10:54.050
+só que a galera da Hostinger, nesse tempo que eu tenho,
+10:54.050 --> 10:56.600
+eles me dão um feedback um pouco mais rápido, tá?
+10:56.600 --> 11:00.420
+Deixa eu ver aqui, para dar uma resumida legal.
+11:00.420 --> 11:05.960
+Tá, beleza, aqui, passando para vocês o que está sendo pago hoje, tá?
+11:06.420 --> 11:09.920
+Só ignorem essa parte do e-mail aqui,
+11:09.920 --> 11:11.480
+porque eu lembro que o Guilherme tinha passado para mim,
+11:11.480 --> 11:12.780
+que acho que o dinâmico é o dele, né?
+11:12.780 --> 11:15.580
+Aí eu esqueci que ia separar, depois ele me lembrou, né?
+11:15.580 --> 11:18.420
+Então, esse que envolve a parte de e-mail aqui, só ignora, tá?
+11:18.420 --> 11:21.620
+É que ele pediu lá um apoio em relação a essa parte do e-mail.
+11:21.620 --> 11:27.080
+Mas aqui, pensando em 100 dólares por mês ali,
+11:27.080 --> 11:31.500
+que dá em torno, mais ou menos aí, hoje, não sei quanto que está o dólar,
+11:31.700 --> 11:32.900
+5 e pouquinho lá, mais ou menos.
+11:32.900 --> 11:34.080
+5 e 10 deve ser por isso.
+11:34.080 --> 11:38.540
+5 e 10, isso aí dá uns 500, 5 mil.
+11:38.540 --> 11:40.600
+É, basicamente 6 mil ali no ano, né?
+11:40.600 --> 11:42.440
+500 em 10 meses, né?
+11:42.440 --> 11:44.940
+Daria uns 5 mil ali, mais dois meses ali,
+11:44.940 --> 11:47.320
+mais ou menos aproximadamente uns 100 mil, uns 6 mil,
+11:47.320 --> 11:50.700
+mais esse cara aqui, que é o 59, que é o domínio de...
+11:50.700 --> 11:53.940
+Tá dinâmica, mas aí pense como se fosse o X Construção, né?
+11:54.480 --> 11:56.500
+Seria mais o domínio de vocês ali.
+11:56.500 --> 11:58.220
+Então, tirando o e-mail aqui, né?
+11:58.220 --> 12:00.300
+Daria uns 6 mil e alguns quebrados, né?
+12:00.300 --> 12:02.900
+Deixa eu ver aqui.
+12:02.900 --> 12:08.320
+Beleza, na proposta em si, é mais ou menos...
+12:08.320 --> 12:08.900
+Deixa eu ver aqui.
+12:08.900 --> 12:09.740
+Ah, tá.
+12:09.740 --> 12:12.860
+O servidor da Hostinger aqui, eu coloquei como primeiro ano,
+12:12.860 --> 12:13.860
+porque lá tem...
+12:13.860 --> 12:16.340
+Se você quiser fechar 3 anos a plataforma,
+12:16.340 --> 12:18.380
+só que você tem que pagar numa paulada, esse que é o chato, né?
+12:18.380 --> 12:21.280
+E tem, por exemplo, você pode fechar um ano mensal,
+12:21.280 --> 12:23.680
+pagar mensal, aí tem um valor lá de 100 e pouquinho.
+12:24.120 --> 12:26.200
+Se você pagar o anual, ele fica muito mais enxuto,
+12:26.200 --> 12:27.560
+que é esse...
+12:27.560 --> 12:29.360
+Tipo assim, um ano dá 671.
+12:29.360 --> 12:32.800
+Então, você pagaria o ano a hospedagem em si, a VPS lá, né?
+12:32.800 --> 12:35.240
+Dois anos aí fica um pouco menor, né?
+12:35.240 --> 12:38.260
+Mas aí ficaria uns 900 ou 1.000 reais e assim por diante.
+12:38.260 --> 12:39.920
+Mas aí a gente vê com calma.
+12:39.920 --> 12:42.880
+Isso aqui é meio que as especificações do que eu sugeri lá, tá?
+12:42.880 --> 12:46.460
+E aí, obviamente, a gente utilizando isso daí,
+12:46.460 --> 12:48.300
+e também tem a parte do domínio,
+12:48.300 --> 12:51.120
+se utilizar direto com o registro BR, dá 40 reais no ano.
+12:51.120 --> 12:53.660
+Então, aqui é uma comparação, né?
+12:53.760 --> 12:54.640
+Hoje, né?
+12:54.640 --> 12:58.160
+Hoje aqui, esse primeiro aqui é o Replit.
+12:58.160 --> 13:01.440
+O segundo é esse aqui e a diferença entre eles.
+13:01.440 --> 13:01.900
+Então, vamos lá.
+13:01.900 --> 13:03.980
+O primeiro ano do Replit, né?
+13:03.980 --> 13:08.320
+Daria 6.200 ou 519, né?
+13:08.320 --> 13:09.740
+Ali por mês, basicamente.
+13:10.880 --> 13:14.860
+E o propósito que eu estou passando para vocês é 711, né?
+13:14.860 --> 13:17.560
+Aproximadamente, que é o...
+13:17.560 --> 13:18.560
+Acho que está aqui embaixo aqui.
+13:18.560 --> 13:20.780
+Que é a hospedagem mais o domínio, né?
+13:20.780 --> 13:23.080
+Que seria mais ou menos 40 reais ali no ano.
+13:23.080 --> 13:29.040
+E aí vai ter uma diferença já no primeiro ano ali de 5 mil e pouquinho, tá?
+13:29.040 --> 13:33.040
+Então, pensa que isso daqui é só o lance da hospedagem em si.
+13:33.040 --> 13:35.400
+Aí vocês vão falar, pô, é algo gritante, tá?
+13:35.680 --> 13:40.160
+Porque aqui, não estou contemplando, obviamente, o gasto que vocês já estão tendo comigo lá dos 600 reais, tá?
+13:40.160 --> 13:45.000
+Então, aí só que aqui contempla a plataforma da Replit mais os 100 dólares, tá?
+13:45.000 --> 13:48.780
+Então, a partir do segundo ano, ele tem um aumento, né?
+13:48.880 --> 13:52.600
+Aqui no caso do Hostinger, porque no ano seguinte, né?
+13:52.600 --> 13:54.520
+Esse primeiro ano é o ano para vocês fecharem, né?
+13:54.520 --> 13:55.320
+Fica mais barato.
+13:55.320 --> 13:57.240
+E o segundo ano fica um pouquinho mais caro.
+13:57.240 --> 14:00.100
+Mas, ainda assim, é uma diferença bem bizarra, né?
+14:00.100 --> 14:06.480
+Então, no total de 3 anos, com o Replit, vocês pagam um valor exorbitante por causa do dólar mesmo.
+14:06.480 --> 14:08.840
+Todo mês vocês estão tendo que dar os 500.
+14:08.840 --> 14:13.000
+E na VPS, vocês pagando o valor de 600 e pouquinho lá, né?
+14:13.000 --> 14:15.960
+No ano, vocês não precisam pagar mensalmente, beleza?
+14:15.960 --> 14:16.360
+Sim.
+14:16.360 --> 14:18.080
+Não, é entendido.
+14:18.080 --> 14:23.860
+E assim, Ramon, a gente entendeu, eu entendi, você entendeu o tudo tranquilo para ti?
+14:23.860 --> 14:25.520
+Sim, tudo entendido.
+14:25.520 --> 14:25.960
+Beleza.
+14:25.960 --> 14:28.640
+E aí, agora, beleza.
+14:28.640 --> 14:31.240
+Em relação à custa, cara, vamos...
+14:31.240 --> 14:33.400
+Só para racionalizar aqui, é 10% a menos, né?
+14:33.400 --> 14:34.220
+No ano, só isso.
+14:34.220 --> 14:35.280
+É, então...
+14:35.280 --> 14:37.920
+É 10% do gasto, na verdade, é 10% do gasto.
+14:37.920 --> 14:39.620
+E se pagar um ano, né?
+14:39.620 --> 14:43.240
+E, Ramon, e o tempo, cara, para fazer essa migração?
+14:43.240 --> 14:44.140
+Quanto tempo você acha?
+14:44.140 --> 14:47.280
+Tá, eu até coloquei aqui, se for...
+14:47.280 --> 14:48.260
+Deixa eu ver aqui.
+14:48.260 --> 14:49.940
+Mesmo pagando...
+14:49.940 --> 14:50.440
+Ah, tá, tá.
+14:50.440 --> 14:53.760
+Só um outro detalhe que eu ia passar para vocês, que eu coloquei aqui, né?
+14:53.760 --> 14:55.860
+Hoje vocês pagam 600 reais, né?
+14:55.860 --> 14:58.960
+Para mim, obviamente, para dar um apoio para vocês e tudo mais.
+14:59.060 --> 15:02.720
+Eu acabo usando basicamente esse dinheiro para usar no cloud, consequentemente, né?
+15:03.040 --> 15:07.860
+Para usar na plataforma de vocês também, juntamente com o próprio Rapt, que ele já disponibiliza, tá?
+15:07.860 --> 15:10.780
+E aí, como nesse caso, eu vou ter que...
+15:10.780 --> 15:15.160
+Eu já tenho já a receita do bolo da infraestrutura, porque eu já montei a mim, já montei para um outro projeto.
+15:15.620 --> 15:20.460
+Então, a ideia que eu passei para vocês aqui é um... como que eu posso dizer?
+15:20.460 --> 15:23.200
+Vai mais para o caso da manutenção da infraestrutura, tá?
+15:23.200 --> 15:26.980
+Aí eu coloquei que aumentaria em 150, só.
+15:26.980 --> 15:29.920
+Seria a parte de manter a infraestrutura, acompanhar.
+15:29.920 --> 15:33.920
+Vou criar também... tem um procedimento que eu criei já, que é deixar no Telegram, né?
+15:33.960 --> 15:35.140
+Tipo assim, notificação, né?
+15:35.140 --> 15:38.500
+Em relação a backup de banco de dados, etc.
+15:38.500 --> 15:40.840
+Então, vai rodar uma rotina lá, eu colocaria vocês no grupo.
+15:40.840 --> 15:42.940
+E aí, vai vir aqueles e-mails automáticos, né?
+15:42.940 --> 15:44.180
+Só para a gente ficar ciente.
+15:44.180 --> 15:48.420
+Pô, caiu alguma coisa lá no Hostinger, eu já conseguiria ter esse alerta, tá?
+15:48.420 --> 15:51.500
+Então, seria só esse aumento de 150.
+15:51.500 --> 15:55.800
+E aí, aqui... deixa eu ver aqui...
+15:55.800 --> 15:56.540
+Ah, tá. Agora aqui.
+15:56.540 --> 15:59.120
+Agora é o quadro completo, tá?
+15:59.120 --> 16:02.460
+No primeiro ano, com o Rapt, né?
+16:02.460 --> 16:05.360
+Que seria o valor lá de... deixa eu ver aqui.
+16:05.360 --> 16:07.120
+Deixa eu ver aqui, se ele tem destranchado.
+16:07.120 --> 16:10.860
+Ah, tá. 1119 por mês.
+16:10.860 --> 16:13.480
+Deixa eu ver aqui mais para cima.
+16:13.480 --> 16:15.080
+Eu lembro que eu estava anotado, né?
+16:15.080 --> 16:15.860
+Deu um branco aqui.
+16:15.860 --> 16:20.180
+Mas aqui, a questão toda é o tempo, né?
+16:20.180 --> 16:21.400
+O que tu quer saber, né?
+16:21.400 --> 16:23.000
+Tá, eu coloquei aqui...
+16:23.000 --> 16:26.420
+Eu coloquei o prazo estimado de uma a duas semanas corridas para fazer a migração.
+16:26.420 --> 16:28.380
+Ah, então, cara...
+16:28.380 --> 16:31.540
+Isso sem estar com os olhos de produção, no caso.
+16:31.540 --> 16:34.960
+Se tiver com os olhos de produção, aí eu vou ter que tratar os dados mais calmo.
+16:34.960 --> 16:37.060
+Eu acho até, assim...
+16:37.060 --> 16:39.060
+Claro que a gente vai conversar aqui depois, mas...
+16:39.060 --> 16:41.060
+Eu acho que, assim...
+16:41.060 --> 16:48.240
+Por uma questão de otimizar, obviamente, recursos e também de a gente ficar mais independente com as coisas.
+16:48.920 --> 16:50.920
+Principalmente quando está falando de banco de dados e construção.
+16:50.920 --> 16:53.440
+E se vai ter depois um problema, digamos...
+16:53.440 --> 16:57.820
+Um ruído depois entre sair de um para o outro já com usuários.
+16:57.820 --> 17:00.540
+Eu acho que a gente já deveria, né?
+17:00.540 --> 17:03.580
+De repente, bater o martelo para a gente já construir isso.
+17:03.580 --> 17:04.300
+O que você acha, Hugo?
+17:05.610 --> 17:07.080
+Cara, eu acho que a gente deveria...
+17:07.080 --> 17:10.180
+Aí o custo de implementação é 200 reais que você colocou ali, né?
+17:10.300 --> 17:15.280
+Isso, eu coloquei 200 reais, só que eu coloquei, tipo assim, diluído no que você já paga para mim já.
+17:15.280 --> 17:18.610
+Então, ficaria no ano aí, sei lá, vai...
+17:18.610 --> 17:21.350
+Mais 15 reais, aí ele tem um valor ali que eu esqueci o nome.
+17:21.350 --> 17:24.850
+Enfim, ficaria, tipo, quase que risório, tá?
+17:24.850 --> 17:26.060
+De diferença ali, entendeu?
+17:26.400 --> 17:29.880
+E aí, mais uns 150 que eu falei que é o da manutenção da infra.
+17:29.880 --> 17:30.540
+De manutenção.
+17:30.540 --> 17:31.330
+Isso, isso.
+17:31.330 --> 17:36.780
+Mas aí, assim, de qualquer forma, a gente...
+17:36.780 --> 17:40.110
+Se vocês falarem bater o martelo, por exemplo, na semana, ou semana que vem, que seja.
+17:40.110 --> 17:42.060
+Vamos, vamos correr com a migração.
+17:42.060 --> 17:47.040
+Eu consigo deixar rodando ali, como os dados do projeto estão no GitHub,
+17:47.040 --> 17:49.460
+então para movimentar é mais tranquilo.
+17:49.460 --> 17:52.480
+Eu só preciso ver se eu já uso o mesmo banco de dados,
+17:52.480 --> 17:56.780
+se eu preciso fazer algum ajuste em relação a isso daí para a nova plataforma,
+17:56.780 --> 18:00.140
+que é o lance da normalização do código com a plataforma nova, né?
+18:00.140 --> 18:02.900
+Que aí vai dar entre uma e duas semanas.
+18:02.900 --> 18:05.610
+Mas a gente consegue paralisar o desenvolvimento.
+18:05.610 --> 18:09.080
+Tipo assim, não parar o desenvolvimento e já continuar com a migração, basicamente.
+18:09.080 --> 18:11.300
+É, que assim, de repente...
+18:11.300 --> 18:12.300
+O que a gente vai...
+18:12.300 --> 18:15.850
+A gente está devendo algumas informações para você.
+18:15.850 --> 18:17.640
+A gente vai matar isso o quanto antes.
+18:17.640 --> 18:19.330
+Para a gente já ter tudo organizado.
+18:19.330 --> 18:21.580
+E falar assim, pessoal, testem aí, está tudo bem.
+18:21.580 --> 18:22.350
+Ok, beleza.
+18:22.480 --> 18:23.240
+Pessoal, acho que está rodando.
+18:23.240 --> 18:23.760
+Ah, então tá bom.
+18:23.760 --> 18:25.180
+Agora eu vou fazer a migração aqui.
+18:25.180 --> 18:25.830
+Por quê?
+18:25.830 --> 18:27.400
+Porque se tiver que fazer alguma coisa,
+18:27.400 --> 18:29.460
+aí a gente bota crédito lá no Rapplic para falar...
+18:29.460 --> 18:30.700
+Ramon, putz...
+18:30.700 --> 18:32.660
+Você vai falar assim, é Eder e Hugo.
+18:32.660 --> 18:36.090
+Porque assim, vai tratar mais com a gente essa parada mais...
+18:36.090 --> 18:37.960
+A tecnologia vai ser comigo e com o Hugo.
+18:37.960 --> 18:38.440
+Sim.
+18:38.440 --> 18:41.090
+Os meninos lá, eles são outra frente lá.
+18:41.090 --> 18:42.320
+Mas eles estão envolvidos também.
+18:42.320 --> 18:46.080
+Porque daí fica mais fácil a gente...
+18:46.080 --> 18:47.080
+Aí você pega e fala assim, pessoal,
+18:47.080 --> 18:49.580
+ó, eu vou precisar de o crédito lá no Rapplic.
+18:49.580 --> 18:50.080
+Beleza.
+18:50.080 --> 18:51.590
+Daí a gente viabiliza aqui.
+18:52.080 --> 18:53.640
+Porque daí eu acho que fica...
+18:53.640 --> 18:55.300
+A questão não é só financeira.
+18:55.300 --> 18:57.610
+Eu acho que é uma questão de não gerar ruído
+18:57.610 --> 18:59.760
+para quem vier conhecer a ferramenta.
+18:59.760 --> 19:01.960
+Porque eu sei quando os caras começarem a usar lá,
+19:01.960 --> 19:04.060
+eles conhecem uma porrada de empreiteiros.
+19:04.060 --> 19:05.440
+Os caras falam, puta, eu quero usar, eu quero usar,
+19:05.440 --> 19:06.780
+eu quero usar, eu quero usar, eu quero usar.
+19:06.780 --> 19:08.560
+Aí a gente bota os caras para usar na semana,
+19:08.560 --> 19:10.330
+aí na semana seguinte a gente...
+19:10.330 --> 19:12.500
+Puda, cara, pessoal, tem 50 caras usando aqui.
+19:12.500 --> 19:13.980
+Putz, vamos migrar.
+19:13.980 --> 19:17.800
+Aí, mas, sabe, tipo, o tesão interrompido, entendeu?
+19:17.800 --> 19:19.850
+É isso que eu não estou meio preocupado, assim.
+19:19.850 --> 19:22.500
+E aí, pessoal, só para dar uma ênfase ali,
+19:22.500 --> 19:24.880
+o fato também de diminuir isso é o quê?
+19:24.880 --> 19:27.220
+Com essa troca, né,
+19:27.220 --> 19:31.980
+vocês já não vão precisar gastar mensalmente aqueles 100 dólares, né,
+19:31.980 --> 19:32.850
+obviamente do Rabbit,
+19:32.850 --> 19:35.300
+porque eu já vou estar usando o Cloud ali, né,
+19:35.300 --> 19:36.540
+então dos 600 reais.
+19:36.700 --> 19:38.900
+Então, porque o que eu tenho do Cloud hoje, né,
+19:38.900 --> 19:40.540
+que, enfim, basicamente eu pago aqui,
+19:40.540 --> 19:43.720
+eu consigo usar para o projeto de vocês e para qualquer outra coisa, né,
+19:43.720 --> 19:44.610
+tipo, do meu dia a dia.
+19:44.610 --> 19:46.080
+Então, não é algo...
+19:46.080 --> 19:48.780
+Eu já consigo fazer a autonomia de tokens, etc, etc.
+19:48.780 --> 19:50.280
+Então, basicamente, assim,
+19:50.280 --> 19:53.610
+vocês vão estar ganhando e não gastar os 100 dólares por mês.
+19:53.610 --> 19:54.960
+Não que seja o problema, tá,
+19:54.960 --> 19:57.960
+mas a gente sabe que ter um saving ali é sempre bacana, né,
+19:57.960 --> 19:59.850
+então, claro, vocês dão uma olhada, né,
+19:59.850 --> 20:02.220
+ver a diferença e tudo mais que eu coloquei.
+20:02.220 --> 20:03.560
+Só ignorem a parte do e-mail,
+20:03.560 --> 20:05.300
+porque eu achei que era vinculado,
+20:05.380 --> 20:07.580
+mas o Guilherme falou que era o do e-mail dele lá, tá.
+20:07.580 --> 20:09.420
+É só ignorar esse valor do e-mail,
+20:09.420 --> 20:11.850
+mas eu deixei meio que destrinchado as diferenças.
+20:11.850 --> 20:13.000
+Se tiverem dúvidas, né,
+20:13.000 --> 20:15.330
+no detalhe também vocês me passam,
+20:15.330 --> 20:17.590
+mas aí tem um detalhe, tá,
+20:17.590 --> 20:18.960
+que é importante falar, tá.
+20:18.960 --> 20:21.320
+Com essa migração, pensem que, assim,
+20:21.320 --> 20:24.580
+eu vou, obviamente, documentar, etc, etc,
+20:24.580 --> 20:26.320
+mas, por exemplo, hoje no Rapid,
+20:26.320 --> 20:27.540
+se supondo que, vai,
+20:27.540 --> 20:28.220
+vocês falam,
+20:28.220 --> 20:30.400
+Puta, Ramon, eu gostaria de mexer também, um de vocês.
+20:30.400 --> 20:33.440
+Vocês hoje têm autonomia de entrar lá no chat mesmo
+20:33.440 --> 20:35.220
+e digitar alguma coisa para ele alterar.
+20:35.380 --> 20:37.020
+Então, em relação a isso, sem problema.
+20:37.020 --> 20:40.380
+Lá na plataforma, ele não tem essa interface visual.
+20:40.380 --> 20:44.540
+Eu ainda vou usar nível de linha de comando e tudo mais,
+20:44.540 --> 20:47.260
+então eu vou conectar o cloud lá e vou arrepiar as coisas, tá.
+20:47.800 --> 20:49.350
+Mas é algo bem específico, né,
+20:49.350 --> 20:51.880
+então, que não é, tipo assim, tão fácil de qualquer usuário.
+20:51.880 --> 20:55.700
+Então, tem essa diferença de ficar na, meio que, na dependência,
+20:55.700 --> 20:56.720
+pode-se dizer, né,
+20:56.720 --> 20:58.940
+Kurtigros falando, né,
+20:58.940 --> 21:01.900
+de uma pessoa que vai cuidar dessa parte da infra, entendeu.
+21:01.900 --> 21:02.820
+Não que eu, claro,
+21:02.820 --> 21:04.920
+longe de mim fazer qualquer coisa de errado,
+21:04.920 --> 21:07.080
+então, só deixar claro também,
+21:07.200 --> 21:08.400
+mas tem esse lado aí,
+21:08.400 --> 21:10.200
+onde o Rappet, Lovable, etc.
+21:10.200 --> 21:11.180
+Uma pessoa, eventualmente,
+21:11.180 --> 21:14.080
+que não tem o conhecimento de desenvolvimento,
+21:14.080 --> 21:15.680
+por exemplo,
+21:15.680 --> 21:18.080
+poderia fazer alguma coisa dentro da plataforma e tudo mais.
+21:18.080 --> 21:19.420
+Então, é só deixando vocês cientes
+21:19.420 --> 21:21.380
+que tem esse trade-off aí.
+21:21.380 --> 21:22.920
+Não, não, e outra,
+21:22.920 --> 21:23.590
+fica em parte, cara.
+21:23.590 --> 21:25.200
+Ramon, tu vai com a gente até o fim, velho.
+21:25.640 --> 21:26.880
+Não, tranquilo, pra mim.
+21:26.880 --> 21:29.660
+Não, não, porque assim, cara,
+21:29.660 --> 21:31.640
+pra gente não há, não há,
+21:31.640 --> 21:32.920
+eu não posso tirar, por exemplo,
+21:32.920 --> 21:34.520
+o Hugo da potencialidade dele,
+21:34.520 --> 21:35.040
+da arte dele,
+21:35.040 --> 21:35.590
+pra falar, cara,
+21:35.590 --> 21:36.380
+vamos lá botar um prompt,
+21:36.380 --> 21:37.780
+nem eu quero fazer isso.
+21:37.780 --> 21:40.350
+A gente não, a gente tem que fazer outras coisas,
+21:40.350 --> 21:41.400
+a gente já tem um time formado,
+21:41.400 --> 21:43.540
+e você, embora ainda não esteja dentro,
+21:43.540 --> 21:46.420
+dentro, dentro ali do organograma da ex-construção,
+21:46.420 --> 21:47.580
+tu ex-construção, entendeu.
+21:47.580 --> 21:48.560
+Era um projeto que você pode falar,
+21:48.560 --> 21:49.780
+pode chamar de teu também, entendeu.
+21:49.780 --> 21:51.300
+E a gente vai continuar contigo, cara,
+21:51.300 --> 21:53.640
+não tem, disso a gente não corre, cara.
+21:53.640 --> 21:55.120
+Não, agradeço,
+21:55.180 --> 21:56.060
+mas eu só quis falar,
+21:56.060 --> 21:57.600
+porque tem esse lado também, sabe.
+21:57.600 --> 21:57.780
+Ah, claro.
+21:57.780 --> 21:59.060
+Não, não, tranquilo.
+21:59.060 --> 22:01.920
+Que parece tudo meio uma maravilha, né,
+22:01.920 --> 22:02.820
+o lance do custo.
+22:02.820 --> 22:03.540
+Então, não, pode falar.
+22:03.540 --> 22:06.540
+Então, não, só pra alinhar contigo então, Adr,
+22:06.540 --> 22:09.860
+é bom a gente só fazer uma análise em cima disso,
+22:09.860 --> 22:10.740
+levar pro pessoal,
+22:10.740 --> 22:12.560
+pra bater uma tela até a semana que vem, então.
+22:12.560 --> 22:15.180
+Exatamente, isso que eu ia apontar também.
+22:15.180 --> 22:16.260
+É isso, cara,
+22:16.260 --> 22:17.160
+a gente vai bater um papo aqui,
+22:17.160 --> 22:17.880
+levar pra galera,
+22:17.880 --> 22:21.500
+mas é quase certo que a gente vai ter que tocar isso aí, cara,
+22:21.500 --> 22:23.540
+por esses dois motivos que a gente levanta aqui, né,
+22:23.540 --> 22:24.480
+para as duas preocupações.
+22:24.720 --> 22:26.860
+Acho que isso posto,
+22:26.860 --> 22:28.500
+vamos voltar para os outros assuntos ali
+22:28.500 --> 22:32.620
+que a gente tinha pra pontuar em relação aos planos.
+22:32.620 --> 22:34.440
+Como é que a gente pode passar isso?
+22:34.440 --> 22:36.800
+Só da gente passar o outro documento atualizado
+22:36.800 --> 22:38.400
+com o nome dos planos,
+22:38.400 --> 22:39.600
+o que cada um inclui,
+22:39.600 --> 22:41.200
+e o preço dele já tá tudo certo?
+22:41.400 --> 22:42.940
+Pra mim, tá bom, em texto,
+22:42.940 --> 22:46.040
+aí, se vocês quiserem conseguir alterar no documento,
+22:46.040 --> 22:46.720
+tá perfeito,
+22:46.720 --> 22:49.280
+se vocês tiverem textualmente também,
+22:49.280 --> 22:50.520
+porque eu já, como eu falei,
+22:50.520 --> 22:52.340
+eu uso isso aí como um prompt, né,
+22:52.340 --> 22:53.640
+pra tá passando pra IA,
+22:53.640 --> 22:54.440
+pra tá desenvolvendo,
+22:54.440 --> 22:56.540
+e aí eu faço ajustes ali, né,
+22:56.600 --> 22:58.300
+só que é nível do código ali também.
+22:58.300 --> 22:59.460
+Não, tranquilo,
+22:59.460 --> 23:00.980
+eu atualizo o documento pra ti,
+23:00.980 --> 23:02.720
+eu vou, eu e o Hugo,
+23:02.720 --> 23:03.640
+a gente vai validar aqui,
+23:03.640 --> 23:05.480
+e aí depois a gente passa pra ti.
+23:05.480 --> 23:06.460
+Tá, tá, tá.
+23:06.460 --> 23:07.580
+E tem um ponto lá,
+23:07.580 --> 23:10.200
+que eu até comentei no grupo hoje de manhã, né,
+23:10.320 --> 23:12.320
+que eu vi lá que tem a parte do serviço,
+23:12.320 --> 23:13.580
+só que é do Asas, né,
+23:13.580 --> 23:15.260
+é específico na troca do plano,
+23:15.260 --> 23:16.360
+que eu tô vendo direitinho
+23:16.360 --> 23:18.540
+qual o motivo do problema, né,
+23:18.540 --> 23:20.040
+então eu tô ajustando isso daí,
+23:20.040 --> 23:21.040
+o Guilherme falou, né,
+23:21.040 --> 23:21.820
+no grupo lá,
+23:21.820 --> 23:23.780
+pra gente na semana que vem também conversar,
+23:23.780 --> 23:26.800
+eu vou pegar férias na quarta-feira, né,
+23:26.800 --> 23:28.640
+então a gente pode ver aí um dia ali,
+23:28.640 --> 23:29.880
+aí durante o dia,
+23:29.880 --> 23:30.980
+se vocês acharem tranquilo,
+23:30.980 --> 23:32.500
+enfim, a gente vê o horário certinho,
+23:32.500 --> 23:34.920
+pra tá alinhando lá também,
+23:34.920 --> 23:36.160
+conversando e fazendo,
+23:36.160 --> 23:39.020
+agilizando essa parte das jornadas também,
+23:39.020 --> 23:41.300
+pelo amor bom que eu anoto
+23:41.300 --> 23:42.660
+os problemas técnicos ali,
+23:42.660 --> 23:44.460
+e aí vocês já peguem ideia ali
+23:44.460 --> 23:46.740
+que pode ser a nível de negócio também.
+23:46.740 --> 23:48.300
+Bom, fechou.
+23:48.300 --> 23:51.460
+Então, beleza,
+23:51.460 --> 23:53.620
+essa parte tá basicamente resolvida, né,
+23:53.620 --> 23:54.460
+a questão dos planos,
+23:54.460 --> 23:55.840
+depois tu vai alterar então, né,
+23:55.840 --> 23:57.640
+a gente vai bater e tal,
+23:57.640 --> 23:59.140
+a gente vai alterar o documento
+23:59.140 --> 24:00.120
+e mandar pra uma mão antes,
+24:00.120 --> 24:02.180
+e a questão,
+24:02.180 --> 24:05.320
+essa questão das limitações por plano, cara,
+24:05.320 --> 24:08.800
+a gente vai ter que revisar isso também, né,
+24:08.800 --> 24:10.280
+porque eu não sei se todas que estão aqui
+24:10.280 --> 24:13.180
+nesse documento estão funcionando.
+24:13.180 --> 24:15.580
+É, então, as limitações,
+24:15.580 --> 24:17.280
+assim, se vocês já colocaram
+24:17.280 --> 24:18.600
+e já tem na plataforma,
+24:18.600 --> 24:19.920
+eu já consigo, né,
+24:19.920 --> 24:21.620
+fazer ali o ajuste por prompt,
+24:21.620 --> 24:23.080
+por exemplo, chat limitado,
+24:23.080 --> 24:23.700
+etc e tal,
+24:23.700 --> 24:25.140
+por mais que eu tenha que fazer
+24:25.140 --> 24:26.120
+alguns testes aí no chat
+24:26.120 --> 24:26.720
+pra ver se tá ok,
+24:26.720 --> 24:28.300
+tem a funcionalidade lá.
+24:28.300 --> 24:30.820
+A gente coloca um item da jornada
+24:30.820 --> 24:31.820
+e um requisito também.
+24:32.760 --> 24:34.140
+Essa integração do Synapse
+24:34.140 --> 24:35.120
+já tá funcionando ou não?
+24:35.120 --> 24:37.720
+Essa...
+24:37.720 --> 24:38.780
+Então, na verdade,
+24:38.780 --> 24:40.340
+acho que a gente tinha,
+24:40.340 --> 24:41.240
+isso daí é uma observação,
+24:41.240 --> 24:43.720
+mas a gente ficou de conversar
+24:43.720 --> 24:46.320
+e ainda preciso dar uma olhada
+24:46.320 --> 24:47.880
+na API deles e tudo mais,
+24:47.880 --> 24:48.240
+ver como funciona.
+24:48.240 --> 24:50.700
+Eu não sei se vocês têm acesso
+24:50.700 --> 24:51.240
+a alguma coisa deles,
+24:51.240 --> 24:53.500
+se tem custo à parte
+24:53.500 --> 24:54.240
+ou algum sentido.
+24:55.040 --> 24:55.640
+Não, não tem, não.
+24:55.640 --> 24:57.140
+É API gratuita.
+24:57.140 --> 24:59.240
+É governamental, né?
+24:59.240 --> 25:01.560
+Você é meio que pra regular
+25:01.560 --> 25:02.680
+o mercado ali e tal.
+25:02.680 --> 25:04.280
+Tá.
+25:04.280 --> 25:05.660
+Regular não, né?
+25:05.660 --> 25:07.260
+Dá uma norteada, vai.
+25:07.260 --> 25:08.520
+Mas tu sabe como é que funciona
+25:08.520 --> 25:09.440
+essa integração, Éder?
+25:09.440 --> 25:10.280
+Porque eu te confesso
+25:10.280 --> 25:10.940
+que eu não sei por isso
+25:10.940 --> 25:11.580
+que eu tô perguntando.
+25:11.580 --> 25:13.280
+Não, quando eu pesquisei,
+25:13.280 --> 25:15.000
+até mandei pro...
+25:15.000 --> 25:16.160
+Quando eu...
+25:16.160 --> 25:17.000
+Lá no início, lá,
+25:17.000 --> 25:18.260
+quando eu falei pro Ramon,
+25:18.260 --> 25:19.640
+eu pesquisei lá, cara,
+25:19.640 --> 25:21.140
+ele falou que era muito tranquilo.
+25:21.140 --> 25:22.000
+Até mandei isso pro Ramon,
+25:22.000 --> 25:23.060
+mas faz muito tempo também, tá?
+25:23.060 --> 25:24.460
+Não vou cobrar que você lembre isso, não.
+25:24.840 --> 25:26.100
+Mas, pelo que eu lembro,
+25:26.100 --> 25:27.580
+era bem simplesinho, cara.
+25:27.580 --> 25:29.140
+Não era nada complexo, não.
+25:29.140 --> 25:29.540
+Tá.
+25:29.540 --> 25:30.240
+É um...
+25:30.240 --> 25:31.740
+Tu faz uma...
+25:31.740 --> 25:32.660
+Aí eu não sei como é que faz,
+25:32.660 --> 25:33.220
+mas, sei lá,
+25:33.220 --> 25:33.740
+mas faz...
+25:33.740 --> 25:35.180
+Conecta aí e manda bala.
+25:35.180 --> 25:36.200
+Dá, tranquilo.
+25:36.200 --> 25:37.680
+Tu consegue verificar isso pra gente,
+25:37.680 --> 25:38.000
+ou Ramon?
+25:38.000 --> 25:39.660
+Pra ver se dá pra já deixar pronto também?
+25:39.660 --> 25:40.520
+Beleza.
+25:40.520 --> 25:42.620
+Vou colocar aqui.
+25:42.620 --> 25:48.620
+Beleza.
+25:48.620 --> 25:49.540
+Aí, essa...
+25:49.540 --> 25:52.080
+Essa relação também dos dashboards,
+25:52.080 --> 25:53.080
+assim, tem como...
+25:53.080 --> 25:54.080
+Porque, assim, eu não sei, né, cara,
+25:54.140 --> 25:56.520
+se todos eles não seriam iguais, né?
+25:56.520 --> 25:57.620
+Tem como ser diferente?
+25:57.620 --> 25:59.120
+Porque um aqui, por exemplo,
+25:59.120 --> 26:00.980
+faz dashboards essenciais.
+26:00.980 --> 26:02.120
+Aí, no caso,
+26:02.120 --> 26:03.900
+a única coisa que mudaria seria
+26:03.900 --> 26:05.940
+o que vai aparecer no dashboard?
+26:05.940 --> 26:07.980
+Alguns vão aparecer como bloqueado,
+26:07.980 --> 26:09.280
+alguns vão aparecer como...
+26:09.280 --> 26:11.660
+visualização liberada, é isso?
+26:11.660 --> 26:15.660
+Dá pra simplesmente só não mostrar.
+26:15.660 --> 26:17.800
+Também, por exemplo,
+26:17.800 --> 26:20.440
+ah, supondo que o cara tá no plano freemium ali,
+26:20.440 --> 26:22.580
+ele tem acesso a um dashboard essencial,
+26:22.580 --> 26:24.240
+a gente só mostra realmente ali,
+26:24.240 --> 26:25.900
+saldo e alerta básico, por exemplo.
+26:25.900 --> 26:27.140
+Ah, dá pra fazer isso?
+26:27.140 --> 26:29.320
+Tipo, pelo plano que ele logar,
+26:29.320 --> 26:30.640
+que ele tiver ali na conta dele,
+26:30.640 --> 26:31.240
+vai aparecer...
+26:31.240 --> 26:32.740
+Ah, tá.
+26:32.740 --> 26:33.560
+Perfeito.
+26:33.560 --> 26:35.300
+Agora, essa falta a gente definir o que vai,
+26:35.300 --> 26:36.100
+o que não vai, então.
+26:36.100 --> 26:38.880
+Isso, por isso que eu falei que era importante,
+26:38.880 --> 26:40.920
+mesmo que a gente finalizar 100% hoje,
+26:40.920 --> 26:44.180
+essa parte ia ser muito importante justamente por isso.
+26:44.280 --> 26:46.120
+O cara tem um plano XPTO,
+26:46.120 --> 26:47.960
+ele vai mostrar tanto.
+26:47.960 --> 26:49.680
+Ele mudou de plano,
+26:49.680 --> 26:50.740
+mostra tanto também,
+26:50.740 --> 26:51.500
+o mais ou, enfim,
+26:51.500 --> 26:52.680
+basicamente.
+26:52.680 --> 26:54.340
+Então, por isso que é interessante vocês falarem,
+26:54.340 --> 26:56.860
+Ramon, o cara vai ter de 1 a 8 aqui,
+26:56.860 --> 26:57.620
+e é isso daqui.
+26:57.620 --> 26:59.680
+Aí eu vou montar o prompt, etc,
+26:59.680 --> 27:01.480
+pra ele fazer a lógica em todo o plano tal,
+27:01.480 --> 27:03.600
+e ele vai mostrar ou não tal informação.
+27:03.600 --> 27:06.040
+Eu vou dar uma revisada aqui depois,
+27:06.040 --> 27:08.120
+mas, e depois quando eu for bater pulgo,
+27:08.120 --> 27:08.960
+mas eu até coloquei assim,
+27:08.960 --> 27:10.380
+o que tá em roxinho ali,
+27:10.380 --> 27:12.500
+é um que vai mudando de um pro outro ali, né,
+27:12.500 --> 27:13.580
+tirando o texto ali de objetivo.
+27:13.580 --> 27:14.620
+Então, por exemplo,
+27:14.620 --> 27:16.040
+eu até coloquei as limitações,
+27:16.040 --> 27:17.820
+ah, no plano premium lá,
+27:17.820 --> 27:20.560
+sem acesso ao marketplace de oportunidades e tal.
+27:20.560 --> 27:22.400
+Só que como a gente vai ter o marketplace ainda,
+27:22.400 --> 27:24.100
+a gente vai ter que tentar dar uma elaborada aqui,
+27:24.100 --> 27:25.680
+melhor aqui nisso aqui, né,
+27:25.680 --> 27:26.800
+pra ver o que tem no básico,
+27:26.800 --> 27:27.740
+pra ver o que tem no premium,
+27:27.740 --> 27:30.100
+pra gente deixar ali como,
+27:30.100 --> 27:31.360
+putz, esse cara não vai ter isso, isso.
+27:31.360 --> 27:33.140
+No basic, aí a gente vai subindo,
+27:33.140 --> 27:33.620
+no premium,
+27:33.620 --> 27:36.720
+no premium pra gente deixar isso equilibrado,
+27:36.720 --> 27:38.820
+porque quando a gente tirou o outro lá,
+27:38.820 --> 27:39.840
+e eu preciso dar uma,
+27:39.840 --> 27:41.280
+a gente precisa mexer nisso aqui
+27:41.280 --> 27:42.720
+pra deixar ele mais coerente, sabe?
+27:42.880 --> 27:44.440
+Entendi, entendi.
+27:44.440 --> 27:46.580
+Não, por mim, o que vocês aguentaram...
+27:46.580 --> 27:49.200
+A gente acabou alterando também,
+27:49.200 --> 27:51.740
+pra fazer mais sentido na questão de precificação,
+27:51.740 --> 27:53.340
+porque inicialmente,
+27:53.340 --> 27:54.620
+pô, a gente não...
+27:54.620 --> 27:55.540
+Como é um MVP, né,
+27:55.540 --> 27:56.620
+a gente também não adianta lançar
+27:56.620 --> 27:58.180
+com muita complexidade operacional,
+27:58.180 --> 27:58.620
+pra não...
+27:58.620 --> 28:00.080
+até pela gente, né, cara?
+28:00.080 --> 28:02.420
+Então, fez mais sentido reduzir,
+28:02.420 --> 28:04.320
+pra que a gente tenha uma operação mais enxuta
+28:04.320 --> 28:05.680
+e teste, de fato, o produto.
+28:05.680 --> 28:08.960
+Sim, depois vai surgindo novas possibilidades,
+28:08.960 --> 28:10.440
+aí vai dando uma modificação.
+28:10.440 --> 28:11.560
+E acaba que nesse começo,
+28:11.560 --> 28:13.080
+a gente acaba até chamando mais gente
+28:13.080 --> 28:14.180
+pros planos iniciais,
+28:14.180 --> 28:16.480
+pra que também seja um aprendizado pra nós,
+28:16.480 --> 28:17.980
+dos feedbacks dos clientes e tal,
+28:17.980 --> 28:19.460
+que é o sentido do negócio, né?
+28:19.460 --> 28:20.140
+Com certeza.
+28:20.300 --> 28:23.420
+Então, acho que disso...
+28:23.420 --> 28:24.140
+Acho que tá ok.
+28:24.140 --> 28:26.260
+A gente vai revalidar essas questões, né,
+28:26.260 --> 28:27.100
+né, Eder?
+28:27.100 --> 28:29.060
+Pra depois a gente fazer essa questão
+28:29.060 --> 28:30.340
+que o Ramon solicitou ali no grupo,
+28:30.340 --> 28:31.440
+de acompanhar a jornada
+28:31.440 --> 28:33.360
+e ver o que vale e o que não vale, né?
+28:33.360 --> 28:34.580
+Que é importante.
+28:34.580 --> 28:39.000
+E agora a questão da jornada lá do...
+28:39.000 --> 28:41.240
+do cadastro lá do empreiteiro e tudo, né,
+28:41.240 --> 28:43.040
+que a gente tava falando, Eder.
+28:43.040 --> 28:44.640
+Tu quer falar ou o que eu acho que eu faço?
+28:44.640 --> 28:46.600
+Pode, pode, pode desenrolar.
+28:46.600 --> 28:47.780
+Tá bom.
+28:48.960 --> 28:50.000
+O seguinte, Ramon,
+28:50.000 --> 28:52.160
+acho que a gente não teve esse papo antes
+28:52.160 --> 28:54.320
+e uma coisa que a gente teria que fazer
+28:54.320 --> 28:55.900
+de alteração na plataforma
+28:55.900 --> 28:58.520
+é que hoje, no produto...
+28:58.520 --> 29:01.240
+Hoje, o acesso, ele tá basicamente
+29:01.240 --> 29:03.460
+como seria no marketplace.
+29:03.460 --> 29:05.740
+O cliente faz um cadastro
+29:05.740 --> 29:07.460
+e o empreiteiro faz outro cadastro.
+29:07.460 --> 29:10.040
+E nesse primeiro momento...
+29:10.040 --> 29:10.280
+Você fala cliente, desculpa.
+29:10.280 --> 29:12.240
+Cliente é o contratante, no caso, né?
+29:12.240 --> 29:12.860
+Isso, isso.
+29:12.860 --> 29:13.560
+Contratante, claro.
+29:13.560 --> 29:16.200
+Cliente, no caso, o cliente do empreiteiro,
+29:16.200 --> 29:18.480
+não é o nosso cliente, mas é o contratante.
+29:18.960 --> 29:21.540
+E hoje o contratante faz um cadastro
+29:21.540 --> 29:24.040
+e o empreiteiro faz outro cadastro.
+29:24.040 --> 29:27.760
+E esse seria o fluxo ideal pro marketplace,
+29:27.760 --> 29:30.160
+não seria o fluxo ideal pro ex-gestão.
+29:30.160 --> 29:31.000
+Eu acho...
+29:31.000 --> 29:32.560
+Essa é uma pergunta que eu ia fazer também.
+29:32.560 --> 29:36.580
+Nesse momento inicial, qual seria o fluxo correto?
+29:36.840 --> 29:38.740
+Só o empreiteiro faz o cadastro,
+29:38.740 --> 29:40.780
+porque ele é o cliente do produto ex-gestão, né?
+29:40.780 --> 29:41.720
+O contratante não é.
+29:41.720 --> 29:43.320
+O contratante é o cliente dele, né?
+29:43.320 --> 29:45.940
+Então, ele faz o cadastro, cria a conta
+29:45.940 --> 29:48.640
+e, a partir disso, ele teria que ter uma aba
+29:48.640 --> 29:51.040
+em que ele possa exportar, por exemplo, um link
+29:51.040 --> 29:54.780
+pra que o contratante visse o que ele quisesse mandar
+29:54.780 --> 29:55.840
+naquele relatório, entendeu?
+29:57.520 --> 29:59.780
+Como se fosse um portfólio dele, digamos assim.
+29:59.780 --> 30:02.340
+Ah, ele fala assim, pô, vou te mandar aqui um link
+30:02.340 --> 30:04.740
+que vai melhor conseguir olhar como é que tá a tua obra, entendeu?
+30:04.740 --> 30:07.700
+Aí ele vai pegar as informações ali,
+30:07.700 --> 30:10.300
+o modelo pronto, no caso, de um relatório,
+30:10.300 --> 30:12.520
+exportação de um relatório ou de um link.
+30:12.520 --> 30:13.780
+Eu acho que é melhor um link, né?
+30:13.780 --> 30:15.660
+Que o cara possa acessar e mexer ali.
+30:15.660 --> 30:17.520
+Só que, claro, ele vai...
+30:18.520 --> 30:20.140
+Talvez, eu não sei como é que daria pra ver
+30:20.140 --> 30:22.420
+se a questão do acesso, se o acesso ficaria liberado,
+30:22.420 --> 30:26.120
+se ele colocar alguma senha que o empreiteiro passasse pra ele.
+30:26.120 --> 30:27.800
+Tem que ver qual é a prática que ele mesmo tá dando.
+30:27.800 --> 30:31.200
+Só que eu acho que é interessante a gente fazer esse ajuste
+30:31.200 --> 30:34.200
+porque a gente geraria muito atrito
+30:34.200 --> 30:36.340
+se o contratante também tivesse que criar uma conta
+30:36.340 --> 30:39.440
+só pra poder ver como é que a obra dele tá, entendeu?
+30:39.440 --> 30:42.000
+É mais fácil que ele só exporte o link
+30:42.000 --> 30:43.280
+e o cara fala, pô, show de bola.
+30:43.280 --> 30:45.600
+Porque daí, nesse link, a gente pode, por exemplo,
+30:45.600 --> 30:47.260
+usar os quadrados de anúncio
+30:47.260 --> 30:49.220
+pra fazer anúncio do Marketplace
+30:49.220 --> 30:50.900
+pra gerar interesse no cliente também.
+30:50.900 --> 30:53.140
+Querendo ou não, a gente já começa a fazer
+30:53.140 --> 30:54.820
+um pré-lançamento do Marketplace
+30:54.820 --> 30:57.760
+e usa também isso como canal de tráfego, né?
+30:57.760 --> 30:59.820
+Já que, claro, cada pessoa...
+30:59.820 --> 31:01.360
+Se a gente tiver um empreiteiro, por exemplo,
+31:01.360 --> 31:02.600
+do próprio, tiver 10 obras,
+31:02.600 --> 31:03.900
+são 10 clientes que vão estar vendo
+31:03.900 --> 31:05.600
+que o Marketplace vai ser lançado, né?
+31:05.600 --> 31:06.880
+Justo, justo.
+31:06.880 --> 31:09.940
+Mas, assim, hoje o que a gente já tem vai se manter, né?
+31:09.940 --> 31:12.520
+O Marketplace lá, tanto do contratante quanto do empreiteiro.
+31:12.520 --> 31:13.600
+Não, isso vai, isso vai.
+31:13.600 --> 31:16.340
+Esse fluxo do Marketplace tá perfeito,
+31:16.340 --> 31:17.220
+continua dessa maneira.
+31:17.260 --> 31:18.940
+Mas é que, pro ex-gestão,
+31:18.940 --> 31:21.500
+é que a gente teve um erro, talvez, no começo,
+31:21.500 --> 31:23.320
+de não fazer essa separação de produto.
+31:23.320 --> 31:25.000
+Cada produto é um produto.
+31:25.000 --> 31:26.780
+A ex-construção é uma empresa
+31:26.780 --> 31:27.840
+que tem o ex-gestão,
+31:27.840 --> 31:29.160
+que vai ser um produto inicial
+31:29.160 --> 31:30.860
+pra geração de base
+31:30.860 --> 31:33.060
+e, claro, geração de receita, né?
+31:33.060 --> 31:34.120
+Receita recorrente,
+31:34.120 --> 31:37.320
+pra que a gente consiga desenvolver o Marketplace,
+31:37.320 --> 31:38.940
+que é um lançamento um pouco posterior,
+31:38.940 --> 31:41.600
+já que a gente depende um pouco também de...
+31:41.600 --> 31:43.140
+A gente depende de tráfego, né?
+31:43.140 --> 31:44.480
+De ser mais conhecido, né?
+31:44.480 --> 31:46.800
+O Marketplace sobrevive disso no final do dia, né?
+31:46.800 --> 31:47.360
+Então...
+31:47.360 --> 31:48.220
+Não, e outra coisa,
+31:48.220 --> 31:49.400
+eu acho que, claro,
+31:49.400 --> 31:52.920
+só Deus vai dizer o que vai ser quando começar.
+31:52.920 --> 31:54.140
+Mas, por exemplo,
+31:54.140 --> 31:56.800
+pode ser que inicie uma obra
+31:56.800 --> 31:58.600
+já com uma porcentagem, entendeu?
+31:58.600 --> 32:01.320
+Então, o cara já inicie com aquelas features
+32:01.320 --> 32:02.020
+que ele vai usar lá.
+32:02.020 --> 32:03.020
+Então, tá, beleza.
+32:03.600 --> 32:05.760
+Até o que o Dedeck tinha falado em algum momento,
+32:05.760 --> 32:06.260
+ela falou, cara,
+32:06.260 --> 32:07.500
+vamos botar o cara pra rodar lá dentro.
+32:07.500 --> 32:09.240
+Se é o cara que ele já conhece e tudo,
+32:09.240 --> 32:09.820
+então bota lá,
+32:09.820 --> 32:11.080
+vai ter 10% da...
+32:11.080 --> 32:12.500
+Enfim, a gente tá vendo ainda,
+32:12.500 --> 32:13.960
+vai ter 10% de administração.
+32:13.960 --> 32:16.020
+Então, talvez o Marketplace já começa
+32:16.020 --> 32:18.320
+junto com o início, entendeu?
+32:18.320 --> 32:19.260
+A gente não sabe,
+32:19.260 --> 32:20.920
+mas vai estar preparado pra isso
+32:20.920 --> 32:23.620
+que a gente sabe que as telas já estão criadas,
+32:23.620 --> 32:25.520
+os agentes já estão criados, né?
+32:25.520 --> 32:27.240
+Então, pode ser que, cara,
+32:27.240 --> 32:28.580
+comece tudo junto.
+32:28.580 --> 32:29.400
+O que a gente,
+32:29.400 --> 32:31.000
+o que bem o Hugo colocou aí,
+32:31.000 --> 32:31.560
+é isso, cara.
+32:31.600 --> 32:32.820
+É um canal de aquisição, né?
+32:32.820 --> 32:33.700
+No final das contas, ali,
+32:33.700 --> 32:35.840
+o ex-gestão é um canal de aquisição,
+32:35.840 --> 32:37.160
+um canal de tráfego mesmo, entendeu?
+32:37.160 --> 32:37.900
+Entendi.
+32:37.900 --> 32:39.160
+E aí, por exemplo,
+32:39.160 --> 32:40.460
+como que vai funcionar?
+32:40.460 --> 32:43.080
+Ele vai mandar o link pro cara e tal,
+32:43.080 --> 32:44.360
+mas aí, no caso aí,
+32:44.360 --> 32:47.620
+o empreiteiro criaria a obra,
+32:47.620 --> 32:48.320
+digamos assim?
+32:48.320 --> 32:49.580
+Só pra entender, por exemplo.
+32:49.580 --> 32:50.220
+É isso?
+32:50.220 --> 32:52.300
+O empreiteiro faria o cadastro dele,
+32:52.300 --> 32:53.160
+criaria a obra,
+32:53.160 --> 32:57.160
+e ele iria usando o software,
+32:57.160 --> 32:59.180
+de fato, pra gestão das obras, né?
+33:00.720 --> 33:01.940
+Como, por exemplo,
+33:01.940 --> 33:02.980
+uma VOB da vida,
+33:02.980 --> 33:03.300
+enfim,
+33:03.300 --> 33:04.640
+uma prática de mercado
+33:04.640 --> 33:06.620
+seria um sistema de gestão de obra, né?
+33:06.620 --> 33:07.520
+O cara poderia,
+33:07.520 --> 33:10.060
+ele vai colocando as informações ali,
+33:10.060 --> 33:11.180
+e vai tendo,
+33:11.180 --> 33:12.660
+os testes boards,
+33:12.660 --> 33:12.940
+enfim,
+33:12.940 --> 33:14.700
+vai tendo essas visualizações
+33:14.700 --> 33:15.960
+das informações,
+33:15.960 --> 33:17.520
+e usando isso
+33:17.520 --> 33:18.620
+pra poder reportar melhor
+33:18.620 --> 33:19.320
+pro cliente, né?
+33:19.320 --> 33:19.840
+Querendo ou não,
+33:19.840 --> 33:21.220
+uma ferramenta pra ele também, né?
+33:21.220 --> 33:22.580
+Entendi, entendi, tá.
+33:22.580 --> 33:23.840
+Beleza.
+33:23.840 --> 33:25.140
+Então, ele criaria e passa.
+33:25.480 --> 33:26.540
+E aí, hoje, por exemplo,
+33:26.540 --> 33:28.120
+é que tem o marketplace,
+33:28.120 --> 33:28.840
+sei lá, né?
+33:28.840 --> 33:29.120
+Beleza,
+33:29.120 --> 33:30.760
+é os dois tendo aquela visão.
+33:30.760 --> 33:31.920
+No caso,
+33:31.920 --> 33:32.840
+vocês acham que daria
+33:32.840 --> 33:33.460
+pra aproveitar
+33:33.460 --> 33:34.820
+a própria jornada
+33:34.820 --> 33:35.920
+do empreiteiro hoje,
+33:35.920 --> 33:37.200
+do jeito que tá,
+33:37.200 --> 33:38.240
+e aí vocês acham
+33:38.240 --> 33:39.380
+que colocariam um item
+33:39.380 --> 33:39.840
+no menu,
+33:39.840 --> 33:41.460
+que teria, por exemplo,
+33:41.460 --> 33:42.700
+ex-gestão,
+33:42.700 --> 33:43.240
+por exemplo,
+33:43.240 --> 33:44.240
+e aí dentro dele
+33:44.240 --> 33:46.280
+a gente teria algo específico,
+33:46.280 --> 33:47.340
+particular, por exemplo,
+33:47.340 --> 33:48.520
+em relação a isso,
+33:48.520 --> 33:49.420
+ou o que vocês estavam
+33:49.420 --> 33:50.140
+mentalizando isso aí?
+33:50.140 --> 33:51.180
+Apesar que eu dei uma lida aqui,
+33:51.180 --> 33:51.720
+mas é só pra ver
+33:51.720 --> 33:53.000
+se tá ligando
+33:53.000 --> 33:53.660
+essa informação.
+33:53.660 --> 33:56.200
+Talvez seja uma dúvida
+33:56.200 --> 33:57.280
+até que fica na minha cabeça
+33:57.280 --> 33:57.980
+em relação a isso,
+33:57.980 --> 34:00.120
+porque existe a possibilidade
+34:00.120 --> 34:01.560
+que hoje quem cria a obra
+34:01.560 --> 34:03.940
+é o contratante
+34:03.940 --> 34:05.240
+pra que o empreiteiro
+34:05.240 --> 34:06.400
+possa ver a obra, né?
+34:06.400 --> 34:08.460
+Então, a gente tem um fluxo
+34:08.460 --> 34:09.160
+todo desenhado
+34:09.160 --> 34:09.800
+com o marketplace.
+34:09.800 --> 34:11.160
+Agora, eu não sei
+34:11.160 --> 34:12.670
+como fazer essa diferenciação
+34:12.670 --> 34:13.340
+de produto
+34:13.340 --> 34:14.640
+pra que as jornadas
+34:14.640 --> 34:15.980
+não fiquem confusas, né?
+34:15.980 --> 34:17.080
+Não sei se isso teria
+34:17.080 --> 34:18.300
+que ser feito no acesso,
+34:18.300 --> 34:21.160
+ou teria que ter um botão ali
+34:21.160 --> 34:22.000
+tipo o Xgestão
+34:22.000 --> 34:22.500
+e um botão
+34:22.500 --> 34:23.710
+pro marketplace,
+34:23.710 --> 34:24.840
+porque no início
+34:24.840 --> 34:26.210
+a gente entende
+34:26.210 --> 34:27.160
+que o marketplace
+34:27.160 --> 34:28.520
+vai ficar bloqueado, né?
+34:28.520 --> 34:29.320
+A gente não vai lançar
+34:29.320 --> 34:30.940
+o marketplace por enquanto,
+34:30.940 --> 34:32.230
+seria como se fosse,
+34:32.230 --> 34:34.300
+ele apareceria,
+34:34.300 --> 34:35.340
+mas como uma coisa
+34:35.340 --> 34:36.120
+em breve, né?
+34:36.120 --> 34:36.660
+A gente vai
+34:36.660 --> 34:38.420
+pra gerar aquele desejo e tal.
+34:38.420 --> 34:40.160
+A gente teria que ter um acesso
+34:40.160 --> 34:41.300
+com o nome, de fato,
+34:41.300 --> 34:42.800
+do produto Xgestão
+34:42.800 --> 34:43.620
+pro cara entender
+34:43.620 --> 34:44.960
+que ele tá usando
+34:44.960 --> 34:46.230
+o produto Xgestão mesmo,
+34:46.230 --> 34:47.060
+que é uma ferramenta
+34:47.060 --> 34:47.840
+de gestão de obra.
+34:47.840 --> 34:49.980
+Não é um marketplace inicialmente,
+34:49.980 --> 34:50.280
+entendeu?
+34:50.710 --> 34:52.500
+Teria que ter essa diferenciação
+34:52.500 --> 34:53.300
+inicial, assim.
+34:53.300 --> 34:54.900
+Talvez não saiba,
+34:54.900 --> 34:56.170
+talvez a gente tenha que parar
+34:56.170 --> 34:57.280
+pra desenhar a jornada
+34:57.280 --> 34:58.690
+de como se diferenciariam
+34:58.690 --> 34:59.480
+os dois produtos.
+34:59.480 --> 35:01.190
+Mas teria que ter
+35:01.190 --> 35:02.000
+essa diferenciação
+35:02.000 --> 35:02.780
+do cara entender
+35:02.780 --> 35:03.940
+que nesse momento
+35:03.940 --> 35:04.730
+ele tá entrando
+35:04.730 --> 35:06.280
+pra o Xgestão
+35:06.280 --> 35:07.540
+e não pro marketplace.
+35:07.540 --> 35:10.060
+Entendi, entendi.
+35:10.060 --> 35:12.160
+Mas a gente pode bater isso
+35:12.160 --> 35:13.440
+também na comunicação também, né?
+35:13.440 --> 35:14.640
+Então, acho que também
+35:14.640 --> 35:15.940
+a gente vai desenhar também,
+35:15.940 --> 35:16.710
+a gente...
+35:16.710 --> 35:18.000
+Não é porque também, assim,
+35:18.000 --> 35:19.080
+o cara que foi impactado, né?
+35:19.080 --> 35:19.620
+Pensando que o cara
+35:19.620 --> 35:20.160
+foi impactado,
+35:20.210 --> 35:20.840
+ele vai ser impactado
+35:20.840 --> 35:22.840
+porque ele é o executor.
+35:22.840 --> 35:24.360
+E a gente,
+35:24.360 --> 35:25.190
+quando a gente, obviamente,
+35:25.190 --> 35:27.120
+fizer algo geolocalizado,
+35:27.120 --> 35:27.980
+algo que a gente tá pensando
+35:27.980 --> 35:29.020
+em atingir pessoas
+35:29.020 --> 35:30.020
+que estão querendo construir,
+35:30.020 --> 35:30.670
+reformar,
+35:30.670 --> 35:32.600
+vai ser um link direto
+35:32.600 --> 35:34.340
+pro momento dele, entendeu?
+35:34.340 --> 35:35.500
+Mas eu entendi
+35:35.500 --> 35:35.980
+o que vocês estão
+35:35.980 --> 35:36.420
+querendo dizer,
+35:36.420 --> 35:37.080
+até mesmo por conta
+35:37.080 --> 35:38.020
+de entender
+35:38.020 --> 35:38.900
+como é que isso vai funcionar
+35:38.900 --> 35:39.640
+dentro da plataforma.
+35:39.640 --> 35:40.780
+E a gente também
+35:40.780 --> 35:41.670
+vai alinhar isso aí também
+35:41.670 --> 35:42.260
+e deixar afinadinho
+35:42.260 --> 35:43.080
+pra ti também, tá, Ramon?
+35:43.480 --> 35:44.460
+Não, tranquilo, tranquilo.
+35:44.460 --> 35:45.860
+É, a gente pode fazer isso
+35:45.860 --> 35:46.380
+e também,
+35:46.380 --> 35:48.780
+meio que idealizar, né?
+35:48.780 --> 35:49.280
+Pelo menos,
+35:49.280 --> 35:50.980
+se lá na frente,
+35:50.980 --> 35:52.420
+supondo que estourou ali, né?
+35:52.420 --> 35:53.660
+Obviamente, se Deus quiser,
+35:53.660 --> 35:55.600
+estoura a parte do marketplace,
+35:55.600 --> 35:56.880
+realmente ving, né?
+35:57.040 --> 35:58.440
+Essa é a segunda etapa
+35:58.440 --> 35:59.300
+pra realmente ter
+35:59.300 --> 36:00.580
+a movimentação dos dois lados
+36:00.580 --> 36:01.980
+até se conversar,
+36:01.980 --> 36:02.460
+eventualmente,
+36:02.460 --> 36:03.980
+na própria visão do cara ali,
+36:03.980 --> 36:04.580
+eventualmente,
+36:04.580 --> 36:05.280
+ter uma aba ali
+36:05.280 --> 36:06.160
+que ele possa, né,
+36:06.160 --> 36:07.800
+visualizar projetos ali
+36:07.800 --> 36:08.780
+do seu portfólio dele
+36:08.780 --> 36:09.400
+que ele manda o link
+36:09.400 --> 36:10.900
+ou outros que ele já tá lidando
+36:10.900 --> 36:11.560
+direto no marketplace.
+36:11.560 --> 36:13.580
+Mas é outro momento e tal, né?
+36:13.580 --> 36:14.260
+Mas...
+36:14.260 --> 36:14.900
+Não, isso vai aparecer,
+36:14.900 --> 36:15.440
+por exemplo,
+36:15.440 --> 36:16.480
+você falando aqui agora,
+36:16.480 --> 36:17.710
+assim, vamos por,
+36:17.710 --> 36:18.690
+eu sou empreiteiro.
+36:18.690 --> 36:19.580
+Daí eu tô lá,
+36:19.580 --> 36:20.670
+eu ainda não conhecia
+36:20.670 --> 36:21.440
+o marketplace,
+36:21.440 --> 36:21.880
+tem nada,
+36:21.880 --> 36:22.760
+ou então eu ouvi falar,
+36:22.760 --> 36:23.690
+mas não vi nada.
+36:23.690 --> 36:24.160
+Daí eu tô lá
+36:24.160 --> 36:25.780
+no meu ambiente lá,
+36:25.780 --> 36:26.960
+daí eu vou aparecer
+36:26.960 --> 36:27.400
+pra mim, é assim,
+36:27.400 --> 36:28.520
+tu conhece o marketplace?
+36:28.520 --> 36:32.020
+Tu pode, tu pode, é, é, é,
+36:32.020 --> 36:34.120
+participar de, de, de,
+36:34.120 --> 36:35.020
+orçamentos.
+36:35.020 --> 36:36.420
+Então o cara vai clicar lá.
+36:36.420 --> 36:37.160
+Então a gente vai levar
+36:37.160 --> 36:38.210
+esse cara basicamente
+36:38.210 --> 36:39.320
+já no nosso caminho
+36:39.320 --> 36:39.690
+que ele já,
+36:39.690 --> 36:40.880
+ele já tá ali dentro, entendeu?
+36:40.880 --> 36:43.170
+Talvez o nosso, o nosso,
+36:43.170 --> 36:45.120
+o que a gente precisa fazer mesmo
+36:45.120 --> 36:46.710
+é construir cases
+36:46.710 --> 36:48.210
+pra mostrar pro cara,
+36:48.210 --> 36:49.160
+pro contratante
+36:49.160 --> 36:50.580
+que é importante ele tá dentro, entendeu?
+36:50.580 --> 36:52.560
+Esse talvez é o nosso
+36:52.560 --> 36:53.580
+maior desafio aqui.
+36:53.580 --> 36:54.860
+Porque gestão de obra, cara,
+36:54.860 --> 36:55.900
+é tranquilo.
+36:56.620 --> 36:57.520
+Existe gestão de obra.
+36:57.520 --> 36:58.500
+O nosso tem, puta,
+36:58.500 --> 36:59.300
+muita coisa a mais.
+36:59.300 --> 37:00.620
+Tem coisas simples,
+37:00.620 --> 37:01.780
+mas bem feitas.
+37:01.780 --> 37:03.320
+É aí que a gente vai pegar
+37:03.320 --> 37:04.440
+a diferença da galera, entendeu?
+37:04.440 --> 37:05.780
+Mas o restante ali,
+37:05.780 --> 37:06.170
+marketplace,
+37:06.170 --> 37:07.540
+como é que a gente vai conectar isso,
+37:07.540 --> 37:09.300
+aí a gente vai ter que meio que
+37:09.300 --> 37:12.500
+já ir pensando estrategicamente ali, sabe?
+37:12.500 --> 37:13.300
+Tá.
+37:13.300 --> 37:15.160
+É, eu posso pegar
+37:15.160 --> 37:16.620
+essa nossa conversa aqui, né,
+37:16.620 --> 37:17.260
+enfim,
+37:17.260 --> 37:18.500
+e dar uma perguntada aqui
+37:18.500 --> 37:19.640
+com o chat e tudo mais aqui,
+37:19.640 --> 37:21.040
+e tentar trazer algumas ideias.
+37:21.120 --> 37:22.690
+se vocês tiverem outras também,
+37:22.690 --> 37:24.540
+a gente pode talvez ali até,
+37:24.540 --> 37:26.710
+como que eu posso dizer assim,
+37:26.710 --> 37:28.730
+congelar no primeiro momento ali, né,
+37:28.730 --> 37:30.440
+tirar na home ali
+37:30.440 --> 37:32.780
+a parte de acesso de contratantes,
+37:32.780 --> 37:33.780
+se for o caso também,
+37:33.780 --> 37:35.340
+deixar só empreiteiro,
+37:35.440 --> 37:37.060
+pra gente colocar alguma coisa
+37:37.060 --> 37:39.380
+mais focada ali em ex-gestão, né,
+37:39.380 --> 37:39.920
+também,
+37:39.920 --> 37:41.980
+a gente pode fazer uma jornada específica,
+37:41.980 --> 37:43.190
+que vai ser uma jornada mais enxuta,
+37:43.190 --> 37:44.080
+de certa forma, né,
+37:44.080 --> 37:45.640
+e aí eu vejo com a IA direitinho
+37:45.640 --> 37:48.440
+pra gente poder fazer,
+37:48.440 --> 37:50.400
+pegar fragmentos do que já tem ali,
+37:50.400 --> 37:51.960
+e algo separado mesmo,
+37:51.960 --> 37:53.190
+pra não mesclar, né,
+37:53.190 --> 37:54.230
+as ideias e tal,
+37:54.230 --> 37:56.170
+e fazer algo mais enxuto ali
+37:56.170 --> 37:58.120
+pro ex-gestão,
+37:58.120 --> 37:59.280
+porque, querendo ou não,
+37:59.280 --> 37:59.820
+como vocês falaram,
+37:59.820 --> 38:00.340
+pode ser que,
+38:00.340 --> 38:02.170
+se fosse começar pelo ex-gestão,
+38:02.170 --> 38:03.120
+talvez o MVP já,
+38:03.120 --> 38:04.860
+não vou falar que teria saído, né,
+38:04.860 --> 38:06.940
+mas estaria muito mais apalpável,
+38:06.940 --> 38:08.210
+então a gente começou pelo mais difícil,
+38:08.210 --> 38:09.500
+o que é bom também, né,
+38:09.500 --> 38:10.160
+porque a gente já tem
+38:10.160 --> 38:12.340
+algo bem mais estruturado pro pós, né,
+38:12.340 --> 38:13.980
+então eu posso agilizar
+38:13.980 --> 38:14.840
+essas jornadas aqui,
+38:14.840 --> 38:16.280
+a gente já ir maturando
+38:16.280 --> 38:17.440
+nos próximos dias aí
+38:17.440 --> 38:19.100
+uma outra jornada, né,
+38:19.100 --> 38:21.520
+eventualmente do ex-gestão inteligente,
+38:21.520 --> 38:23.080
+é, ex-gestão inteligente,
+38:23.080 --> 38:25.730
+e pra gente poder também já começar
+38:25.730 --> 38:27.820
+a ter esse protótipo, né,
+38:27.820 --> 38:29.580
+de ter uma página pública ali
+38:29.580 --> 38:30.560
+pra mandar pro cara,
+38:30.560 --> 38:32.500
+pegar fragmentos do que tem no marketplace
+38:32.500 --> 38:34.120
+e deixar mais enxuto,
+38:34.280 --> 38:35.260
+e aí, obviamente,
+38:35.260 --> 38:37.160
+a gente nem precisa colocar em breve ainda,
+38:37.160 --> 38:38.160
+ou a gente pode colocar depois
+38:38.160 --> 38:39.160
+em alguns lugares,
+38:39.160 --> 38:40.730
+ó, em breve vamos lançar marketplace,
+38:40.730 --> 38:43.170
+aí a gente faz algo mais bacana,
+38:43.170 --> 38:44.320
+seja dentro da plataforma,
+38:44.320 --> 38:45.100
+fora também,
+38:45.100 --> 38:46.080
+então a gente pode,
+38:46.080 --> 38:48.340
+é, deixar meio que nossa visão,
+38:48.340 --> 38:49.640
+a gente ir testando marketplace,
+38:49.640 --> 38:51.320
+mas a gente já começar a focar,
+38:51.320 --> 38:52.520
+então, no ex-gestão,
+38:52.520 --> 38:53.600
+porque eu vejo que a gente já tem,
+38:53.600 --> 38:55.670
+vai, quase tudo pronto,
+38:55.670 --> 38:56.560
+digamos assim, né,
+38:56.560 --> 38:57.320
+lá no,
+38:57.320 --> 38:58.710
+na plataforma do marketplace,
+38:58.710 --> 39:00.480
+que poderia já encaixar
+39:00.480 --> 39:00.880
+pra cá,
+39:00.880 --> 39:00.880
+pra cá,
+39:00.880 --> 39:01.640
+pro empreiteiro,
+39:01.640 --> 39:03.340
+dadas devidas diferenças,
+39:03.340 --> 39:04.190
+que vocês passaram aqui,
+39:04.190 --> 39:06.190
+e aí a gente reaproveita código,
+39:06.190 --> 39:06.900
+e etc, etc,
+39:06.900 --> 39:07.340
+entendeu?
+39:07.340 --> 39:07.940
+Então,
+39:07.940 --> 39:09.040
+eu acho que dá pra gente agilizar,
+39:09.040 --> 39:10.400
+e eu só preciso entender com vocês,
+39:10.400 --> 39:11.440
+se os planos, né,
+39:11.440 --> 39:12.280
+que vocês passaram ali,
+39:12.280 --> 39:13.040
+vão ser o mesmo,
+39:13.040 --> 39:13.460
+né,
+39:13.460 --> 39:14.080
+pro marketplace,
+39:14.080 --> 39:15.040
+se, é,
+39:15.040 --> 39:16.140
+e o ex-gestão,
+39:16.140 --> 39:18.140
+ou vai ter alguma coisa mais específica,
+39:18.140 --> 39:19.100
+no primeiro momento,
+39:19.100 --> 39:19.400
+talvez.
+39:19.400 --> 39:21.100
+Então,
+39:21.100 --> 39:21.640
+é,
+39:21.640 --> 39:23.620
+a questão é,
+39:23.620 --> 39:26.780
+que talvez tenha existido uma falha de comunicação nossa,
+39:26.780 --> 39:28.300
+que a gente até estava falando,
+39:28.300 --> 39:28.780
+eu e o Ed,
+39:28.780 --> 39:29.940
+a gente estava falando essa semana,
+39:29.940 --> 39:31.300
+que o foco agora,
+39:31.300 --> 39:31.880
+de fato,
+39:31.880 --> 39:33.300
+é o ex-gestão,
+39:33.300 --> 39:35.160
+os planos que a gente se mandou ali,
+39:35.160 --> 39:36.260
+são só do ex-gestão,
+39:36.260 --> 39:39.040
+mas talvez seja uma falha de comunicação nossa,
+39:39.040 --> 39:39.900
+no sentido de,
+39:39.900 --> 39:41.540
+de deixar isso mais claro,
+39:41.540 --> 39:42.080
+e até ter,
+39:42.080 --> 39:43.820
+te posicionado esse fluxo,
+39:43.820 --> 39:44.440
+já no início.
+39:44.440 --> 39:45.780
+O nosso foco agora,
+39:45.780 --> 39:47.500
+é lançar o ex-gestão,
+39:47.500 --> 39:47.760
+entendeu?
+39:47.760 --> 39:48.080
+Então,
+39:48.080 --> 39:48.670
+por exemplo,
+39:48.670 --> 39:50.600
+é legal a gente ter,
+39:50.600 --> 39:51.760
+dado tanto,
+39:51.760 --> 39:53.380
+ter desenvolvido todo esse fluxo,
+39:53.380 --> 39:54.300
+da questão do marketplace,
+39:54.300 --> 39:56.230
+e a gente vai ter um trabalho futuro menor.
+39:56.230 --> 39:57.040
+Só que,
+39:57.040 --> 39:58.760
+a nossa prioridade,
+39:58.760 --> 39:58.980
+assim,
+39:58.980 --> 40:00.920
+que a gente quer lançar pra ontem mesmo,
+40:00.920 --> 40:01.690
+é o ex-gestão,
+40:01.690 --> 40:02.980
+que é um produto mais simples,
+40:02.980 --> 40:04.080
+é um produto que,
+40:04.080 --> 40:05.380
+que depende de uma,
+40:05.380 --> 40:07.380
+de uma operacionalização menor nossa,
+40:07.380 --> 40:08.360
+que depende de,
+40:08.360 --> 40:09.710
+de um suporte menor,
+40:09.710 --> 40:10.380
+de certa maneira,
+40:10.380 --> 40:11.230
+do que um marketplace,
+40:11.230 --> 40:11.710
+claro,
+40:11.820 --> 40:13.520
+que é infinitamente mais complexo.
+40:13.520 --> 40:14.440
+E a gente consegue validar,
+40:14.440 --> 40:14.600
+né?
+40:14.600 --> 40:15.340
+Porque os caras já estão na,
+40:15.340 --> 40:16.440
+e os caras conseguem validar,
+40:16.440 --> 40:16.560
+né?
+40:16.560 --> 40:17.520
+Porque eles já estão fazendo obra,
+40:17.520 --> 40:17.670
+né?
+40:17.670 --> 40:19.440
+É um negócio que a gente pode rodar pra nós mesmos,
+40:19.440 --> 40:21.000
+a gente já tem operação pra rodar.
+40:21.000 --> 40:21.300
+E, cara,
+40:21.300 --> 40:22.860
+pra lançar um marketplace,
+40:22.860 --> 40:23.690
+já tendo,
+40:23.690 --> 40:23.940
+né?
+40:23.940 --> 40:24.340
+Enfim,
+40:24.340 --> 40:25.210
+como a gente apontou,
+40:25.210 --> 40:25.780
+pra lançar,
+40:25.780 --> 40:28.190
+já tendo um sistema de gestão de obra,
+40:28.190 --> 40:29.340
+pra lançar um marketplace,
+40:29.340 --> 40:30.520
+depois que a gente tiver,
+40:30.520 --> 40:31.620
+base de dados,
+40:31.620 --> 40:32.540
+tráfego de gente,
+40:32.540 --> 40:33.190
+é muito melhor,
+40:33.190 --> 40:34.000
+sem dúvida.
+40:34.230 --> 40:34.500
+Então,
+40:34.500 --> 40:35.380
+nesse momento,
+40:35.380 --> 40:38.800
+a gente tem que desenhar essa parte com mais urgência,
+40:38.800 --> 40:38.980
+né?
+40:38.980 --> 40:39.880
+Tanto da nossa parte,
+40:39.880 --> 40:41.280
+como os que tiveram as sugestões,
+40:41.280 --> 40:45.940
+pra que a gente tenha como urgência a finalização do ex-gestão,
+40:45.940 --> 40:50.140
+aqueles planos ali que a gente vai te passar depois redondinho, né?
+40:50.190 --> 40:51.620
+Que a gente fez alterações,
+40:51.620 --> 40:52.920
+são do ex-gestão,
+40:52.920 --> 40:53.920
+que são as mensalidades,
+40:53.920 --> 40:56.670
+porque as taxas de serviço que a gente coloca ali,
+40:56.670 --> 40:58.040
+de 3% ou 18%,
+40:58.040 --> 40:58.860
+acompanhamento,
+40:58.860 --> 40:59.320
+aquilo ali,
+40:59.320 --> 41:00.900
+engloba só marketplace,
+41:00.900 --> 41:01.340
+entendeu?
+41:01.340 --> 41:02.060
+Só marketplace.
+41:02.060 --> 41:03.540
+A gente só vai cobrar,
+41:03.540 --> 41:04.520
+no marketplace,
+41:04.520 --> 41:10.420
+a ideia é que a gente tenha fontes de receita recorrente proveniente do ex-gestão,
+41:10.420 --> 41:11.690
+como receita previsível,
+41:11.690 --> 41:15.160
+e a gente use os primeiros fechamentos do marketplace,
+41:15.160 --> 41:17.710
+como vão ser receitas mais pontuais,
+41:17.710 --> 41:21.710
+e em algum momento vão se tornar recorrente pelo volume de obra.
+41:21.710 --> 41:23.840
+Mas o 15 por 13,
+41:23.840 --> 41:26.340
+15, 18% ali que a gente ainda está definindo,
+41:26.340 --> 41:27.730
+provavelmente serão 15%,
+41:27.730 --> 41:29.380
+é em cima do valor da obra.
+41:29.380 --> 41:31.900
+Então, se o cara cotou o valor de obra 100 mil,
+41:31.900 --> 41:34.960
+é 115 mil pra ele poder fazer tudo dentro do marketplace.
+41:34.960 --> 41:38.000
+A gente vai validar isso em mercado,
+41:38.000 --> 41:41.100
+porque não existe marketplace desse ramo ainda, né?
+41:41.100 --> 41:42.690
+Graças a Deus, né?
+41:42.690 --> 41:43.460
+Que vai ser o nosso.
+41:43.460 --> 41:46.170
+É, a gente vai ser os intermediadores, né?
+41:46.560 --> 41:48.800
+A gente é o mercado livre da construção, entendeu?
+41:48.800 --> 41:50.000
+É isso que a gente fala, cara.
+41:50.000 --> 41:52.000
+A gente não constrói,
+41:52.000 --> 41:54.400
+e a gente não executa,
+41:54.400 --> 41:56.690
+e a gente não está construindo.
+41:56.690 --> 41:58.230
+Mas a gente está no meio dessa galera,
+41:58.230 --> 41:58.500
+no meio dos...
+41:58.500 --> 41:59.820
+Que é o que liga eles organizados.
+41:59.820 --> 42:02.880
+A gente conecta e em algum momento vai prestar serviço também,
+42:02.880 --> 42:05.280
+a gente pretende ter serviços complementares, né?
+42:05.280 --> 42:06.000
+Para que a gente também...
+42:06.000 --> 42:06.210
+Exatamente.
+42:06.210 --> 42:10.340
+Eu vou usar um termo aqui,
+42:10.340 --> 42:13.460
+é um termo de marca que o Hugo deve conhecer,
+42:13.460 --> 42:16.360
+mas é um conceito chamado One Stop Shop.
+42:16.360 --> 42:17.100
+O que é isso?
+42:17.100 --> 42:19.880
+A ideia que o Ex Construção,
+42:19.880 --> 42:20.640
+junto com o marketplace,
+42:20.640 --> 42:22.880
+junto com o Ex Gestão,
+42:22.880 --> 42:24.300
+junto com os anúncios,
+42:24.300 --> 42:27.920
+é o único lugar onde a pessoa que estiver construindo
+42:27.920 --> 42:28.620
+precisa estar.
+42:29.060 --> 42:29.620
+Ou seja,
+42:29.620 --> 42:31.580
+porque ela está monitorando a obra dela,
+42:31.580 --> 42:33.170
+ou porque ela ofertou a obra dela,
+42:33.170 --> 42:34.560
+ou porque ela vai ter garantia,
+42:34.560 --> 42:35.060
+e olha,
+42:35.060 --> 42:38.040
+porque ela vai ter melhores preços de produtos,
+42:38.040 --> 42:39.960
+serviços anunciados dentro da plataforma, entendeu?
+42:39.960 --> 42:41.170
+A ideia é essa,
+42:41.170 --> 42:41.640
+mas enfim,
+42:41.640 --> 42:43.640
+isso é uma ideia mais para frente.
+42:43.640 --> 42:45.100
+Mas só para você entender,
+42:45.100 --> 42:46.820
+que está falando um pouco de estratégia,
+42:46.820 --> 42:48.040
+do que é a ferramenta,
+42:48.040 --> 42:49.690
+ela é basicamente isso que o Hugo falou.
+42:49.690 --> 42:52.980
+A Ex Gestão é o que a gente vai lançar o negócio,
+42:52.980 --> 42:56.400
+e o marketplace é o que vai trazer logo ali,
+42:56.400 --> 42:58.500
+um diferencial para o mercado,
+42:58.500 --> 42:59.040
+que não existe.
+42:59.060 --> 43:00.080
+Mas é isso.
+43:00.080 --> 43:00.860
+Segunda-feira.
+43:00.860 --> 43:01.460
+Meus caros,
+43:01.460 --> 43:02.960
+eu preciso muito ir,
+43:02.960 --> 43:03.500
+de verdade.
+43:03.500 --> 43:04.760
+Tem mais alguma coisa, Hugo?
+43:04.760 --> 43:05.690
+Com certeza.
+43:05.690 --> 43:06.280
+Não, cara,
+43:06.280 --> 43:08.260
+acho que é basicamente isso.
+43:08.260 --> 43:08.840
+Pode sair,
+43:08.840 --> 43:10.560
+eu vou falar mais uns cinco minutos com o Ramon,
+43:10.560 --> 43:11.480
+só para alinhar alguns pontos,
+43:11.480 --> 43:13.320
+porque eu preciso falar com ele,
+43:13.320 --> 43:13.620
+mas...
+43:13.620 --> 43:14.920
+Será que o seu sair cai aqui?
+43:14.920 --> 43:16.320
+Tá, ok.
+43:16.320 --> 43:17.080
+Cara, não sei,
+43:17.080 --> 43:17.480
+acho que não.
+43:17.480 --> 43:20.960
+Será que o seu sair cai?
+43:20.960 --> 43:22.360
+Sai aí para nós ver.
+43:22.360 --> 43:24.860
+É a única maneira.
+43:24.860 --> 43:26.600
+Boa.
+43:26.600 --> 43:27.960
+Não, desculpa.
+43:28.420 --> 43:29.280
+Ô, Ramon, rapidinho,
+43:29.280 --> 43:31.940
+só para contar outras coisas contigo.
+43:31.940 --> 43:33.900
+Então, acho que, cara,
+43:33.900 --> 43:35.520
+da nossa parte, assim,
+43:35.520 --> 43:38.140
+eu quero que a gente tenha...
+43:38.140 --> 43:39.380
+Eu fiquei um pouco ausente aí também,
+43:39.380 --> 43:40.840
+por conta de outros projetos,
+43:40.840 --> 43:42.720
+e por isso que esse tempo,
+43:42.720 --> 43:45.380
+eu estava trabalhando mais nos bastidores aqui,
+43:45.380 --> 43:45.980
+com o Wether,
+43:45.980 --> 43:47.860
+mas não tive nenhum contato contigo,
+43:47.860 --> 43:51.360
+mas eu sou um cara que gosta de acompanhar tudo da operação meio de perto,
+43:51.360 --> 43:51.820
+porque...
+43:51.820 --> 43:52.580
+Ah, bom, é bom, pô.
+43:52.580 --> 43:53.180
+É bom.
+43:53.180 --> 43:55.700
+Ainda mais justamente por causa desse ruído, entre aspas, né,
+43:55.700 --> 43:57.400
+que se tivesse sido feito antes,
+43:57.400 --> 43:58.040
+a gente já tinha...
+43:58.040 --> 43:58.640
+Exato.
+43:58.640 --> 43:59.320
+Exato, mais coisas.
+43:59.320 --> 44:02.120
+Eu acho que a comunicação é extremamente importante.
+44:02.120 --> 44:03.800
+Eu trabalho com logística,
+44:03.800 --> 44:05.620
+trabalhei a vida toda com logística até então,
+44:05.620 --> 44:09.100
+e é um ramo que, se tu falar isso aqui fora de coisa,
+44:09.100 --> 44:10.500
+tu acaba com a operação inteira.
+44:10.500 --> 44:13.220
+Então, eu gosto de acompanhar tudo de perto,
+44:13.220 --> 44:14.600
+sou um cara um pouco mais operacional.
+44:14.600 --> 44:18.300
+E eu queria, assim, conversar contigo para entender, cara,
+44:18.360 --> 44:21.760
+o que tu acha que falta da nossa parte para a gente se entregar,
+44:21.760 --> 44:23.020
+para a gente conseguir, pelo menos,
+44:23.020 --> 44:25.140
+a versão inicial do Xgestão?
+44:25.140 --> 44:27.700
+Porque a gente está fazendo um cronograma aí, Wether,
+44:27.700 --> 44:30.000
+para matar alguns pontos que a gente deve, claro, né,
+44:30.000 --> 44:30.780
+para...
+44:30.780 --> 44:31.920
+Porque, pô, como um negócio,
+44:31.920 --> 44:33.300
+ele nunca vai deixar de...
+44:33.300 --> 44:35.420
+Nunca vai acabar a estruturação do negócio,
+44:35.420 --> 44:36.300
+ela é eterna, né?
+44:36.300 --> 44:39.280
+Só que a gente queria ter o mínimo
+44:39.280 --> 44:40.980
+para poder lançar o Xgestão
+44:40.980 --> 44:42.620
+e começar a testar,
+44:42.620 --> 44:44.220
+começar a ter retorno das pessoas,
+44:44.220 --> 44:45.360
+começar a pegar feedback,
+44:45.360 --> 44:47.720
+começar a trabalhar em cima do produto, sabe?
+44:48.100 --> 44:48.700
+E eu queria...
+44:48.700 --> 44:50.140
+Eu falei para o Dedé também,
+44:50.140 --> 44:51.560
+que é o nosso sócio mais operacional,
+44:51.560 --> 44:53.140
+que eu ia trocar uma ideia contigo
+44:53.140 --> 44:55.620
+para a gente entender o que falta da nossa parte
+44:55.620 --> 44:58.040
+e qual um prazo, assim, por realista
+44:58.040 --> 45:00.360
+que tu acha que a gente trabalhando junto, né,
+45:00.360 --> 45:01.680
+a gente colocando mais energia,
+45:01.680 --> 45:04.020
+a gente consegue chegar para...
+45:04.020 --> 45:05.540
+ter uma ferramenta, assim, para...
+45:05.540 --> 45:06.220
+do Xgestão,
+45:06.220 --> 45:08.120
+desse que eu te falei que é mais básico
+45:08.120 --> 45:10.780
+no sentido do empreiteiro fazer o cadastro,
+45:10.780 --> 45:12.940
+ele botar as informações,
+45:12.940 --> 45:14.580
+ter as informações da obra,
+45:14.580 --> 45:16.840
+mandar um link para o contratante dele
+45:16.840 --> 45:19.700
+para ele ter as informações dentro de um link, por exemplo.
+45:19.700 --> 45:20.320
+Tá.
+45:20.320 --> 45:21.360
+Cara, assim,
+45:21.360 --> 45:22.480
+a princípio,
+45:22.480 --> 45:25.420
+os planos que vocês já vão estar me passando, né,
+45:25.420 --> 45:25.660
+ali,
+45:25.660 --> 45:26.860
+que esses planos que vocês vão passar
+45:26.860 --> 45:28.200
+vai ser específico do Xgestão,
+45:28.200 --> 45:28.780
+isso é correto?
+45:28.780 --> 45:29.520
+Exato.
+45:29.520 --> 45:30.960
+nós aqui saibam com o Marketplace,
+45:30.960 --> 45:32.380
+mas vocês baterem o martelo e falam,
+45:32.380 --> 45:32.580
+Ramon,
+45:32.580 --> 45:33.820
+esses aqui são do Xgestão,
+45:33.820 --> 45:35.480
+a gente pode começar já...
+45:35.480 --> 45:35.900
+Enfim,
+45:35.900 --> 45:37.300
+se vocês quiserem me passar,
+45:37.300 --> 45:39.580
+se for ter diferença, tá,
+45:39.580 --> 45:41.200
+do Xgestão pro...
+45:41.200 --> 45:43.200
+pro...
+45:43.200 --> 45:43.780
+marketplace,
+45:43.780 --> 45:45.920
+aí se vocês quiserem fazer ou duas versões,
+45:45.920 --> 45:46.760
+ou uma mais completa,
+45:46.760 --> 45:47.120
+enfim,
+45:47.120 --> 45:48.160
+aí vocês me passam direitinho,
+45:48.160 --> 45:49.260
+que eu acho que vai ser melhor,
+45:49.260 --> 45:51.620
+pelo menos já mata esse cara aí nos dois cenários,
+45:51.620 --> 45:52.260
+porque eu imagino,
+45:52.260 --> 45:54.540
+aí vocês me falam se...
+45:54.540 --> 45:55.660
+de uma visão pra outra,
+45:55.660 --> 45:57.300
+vai ter, por exemplo,
+45:57.300 --> 45:58.400
+alteração de valor,
+45:58.400 --> 45:59.640
+aí eu não sei,
+45:59.640 --> 46:01.520
+aí vocês me passam direitinho,
+46:01.520 --> 46:01.660
+tá,
+46:01.660 --> 46:01.900
+você fala,
+46:01.900 --> 46:02.240
+pô, Ramon,
+46:02.240 --> 46:04.280
+hoje a gente trabalhando com o Xgestão,
+46:04.280 --> 46:05.240
+vai ser, vai,
+46:05.240 --> 46:06.940
+20% mais barato,
+46:06.940 --> 46:07.820
+vai ter alguma coisa aqui,
+46:07.820 --> 46:09.180
+outra ali, etc.,
+46:09.180 --> 46:10.800
+porque o que eu vou precisar saber, né,
+46:10.800 --> 46:11.400
+é...
+46:11.400 --> 46:12.760
+na verdade tem tudo aqui no documento,
+46:12.760 --> 46:12.860
+né,
+46:12.860 --> 46:15.260
+que vocês passaram o que vai ter no Xgestão hoje,
+46:15.260 --> 46:16.660
+que são mais enxutos em telas, né,
+46:16.660 --> 46:17.580
+então,
+46:17.580 --> 46:19.080
+pelo que eu vi aqui é isso,
+46:19.080 --> 46:20.220
+então a parte das telas,
+46:20.220 --> 46:21.620
+a parte dos planos, né,
+46:21.620 --> 46:24.040
+aí me passando essas informações,
+46:24.540 --> 46:25.360
+é...
+46:25.360 --> 46:26.240
+deixa eu ver o que mais,
+46:26.240 --> 46:27.600
+é...
+46:27.600 --> 46:29.580
+eu preciso só agora fazer,
+46:29.580 --> 46:31.500
+eu vou pegar essa nossa conversa aqui também,
+46:31.500 --> 46:34.700
+e vou tentar bolar algumas estratégias, né,
+46:34.700 --> 46:36.920
+pra gente já começar a mudar o foco,
+46:36.920 --> 46:39.780
+o alvo nosso pro Xgestão também, tá,
+46:39.780 --> 46:40.400
+é...
+46:40.400 --> 46:41.420
+e ver como que vai ser lá,
+46:41.420 --> 46:44.140
+eventualmente a gente oculta o formato de login hoje,
+46:44.140 --> 46:46.780
+a gente cria um outro personalizado só pra isso, tá,
+46:46.780 --> 46:47.700
+porque hoje tem ali,
+46:47.700 --> 46:48.300
+é...
+46:48.300 --> 46:49.580
+anunciante, fluxo de anunciante,
+46:49.580 --> 46:50.580
+fluxo de empreiteiro,
+46:50.580 --> 46:51.760
+fluxo de contratante,
+46:51.760 --> 46:53.960
+o do administrador tem o seu,
+46:54.080 --> 46:55.360
+não tem o seu fluxo ali aberto,
+46:55.360 --> 46:57.840
+porque é algo realmente poucos usuários,
+46:57.840 --> 46:59.940
+então não tem por que colocar uma tela de login lá, tá,
+46:59.940 --> 47:01.640
+é...
+47:01.640 --> 47:03.280
+então a gente tem isso daí hoje,
+47:03.280 --> 47:05.520
+e aí eu vou precisar dar uma adaptada no do anunciante,
+47:05.520 --> 47:06.340
+é...
+47:06.340 --> 47:06.900
+pra essa questão do...
+47:06.900 --> 47:07.900
+do...
+47:07.900 --> 47:08.900
+do...
+47:08.900 --> 47:08.900
+do...
+47:08.900 --> 47:08.900
+do...
+47:08.900 --> 47:09.900
+do...
+47:09.900 --> 47:10.260
+Xgestão,
+47:10.260 --> 47:10.640
+beleza,
+47:10.640 --> 47:11.900
+que ele vai ter agora uma...
+47:11.900 --> 47:12.740
+enfim,
+47:12.740 --> 47:15.920
+a gente vai ter que primeiro finalizar a do Xgestão ali,
+47:15.920 --> 47:16.120
+né,
+47:16.120 --> 47:17.200
+a jornada ali do empreiteiro,
+47:17.200 --> 47:18.400
+consequentemente,
+47:18.400 --> 47:20.780
+a gente vai ter que fazer essa ligação lá,
+47:20.780 --> 47:22.320
+se eventualmente mudar alguma coisa de tela,
+47:22.420 --> 47:24.560
+pra o anunciante mostrar corretamente,
+47:24.560 --> 47:26.140
+então vai ter que começar a englobar isso,
+47:26.140 --> 47:27.340
+é...
+47:27.340 --> 47:30.160
+eu preciso estar validando os probleminhas lá que deram no Asus,
+47:30.160 --> 47:30.360
+tá,
+47:30.360 --> 47:31.240
+que eu fiz a integração,
+47:31.240 --> 47:32.840
+mas ele deu algum problema no serviço,
+47:32.840 --> 47:33.900
+mas eu acho que é no Asus,
+47:33.900 --> 47:35.880
+ou eu vou ver se é Asus barra replete,
+47:35.880 --> 47:36.060
+né,
+47:36.060 --> 47:38.060
+vou ver onde que tá sendo o gargalo,
+47:39.500 --> 47:40.060
+é...
+47:40.060 --> 47:41.100
+a parte do chat que eu lembro,
+47:41.100 --> 47:42.000
+eu só preciso testar,
+47:42.000 --> 47:42.180
+né,
+47:42.180 --> 47:44.340
+porque até da outra vez estava com problema,
+47:44.340 --> 47:46.320
+eu mandei alguns prompts ontem,
+47:46.320 --> 47:47.740
+só que falta testar ainda,
+47:47.740 --> 47:47.960
+né,
+47:47.960 --> 47:48.980
+eu fiz ontem à noite,
+47:48.980 --> 47:50.960
+é...
+47:50.960 --> 47:51.480
+cara,
+47:51.480 --> 47:52.720
+é...
+47:52.720 --> 47:52.920
+assim,
+47:52.920 --> 47:54.560
+se não for problema,
+47:54.560 --> 47:54.800
+tá,
+47:54.800 --> 47:56.320
+eu primeiro vou lá,
+47:56.320 --> 47:56.960
+realmente aqui,
+47:56.960 --> 47:58.460
+a estratégia de rota,
+47:58.460 --> 47:59.840
+e passar pra vocês com...
+47:59.840 --> 48:00.180
+provavelmente,
+48:00.180 --> 48:00.660
+deixa eu ver,
+48:00.660 --> 48:01.740
+é que hoje vai ser um pouco horrível,
+48:01.740 --> 48:05.100
+que eu ainda também tenho uma aula do MBA extra lá de...
+48:05.100 --> 48:05.720
+mais à noite,
+48:05.720 --> 48:05.920
+né,
+48:05.920 --> 48:07.460
+em relação à parte do...
+48:07.460 --> 48:08.820
+do TCC e tudo mais,
+48:08.820 --> 48:09.920
+é...
+48:09.920 --> 48:11.460
+mas eu vou ver se até esse final de semana,
+48:11.460 --> 48:12.720
+eu consigo prototipar pra vocês,
+48:12.720 --> 48:13.140
+pra passar,
+48:13.140 --> 48:13.420
+tipo,
+48:13.420 --> 48:13.840
+um prazo,
+48:13.840 --> 48:15.220
+eu não vou chutar aqui um mês,
+48:15.220 --> 48:18.060
+embora a gente já tenha praticamente 80,
+48:18.060 --> 48:18.880
+90%,
+48:18.880 --> 48:19.460
+se não mais,
+48:19.460 --> 48:20.180
+das telas,
+48:20.180 --> 48:20.340
+né,
+48:20.340 --> 48:22.000
+e a gente só mude o...
+48:22.000 --> 48:23.220
+o direcionamento do canhão,
+48:23.220 --> 48:24.460
+eu poderia falar um mês,
+48:24.460 --> 48:26.420
+mas vai que eu posso ser leviano,
+48:26.420 --> 48:27.940
+por mais que eu tenho férias aqui e tudo mais,
+48:27.940 --> 48:29.300
+eu dei uma corrida um pouquinho maior,
+48:29.300 --> 48:29.580
+né,
+48:29.580 --> 48:30.400
+é...
+48:30.400 --> 48:33.160
+então pra não passar certinho exatamente chutando um mês,
+48:33.160 --> 48:35.140
+e aí a gente quebrar a expectativa,
+48:35.240 --> 48:36.780
+eu vou fazer esse...
+48:36.780 --> 48:37.560
+como fala,
+48:37.560 --> 48:38.140
+esse prompt,
+48:38.140 --> 48:40.420
+vou tentar montar lá com base no que a gente tem,
+48:40.420 --> 48:42.020
+pegar um insight da IA,
+48:42.020 --> 48:43.120
+pra passar pra vocês,
+48:43.120 --> 48:43.340
+tá,
+48:43.340 --> 48:45.020
+e aí eu acredito que até esse final de semana,
+48:45.020 --> 48:46.380
+eu passaria pra vocês,
+48:46.380 --> 48:46.580
+falar,
+48:46.580 --> 48:46.760
+ó,
+48:46.760 --> 48:47.260
+cara,
+48:47.260 --> 48:48.260
+em um mês e meio,
+48:48.260 --> 48:48.680
+né,
+48:48.680 --> 48:49.720
+a gente correndo junto,
+48:49.720 --> 48:51.300
+a gente pode fazer isso daí que o Guilherme falou,
+48:51.300 --> 48:51.500
+né,
+48:51.500 --> 48:52.860
+vamos fazer junto no Macau,
+48:52.860 --> 48:53.460
+porque às vezes,
+48:53.460 --> 48:53.840
+tipo assim,
+48:53.840 --> 48:55.060
+um tá corrido,
+48:55.060 --> 48:56.100
+aí faz uma parte,
+48:56.100 --> 48:57.560
+aí o outro faz outra parte,
+48:57.560 --> 48:58.280
+às vezes eu testo aqui,
+48:58.280 --> 49:00.100
+a gente nunca testa 100%,
+49:00.100 --> 49:02.060
+então a gente pode também fazer rotinas,
+49:02.060 --> 49:02.260
+né,
+49:02.260 --> 49:03.040
+de reuniões,
+49:03.040 --> 49:05.420
+pra gente chamar direto ali,
+49:05.420 --> 49:06.640
+e pegar todos os problemas,
+49:06.640 --> 49:07.440
+e eu ir corrigindo,
+49:07.440 --> 49:08.780
+então se até esse final de semana,
+49:08.780 --> 49:10.240
+eu já bolando isso daí,
+49:10.240 --> 49:11.440
+eu falo pra vocês com mais precisão,
+49:11.440 --> 49:11.740
+cara,
+49:11.740 --> 49:12.480
+em um mês,
+49:12.480 --> 49:13.720
+em um mês e meio,
+49:13.720 --> 49:14.880
+ou pouco menos de um mês,
+49:15.220 --> 49:16.320
+porque com a IA,
+49:16.320 --> 49:18.960
+eu consigo parametrizar com o que vocês me passaram,
+49:18.960 --> 49:21.240
+as telas que a gente precisa a mais,
+49:21.240 --> 49:22.080
+que a gente não tem hoje,
+49:22.080 --> 49:22.340
+entendeu,
+49:22.340 --> 49:23.500
+se eu tenho essa noção,
+49:23.500 --> 49:23.880
+eu vou falar,
+49:23.880 --> 49:24.200
+cara,
+49:24.200 --> 49:25.980
+já tem 90% criado,
+49:25.980 --> 49:27.600
+eu só preciso fazer uns leves ajustes,
+49:27.600 --> 49:28.880
+pode ser que seja poucas semanas,
+49:28.880 --> 49:30.940
+mas pode ser que seja um pouco mais de um mês,
+49:30.940 --> 49:31.840
+beijando dois meses,
+49:31.840 --> 49:34.400
+mas eu chuto que seja um mês ali,
+49:34.400 --> 49:35.580
+um mês e pouquinho ali,
+49:35.580 --> 49:36.900
+mas a gente fazendo reunião,
+49:36.900 --> 49:38.180
+pelo menos uma vez na semana,
+49:38.180 --> 49:38.840
+mais contínua,
+49:38.840 --> 49:39.080
+entendeu.
+49:39.080 --> 49:40.140
+Cara,
+49:40.140 --> 49:41.060
+porra,
+49:41.060 --> 49:44.140
+eu te agradeço também pela sinceridade,
+49:44.140 --> 49:45.920
+eu também sou um cara extremamente transparente,
+49:45.920 --> 49:47.160
+em relação a falar das coisas,
+49:47.160 --> 49:48.040
+não gosto de prometer nada,
+49:48.040 --> 49:48.700
+porque eu não vou alcançar.
+49:48.700 --> 49:49.000
+É,
+49:49.000 --> 49:50.720
+porque senão eu prometo agora,
+49:50.720 --> 49:51.060
+e pô,
+49:51.060 --> 49:51.640
+daqui a um mês,
+49:51.640 --> 49:52.900
+ou vai que der um problema aqui,
+49:52.900 --> 49:53.500
+específico,
+49:53.500 --> 49:56.260
+acho que a coisa que mais vale para o cara,
+49:56.260 --> 49:57.060
+é sempre a palavra,
+49:57.060 --> 49:58.440
+então não dá para falar duas vezes,
+49:58.440 --> 49:59.140
+é sempre uma só,
+49:59.140 --> 50:00.140
+mas cara,
+50:00.140 --> 50:01.440
+vou te pedir assim,
+50:01.440 --> 50:04.600
+como um cara que quer ver o próprio negócio funcionar,
+50:04.600 --> 50:06.420
+que a gente tente trabalhar em cima de um mês,
+50:06.420 --> 50:08.400
+e o que eu te digo em relação a isso?
+50:08.400 --> 50:09.400
+Te digo que,
+50:09.400 --> 50:09.640
+claro,
+50:09.640 --> 50:12.980
+isso vai exigir um compromisso da tua parte,
+50:13.060 --> 50:14.400
+que eu já vejo que existe bastante,
+50:14.400 --> 50:16.380
+não tinha te conhecido,
+50:16.380 --> 50:18.600
+mas já dava para anotar para outros posicionamentos ali no grupo,
+50:18.600 --> 50:21.360
+mas também um compromisso maior da nossa parte,
+50:21.360 --> 50:23.780
+que eu sei que muita coisa poderia ter sido agilizada,
+50:23.780 --> 50:26.040
+se esse tipo de conversa aqui já tivesse acontecido antes.
+50:26.040 --> 50:26.860
+Então,
+50:26.860 --> 50:28.700
+eu como pessoa,
+50:28.700 --> 50:31.660
+por mais que cada um tenha sua função no projeto,
+50:31.660 --> 50:37.360
+mas eu me comprometo a manter essa cadência de contato contigo,
+50:37.360 --> 50:37.680
+te falar,
+50:37.800 --> 50:39.940
+eu te ligo,
+50:39.940 --> 50:41.040
+tu me liga a hora que puder,
+50:41.040 --> 50:42.900
+eu trabalho durante o dia,
+50:42.900 --> 50:43.940
+eu acho complicado,
+50:43.940 --> 50:46.880
+porque eu trabalho em uma empresa de logística,
+50:46.880 --> 50:47.500
+mas cara,
+50:47.500 --> 50:49.820
+eu estou sempre à disposição,
+50:49.820 --> 50:50.140
+ah,
+50:50.140 --> 50:50.400
+pô,
+50:50.400 --> 50:51.200
+eu estou aqui,
+50:51.200 --> 50:52.380
+meio de boa,
+50:52.380 --> 50:53.120
+num sábado,
+50:53.120 --> 50:53.420
+sei,
+50:53.420 --> 50:54.420
+quatro horas da tarde,
+50:54.420 --> 50:56.520
+queres trocar um papo só para a gente resolver aquele assunto,
+50:56.520 --> 50:56.840
+tal,
+50:56.840 --> 50:57.340
+meia horinha,
+50:57.340 --> 50:57.840
+vinte minutos,
+50:57.840 --> 50:58.440
+a gente resolve,
+50:58.860 --> 50:59.080
+ah,
+50:59.080 --> 50:59.460
+bora,
+50:59.460 --> 51:00.080
+vamos falar agora,
+51:00.080 --> 51:00.360
+ah,
+51:00.360 --> 51:00.700
+pô,
+51:00.700 --> 51:01.400
+um dia no almoço,
+51:01.400 --> 51:02.200
+igual eu estou fazendo aqui,
+51:02.200 --> 51:02.900
+um dia à noite,
+51:02.900 --> 51:05.220
+um dia no horário de trabalho normal,
+51:05.220 --> 51:05.560
+pô,
+51:05.560 --> 51:06.980
+tal dia eu posso tal horário,
+51:06.980 --> 51:07.920
+consegue se adequar,
+51:07.920 --> 51:10.560
+eu tento dar uma ajustada na minha agenda e a gente conversa,
+51:10.560 --> 51:13.420
+mas para a gente manter essas entregas aqui,
+51:13.420 --> 51:14.920
+para a gente tentar trabalhar em um mês,
+51:14.920 --> 51:15.380
+por quê?
+51:15.380 --> 51:16.320
+Porque a gente já teve,
+51:16.320 --> 51:18.420
+o professor já deve ter comentado,
+51:18.420 --> 51:21.840
+que a gente já teve alguns problemas em relação a algumas desilusões,
+51:21.840 --> 51:23.520
+em relação a tecnologia ao longo dos anos.
+51:23.540 --> 51:24.380
+Eu fiquei sabendo lá atrás,
+51:24.380 --> 51:25.940
+eu participei em algumas reuniões lá,
+51:25.940 --> 51:26.760
+no comecinho lá,
+51:26.760 --> 51:28.400
+daí mudou o sócio,
+51:28.400 --> 51:29.620
+mudou até um rosto de cabeça.
+51:29.620 --> 51:29.920
+Então,
+51:29.920 --> 51:31.840
+a gente teve umas desilusões aí,
+51:31.840 --> 51:34.120
+que acabam baixando um pouco o ânimo de todo mundo,
+51:34.120 --> 51:34.360
+né,
+51:34.360 --> 51:37.400
+só que a gente sempre tenta jogar energia de novo lá em cima,
+51:37.400 --> 51:38.680
+e eu acredito que,
+51:38.680 --> 51:38.980
+pô,
+51:38.980 --> 51:40.060
+esse prazo assim,
+51:40.060 --> 51:41.780
+se a gente conseguisse lançar em um mês,
+51:41.780 --> 51:42.040
+pô,
+51:42.040 --> 51:43.620
+ali perto do feriado,
+51:43.620 --> 51:45.080
+uma semana antes,
+51:45.080 --> 51:46.280
+ou uma semana depois do feriado,
+51:46.280 --> 51:47.860
+7 de setembro do mês que vem,
+51:47.860 --> 51:48.700
+seria,
+51:48.700 --> 51:49.060
+pô,
+51:49.060 --> 51:51.460
+perfeito para a gente renovar o ânimo da galera,
+51:51.460 --> 51:52.420
+e tapar o palco,
+51:52.500 --> 51:53.460
+fazer o negócio funcionar,
+51:53.460 --> 51:54.220
+e claro,
+51:54.220 --> 51:58.320
+deixando claro que a gente só precisa do ex-gestão funcionando.
+51:58.320 --> 51:59.340
+Depois disso,
+51:59.340 --> 52:03.680
+a gente continua trabalhando junto para melhorar o marketplace para o futuro,
+52:03.680 --> 52:05.040
+mas eu quero só,
+52:05.040 --> 52:07.880
+só ex-gestão para a gente tentar trabalhar nesse prazo.
+52:07.880 --> 52:08.380
+Então,
+52:08.380 --> 52:12.160
+eu vou ficar te devendo os planos com tudo ajustado no documento,
+52:12.160 --> 52:14.680
+vou pedir para o Eder separar o que é ex-gestão,
+52:14.680 --> 52:15.600
+que é o foco agora,
+52:15.600 --> 52:18.260
+e se ele não te passar o marketplace junto,
+52:18.260 --> 52:19.840
+tu trabalha em cima do ex-gestão,
+52:19.840 --> 52:21.580
+e deixa o marketplace para o futuro,
+52:22.120 --> 52:25.040
+que eu acredito que isso a gente ainda está definindo taxa de acompanhamento,
+52:25.040 --> 52:26.920
+que vai ser diferente, claro,
+52:26.920 --> 52:28.080
+do ex-gestão.
+52:28.080 --> 52:29.400
+A gente fica,
+52:29.400 --> 52:34.140
+eu fico te devendo também aquela decisão em relação à migração ou não da infraestrutura,
+52:34.140 --> 52:34.880
+de tecnologia,
+52:34.880 --> 52:35.440
+posso falar,
+52:35.440 --> 52:36.760
+posso falar agora?
+52:37.900 --> 52:41.660
+essa questão de a gente fazer uma reunião semana que vem sem falta,
+52:41.660 --> 52:41.880
+então,
+52:41.880 --> 52:43.420
+para a gente falar da questão das jornadas,
+52:43.420 --> 52:44.900
+como o Guilherme está testando lá,
+52:44.900 --> 52:47.820
+e a gente olhar cada tela que vai para cada plano,
+52:47.820 --> 52:48.960
+e em cima disso,
+52:48.960 --> 52:51.700
+a gente vai fazendo os trabalhos que preciso fazer por semana,
+52:51.700 --> 52:55.160
+para a gente conseguir tentar trabalhar nesse prazo de um mês.
+52:55.240 --> 52:57.060
+se passar um pouco ou reduzir um pouco,
+52:57.060 --> 52:57.800
+ótimo,
+52:57.800 --> 52:59.040
+mas vamos tentar trabalhar em cima disso.
+52:59.040 --> 53:00.260
+Aí, se for o caso,
+53:00.260 --> 53:00.780
+eu vou ver como,
+53:00.780 --> 53:01.620
+novamente,
+53:01.620 --> 53:03.220
+como que eu trazer ali até o final de semana,
+53:03.220 --> 53:04.180
+as rotas e tudo mais,
+53:04.180 --> 53:05.140
+se for o caso,
+53:05.140 --> 53:06.260
+a gente até,
+53:06.260 --> 53:07.460
+meio que,
+53:07.460 --> 53:08.660
+como que eu posso dizer,
+53:09.000 --> 53:09.920
+aborta entre aspas,
+53:09.920 --> 53:12.720
+talvez essa reunião com a jornada ali do,
+53:12.720 --> 53:13.160
+claro,
+53:13.160 --> 53:14.940
+eu vou ainda correr nesses próximos dias,
+53:14.940 --> 53:16.900
+a gente aborta a parte do marketplace,
+53:16.900 --> 53:18.480
+eu vejo ali uma forma ali,
+53:18.480 --> 53:19.940
+e aí eu pego as telas,
+53:19.940 --> 53:20.820
+e aí a gente já foca,
+53:20.820 --> 53:23.460
+porque provavelmente vai ser muito mais enxuto do que a gente tem hoje,
+53:23.460 --> 53:25.000
+para a gente sair o MVP,
+53:25.000 --> 53:25.280
+então,
+53:25.280 --> 53:25.800
+se eu ver e falar,
+53:25.800 --> 53:26.120
+cara,
+53:26.120 --> 53:27.200
+para a gente economizar,
+53:27.200 --> 53:28.080
+a gente pode,
+53:28.080 --> 53:29.660
+a partir de segunda,
+53:29.660 --> 53:32.780
+bater o martelo e já focar só ex-gestão,
+53:32.780 --> 53:34.120
+aí eu já corro com os prompts,
+53:34.120 --> 53:35.200
+para já,
+53:35.200 --> 53:36.400
+meio que ocultar,
+53:36.400 --> 53:37.080
+ocultar,
+53:37.080 --> 53:37.520
+não apagar,
+53:37.520 --> 53:38.980
+mas ocultar a jornada que,
+53:39.000 --> 53:39.440
+tem hoje,
+53:39.440 --> 53:40.440
+contratante empreiteiro,
+53:40.440 --> 53:41.360
+para marketplace,
+53:41.360 --> 53:43.660
+e já criar uma nova,
+53:43.660 --> 53:44.480
+um novo login,
+53:44.480 --> 53:44.980
+etc.,
+53:44.980 --> 53:46.400
+uma nova jornada para ex-gestão,
+53:46.400 --> 53:47.340
+e aí a gente já muda,
+53:47.340 --> 53:47.480
+tipo,
+53:47.480 --> 53:49.960
+praticamente 100% para esse foco,
+53:49.960 --> 53:50.680
+e aí depois,
+53:50.680 --> 53:51.440
+com calma lá,
+53:51.440 --> 53:52.880
+enquanto a gente vai fazendo MVP,
+53:52.880 --> 53:53.620
+e tudo mais ali,
+53:53.620 --> 53:55.000
+aí a gente deixa no paralelo ali,
+53:55.000 --> 53:56.000
+abre uma tela,
+53:56.000 --> 53:57.680
+se for na nossa infa,
+53:57.680 --> 53:58.380
+é muito mais fácil,
+53:58.380 --> 53:59.400
+porque eu consigo criar,
+53:59.400 --> 54:00.900
+subdomínios,
+54:00.900 --> 54:01.840
+ilimitados assim,
+54:01.840 --> 54:02.760
+temporários,
+54:02.760 --> 54:03.160
+então,
+54:03.160 --> 54:04.260
+eu criei um subdomínio ali,
+54:04.260 --> 54:05.340
+aí a gente começa a fazer,
+54:05.340 --> 54:07.040
+testes nesse subdomínio,
+54:07.040 --> 54:07.540
+homologação,
+54:07.540 --> 54:08.100
+desenvolvimento,
+54:08.100 --> 54:08.660
+etc.,
+54:08.660 --> 54:09.160
+mas enfim,
+54:09.160 --> 54:09.860
+é só uma ideia,
+54:09.860 --> 54:10.060
+tá,
+54:10.060 --> 54:11.300
+e aí eu vou,
+54:11.300 --> 54:12.740
+ver direitinho isso daí,
+54:12.740 --> 54:13.460
+aí se eu ver que,
+54:13.460 --> 54:13.720
+cara,
+54:13.720 --> 54:14.660
+é muito mais válido a gente,
+54:14.660 --> 54:16.080
+parar os testes ali,
+54:16.080 --> 54:16.780
+com o marketplace,
+54:16.780 --> 54:18.620
+e já focar 100% para o ex-gestão,
+54:18.620 --> 54:19.280
+pelo menos a gente já,
+54:19.280 --> 54:20.580
+só gasta esse um mês aí,
+54:20.580 --> 54:21.660
+de energia nele também,
+54:21.660 --> 54:22.120
+tá,
+54:22.120 --> 54:22.440
+então eu,
+54:22.440 --> 54:51.260
+Isso aí tu pode fazer, né, o teu trabalho, a investigação tu vai fazer também em relação às possibilidades e tal, também da questão dos fluxos, mas em relação à postura da gente, né, digo pela empresa, o martelo tá batido pra ex-gestão como prioridade, isso já pode ter na tua cabeça que essa decisão já tá tomada, eu te dou aqui a minha, eu já bato o martelo aqui pra ti, que é isso que a gente precisa pra fazer o negócio acontecer,
+54:51.260 --> 54:58.260
+e claro, em paralelo, depois do que aconteceu, a gente volta a desenhar fluxos juntos de marketplace, fechou?
+54:58.260 --> 55:09.480
+Pode ser, por mim tranquilo, aí eu já deixo um resumo já prévio pra quando a gente retornar, a gente já conseguir retornar da onde parou, mas beleza, então eu de qualquer forma já faço a 100% pro ex-gestão também.
+55:09.480 --> 55:20.200
+Tá, eu vou trabalhar aqui com a galera do que a gente deve, depois tu vê essas questões que tu falou que tu ia verificar também das possibilidades lá de exportação do link, quais são as telas que dá pra fazer e tal,
+55:20.200 --> 55:26.420
+que, né, essa questão que tu entende mais que eu no sentido de como construir uma jornada legal aí na questão da tecnologia.
+55:26.420 --> 55:34.200
+É, eu trago uma jornada e aí vocês me validam se é válido também, porque eu sei que vocês já tenham tido uma experiência com uma outra plataforma e a gente ajusta.
+55:35.040 --> 55:40.440
+Perfeito, a gente tenta então marcar uma reunião na semana que vem já falando mais dessa questão da jornada do ex-gestão, então.
+55:40.440 --> 55:40.800
+De boa.
+55:40.800 --> 55:41.200
+Fechou?
+55:41.200 --> 55:42.200
+Tranquilo então, Hugo.
+55:42.200 --> 55:47.760
+Tá feito então, eu te agradeço aí pela atenção, cara, vamos manter esse contato aí e vai dar certo, se Deus quiser.
+55:47.760 --> 55:53.020
+Não, agradeço também o apoio aí, a explicação e, meu, bora correr 100% aí nessa jornada aí.
+55:53.020 --> 55:53.820
+Agradeço também.
+55:53.820 --> 55:55.200
+Então tá, valeu, tamo junto aí, mano.
+55:55.200 --> 55:55.660
+Valeu, abração.
+55:55.660 --> 55:56.320
+Tchau, tchau.

@@ -19,11 +19,12 @@ import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
 import Image from 'next/image';
 import { ADMIN_NAV_ITEMS, ADMIN_BOTTOM_NAV_ITEMS } from '../constants';
+import type { NavItem } from '../types';
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -34,21 +35,40 @@ export function AdminSidebar() {
   // que casa com a rota atual fica ativo. Evita ativar "Obras" (/admin/obras)
   // junto com filhas como /admin/obras/moderacao, e o falso-positivo de prefixo
   // de string (/admin/obras-destaque).
+  // XG06 — escopo do admin. `undefined` (token antigo, admin comum) ⇒ "global",
+  // que enxerga tudo: para o admin de hoje os dois filtros abaixo são no-op.
+  // Isto é montagem de menu, não autorização — o proxy e as rotas revalidam.
+  const escopo = (user as { adminEscopo?: string } | null)?.adminEscopo === 'xgestao'
+    ? 'xgestao'
+    : 'global';
+
+  const podeVer = useCallback(
+    (item: NavItem) => escopo === 'global' || (item.escopos ?? ['global']).includes(escopo),
+    [escopo],
+  );
+
+  const navItems = useMemo(() => ADMIN_NAV_ITEMS.filter(podeVer), [podeVer]);
+  const bottomNavItems = useMemo(() => ADMIN_BOTTOM_NAV_ITEMS.filter(podeVer), [podeVer]);
+
+  // Best-match sobre a lista JÁ FILTRADA — senão o realce cairia em item que o
+  // usuário não enxerga.
   const activeUrl = useMemo(() => {
-    const all = [...ADMIN_NAV_ITEMS, ...ADMIN_BOTTOM_NAV_ITEMS];
+    const all = [...navItems, ...bottomNavItems];
     return (
       all
         .filter((i) => pathname === i.url || pathname.startsWith(`${i.url}/`))
         .sort((a, b) => b.url.length - a.url.length)[0]?.url ?? null
     );
-  }, [pathname]);
+  }, [pathname, navItems, bottomNavItems]);
 
   const isActive = (url: string): boolean => url === activeUrl;
 
   return (
     <Sidebar className="bg-[#FAFAFA] dark:bg-background-dark">
       <SidebarHeader className="p-6">
-        <Link href="/admin/financeiro">
+        {/* XG06 — o destino do logo depende do escopo: /admin/financeiro está
+            fora da allowlist do admin xgestão e daria 403. */}
+        <Link href={escopo === 'xgestao' ? '/admin/xgestao' : '/admin/financeiro'}>
           <div className="flex items-center cursor-pointer">
             <Image
               src="/images/logo-xconstrucao-horizontal-01.png"
@@ -65,7 +85,7 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {ADMIN_NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -90,7 +110,7 @@ export function AdminSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {ADMIN_BOTTOM_NAV_ITEMS.map((item) => (
+          {bottomNavItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
                 <Link href={item.url}>

@@ -85,6 +85,11 @@ export async function GET(request: NextRequest) {
       role: users.role,
       phone: users.phone,
       ativo: users.ativo,
+      // XG06 — o diálogo de edição precisa do valor real gravado; sem estes dois
+      // campos ele abriria sempre nos defaults e um "salvar" silencioso rebaixaria
+      // a permissão/escopo de um admin.
+      canManageUsers: users.canManageUsers,
+      adminEscopo: users.adminEscopo,
       mustChangePassword: users.mustChangePassword,
       emailVerified: users.emailVerified,
       createdAt: users.createdAt,

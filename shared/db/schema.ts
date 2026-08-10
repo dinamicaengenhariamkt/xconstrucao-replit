@@ -84,6 +84,15 @@ export const users = pgTable("users", {
   createdBy: varchar("created_by"),
   ativo: boolean("ativo").notNull().default(true),
   canManageUsers: boolean("can_manage_users").notNull().default(false),
+  // XG06/XG07 — escopo do administrador. "global" = admin de plataforma (todas as
+  // seções, comportamento histórico); "xgestao" = admin restrito ao recorte do
+  // xgestão. TEXT e não enum Postgres de propósito: `ALTER TYPE ... ADD VALUE`
+  // roda fora de transação (mesma ressalva de XG01 §6) e esta coluna tende a
+  // ganhar valores. Default "global" torna a coluna retrocompatível por
+  // construção — nenhum admin existente muda de comportamento. Irrelevante para
+  // não-admins. Superadmin é SEMPRE global, independentemente do que está gravado
+  // aqui (ver getAdminEscopo em features/auth/api/admin-scope.ts).
+  adminEscopo: text("admin_escopo").notNull().default("global"),
   avatarFileId: varchar("avatar_file_id"),
   // J29 — rastreio de último login para churn por inatividade.
   lastLoginAt: timestamp("last_login_at"),

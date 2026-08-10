@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     image: user.image,
     avatarUrl: user.avatarUrl,
     canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
+    adminEscopo: user.role === "superadmin" ? "global" : (user.adminEscopo ?? "global"),
     mustChangePassword: false,
   });
   const rememberMe = false;

@@ -59,6 +59,11 @@ function buildAccessToken(user: NonNullable<Awaited<ReturnType<typeof findUser>>
     name: user.name,
     image: user.image ?? null,
     avatarUrl: user.avatarUrl ?? null,
+    // Espelha `montarUserData` (session-issuer): sem estas claims o token de
+    // teste divergiria do token real — um admin de escopo restrito seria tratado
+    // como global e os guards passariam a testar o cenário errado.
+    canManageUsers: user.role === "superadmin" ? true : (user.canManageUsers ?? false),
+    adminEscopo: user.role === "superadmin" ? "global" : (user.adminEscopo ?? "global"),
   });
 }
 

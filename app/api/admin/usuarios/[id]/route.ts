@@ -17,6 +17,8 @@ const patchSchema = z.object({
   role: z.enum(["superadmin", "admin", "contratante", "empreiteiro"]).optional(),
   ativo: z.boolean().optional(),
   canManageUsers: z.boolean().optional(),
+  // XG06 — escopo administrativo. Mesmas travas de canManageUsers.
+  adminEscopo: z.enum(["global", "xgestao"]).optional(),
 });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -53,6 +55,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     phone: target.phone,
     ativo: target.ativo,
     canManageUsers: (target as { canManageUsers?: boolean }).canManageUsers ?? false,
+    adminEscopo: (target as { adminEscopo?: string }).adminEscopo ?? "global",
     mustChangePassword: target.mustChangePassword,
     emailVerified: target.emailVerified,
     createdAt: target.createdAt,
@@ -102,6 +105,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   }
 
+  // XG06 — adminEscopo: só superadmin altera, só sobre admins, e nunca sobre a
+  // própria conta (auto-restrição/auto-promoção é caminho de escalação).
+  if (updates.adminEscopo !== undefined) {
+    if (guard.user.role !== "superadmin") {
+      return jsonNoStore({ message: "Apenas super admin pode alterar o escopo administrativo." }, 403);
+    }
+    if (target.id === guard.user.id) {
+      return jsonNoStore({ message: "Não é possível alterar o próprio escopo administrativo." }, 400);
+    }
+    const finalRole = (updates.role ?? target.role) as Role;
+    if (finalRole !== "admin") {
+      return jsonNoStore({ message: "Escopo administrativo só se aplica a admins." }, 400);
+    }
+  }
+
   // Email change: validate uniqueness → 409 conflict
   if (updates.email && updates.email !== target.email) {
     const conflict = await getUserByEmail(updates.email);
@@ -119,6 +137,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       ...(updates.role !== undefined ? { role: updates.role } : {}),
       ...(updates.ativo !== undefined ? { ativo: updates.ativo } : {}),
       ...(updates.canManageUsers !== undefined ? { canManageUsers: updates.canManageUsers } : {}),
+      ...(updates.adminEscopo !== undefined ? { adminEscopo: updates.adminEscopo } : {}),
     })
     .where(eq(users.id, id))
     .returning();

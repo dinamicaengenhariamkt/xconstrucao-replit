@@ -27,6 +27,9 @@ export async function bootstrapSuperAdmin(): Promise<void> {
   await ensureColumn("users", "created_by", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by VARCHAR REFERENCES users(id) ON DELETE SET NULL`);
   await ensureColumn("users", "ativo", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS ativo BOOLEAN NOT NULL DEFAULT TRUE`);
   await ensureColumn("users", "can_manage_users", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS can_manage_users BOOLEAN NOT NULL DEFAULT FALSE`);
+  // XG06 — escopo do admin. DEFAULT 'global' é o que garante retrocompatibilidade:
+  // toda linha existente passa a valer "global" sem nenhum UPDATE.
+  await ensureColumn("users", "admin_escopo", sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_escopo TEXT NOT NULL DEFAULT 'global'`);
 
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS audit_logs (

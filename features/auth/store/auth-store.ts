@@ -18,6 +18,9 @@ interface User {
   image?: string | null;
   avatarUrl?: string | null;
   canManageUsers?: boolean;
+  // XG06 — escopo administrativo ("global" | "xgestao"). Ausente ⇒ "global".
+  // Usado só para MONTAR a navegação; a autorização real é server-side.
+  adminEscopo?: string;
   // J51 — gate do wizard de onboarding. Pode não vir em todas as respostas de
   // login/refresh; o gate pós-login confirma via /api/auth/me quando ausente.
   onboardingConcluido?: boolean;

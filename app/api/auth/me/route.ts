@@ -57,6 +57,12 @@ export async function GET(request: NextRequest) {
       ativo: viewer.ativo ?? true,
       canManageUsers:
         (viewer.role === "superadmin") || ((viewer as { canManageUsers?: boolean }).canManageUsers ?? false),
+      // XG06 — explícito no contrato: o spread acima já traz a coluna, mas o
+      // superadmin precisa da mesma blindagem aplicada a canManageUsers.
+      adminEscopo:
+        viewer.role === "superadmin"
+          ? "global"
+          : ((viewer as { adminEscopo?: string }).adminEscopo ?? "global"),
       impersonation,
     });
   } catch (error) {
