@@ -103,6 +103,35 @@ def linha_tabela(pdf, col1, col2, larg1, negrito_col1=True, cor2=GRAFITE):
     pdf.set_xy(x0, y0 + altura + 0.9)
 
 
+def caixa_destaque(pdf, titulo, texto, cor_titulo, cor_fundo):
+    """Caixa colorida com título e corpo, altura medida a partir do texto.
+
+    O padrão estava repetido em duas caixas; virou helper quando a terceira
+    apareceu. Medir com dry_run evita o texto vazar do retângulo — que é
+    desenhado ANTES do conteúdo e não se ajusta sozinho.
+    """
+    pdf.ln(1)
+    pdf.set_font(FAMILIA, "", 8)
+    linhas = len(pdf.multi_cell(LARGURA_UTIL - 5, 3.8, texto, dry_run=True, output="LINES"))
+    altura = linhas * 3.8 + 7.5
+
+    y0 = pdf.get_y()
+    pdf.set_fill_color(*cor_fundo)
+    pdf.rect(MARGEM, y0, LARGURA_UTIL, altura, style="F")
+
+    pdf.set_xy(MARGEM + 2.5, y0 + 1.8)
+    pdf.set_font(FAMILIA, "B", 8)
+    pdf.set_text_color(*cor_titulo)
+    pdf.cell(0, 4, titulo, new_x="LMARGIN", new_y="NEXT")
+
+    pdf.set_x(MARGEM + 2.5)
+    pdf.set_font(FAMILIA, "", 8)
+    pdf.set_text_color(*GRAFITE)
+    pdf.multi_cell(LARGURA_UTIL - 5, 3.8, texto)
+
+    pdf.set_y(y0 + altura + 1)
+
+
 def bullets(pdf, itens, tamanho=8.5):
     for item in itens:
         pdf.set_font(FAMILIA, "", tamanho)
@@ -179,31 +208,22 @@ def construir():
     ]:
         linha_tabela(pdf, nome, desc, 40)
 
-    pdf.ln(1)
-    pdf.set_fill_color(255, 247, 237)
-    y0 = pdf.get_y()
-    pdf.rect(MARGEM, y0, LARGURA_UTIL, 13, style="F")
-    pdf.set_xy(MARGEM + 2.5, y0 + 1.8)
-    pdf.set_font(FAMILIA, "B", 8)
-    pdf.set_text_color(*LARANJA)
-    pdf.cell(0, 4, "Ressalva importante", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_x(MARGEM + 2.5)
-    pdf.set_font(FAMILIA, "", 8)
-    pdf.set_text_color(*GRAFITE)
-    pdf.multi_cell(
-        LARGURA_UTIL - 5, 3.8,
+    caixa_destaque(
+        pdf,
+        "Ressalva importante",
         "Reaproveitar não é copiar e colar. Cada tela precisa ser reorganizada para atender ao novo fluxo "
         "sem quebrar o que já funciona — é justamente esse cuidado que consome a maior parte do prazo.",
+        LARANJA,
+        (255, 247, 237),
     )
-    pdf.set_y(y0 + 14)
 
     # ── 3. A construir ───────────────────────────────────────────────────
     titulo_secao(pdf, "3. O que precisa ser construído")
     bullets(pdf, [
         "Cadastro e criação de obra pelo próprio empreiteiro (hoje só o contratante cria).",
-        "Link público de acompanhamento para o cliente final, com espaço de anúncio — usado também "
-        "para divulgar o marketplace que vem a seguir.",
-        "Limites de obras por plano (1 / 3 / 10) e período de teste de 3 meses.",
+        "Link de acompanhamento para o cliente final: ele abre sem criar conta e vê a obra em "
+        "modo somente leitura, reaproveitando as telas que o contratante já usa hoje.",
+        "Limites de obras por plano (1 / 3 / 10) e período de teste.",
         "Área administrativa com visão específica do xgestão.",
         "Entrada e login próprios do xgestão, para o usuário saber em qual produto está.",
     ])
@@ -226,11 +246,13 @@ def construir():
          "Criação e edição de obras pelo próprio empreiteiro.", "Baixo"),
         ("Bloco 3 · Planos e limites",
          "Limite de obras por plano, período de teste e cobrança.", "Médio"),
-        ("Bloco 4 · Link do cliente",
-         "Página pública de acompanhamento com espaço de anúncio.", "ALTO"),
-        ("Bloco 5 · Ocultar marketplace",
+        ("Bloco 4 · Telas do cliente",
+         "As telas de acompanhamento adaptadas para visualização.", "Médio"),
+        ("Bloco 5 · Link do cliente",
+         "Link de acompanhamento, com revogação a qualquer momento.", "Médio"),
+        ("Bloco 6 · Ocultar marketplace",
          "Marketplace sai de cena por configuração, sem ser removido.", "Baixo"),
-        ("Bloco 6 · Administração",
+        ("Bloco 7 · Administração",
          "Visão administrativa do xgestão.", "Baixo"),
     ]:
         larg1, larg3 = 47.0, 24.0
@@ -269,61 +291,111 @@ def construir():
     pdf.ln(1)
     paragrafo(
         pdf,
-        "O link do cliente é o único item construído do zero — não existe nada parecido hoje. Por isso "
-        "ele começa já na segunda semana, para que eventuais imprevistos caibam dentro do prazo.",
+        "A decisão de reaproveitar as telas que o cliente já vê hoje, em vez de criar telas novas, "
+        "tirou o maior risco do projeto. O que era um bloco construído do zero virou adaptação de "
+        "algo pronto — e a saída da consulta SINAPI e da área de anunciante desta etapa deixou o "
+        "caminho mais curto e mais previsível.",
         tamanho=8, cor=CINZA,
+    )
+
+    caixa_destaque(
+        pdf,
+        "Sobre o prazo",
+        "Os 40 a 45 dias foram dimensionados com folga proposital: é um teto, não uma meta. "
+        "A folga existe para absorver imprevistos sem renegociar data. A tendência, conforme os "
+        "blocos forem fechando, é de encurtar esse prazo — e cada bloco entregue antes será "
+        "comunicado, não guardado até o fim.",
+        LARANJA,
+        (255, 247, 237),
     )
 
     # ── PÁGINA 2 ─────────────────────────────────────────────────────────
     pdf.add_page()
 
-    # ── 5. Fora do escopo ────────────────────────────────────────────────
-    titulo_secao(pdf, "5. Fora do escopo desta etapa")
+    # ── 5. SINAPI ────────────────────────────────────────────────────────
+    # Histórico desta seção: começou como item de "Fora do escopo" (premissa de
+    # que não havia consulta automática), virou seção própria quando a API de
+    # terceiro apareceu, e voltou a sair do escopo em 19/08 — agora por decisão
+    # de sequenciamento do cliente, não por limitação técnica.
+    titulo_secao(pdf, "5. Integração SINAPI — adiada para depois do lançamento")
+    paragrafo(
+        pdf,
+        "Ficou decidido na reunião de 19 de agosto que a consulta ao SINAPI não entra nesta etapa. "
+        "O motivo não é técnico: o caminho está mapeado e continua viável em poucos dias de "
+        "trabalho. É de prioridade — o objetivo agora é a plataforma rodando em obras reais, e a "
+        "consulta de preços não é necessária para isso.",
+    )
+    pdf.ln(1)
+
     for nome, desc in [
-        ("Integração SINAPI",
-         "Hoje o SINAPI aparece apenas como texto de divulgação — não há integração implementada. "
-         "Os dados são publicados majoritariamente em planilhas mensais por estado, e não como serviço "
-         "de consulta automática, o que torna a integração um projeto próprio, de várias semanas. "
-         "Fica para a etapa seguinte. Se houver um serviço de consulta que eu desconheça, "
-         "basta me indicar que eu reavalio."),
-        ("Migração de infra",
-         "Segue como decisão em aberto e não entra nesta etapa. Todo o desenvolvimento acontece no "
-         "ambiente atual."),
+        ("O que fica pronto agora",
+         "O levantamento está concluído e documentado: o serviço de consulta, os limites de uso, "
+         "os termos do contrato e o desenho da integração. Nada disso se perde."),
+        ("Economia imediata",
+         "Adiar evita o custo recorrente de R$ 79,90 por mês antes de haver receita, e devolve "
+         "esses dias de desenvolvimento para o que é prioridade agora."),
+        ("Quando retomar",
+         "Na preparação do lançamento comercial. A consulta de preços de referência é um "
+         "diferencial de venda, e faz mais sentido quando existe público para percebê-lo."),
     ]:
         linha_tabela(pdf, nome, desc, 40)
 
-    # ── 6. Definições pendentes ──────────────────────────────────────────
-    titulo_secao(pdf, "6. O que preciso de vocês")
+    caixa_destaque(
+        pdf,
+        "O que isso significa para o prazo",
+        "Menos um bloco no caminho crítico e um custo recorrente a menos antes do lançamento. "
+        "O trabalho de pesquisa já feito fica registrado e é retomado sem retrabalho quando a "
+        "funcionalidade voltar à pauta.",
+        VERDE,
+        (240, 253, 244),
+    )
+
+    # ── 6. Fora do escopo ────────────────────────────────────────────────
+    titulo_secao(pdf, "6. Fora do escopo desta etapa")
+    for nome, desc in [
+        ("Migração de infra",
+         "Segue como decisão em aberto e não entra nesta etapa. Todo o desenvolvimento acontece "
+         "no ambiente atual."),
+        ("Área do anunciante",
+         "Congelada nesta etapa, conforme decidido em 19 de agosto. O foco é a jornada do "
+         "empreiteiro. Ela já está construída no marketplace e volta junto com o relançamento."),
+        ("Interação do contratante",
+         "O link de acompanhamento é somente leitura: o cliente visualiza a obra, sem enviar "
+         "arquivos nem trocar mensagens pela plataforma. Tema retomado adiante."),
+    ]:
+        linha_tabela(pdf, nome, desc, 40)
+
+    # ── 7. Definições pendentes ──────────────────────────────────────────
+    titulo_secao(pdf, "7. O que preciso de vocês")
     paragrafo(
         pdf,
-        "Quatro definições destravam o cronograma. As três primeiras são necessárias antes do Bloco 3:",
+        "A reunião de 19 de agosto respondeu a maior parte das definições que estavam abertas — "
+        "limite de obras do plano Pro, formato do link do cliente, área do anunciante e consulta "
+        "SINAPI. Restam três, e nenhuma impede o desenvolvimento de começar:",
         tamanho=8.5,
     )
     pdf.ln(1)
     bullets(pdf, [
-        "Preços finais dos três planos (o documento e o sistema estão divergentes hoje).",
-        "Como funciona o teste de 3 meses: acesso gratuito limitado, ou acesso completo com "
-        "redução automática ao final?",
-        "Limite do plano Pro: 10 ou 15 obras? Do lado técnico é indiferente — é apenas um número "
-        "de configuração.",
-        "SINAPI: existe um serviço de consulta automática disponível?",
+        "Preços finais dos três planos e o que cada um inclui. Vocês ficaram de enviar o "
+        "documento detalhado. Isso é necessário antes do fechamento do Bloco 3.",
+        "Como funciona o período de teste. Há um ponto a alinhar: o documento de monetização "
+        "descreve acesso completo e irrestrito por 3 meses, e na reunião ficou dito que o usuário "
+        "teria o acesso do plano dele. São dois comportamentos diferentes do sistema — o segundo "
+        "é bem mais simples de construir. Basta confirmar qual dos dois vale.",
+        "Acesso ao registrador do domínio xconstrução, para apontar o endereço na hora do "
+        "lançamento. Não bloqueia o desenvolvimento, mas precisa estar resolvido antes de subir.",
     ])
 
-    pdf.ln(1.5)
-    pdf.set_fill_color(240, 253, 244)
-    y0 = pdf.get_y()
-    pdf.rect(MARGEM, y0, LARGURA_UTIL, 12, style="F")
-    pdf.set_xy(MARGEM + 2.5, y0 + 1.8)
-    pdf.set_font(FAMILIA, "B", 8)
-    pdf.set_text_color(*VERDE)
-    pdf.cell(0, 4, "Compromisso de acompanhamento", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_x(MARGEM + 2.5)
-    pdf.set_font(FAMILIA, "", 8)
-    pdf.set_text_color(*GRAFITE)
-    pdf.multi_cell(
-        LARGURA_UTIL - 5, 3.8,
-        "Reunião semanal de alinhamento, com testes feitos em conjunto a cada bloco entregue — "
-        "para que os ajustes apareçam cedo, e não na véspera do lançamento.",
+    caixa_destaque(
+        pdf,
+        "Compromisso de acompanhamento",
+        "Reunião semanal de alinhamento do início ao fim do projeto. Assim que as primeiras telas "
+        "estiverem navegáveis, essas reuniões passam a ser feitas sobre a tela real — vocês veem e "
+        "testam o que foi construído antes de o bloco ser dado como fechado. É esse ciclo curto que "
+        "acelera o processo: o ajuste aparece na semana em que o trabalho foi feito, e não na "
+        "véspera do lançamento.",
+        VERDE,
+        (240, 253, 244),
     )
 
     SAIDA.parent.mkdir(parents=True, exist_ok=True)

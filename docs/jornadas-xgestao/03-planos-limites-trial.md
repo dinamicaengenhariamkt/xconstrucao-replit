@@ -1,7 +1,9 @@
 # Jornada — XG03: Planos, limites e teste de 3 meses
 
-> Status: planejada (bloqueada por definição de preços) | Prioridade: alta | Wave: xgestão-3
-> Última atualização: 2026-08-09
+> Status: planejada (§8 bloqueada por definição de preços) | Prioridade: alta | Wave: xgestão-3
+> Última atualização: 2026-08-19
+
+> **Desbloqueio parcial (2026-08-19):** a reunião 002 fechou o limite do Pro em **10 obras** e descreveu a composição do Freemium. O que segue bloqueado é **só a mecânica do teste** (§8) e os preços. Persona, catálogo, contagem por `empreiteiraId` e o 402 podem ser implementados agora.
 
 ## 1. Contexto & Objetivo
 
@@ -57,7 +59,13 @@ Mapeamento acordado:
 |---|---|---|
 | Freemium | `free` | 1 |
 | Basic | `pro` | 3 |
-| Pro | `enterprise` | 10 (ou 15 — pendente) |
+| Pro | `enterprise` | **10** |
+
+> **Decisão do cliente (2026-08-19):** o limite do Pro é **10 obras**, encerrando a bifurcação "10 ou 15". *"Eu pensei no limite do plano Pro, a gente deixar dez obras, como já estava definido anteriormente ali pelo documento do Ed"* (01:13), confirmado em *"o freemium, ele é que só pode ter uma obra... aí o basic já são três e o pro vamos ser dez"* (15:06).
+
+**Composição funcional do Freemium — premissa provisória.** O cliente descreveu o Freemium como *"tudo do básico, só que com um pouco menos de função"* (15:20-15:28): serve para o empreiteiro *"ter um gostinho do que é a plataforma"*. Como decisão de limite de obras, está fechado (1 obra). Como decisão de **quais funcionalidades** ficam de fora, **não está** — o cliente ficou de enviar o documento detalhando a composição dos três planos (18:44).
+
+Isso não bloqueia a jornada: o modelo de limites é o mesmo independente de quais features entram em cada tier. Implementar a contagem de obras primeiro e ligar as demais entitlements quando o documento chegar.
 
 ## 7. Endpoints
 
@@ -69,12 +77,20 @@ Mapeamento acordado:
 
 **Não existe implementação de trial.** Verificado: `"trial"` aparece apenas como string de tipo em [assinatura-service.ts:631](../../features/planos/assinatura-service.ts). Não há coluna, job nem fluxo.
 
-Duas mecânicas possíveis, e elas **não são a mesma implementação** — precisa de definição do cliente:
+Duas mecânicas possíveis, e elas **não são a mesma implementação**:
 
-- **(a)** tier `free` por 90 dias, depois cobrança obrigatória para continuar criando;
-- **(b)** acesso `enterprise` por 90 dias, com redução automática ao final.
+- **(a)** tier `free` por N meses, depois cobrança obrigatória para continuar criando;
+- **(b)** acesso `enterprise` por N meses, com redução automática ao final.
 
-O PDF de monetização sugere (b) — "3 meses 100% grátis (irrestrito)". Confirmar antes de implementar.
+> ⚠️ **A reunião 002 contradiz o PDF de monetização neste ponto — não implementar até resolver.**
+>
+> O PDF sugere **(b)**: "3 meses 100% grátis (irrestrito)". A reunião 002 aponta para **(a)**: perguntado se no teste o cara teria *"o acesso full, a plataforma com todas as funcionalidades que o xgestão provém"*, a resposta foi **não** — *"ele vai ter o acesso ao plano dele, no caso"* (14:34-14:41). E o Freemium foi descrito como plano de verdade, permanente, com 1 obra e funções reduzidas (15:06), não como janela temporária de acesso elevado.
+>
+> A diferença é cara: **(b) exige um job de downgrade** (molde em [grace-period-downgrade-job.ts](../../features/planos/grace-period-downgrade-job.ts)) e a definição do que acontece com obras acima do limite quando o teste acaba. **(a) não exige nada disso** — o Freemium simplesmente é o que é.
+>
+> **Escolher errado custa um job inteiro, então esta seção fica bloqueada** até o documento de planos chegar (o cliente ficou de enviar, 18:44). O resto da jornada — persona, catálogo, contagem por `empreiteiraId`, o 402 — **não depende disso e pode ser implementado já**.
+
+O prazo em si (2 ou 3 meses) é parâmetro comercial e ficou explicitamente em aberto: *"a parte dos três meses aí é indiferente"* (14:16). Não modelar o número como constante de código — ele muda sem deploy.
 
 ## 9. Checklist de implementação
 
@@ -103,7 +119,7 @@ O PDF de monetização sugere (b) — "3 meses 100% grátis (irrestrito)". Confi
 
 - **Bloqueada por definição de negócio.** Preços e mecânica do teste precisam vir do cliente antes de começar. Mitigação parcial: preços no banco.
 - **Fim do teste com obras acima do limite.** Definição pendente. **Recomendação forte: nunca retirar acesso de leitura** — trancar um construtor fora dos registros da própria obra é o caminho mais rápido para chargeback. Bloquear apenas a criação de novas.
-- **SINAPI passou a ter jornada própria — ver [XG07](07-integracao-sinapi.md).** *(atualizado em 2026-08-10; a nota original está preservada abaixo porque o raciocínio continua válido para a rota de ETL próprio.)* A premissa de que só existiam planilhas mensais por UF estava correta quanto à Caixa — que não tem API oficial —, mas existe API de terceiro que reduz a integração a dias. XG07 também acrescenta `consultasSinapiMes` ao catálogo de limites desta jornada.
+- **SINAPI passou a ter jornada própria — ver [XG07](07-integracao-sinapi.md), hoje congelada.** *(atualizado em 2026-08-10; congelado em 2026-08-19; a nota original está preservada abaixo porque o raciocínio continua válido para a rota de ETL próprio.)* A premissa de que só existiam planilhas mensais por UF estava correta quanto à Caixa — que não tem API oficial —, mas existe API de terceiro que reduz a integração a dias. **Enquanto XG07 estiver congelada, `consultasSinapiMes` não entra no catálogo de limites desta jornada** — não semear a chave, não exibir quota na UI de planos. Volta junto com XG07.
 
   > Nota original: a palavra aparece só em copy de marketing ([app/page.tsx](../../app/page.tsx), [app/xgestao-inteligente/](../../app/xgestao-inteligente/), seeds legais) e num nome de tipo em [features/obras/adapters.ts](../../features/obras/adapters.ts) — **zero implementação**. Os dados são publicados majoritariamente como planilhas mensais por UF, o que significa pipeline de ingestão + tabela de preços versionada + job mensal. É projeto de semanas. Enquanto não houver integração, a copy que promete SINAPI deveria sair do ar.
 - Empreiteiro que seja **também** cliente xgestão terá `users.role = 'empreiteiro'`; por isso a persona é passada explicitamente, e não inferida.
@@ -111,7 +127,9 @@ O PDF de monetização sugere (b) — "3 meses 100% grátis (irrestrito)". Confi
 ## 12. Links cruzados
 
 - Depende de: XG01 (role aditiva), XG02 (`create-obra.ts`)
+- Bloqueia: XG06 (a visão admin mostra plano/tier e distribuição entre os 3 planos)
 - Relacionada: J11 (planos e assinatura), J14 (gateway de pagamento)
+- Congelada, mas dependeria daqui: XG07 (persona `xgestao` no catálogo)
 
 ## 13. Gaps descobertos durante execução
 

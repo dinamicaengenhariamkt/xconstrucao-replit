@@ -1,7 +1,7 @@
 # Jornada — XG02: Obra criada e editada pelo empreiteiro
 
 > Status: planejada | Prioridade: alta | Wave: xgestão-2
-> Última atualização: 2026-08-09
+> Última atualização: 2026-08-19
 
 ## 1. Contexto & Objetivo
 
@@ -106,7 +106,7 @@ A rota atual mantém seus guards e chama a função. A rota nova chama com o out
 ## 12. Links cruzados
 
 - Depende de: XG01 (`assertXgestaoUser`, shell)
-- Bloqueia: XG03 (o limite é aplicado no mesmo `create-obra.ts`), XG04 (o link compartilha uma obra)
+- Bloqueia: XG03 (o limite é aplicado no mesmo `create-obra.ts`), XG04 (o link compartilha uma obra), XG06 (o discriminador `clienteId IS NULL` nasce aqui), XG08 (a obra a exibir em leitura)
 - Relacionada: J03 (cadastro de obra do marketplace)
 
 ## 13. Gaps descobertos durante execução

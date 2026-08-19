@@ -1,7 +1,17 @@
 # Jornada — XG07: Integração SINAPI (consulta de preços de referência)
 
-> Status: planejada | Prioridade: média | Wave: xgestão-7
-> Última atualização: 2026-08-10
+> Status: congelada (2026-08-19) | Prioridade: média | Wave: xgestão-7
+> Última atualização: 2026-08-19
+
+> ❄️ **Congelada na reunião 002 (2026-08-19). Não implementar até o gatilho abaixo.**
+>
+> **Decisão:** SINAPI sai do MVP. O motivo não é técnico — a pesquisa desta jornada continua válida e o caminho por API continua sendo de dias, não semanas. É de sequenciamento: o Dedé precisa da plataforma funcionando **para testar nas obras reais dele**, e não precisa de SINAPI para isso. *"Nesse primeiro momento, se a gente vai começar agora testando em obra do cara, não precisa a gente ter esse custo, por exemplo, inicial já"* (03:03). Todo tempo gasto aqui sai de outra coisa: *"cada coisa que tu tiver que gastar tempo vai naturalmente tirar tempo de outras coisas"* (01:52).
+>
+> **Gatilho para descongelar:** a ida a mercado. *"Então, quando começa no mercado, sim. Já é interessante começar com isso, já que é um adicional que a gente tem de valor"* (03:11). Não é cancelamento — é adiamento com condição definida.
+>
+> **Conteúdo preservado na íntegra abaixo.** A pesquisa da API do Orçamentador, os termos de uso, as quotas, o desenho de porta e adapters e as correções de premissa sobre a Caixa custaram trabalho real e voltam a valer sem retrabalho quando a jornada descongelar.
+>
+> **Estado da chave de testes:** solicitada em 2026-08-10, **sem resposta do fornecedor** até 2026-08-19 (*"eu li o e-mail aqui, que eu pedi a solicitação pra poder fazer o teste. Não me responderam ainda"*, 15:48). O congelamento tornou isso irrelevante para o prazo — que era justamente o risco que ele representava.
 
 ## 1. Contexto & Objetivo
 
@@ -154,8 +164,8 @@ Os [termos de uso da API](https://orcamentador.com.br/termos-de-uso-api.php) per
 
 ## 13. Riscos / Pontos de atenção
 
-- **A chave gratuita expira a cada 15 dias** e é obtida por **formulário de contato**, não pelo painel — não há como automatizar a renovação. Consequência direta: **o tier gratuito não é viável em produção**, serve para desenvolvimento e homologação. O PRO (**R$ 79,90/mês**, 500k req/mês) é pré-requisito de go-live. Isso precisa estar claro para o cliente antes de a copy prometer SINAPI no lançamento.
-- **A quota gratuita documentada diverge**: a tabela de planos em `/api/` diz 50 req/h e 2.000/mês; a `/api/docs` diz 100 req/h e 3.000/mês. Projetar para o menor valor e tratar os headers `X-RateLimit-*` como verdade.
+- **A chave gratuita expira a cada 15 dias** e é obtida por **formulário de contato**, não pelo painel — não há como automatizar a renovação. Consequência direta: **o tier gratuito não é viável em produção**, serve para desenvolvimento e homologação. O PRO (**R$ 79,90/mês**, 500k req/mês) é pré-requisito de go-live. Isso está registrado na seção 5 do [resumo executivo](../novo-fluxo/xgestao-plano-40-45-dias.pdf) e o aceite do custo virou pergunta formal ao cliente. **A chave de testes já foi solicitada** (2026-08-10).
+- **Quota do plano gratuito: 50 req/hora e 2.000 req/mês** — confirmado na tabela de planos em `/api/` (2026-08-10). A página `/api/docs` informa 100/h e 3.000/mês; **prevalece a tabela de planos**, que é a que rege a contratação. Tratar os headers `X-RateLimit-*` como verdade em runtime.
 - **Cláusula "produto concorrente" não é definida** nos termos. Nós exporíamos consulta SINAPI dentro de um SaaS de gestão; eles vendem consulta SINAPI. Zona cinzenta que não se resolve lendo o contrato — **confirmar por escrito com o fornecedor** antes do go-live pago e registrar a resposta aqui.
 - **Sem OpenAPI e sem SDK JavaScript** (só PHP). Tipos escritos à mão a partir de respostas observadas; validar com Zod na borda e nunca propagar `any`.
 - **Fornecedor único.** A porta `SinapiProvider` existe justamente para permitir um adapter futuro de ingestão dos ZIPs oficiais da Caixa sem tocar em nenhum caller — rota mais robusta a médio prazo, sem contrato intermediário e sem teto de requisições.

@@ -1,7 +1,7 @@
 # Jornada — XG01: Fundações e shell do xgestão
 
 > Status: planejada | Prioridade: alta | Wave: xgestão-1
-> Última atualização: 2026-08-09
+> Última atualização: 2026-08-19
 
 ## 1. Contexto & Objetivo
 
@@ -95,8 +95,9 @@ flowchart LR
 
 ## 12. Links cruzados
 
-- Bloqueia: XG02, XG03, XG04, XG05, XG06 (todas dependem do `assertXgestaoUser` e do shell)
+- Bloqueia: XG02, XG03, XG04, XG05, XG06, XG08 (todas dependem do `assertXgestaoUser` e do shell)
 - Relacionada: J23 (roles aditivas), J26 (configurações de plataforma)
+- Congelada, mas também dependeria daqui: XG07 (SINAPI)
 
 ## 13. Gaps descobertos durante execução
 

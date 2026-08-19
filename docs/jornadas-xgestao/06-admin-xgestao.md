@@ -1,7 +1,7 @@
 # Jornada — XG06: Visão administrativa do xgestão
 
 > Status: planejada (escopo a confirmar com o cliente) | Prioridade: média | Wave: xgestão-6
-> Última atualização: 2026-08-09
+> Última atualização: 2026-08-19
 
 ## 1. Contexto & Objetivo
 
@@ -54,7 +54,9 @@ Lista de assinantes, com: nome da empreiteira, e-mail, quantidade de obras, plan
 
 Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuição entre os 3 planos, links públicos ativos.
 
-> ⚠️ **Escopo pendente de confirmação.** Sem um "sim" explícito do cliente sobre esse mínimo, a jornada expande sem limite. Levar a proposta na reunião.
+> ⚠️ **Escopo ainda pendente de confirmação.** Sem um "sim" explícito do cliente sobre esse mínimo, a jornada expande sem limite. *(2026-08-19: a reunião 002 não tocou neste ponto — a pauta foi consumida por SINAPI, planos e o formato do link público. Segue pendente, mas **não é bloqueio de caminho crítico**: XG06 é a última jornada da ordem de execução e o objetivo do MVP é o Dedé testar em obra real, não a visão admin. Reapresentar na próxima conversa.)*
+>
+> **Ajuste de 2026-08-19:** o contador de *links públicos ativos* depende de [XG04](04-link-publico-obra.md) e do plano de corte dela — se a v1 do link sair sem contadores, este número sai junto. Não é motivo para segurar a jornada. E **não incluir painel de quota SINAPI** enquanto [XG07](07-integracao-sinapi.md) estiver congelada.
 
 ## 9. Checklist de implementação
 

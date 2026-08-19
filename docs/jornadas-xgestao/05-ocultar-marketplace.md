@@ -1,7 +1,11 @@
 # Jornada — XG05: Ocultar o marketplace
 
 > Status: planejada | Prioridade: alta | Wave: xgestão-5
-> Última atualização: 2026-08-09
+> Última atualização: 2026-08-19
+
+> **Confirmado na reunião 002 (2026-08-19):** ocultar o marketplace e a jornada do contratante segue no escopo, sem mudança. *"Das questões que você trouxe, a questão do MVP, da questão de ocultar o marketplace ali, ocultar a jornada do contratante, ele já está ok, já está confirmado da nossa parte"* (03:41).
+>
+> ❄️ **A jornada do anunciante fica congelada junto.** *"A jornada do anunciante, beleza. Então a gente congela por enquanto, né? Foca nessa parte do empreiteiro de fato"* (16:04). Ela já existe construída no marketplace (J12/J16/J23/J31) e permanece oculta pelo mesmo toggle — **nenhum trabalho adicional nesta jornada**. O efeito prático está em [XG04 §9](04-link-publico-obra.md): o espaço de anúncio no link público sai do MVP. Descongela junto com o relançamento do marketplace.
 
 ## 1. Contexto & Objetivo
 
