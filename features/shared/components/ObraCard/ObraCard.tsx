@@ -186,22 +186,24 @@ export function ObraCard({
             </div>
           </div>
 
-          <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3">
-            <div
-              className={cn(
-                'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold',
-                parteContraria.cor,
-              )}
-            >
-              {parteContraria.iniciais}
+          {parteContraria && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center gap-3">
+              <div
+                className={cn(
+                  'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold',
+                  parteContraria.cor,
+                )}
+              >
+                {parteContraria.iniciais}
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  {parteContraria.nome}
+                </p>
+                <p className="text-[10px] text-gray-400">{parteContrariaRole}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                {parteContraria.nome}
-              </p>
-              <p className="text-[10px] text-gray-400">{parteContrariaRole}</p>
-            </div>
-          </div>
+          )}
 
           <span className="block w-full text-center py-2.5 rounded-xl text-sm font-semibold transition-colors bg-primary/10 text-primary hover:bg-primary/20">
             Ver detalhes

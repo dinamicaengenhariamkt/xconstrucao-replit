@@ -17,6 +17,10 @@ export interface MinhaObra {
     email?: string;
     avatarUrl?: string;
   };
+  /** False para obra própria do xgestão (`clienteId = null`). */
+  temContratante: boolean;
+  /** Identifica obra operacional do xgestão sem alterar o contrato marketplace. */
+  isObraPropria: boolean;
   tipo: string;
 }
 

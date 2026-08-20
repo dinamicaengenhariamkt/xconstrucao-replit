@@ -46,8 +46,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  // Empreiteiro NÃO cria etapas — só contratante/admin definem escopo.
-  if (access.role === "empreiteiro") {
+  // Marketplace: escopo continua exclusivo do contratante/admin. O xgestão
+  // libera a etapa para a obra própria, identificada sem contratante.
+  if (access.role === "empreiteiro" && access.obra.clienteId !== null) {
     const r = NextResponse.json({ message: "Apenas o contratante pode criar etapas." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

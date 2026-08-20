@@ -31,6 +31,7 @@ import React from 'react';
 import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
+import { EditarObraModal } from '@features/xgestao/components/EditarObraModal';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -66,9 +67,11 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
 export function ObraConsoleView({
   basePath,
   showMarketplaceContact = true,
+  allowOwnWorkEdit = false,
 }: {
   basePath: string;
   showMarketplaceContact?: boolean;
+  allowOwnWorkEdit?: boolean;
 }) {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -187,18 +190,23 @@ export function ObraConsoleView({
                     <p className="font-bold text-sm">{obra.dataPrevisaoFim}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-white/90">
-                  <IconGroups className="text-lg" />
-                  <div>
-                    <p className="text-white/60 text-xs">Contratante</p>
-                    <div className="flex items-center gap-2">
-                      <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold', obra.contratante.cor)}>
-                        {obra.contratante.iniciais}
+                {obra.temContratante && (
+                  <div className="flex items-center gap-2 text-white/90">
+                    <IconGroups className="text-lg" />
+                    <div>
+                      <p className="text-white/60 text-xs">Contratante</p>
+                      <div className="flex items-center gap-2">
+                        <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold', obra.contratante.cor)}>
+                          {obra.contratante.iniciais}
+                        </div>
+                        <p className="font-bold text-sm">{obra.contratante.nome}</p>
                       </div>
-                      <p className="font-bold text-sm">{obra.contratante.nome}</p>
                     </div>
                   </div>
-                </div>
+                )}
+                {allowOwnWorkEdit && obra.isObraPropria && (
+                  <EditarObraModal obra={obra} />
+                )}
                 <button
                   onClick={() => setShowAtualizacao(true)}
                   className="px-5 py-2 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer"
@@ -422,7 +430,7 @@ export function ObraConsoleView({
       </motion.div>
 
       {/* O xgestão não expõe o chat do marketplace; obras próprias não têm contratante. */}
-      {showMarketplaceContact && (
+      {showMarketplaceContact && obra.temContratante && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40 }}>
           <ContatoContratanteCard contratante={obra.contratante} obraId={obra.id} obraTitulo={obra.titulo} />
         </motion.div>

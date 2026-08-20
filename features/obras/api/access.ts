@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, obras } from "@shared/db/schema";
-import { isAdminLike } from "@features/auth/api/auth-utils";
+import { isAdminLike, userHasRole } from "@features/auth/api/auth-utils";
 
 /**
  * Resolve acesso de leitura/escrita a uma obra para qualquer persona.
@@ -64,6 +64,12 @@ export async function findObraAccess(
     if (!isAssigned && !isPublica) return null;
     // Fail-closed: só libera discovery se o caller pedir explicitamente.
     if (!isAssigned && !opts.allowDiscovery) return null;
+    // Uma obra sem contratante pertence ao xgestão. Mantemos o entitlement no
+    // caminho de conteúdo para que revogar o produto também revogue operação,
+    // sem alterar o acesso a obras marketplace atribuídas.
+    if (isAssigned && obra.clienteId === null && !(await userHasRole(user.id, "xgestao"))) {
+      return null;
+    }
     return {
       obra,
       role: "empreiteiro",

@@ -1,7 +1,7 @@
 # Jornada — XG02: Obra criada e editada pelo empreiteiro
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-2
-> Última atualização: 2026-08-19
+> Status: implementada | Prioridade: alta | Wave: xgestão-2
+> Última atualização: 2026-08-20
 
 ## 1. Contexto & Objetivo
 
@@ -78,13 +78,13 @@ A rota atual mantém seus guards e chama a função. A rota nova chama com o out
 
 ## 9. Checklist de implementação
 
-- [ ] Extrair `features/obras/api/create-obra.ts` com o union `DonoObra`
-- [ ] Fazer `app/api/obras/route.ts` consumir a função extraída, sem mudança de comportamento
-- [ ] Criar `POST /api/xgestao/obras`: `assertXgestaoUser` → `empreiteiroPodeOperar` → cria com `clienteId: null`, `visibilidade: "rascunho"`
-- [ ] [app/api/obras/[id]/route.ts:286](../../app/api/obras/[id]/route.ts) — trocar a rejeição categórica do empreiteiro por `if (role === "empreiteiro" && access.obra.clienteId !== null) → 403`. Preserva a garantia de contrato do marketplace e libera só o caso sem contraparte. Manter o strip de `empreiteiraId`/`clienteId`
-- [ ] Criar os modais de nova obra e edição
-- [ ] [build-detalhe-server.ts:144](../../features/empreiteiro/minhas-obras/api/build-detalhe-server.ts) — esconder o card de contato do contratante quando `clienteId === null` (hoje o fallback `?? "Contratante"` renderiza um contratante fantasma)
-- [ ] Spec `tests/e2e/integration/xgestao-obras.integration.spec.ts`
+- [x] Extrair `features/obras/api/create-obra.ts` com o union `DonoObra`
+- [x] Fazer `app/api/obras/route.ts` consumir a função extraída, sem mudança de comportamento
+- [x] Criar `POST /api/xgestao/obras`: `assertXgestaoUser` → `empreiteiroPodeOperar` → cria com `clienteId: null`, `visibilidade: "rascunho"`
+- [x] [app/api/obras/[id]/route.ts](../../app/api/obras/[id]/route.ts) libera só obra própria sem contratante e preserva o strip de ownership
+- [x] Criar os modais de nova obra e edição
+- [x] Esconder contratante e contato quando `clienteId === null`; o DTO sinaliza explicitamente `temContratante`
+- [x] Spec `tests/e2e/integration/xgestao-obras.integration.spec.ts`
 
 > ⚠️ `visibilidade: "rascunho"` é deliberado: evita o `superRefine` de publicação em [features/obras/schemas/index.ts](../../features/obras/schemas/index.ts), que exige CEP, número e modalidade — irrelevantes no xgestão. Confirmar que o console não trava nada em `visibilidade`.
 

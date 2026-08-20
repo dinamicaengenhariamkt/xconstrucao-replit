@@ -17,12 +17,12 @@ export interface ObraCardProps {
   dataPrevisaoFim: string;
   tipo: string;
   /** A "outra parte" do contrato (contratante, na visão empreiteiro; e vice-versa). */
-  parteContraria: {
+  parteContraria?: {
     nome: string;
     iniciais: string;
     cor: string;
   };
-  parteContrariaRole: 'Contratante' | 'Empreiteiro';
+  parteContrariaRole?: 'Contratante' | 'Empreiteiro';
   /** Prefixo da URL de detalhe (ex: `/contratante/minhas-obras` ou `/empreiteiro/minhas-obras`). */
   basePath: string;
   /** Como exibir as datas no rodapé. */

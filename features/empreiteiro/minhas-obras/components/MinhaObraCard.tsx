@@ -21,8 +21,8 @@ export function MinhaObraCard({
       dataInicio={obra.dataInicio}
       dataPrevisaoFim={obra.dataPrevisaoFim}
       tipo={obra.tipo}
-      parteContraria={obra.contratante}
-      parteContrariaRole="Contratante"
+      parteContraria={obra.temContratante ? obra.contratante : undefined}
+      parteContrariaRole={obra.temContratante ? "Contratante" : undefined}
       basePath={basePath}
       dateMode="range"
       healthStatus={healthStatus}

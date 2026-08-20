@@ -33,12 +33,14 @@ import {
 } from '@shared/components/ui/pagination';
 import { getPaginationRange } from '@shared/lib/pagination';
 import { formatRange } from '@shared/lib/formatters';
+import { NovaObraModal } from '@features/xgestao/components/NovaObraModal';
 
 type MinhasObrasViewProps = {
   basePath: string;
+  xgestao?: boolean;
 };
 
-export function MinhasObrasView({ basePath }: MinhasObrasViewProps) {
+export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewProps) {
   const { data: obras, isLoading } = useMinhasObras();
   const { data: healthMap } = useObrasHealthMap('empreiteiro');
   const searchParams = useSearchParams();
@@ -89,7 +91,7 @@ export function MinhasObrasView({ basePath }: MinhasObrasViewProps) {
   }, [obras]);
 
   const contratanteOptions = useMemo(() => {
-    const set = new Set((obras ?? []).map((o) => o.contratante.nome));
+    const set = new Set((obras ?? []).filter((o) => o.temContratante).map((o) => o.contratante.nome));
     return Array.from(set)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .map((n) => ({ value: n, label: n }));
@@ -102,7 +104,7 @@ export function MinhasObrasView({ basePath }: MinhasObrasViewProps) {
     if (saude.value) result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
     if (tipoSelected.length > 0) result = result.filter((o) => tipoSelected.includes(o.tipo));
     if (contratanteSelected.length > 0) {
-      result = result.filter((o) => contratanteSelected.includes(o.contratante.nome));
+      result = result.filter((o) => o.temContratante && contratanteSelected.includes(o.contratante.nome));
     }
     if (orcMinNum !== undefined) result = result.filter((o) => o.orcamento >= orcMinNum);
     if (orcMaxNum !== undefined) result = result.filter((o) => o.orcamento <= orcMaxNum);
@@ -160,10 +162,13 @@ export function MinhasObrasView({ basePath }: MinhasObrasViewProps) {
   return (
     <div className="mb-12 flex flex-col gap-10 p-10" data-testid="minhas-obras-empreiteiro-page">
       <div className="flex flex-col gap-6">
-        <PageHeader
-          title="Minhas Obras"
-          subtitle="Gerencie suas obras em execução e acompanhe o progresso operacional."
-        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <PageHeader
+            title="Minhas Obras"
+            subtitle="Gerencie suas obras em execução e acompanhe o progresso operacional."
+          />
+          {xgestao && <NovaObraModal />}
+        </div>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <AdvancedFiltersPopover activeCount={advancedActiveCount} onClearAll={clearAllAdvanced}>

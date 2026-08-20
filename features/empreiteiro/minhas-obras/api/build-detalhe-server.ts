@@ -141,6 +141,7 @@ export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> 
     const dias = diasAtrasoFor(o.dataPrevisao, o.status);
     const problemas = problemMap.get(o.id) ?? 0;
     const status = mapStatus(o.status, dias, problemas);
+    const temContratante = Boolean(o.clienteId);
     const contratanteNome = r.contratanteNome ?? "Contratante";
     const enderecoFull = [o.endereco, o.cidade && o.uf ? `${o.cidade}, ${o.uf}` : null]
       .filter(Boolean)
@@ -161,6 +162,8 @@ export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> 
         cor: colorFor(contratanteNome),
         email: r.contratanteEmail ?? undefined,
       },
+      temContratante,
+      isObraPropria: !temContratante,
       tipo: o.tipo ?? "Obra",
     };
   });
@@ -196,6 +199,7 @@ export async function buildMinhaObraDetalheReal(
   if (!obra) return null;
 
   // Contratante (via clientes → users).
+  const temContratante = Boolean(obra.clienteId);
   let contratanteNome = "Contratante";
   let contratanteEmail: string | undefined;
   let contratanteTelefone: string | undefined;
@@ -502,18 +506,20 @@ export async function buildMinhaObraDetalheReal(
     .orderBy(asc(obraEquipe.createdAt));
 
   const equipe: MembroEquipe[] = [];
-  equipe.push({
-    id: `contratante-${obra.clienteId ?? "anon"}`,
-    nome: contratanteNome,
-    iniciais: initialsOf(contratanteNome),
-    cor: colorFor(contratanteNome),
-    papel: "Contratante",
-    tipo: "contratante",
-    telefone: contratanteTelefone,
-    email: contratanteEmail,
-    ativo: true,
-    permissao: "admin",
-  });
+  if (temContratante) {
+    equipe.push({
+      id: `contratante-${obra.clienteId}`,
+      nome: contratanteNome,
+      iniciais: initialsOf(contratanteNome),
+      cor: colorFor(contratanteNome),
+      papel: "Contratante",
+      tipo: "contratante",
+      telefone: contratanteTelefone,
+      email: contratanteEmail,
+      ativo: true,
+      permissao: "admin",
+    });
+  }
   if (empreiteiraRow) {
     equipe.push({
       id: `empreiteira-${empreiteiraRow.id}`,
@@ -612,6 +618,8 @@ export async function buildMinhaObraDetalheReal(
       email: contratanteEmail,
       avatarUrl: contratanteAvatarUrl,
     },
+    temContratante,
+    isObraPropria: !temContratante,
     tipo: obra.tipo ?? "Obra",
     valorPago: valorPagoNum,
     aReceber: saldoReceber,

@@ -282,8 +282,13 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     setNoCacheHeaders(r);
     return r;
   }
-  // empreiteiro nunca edita
-  if (guard.user.role === "empreiteiro") {
+  // O empreiteiro só altera a própria obra xgestão: sem contratante e vinculada
+  // à sua empreiteira (findObraWithAccess já garantiu este último vínculo).
+  const isObraPropriaXGestao =
+    guard.user.role === "empreiteiro" &&
+    access.obra.clienteId === null &&
+    access.obra.empreiteiraId === access.empreiteiraId;
+  if (guard.user.role === "empreiteiro" && !isObraPropriaXGestao) {
     const r = NextResponse.json({ message: "Sem permissão para editar." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
@@ -314,6 +319,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return r;
   }
 
+  // Obras próprias permanecem operacionais e privadas; publicação/moderação
+  // pertence ao marketplace e não faz parte do produto xgestão.
+  if (
+    isObraPropriaXGestao &&
+    "visibilidade" in incomingParsed.data &&
+    incomingParsed.data.visibilidade !== "rascunho"
+  ) {
+    const r = NextResponse.json(
+      { message: "Obras próprias do xgestão não podem ser publicadas no marketplace." },
+      { status: 403 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   // Quando transitando para 'publicada', valida o objeto merged com o schema estrito
   // (endereço, CEP, tipo, modalidade etc. obrigatórios).
   const indoPublicar =
@@ -334,7 +354,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   // Bloqueio: valorTotal/descricao não podem ser alterados após vínculo com empreiteira.
-  if (access.obra.empreiteiraId !== null) {
+  if (access.obra.clienteId !== null && access.obra.empreiteiraId !== null) {
     const valorMudou = "valorTotal" in safeBody && String(safeBody.valorTotal) !== String(access.obra.valorTotal);
     const descMudou = "descricao" in safeBody && safeBody.descricao !== access.obra.descricao;
     if (valorMudou || descMudou) {

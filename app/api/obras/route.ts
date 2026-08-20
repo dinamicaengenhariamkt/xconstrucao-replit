@@ -3,22 +3,12 @@ import { and, desc, eq, getTableColumns, gte, ilike, inArray, isNull, lte, sql }
 import { db } from "@shared/db/db";
 import { candidaturas, clientes, empreiteiras, obras, obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { insertObraSchemaStrict } from "@features/obras/schemas";
-import { recordAudit } from "@features/auth/api/audit";
-import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
-import { getLimiteRecurso } from "@features/planos/assinatura-service";
+import { createObra } from "@features/obras/api/create-obra";
 import {
   contratantePodeOperar,
   mensagemPerfilIncompleto,
   CODE_PERFIL_INCOMPLETO,
 } from "@shared/lib/perfil-operacional";
-
-/** Sinaliza estouro de limite de plano dentro da transação de criação de obra. */
-class ObraLimiteError extends Error {
-  constructor(public readonly limite: number) {
-    super("LIMITE_PLANO");
-  }
-}
 
 /**
  * GET /api/obras  (role-scoped, paginado)
@@ -297,25 +287,6 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
-  // Rate limit: máx 10 criações por usuário por minuto.
-  const ip = getClientIp(request);
-  if (isRateLimited(`obras.create:${guard.user.id}`, 10, 60 * 1000)) {
-    const r = NextResponse.json(
-      { message: "Muitas obras criadas em pouco tempo. Aguarde um minuto e tente novamente." },
-      { status: 429 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
-  if (isRateLimited(`obras.create.ip:${ip}`, 30, 60 * 1000)) {
-    const r = NextResponse.json(
-      { message: "Muitas requisições. Aguarde um minuto e tente novamente." },
-      { status: 429 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
-
   const [cli] = await db
     .select({
       id: clientes.id,
@@ -362,88 +333,16 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
-  // J11 — limite de obras abertas do plano ativo (free=1, pro=5, ...). A contagem
-  // efetiva é feita DENTRO da transação de insert (abaixo) para fechar a corrida
-  // check-then-act; aqui só resolvemos o teto.
-  const limiteObras = await getLimiteRecurso(guard.user.id, "obrasAbertas");
-
   const body = await request.json().catch(() => ({}));
-  const {
-    clienteId: _ignored,
-    empreiteiraId: _ignored2,
-    id: _ignored3,
-    // Moderação é responsabilidade exclusiva do admin — strip server-side (Task #86).
-    statusModeracao: _ignoredMod,
-    motivoModeracao: _ignoredMotivo,
-    moderadoEm: _ignoredEm,
-    moderadoPor: _ignoredPor,
-    ...safeBody
-  } = body ?? {};
-  const parsed = insertObraSchemaStrict.safeParse(safeBody);
-  if (!parsed.success) {
-    const r = NextResponse.json(
-      { message: "Dados inválidos", errors: parsed.error.flatten() },
-      { status: 400 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
-
-  const data = parsed.data;
-
-  // Insert atômico com checagem de limite na MESMA transação (fecha a corrida
-  // check-then-act do gating de plano).
-  let created: typeof obras.$inferSelect | undefined;
-  try {
-    created = await db.transaction(async (tx) => {
-      if (limiteObras != null && limiteObras < 9999) {
-        const [{ abertas }] = await tx
-          .select({ abertas: sql<number>`COUNT(*)::int` })
-          .from(obras)
-          .where(and(eq(obras.clienteId, cli.id), sql`${obras.status} <> 'concluida'`));
-        if (abertas >= limiteObras) {
-          throw new ObraLimiteError(limiteObras);
-        }
-      }
-      const [row] = await tx
-        .insert(obras)
-        .values({
-          ...data,
-          clienteId: cli.id,
-          empreiteiraId: null,
-        } as any)
-        .returning();
-      return row;
-    });
-  } catch (err) {
-    if (err instanceof ObraLimiteError) {
-      const r = NextResponse.json(
-        {
-          message: `Você atingiu o limite de ${err.limite} obra(s) aberta(s) do seu plano. Faça upgrade para publicar mais.`,
-          code: "LIMITE_PLANO",
-          limite: err.limite,
-        },
-        { status: 402 },
-      );
-      setNoCacheHeaders(r);
-      return r;
-    }
-    throw err;
-  }
-
-  await recordAudit({
-    actorId: guard.user.id,
-    action: "obras.create",
-    targetUserId: null,
-    payload: {
-      obraId: created.id,
-      visibilidade: created.visibilidade,
-      valorTotal: created.valorTotal,
-    },
+  const result = await createObra(
     request,
-  });
-
-  const r = NextResponse.json(created, { status: 201 });
+    guard.user.id,
+    { kind: "contratante", clienteId: cli.id },
+    body,
+  );
+  const r = result.ok
+    ? NextResponse.json(result.obra, { status: 201 })
+    : NextResponse.json(result.body, { status: result.status });
   setNoCacheHeaders(r);
   return r;
 }
