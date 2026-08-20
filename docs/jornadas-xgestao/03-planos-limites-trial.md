@@ -1,9 +1,9 @@
 # Jornada — XG03: Planos, limites e teste de 3 meses
 
-> Status: planejada (§8 bloqueada por definição de preços) | Prioridade: alta | Wave: xgestão-3
-> Última atualização: 2026-08-19
+> Status: implementada parcialmente (§8 — teste/trial — permanece bloqueado) | Prioridade: alta | Wave: xgestão-3
+> Última atualização: 2026-08-20
 
-> **Desbloqueio parcial (2026-08-19):** a reunião 002 fechou o limite do Pro em **10 obras** e descreveu a composição do Freemium. O que segue bloqueado é **só a mecânica do teste** (§8) e os preços. Persona, catálogo, contagem por `empreiteiraId` e o 402 podem ser implementados agora.
+> **Implementado (2026-08-20):** persona, catálogo, contagem por `empreiteiraId`, 402, tela de planos e checkout no contexto xgestão estão ativos. O teste/trial (§8) continua bloqueado pela definição comercial. Os preços são dados persistidos do catálogo `planos`, e não valores da interface.
 
 ## 1. Contexto & Objetivo
 
@@ -94,15 +94,15 @@ O prazo em si (2 ou 3 meses) é parâmetro comercial e ficou explicitamente em a
 
 ## 9. Checklist de implementação
 
-- [ ] Adicionar persona `xgestao` em `plans-catalog.ts` + `XGESTAO_USAGE_LABELS`
-- [ ] Adicionar `"xgestao"` ao `planoPersonaEnum` + migration
-- [ ] Semear as 3 linhas de `planos` (preços vindos da definição do cliente)
-- [ ] `getLimitesUsuario(userId, tx, persona?)` — parâmetro **explícito** de persona, passado pelo caller que já sabe ser xgestão
-- [ ] `create-obra.ts` — contar por `empreiteiraId` no ramo xgestão, **dentro da transação**
-- [ ] Ligar o 402 ao `PlanoUpsellDialog`
-- [ ] Criar `app/xgestao/planos/page.tsx`
+- [x] Adicionar persona `xgestao` em `plans-catalog.ts` + `XGESTAO_USAGE_LABELS`
+- [x] Adicionar `"xgestao"` ao `planoPersonaEnum` + migration
+- [x] Semear as 3 linhas de `planos` (preços persistidos e configuráveis)
+- [x] `getLimitesUsuario(userId, tx, persona?)` — parâmetro **explícito** de persona, passado pelo caller que já sabe ser xgestão
+- [x] `create-obra.ts` — contar por `empreiteiraId` no ramo xgestão, **dentro da transação**
+- [x] Ligar o 402 ao `PlanoUpsellDialog`
+- [x] Criar `app/xgestao/planos/page.tsx`
 - [ ] Implementar o teste de 3 meses conforme a mecânica definida
-- [ ] Spec `tests/e2e/integration/xgestao-planos.integration.spec.ts`
+- [x] Spec `tests/e2e/integration/xgestao-planos.integration.spec.ts`
 
 > ⚠️ `getLimitesUsuario` é chamada **dentro da transação de insert**. Não adicionar uma query a `user_roles` ali dentro — é caminho que segura lock. Daí o parâmetro explícito em vez de detecção automática.
 

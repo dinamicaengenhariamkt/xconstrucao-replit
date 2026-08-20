@@ -14,8 +14,20 @@ import {
 } from '@shared/components/ui/dialog';
 import { Input } from '@shared/components/ui/input';
 import { useToast } from '@shared/hooks/use-toast';
+import { PlanoUpsellDialog } from '@features/planos/ui/PlanoUpsellDialog';
 
 type ObraCriada = { id: string };
+
+class CriarObraError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: string,
+    public readonly limite?: number,
+  ) {
+    super(message);
+  }
+}
 
 async function criarObra(payload: { nome: string; endereco: string }): Promise<ObraCriada> {
   const response = await fetch('/api/xgestao/obras', {
@@ -26,8 +38,11 @@ async function criarObra(payload: { nome: string; endereco: string }): Promise<O
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(
+    throw new CriarObraError(
       typeof body?.message === 'string' ? body.message : 'Não foi possível criar a obra.',
+      response.status,
+      typeof body?.code === 'string' ? body.code : undefined,
+      typeof body?.limite === 'number' ? body.limite : undefined,
     );
   }
   return body as ObraCriada;
@@ -37,6 +52,7 @@ export function NovaObraModal() {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [upsellLimite, setUpsellLimite] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -50,6 +66,11 @@ export function NovaObraModal() {
       toast({ title: 'Obra criada', description: 'Sua obra própria já está pronta para ser gerenciada.' });
     },
     onError: (error) => {
+      if (error instanceof CriarObraError && error.status === 402 && error.code === 'LIMITE_PLANO') {
+        setOpen(false);
+        setUpsellLimite(error.limite ?? 1);
+        return;
+      }
       toast({
         title: 'Não foi possível criar a obra',
         description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
@@ -116,6 +137,12 @@ export function NovaObraModal() {
           </form>
         </DialogContent>
       </Dialog>
+      <PlanoUpsellDialog
+        open={upsellLimite !== null}
+        onClose={() => setUpsellLimite(null)}
+        descricaoLimite={`${upsellLimite ?? 1} obra(s) ativa(s)`}
+        planosHref="/xgestao/planos"
+      />
     </>
   );
 }

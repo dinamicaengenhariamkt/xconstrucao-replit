@@ -20,7 +20,7 @@
 
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { assinaturaEventos, assinaturas, planos, users } from "@shared/db/schema";
 import { computeDowngradeCutoff, downgradeInadimplentes } from "./grace-period-downgrade-job";
@@ -217,11 +217,14 @@ async function createPendenteReativacaoAssinatura(
 ): Promise<string> {
   const renovaEm = new Date();
   renovaEm.setDate(renovaEm.getDate() - 30); // well past grace window
+  const [plano] = await db.select({ persona: planos.persona }).from(planos).where(eq(planos.id, planoId)).limit(1);
+  if (!plano || plano.persona === "ambos") throw new Error("plano de teste sem persona");
   const [a] = await db
     .insert(assinaturas)
     .values({
       userId,
       planoId,
+      persona: plano.persona,
       status: "pendente_reativacao",
       ciclo: "mensal",
       renovaEm,
@@ -282,22 +285,29 @@ async function cleanupIntegration() {
 
 let testPlanoId: string;
 let testPlanoTier: string;
+let xgestaoPlanoId: string;
 
 describe("downgradeInadimplentes — phase-2 recovery after crashed phase-1 (DB integration)", () => {
   before(async () => {
     const [plano] = await db
       .select({ id: planos.id, tier: planos.tier })
       .from(planos)
-      .where(eq(planos.ativo, true))
+      .where(and(eq(planos.ativo, true), ne(planos.persona, "xgestao"), ne(planos.persona, "ambos")))
+      .limit(1);
+    const [planoXgestao] = await db
+      .select({ id: planos.id })
+      .from(planos)
+      .where(and(eq(planos.ativo, true), eq(planos.persona, "xgestao")))
       .limit(1);
 
-    if (!plano) {
+    if (!plano || !planoXgestao) {
       throw new Error(
         "No active plan found in DB. Run the app once to seed plans before running this test.",
       );
     }
     testPlanoId = plano.id;
     testPlanoTier = plano.tier;
+    xgestaoPlanoId = planoXgestao.id;
   });
 
   after(cleanupIntegration);
@@ -392,10 +402,15 @@ describe("downgradeInadimplentes — phase-2 recovery after crashed phase-1 (DB 
 
     _overrideGatewayForTest(makeMockGateway("unknown"));
 
-    const result = await downgradeInadimplentes(0, 0);
+    let result = await downgradeInadimplentes(0, 0);
+    result = await downgradeInadimplentes(0, 0);
+    result = await downgradeInadimplentes(0, 0);
 
     assert.equal(result.ok, true);
-    assert.ok(result.downgraded >= 1, `downgraded must be ≥1 for unknown status, got ${result.downgraded}`);
+    assert.ok(
+      result.expiredUnreachable >= 1,
+      `expiredUnreachable must be ≥1 for unknown status, got ${result.expiredUnreachable}`,
+    );
 
     assert.equal(
       await getAssinaturaStatus(assinaturaId),
@@ -456,6 +471,8 @@ describe("downgradeInadimplentes — phase-2 recovery after crashed phase-1 (DB 
 
     _overrideGatewayForTest(routingGateway);
 
+    await downgradeInadimplentes(0, 0);
+    await downgradeInadimplentes(0, 0);
     const result = await downgradeInadimplentes(0, 0);
     assert.equal(result.ok, true, "job must complete without errors");
 
@@ -475,5 +492,63 @@ describe("downgradeInadimplentes — phase-2 recovery after crashed phase-1 (DB 
         `assinatura ${assinaturaId} must be ativa or expirada after job, got ${finalStatus}`,
       );
     }
+  });
+
+  it("reativa xgestão sem alterar o tier legado do marketplace", async () => {
+    const userId = await createTestUser(`phase2-xgestao-paid-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+    await db.update(users).set({ plano: "pro" }).where(eq(users.id, userId));
+    const assinaturaId = await createPendenteReativacaoAssinatura(
+      userId,
+      xgestaoPlanoId,
+      `mock-sub-xgestao-paid-${uid()}`,
+    );
+    createdAssinaturaIds.push(assinaturaId);
+
+    _overrideGatewayForTest(makeMockGateway("paid"));
+    await downgradeInadimplentes(0, 0);
+
+    assert.equal(await getAssinaturaStatus(assinaturaId), "ativa");
+    assert.equal(
+      await getUserPlano(userId),
+      "pro",
+      "a reativação xgestão não pode conceder nem remover limites do marketplace",
+    );
+  });
+
+  it("expira marketplace mesmo quando xgestão permanece ativa", async () => {
+    const userId = await createTestUser(`phase2-marketplace-expiry-${uid()}@test.xconstrucao`);
+    createdUserIds.push(userId);
+    await db.update(users).set({ plano: "pro" }).where(eq(users.id, userId));
+    const assinaturaMarketplaceId = await createPendenteReativacaoAssinatura(
+      userId,
+      testPlanoId,
+      `mock-sub-marketplace-unpaid-${uid()}`,
+    );
+    createdAssinaturaIds.push(assinaturaMarketplaceId);
+    const [assinaturaXgestao] = await db
+      .insert(assinaturas)
+      .values({
+        userId,
+        planoId: xgestaoPlanoId,
+        persona: "xgestao",
+        status: "ativa",
+        ciclo: "mensal",
+        renovaEm: new Date(),
+        gatewayProvider: "test",
+        gatewaySubscriptionId: `mock-sub-xgestao-active-${uid()}`,
+      })
+      .returning({ id: assinaturas.id });
+    createdAssinaturaIds.push(assinaturaXgestao.id);
+
+    _overrideGatewayForTest(makeMockGateway("unpaid"));
+    await downgradeInadimplentes(0, 0);
+
+    assert.equal(await getAssinaturaStatus(assinaturaMarketplaceId), "expirada");
+    assert.equal(
+      await getUserPlano(userId),
+      "free",
+      "uma assinatura xgestão ativa não mantém os limites expirados do marketplace",
+    );
   });
 });

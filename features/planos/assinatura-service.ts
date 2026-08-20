@@ -14,21 +14,44 @@ export interface LimitesPlano {
 }
 
 /**
- * Limites efetivos do usuário, derivados do tier ATIVO (`users.plano`) via
- * plans-catalog. Mantém o tier "free" como fallback universal. Esta é a fonte
- * de verdade consumida pelos gates de J03/J05.
+ * Limites efetivos do usuário. A persona pode ser explícita para produtos
+ * adicionais, como xgestão, pois ela não pode ser inferida de `users.role`.
+ * Os limites aplicados continuam no catálogo compartilhado para preservar os
+ * gates existentes; preço e conteúdo comercial são lidos da tabela de planos.
  */
-export async function getLimitesUsuario(userId: string, tx?: DbOrTx): Promise<LimitesPlano> {
+export async function getLimitesUsuario(
+  userId: string,
+  tx?: DbOrTx,
+  personaExplicita?: PlanoPersona,
+): Promise<LimitesPlano> {
   const client = (tx ?? db) as typeof db;
   const [u] = await client.select({ plano: users.plano, role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
-  const tier = (u?.plano ?? "free") as PlanoTier;
-  const persona: PlanoPersona = u?.role === "empreiteiro" ? "empreiteiro" : "contratante";
+  const persona: PlanoPersona = personaExplicita ?? (u?.role === "empreiteiro" ? "empreiteiro" : "contratante");
+  let tier = (u?.plano ?? "free") as PlanoTier;
+  if (persona === "xgestao") {
+    const [assinaturaXGestao] = await client
+      .select({ tier: planos.tier })
+      .from(assinaturas)
+      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
+      .where(and(
+        eq(assinaturas.userId, userId),
+        eq(assinaturas.persona, "xgestao"),
+        eq(assinaturas.status, "ativa"),
+      ))
+      .limit(1);
+    tier = (assinaturaXGestao?.tier ?? "free") as PlanoTier;
+  }
   return getPlanCatalog(persona, tier).limites;
 }
 
 /** Limite de um recurso específico (ex: "propostasMes", "obrasAbertas"). */
-export async function getLimiteRecurso(userId: string, recurso: string, tx?: DbOrTx): Promise<number | null> {
-  const limites = await getLimitesUsuario(userId, tx);
+export async function getLimiteRecurso(
+  userId: string,
+  recurso: string,
+  tx?: DbOrTx,
+  personaExplicita?: PlanoPersona,
+): Promise<number | null> {
+  const limites = await getLimitesUsuario(userId, tx, personaExplicita);
   const v = limites[recurso];
   return typeof v === "number" ? v : null;
 }
@@ -49,12 +72,19 @@ export async function userTemAssinaturaAtiva(userId: string, tx?: DbOrTx): Promi
   return Boolean(row && row.tier !== "free");
 }
 
-export async function getAssinaturaAtiva(userId: string): Promise<(typeof assinaturas.$inferSelect & { tier: PlanoTier }) | null> {
+export async function getAssinaturaAtiva(
+  userId: string,
+  persona?: PlanoPersona,
+): Promise<(typeof assinaturas.$inferSelect & { tier: PlanoTier }) | null> {
   const [row] = await db
     .select({ a: assinaturas, tier: planos.tier })
     .from(assinaturas)
     .innerJoin(planos, eq(planos.id, assinaturas.planoId))
-    .where(and(eq(assinaturas.userId, userId), eq(assinaturas.status, "ativa")))
+    .where(and(
+      eq(assinaturas.userId, userId),
+      eq(assinaturas.status, "ativa"),
+      ...(persona ? [eq(assinaturas.persona, persona)] : []),
+    ))
     .limit(1);
   return row ? { ...row.a, tier: row.tier as PlanoTier } : null;
 }
@@ -85,6 +115,8 @@ export async function iniciarCheckout(args: {
   userId: string;
   planoId: string;
   ciclo?: "mensal" | "anual";
+  /** Persona validada pela rota para produtos adicionais, como xgestão. */
+  persona?: PlanoPersona;
   /** Força o adapter a retornar redirect (pagamento pendente) em vez de ativar imediatamente. */
   pendingMode?: boolean;
 }): Promise<CheckoutResult> {
@@ -100,13 +132,20 @@ async function _iniciarCheckoutImpl(args: {
   userId: string;
   planoId: string;
   ciclo?: "mensal" | "anual";
+  persona?: PlanoPersona;
   pendingMode?: boolean;
 }): Promise<CheckoutResult> {
   const [plano] = await db.select().from(planos).where(eq(planos.id, args.planoId)).limit(1);
   if (!plano || !plano.ativo) return { ok: false, code: "PLANO_INVALIDO" };
+  if (args.persona && plano.persona !== args.persona && plano.persona !== "ambos") {
+    return { ok: false, code: "PLANO_INVALIDO" };
+  }
+  const personaAssinatura: PlanoPersona | null =
+    plano.persona === "ambos" ? (args.persona ?? null) : plano.persona;
+  if (!personaAssinatura) return { ok: false, code: "PLANO_INVALIDO" };
 
   // Já tem assinatura paga ativa? (free pode "assinar" um pago; pago→pago troca via cancelar antes.)
-  const atual = await getAssinaturaAtiva(args.userId);
+  const atual = await getAssinaturaAtiva(args.userId, personaAssinatura);
   if (atual && atual.planoId === args.planoId) return { ok: false, code: "JA_ASSINANTE" };
 
   const ciclo = args.ciclo ?? "mensal";
@@ -124,20 +163,20 @@ async function _iniciarCheckoutImpl(args: {
   // Busca cpfCnpj do perfil do usuário — exigido pelo ASAAS para cobranças
   // recorrentes (boleto/PIX). Lookup por role para saber qual tabela consultar.
   let userCpfCnpj: string | undefined;
-  if (userRow?.role === "contratante") {
-    const [cr] = await db
-      .select({ cnpjCpf: clientes.cnpjCpf })
-      .from(clientes)
-      .where(eq(clientes.userId, args.userId))
-      .limit(1);
-    userCpfCnpj = cr?.cnpjCpf ?? undefined;
-  } else if (userRow?.role === "empreiteiro") {
+  if (args.persona === "xgestao" || userRow?.role === "empreiteiro") {
     const [er] = await db
       .select({ cnpj: empreiteiras.cnpj })
       .from(empreiteiras)
       .where(eq(empreiteiras.userId, args.userId))
       .limit(1);
     userCpfCnpj = er?.cnpj ?? undefined;
+  } else if (userRow?.role === "contratante") {
+    const [cr] = await db
+      .select({ cnpjCpf: clientes.cnpjCpf })
+      .from(clientes)
+      .where(eq(clientes.userId, args.userId))
+      .limit(1);
+    userCpfCnpj = cr?.cnpjCpf ?? undefined;
   }
 
   // Gateways externos (ex: ASAAS) exigem cpfCnpj para cobranças recorrentes.
@@ -231,7 +270,11 @@ async function _iniciarCheckoutImpl(args: {
     await tx
       .update(assinaturas)
       .set({ status: "cancelada", canceladaEm: new Date() })
-      .where(and(eq(assinaturas.userId, args.userId), eq(assinaturas.status, "ativa")));
+      .where(and(
+        eq(assinaturas.userId, args.userId),
+        eq(assinaturas.persona, personaAssinatura),
+        eq(assinaturas.status, "ativa"),
+      ));
 
     const renova = new Date();
     if (ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
@@ -242,6 +285,7 @@ async function _iniciarCheckoutImpl(args: {
       .values({
         userId: args.userId,
         planoId: plano.id,
+        persona: personaAssinatura,
         status: "ativa",
         ciclo,
         renovaEm: renova,
@@ -251,8 +295,11 @@ async function _iniciarCheckoutImpl(args: {
       })
       .returning({ id: assinaturas.id });
 
-    // users.plano = tier (dirige o catálogo de limites/gating).
-    await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, args.userId));
+    // users.plano segue sendo o tier legado do marketplace. xgestão resolve o
+    // seu tier pela assinatura da própria persona, sem alterar suas cotas.
+    if (personaAssinatura !== "xgestao") {
+      await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, args.userId));
+    }
 
     // Evento de checkout (idempotência por gatewaySubscriptionId).
     await tx.insert(assinaturaEventos).values({
@@ -326,9 +373,9 @@ async function _iniciarCheckoutImpl(args: {
   return { ok: true, kind: "activated", assinaturaId, vigenciaEm };
 }
 
-/** Cancela a assinatura ativa do usuário. Rebaixa para free no fim do ciclo. */
-export async function cancelarAssinatura(userId: string): Promise<{ ok: boolean }> {
-  const atual = await getAssinaturaAtiva(userId);
+/** Cancela a assinatura ativa da persona solicitada. */
+export async function cancelarAssinatura(userId: string, persona?: PlanoPersona): Promise<{ ok: boolean }> {
+  const atual = await getAssinaturaAtiva(userId, persona);
   if (!atual) return { ok: false };
 
   // Carrega nome/email antes da transação para o dispatcher.
@@ -351,8 +398,11 @@ export async function cancelarAssinatura(userId: string): Promise<{ ok: boolean 
       .update(assinaturas)
       .set({ status: "cancelada", canceladaEm: new Date() })
       .where(eq(assinaturas.id, atual.id));
-    // Rebaixa o tier para free (limites caem para o fallback).
-    await tx.update(users).set({ plano: "free" }).where(eq(users.id, userId));
+    // O tier legado não representa xgestão, então seu cancelamento não altera
+    // os limites do marketplace.
+    if (atual.persona !== "xgestao") {
+      await tx.update(users).set({ plano: "free" }).where(eq(users.id, userId));
+    }
     await tx.insert(assinaturaEventos).values({
       assinaturaId: atual.id,
       tipo: "cancelamento",
@@ -408,7 +458,7 @@ export async function aplicarEventoWebhook(evt: {
     let assinaturaId: string | null = null;
     if (evt.gatewaySubscriptionId) {
       const [a] = await tx
-        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, status: assinaturas.status, ciclo: assinaturas.ciclo, renovaEm: assinaturas.renovaEm })
+        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, persona: assinaturas.persona, status: assinaturas.status, ciclo: assinaturas.ciclo, renovaEm: assinaturas.renovaEm })
         .from(assinaturas)
         .where(eq(assinaturas.gatewaySubscriptionId, evt.gatewaySubscriptionId))
         .limit(1);
@@ -435,7 +485,7 @@ export async function aplicarEventoWebhook(evt: {
             else renova.setMonth(renova.getMonth() + 1);
             await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
             const [plano] = await tx.select({ nome: planos.nome, tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
-            if (plano) {
+            if (plano && a.persona !== "xgestao") {
               await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, a.userId));
             }
             // Prepara notificação de reativação (disparo pós-commit).
@@ -455,7 +505,9 @@ export async function aplicarEventoWebhook(evt: {
           }
         } else if (evt.type === "subscription_canceled") {
           await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, a.id));
-          await tx.update(users).set({ plano: "free" }).where(eq(users.id, a.userId));
+          if (a.persona !== "xgestao") {
+            await tx.update(users).set({ plano: "free" }).where(eq(users.id, a.userId));
+          }
         }
       }
     }
@@ -468,20 +520,31 @@ export async function aplicarEventoWebhook(evt: {
         const { userId, planoId, ciclo } = parsed;
         const [plano] = await tx.select().from(planos).where(eq(planos.id, planoId)).limit(1);
         if (plano && plano.ativo) {
+          const personaAssinatura: PlanoPersona | null =
+            plano.persona === "ambos" ? null : plano.persona;
+          if (!personaAssinatura) return { processed: false };
           // Cancela assinatura ativa anterior (troca de plano).
           // Guarda o gatewaySubscriptionId da assinatura anterior para cancelar
           // no gateway APÓS o commit da transação (seguro: nova assinatura já salva).
           const [antigaAssinatura] = await tx
             .select({ gatewaySubscriptionId: assinaturas.gatewaySubscriptionId })
             .from(assinaturas)
-            .where(and(eq(assinaturas.userId, userId), eq(assinaturas.status, "ativa")))
+            .where(and(
+              eq(assinaturas.userId, userId),
+              eq(assinaturas.persona, personaAssinatura),
+              eq(assinaturas.status, "ativa"),
+            ))
             .limit(1);
           antigaGatewaySubIdToCancel = antigaAssinatura?.gatewaySubscriptionId ?? null;
 
           await tx
             .update(assinaturas)
             .set({ status: "cancelada", canceladaEm: new Date() })
-            .where(and(eq(assinaturas.userId, userId), eq(assinaturas.status, "ativa")));
+            .where(and(
+              eq(assinaturas.userId, userId),
+              eq(assinaturas.persona, personaAssinatura),
+              eq(assinaturas.status, "ativa"),
+            ));
 
           const renova = new Date();
           if (ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
@@ -493,6 +556,7 @@ export async function aplicarEventoWebhook(evt: {
             .values({
               userId,
               planoId: plano.id,
+              persona: personaAssinatura,
               status: "ativa",
               ciclo: (ciclo as "mensal" | "anual") ?? "mensal",
               renovaEm: renova,
@@ -504,11 +568,13 @@ export async function aplicarEventoWebhook(evt: {
 
           assinaturaId = nova.id;
 
-          // Atualiza tier do usuário.
-          await tx
-            .update(users)
-            .set({ plano: plano.tier, planoStartedAt: new Date() })
-            .where(eq(users.id, userId));
+          // O tier global atende apenas o marketplace legado.
+          if (personaAssinatura !== "xgestao") {
+            await tx
+              .update(users)
+              .set({ plano: plano.tier, planoStartedAt: new Date() })
+              .where(eq(users.id, userId));
+          }
 
           // Lançamento no caixa (J09).
           const valorFinal = evt.valor ?? (ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal));

@@ -57,11 +57,14 @@ async function createTestAssinatura(
   defaultRenovaEm.setDate(defaultRenovaEm.getDate() - 30); // 30 days overdue
   const renovaEm = options.renovaEm ?? defaultRenovaEm;
   const ciclo = options.ciclo ?? "mensal";
+  const [plano] = await db.select({ persona: planos.persona }).from(planos).where(eq(planos.id, planoId)).limit(1);
+  if (!plano || plano.persona === "ambos") throw new Error("plano de teste sem persona");
   const [a] = await db
     .insert(assinaturas)
     .values({
       userId,
       planoId,
+      persona: plano.persona,
       status,
       ciclo,
       renovaEm,

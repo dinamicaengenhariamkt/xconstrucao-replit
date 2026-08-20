@@ -14,6 +14,10 @@ import { PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/pl
 export async function bootstrapPlanosSchema(): Promise<void> {
   try {
     await db.execute(sql`DO $$ BEGIN CREATE TYPE plano_persona AS ENUM ('contratante','empreiteiro','ambos'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
+    // PostgreSQL mantém enums existentes quando o bootstrap roda novamente; a
+    // persona xgestão precisa ser adicionada separadamente para instalações já
+    // inicializadas antes do produto existir.
+    await db.execute(sql`ALTER TYPE plano_persona ADD VALUE IF NOT EXISTS 'xgestao'`);
     await db.execute(sql`DO $$ BEGIN CREATE TYPE assinatura_status AS ENUM ('ativa','cancelada','inadimplente','expirada'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
     // Migração idempotente: adiciona 'pendente_reativacao' ao enum se ainda não existir.
     await db.execute(sql`DO $$ BEGIN ALTER TYPE assinatura_status ADD VALUE IF NOT EXISTS 'pendente_reativacao'; EXCEPTION WHEN others THEN NULL; END $$;`);
@@ -40,6 +44,7 @@ export async function bootstrapPlanosSchema(): Promise<void> {
         id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         plano_id VARCHAR NOT NULL REFERENCES planos(id),
+        persona plano_persona NOT NULL,
         status assinatura_status NOT NULL DEFAULT 'ativa',
         ciclo TEXT NOT NULL DEFAULT 'mensal',
         iniciada_em TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -52,8 +57,21 @@ export async function bootstrapPlanosSchema(): Promise<void> {
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_assinaturas_user ON assinaturas(user_id)`);
-    // No máximo uma assinatura ATIVA por usuário.
-    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_assinaturas_user_ativa ON assinaturas(user_id) WHERE status = 'ativa'`);
+    // Migração do vínculo antigo (global) para uma assinatura por produto.
+    // A persona é copiada do plano antes de se tornar obrigatória, preservando
+    // assinaturas existentes durante o deploy.
+    await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS persona plano_persona`);
+    await db.execute(sql`
+      UPDATE assinaturas AS a
+      SET persona = p.persona
+      FROM planos AS p
+      WHERE p.id = a.plano_id AND a.persona IS NULL
+    `);
+    await db.execute(sql`ALTER TABLE assinaturas ALTER COLUMN persona SET NOT NULL`);
+    await db.execute(sql`DROP INDEX IF EXISTS uq_assinaturas_user_ativa`);
+    // Uma mesma pessoa pode assinar marketplace e xgestão, mas não pode ter
+    // duas assinaturas ativas do mesmo produto.
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_assinaturas_user_persona_ativa ON assinaturas(user_id, persona) WHERE status = 'ativa'`);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS assinatura_eventos (
@@ -77,7 +95,7 @@ export async function bootstrapPlanosSchema(): Promise<void> {
     await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS pendente_reativacao_at TIMESTAMP`);
 
     // Seed do catálogo a partir do plans-catalog (idempotente por tier+persona).
-    const personas: PlanoPersona[] = ["empreiteiro", "contratante"];
+    const personas: PlanoPersona[] = ["empreiteiro", "contratante", "xgestao"];
     const tiers: PlanoTier[] = ["free", "pro", "enterprise"];
     for (const persona of personas) {
       for (const tier of tiers) {

@@ -67,11 +67,14 @@ async function createInadimplente(
 ): Promise<string> {
   const renovaEm = new Date();
   renovaEm.setDate(renovaEm.getDate() - renovaEmDaysAgo);
+  const [plano] = await db.select({ persona: planos.persona }).from(planos).where(eq(planos.id, planoId)).limit(1);
+  if (!plano || plano.persona === "ambos") throw new Error("plano de teste sem persona");
   const [a] = await db
     .insert(assinaturas)
     .values({
       userId,
       planoId,
+      persona: plano.persona,
       status: "inadimplente",
       ciclo: "mensal",
       renovaEm,

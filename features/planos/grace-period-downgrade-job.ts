@@ -242,6 +242,7 @@ export async function downgradeInadimplentes(
       .select({
         id: assinaturas.id,
         userId: assinaturas.userId,
+        persona: assinaturas.persona,
         gatewaySubscriptionId: assinaturas.gatewaySubscriptionId,
         gatewayRetryCount: assinaturas.gatewayRetryCount,
       })
@@ -293,20 +294,23 @@ export async function downgradeInadimplentes(
 
             if (updated.length === 0) return; // Race: webhook já reativou
 
-            // Restaura users.plano se não há outra assinatura ativa.
-            const activeRow = await tx
-              .select({ id: assinaturas.id, planoId: assinaturas.planoId })
-              .from(assinaturas)
-              .where(
-                and(
-                  eq(assinaturas.userId, row.userId),
-                  eq(assinaturas.status, "ativa"),
-                  ne(assinaturas.id, row.id),
-                ),
-              )
-              .limit(1);
+            // users.plano é exclusivo do marketplace legado. A reativação
+            // xgestão não pode alterar as cotas de propostas/obras públicas.
+            if (row.persona !== "xgestao") {
+              const activeRow = await tx
+                .select({ id: assinaturas.id, planoId: assinaturas.planoId })
+                .from(assinaturas)
+                .where(
+                  and(
+                    eq(assinaturas.userId, row.userId),
+                    eq(assinaturas.persona, row.persona),
+                    eq(assinaturas.status, "ativa"),
+                    ne(assinaturas.id, row.id),
+                  ),
+                )
+                .limit(1);
 
-            if (activeRow.length === 0) {
+              if (activeRow.length === 0) {
               // Busca o tier do plano para restaurar users.plano.
               const [assinaturaRow] = await tx
                 .select({ planoId: assinaturas.planoId })
@@ -327,6 +331,7 @@ export async function downgradeInadimplentes(
                     .where(eq(users.id, row.userId));
                 }
               }
+            }
             }
 
             await tx.insert(assinaturaEventos).values({
@@ -358,28 +363,25 @@ export async function downgradeInadimplentes(
 
             if (updated.length === 0) return; // Race: webhook reativou no intervalo
 
-            // Só rebaixa users.plano se o usuário não tem outra assinatura ativa.
-            const activeRow = await tx
-              .select({ id: assinaturas.id })
-              .from(assinaturas)
-              .where(
-                and(
-                  eq(assinaturas.userId, row.userId),
-                  eq(assinaturas.status, "ativa"),
-                  ne(assinaturas.id, row.id),
-                ),
-              )
-              .limit(1);
+            if (row.persona !== "xgestao") {
+              // Só rebaixa o marketplace se não há outra assinatura ativa do
+              // mesmo produto; uma assinatura xgestão não interfere aqui.
+              const activeRow = await tx
+                .select({ id: assinaturas.id })
+                .from(assinaturas)
+                .where(
+                  and(
+                    eq(assinaturas.userId, row.userId),
+                    eq(assinaturas.persona, row.persona),
+                    eq(assinaturas.status, "ativa"),
+                    ne(assinaturas.id, row.id),
+                  ),
+                )
+                .limit(1);
 
-            if (activeRow.length === 0) {
-              await tx
-                .update(users)
-                .set({ plano: "free" })
-                .where(eq(users.id, row.userId));
-            } else {
-              console.info(
-                `[downgrade-inadimplente] skipped users.plano for userId=${row.userId} — has active subscription assinaturaId=${activeRow[0].id}`,
-              );
+              if (activeRow.length === 0) {
+                await tx.update(users).set({ plano: "free" }).where(eq(users.id, row.userId));
+              }
             }
 
             await tx.insert(assinaturaEventos).values({
@@ -419,28 +421,23 @@ export async function downgradeInadimplentes(
 
               if (updated.length === 0) return; // Race: webhook reativou no intervalo
 
-              // Só rebaixa users.plano se o usuário não tem outra assinatura ativa.
-              const activeRow = await tx
-                .select({ id: assinaturas.id })
-                .from(assinaturas)
-                .where(
-                  and(
-                    eq(assinaturas.userId, row.userId),
-                    eq(assinaturas.status, "ativa"),
-                    ne(assinaturas.id, row.id),
-                  ),
-                )
-                .limit(1);
+              if (row.persona !== "xgestao") {
+                const activeRow = await tx
+                  .select({ id: assinaturas.id })
+                  .from(assinaturas)
+                  .where(
+                    and(
+                      eq(assinaturas.userId, row.userId),
+                      eq(assinaturas.persona, row.persona),
+                      eq(assinaturas.status, "ativa"),
+                      ne(assinaturas.id, row.id),
+                    ),
+                  )
+                  .limit(1);
 
-              if (activeRow.length === 0) {
-                await tx
-                  .update(users)
-                  .set({ plano: "free" })
-                  .where(eq(users.id, row.userId));
-              } else {
-                console.info(
-                  `[downgrade-inadimplente] skipped users.plano for userId=${row.userId} — has active subscription assinaturaId=${activeRow[0].id}`,
-                );
+                if (activeRow.length === 0) {
+                  await tx.update(users).set({ plano: "free" }).where(eq(users.id, row.userId));
+                }
               }
 
               await tx.insert(assinaturaEventos).values({

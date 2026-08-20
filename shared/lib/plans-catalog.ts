@@ -1,5 +1,5 @@
 export type PlanoTier = 'free' | 'pro' | 'enterprise';
-export type PlanoPersona = 'empreiteiro' | 'contratante';
+export type PlanoPersona = 'empreiteiro' | 'contratante' | 'xgestao';
 
 export interface PlanCatalogEntry {
   nome: string;
@@ -27,6 +27,10 @@ export const CONTRATANTE_USAGE_LABELS: Record<string, string> = {
   empreiteirosContratados: 'Empreiteiros contratados',
   contratosAtivos: 'Contratos ativos',
   propostasRecebidas: 'Propostas recebidas',
+};
+
+export const XGESTAO_USAGE_LABELS: Record<string, string> = {
+  obrasAtivas: 'Obras ativas',
 };
 
 export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEntry>> = {
@@ -108,6 +112,26 @@ export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEn
         'Suporte prioritário',
       ],
       limites: { obrasAbertas: 9999, empreiteirosContratados: 9999, contratosAtivos: 9999, propostasRecebidas: 9999 },
+    },
+  },
+  xgestao: {
+    free: {
+      nome: 'Freemium',
+      precoMensal: 0,
+      features: ['1 obra ativa', 'Gestão operacional da obra'],
+      limites: { obrasAtivas: 1 },
+    },
+    pro: {
+      nome: 'Basic',
+      precoMensal: 89,
+      features: ['3 obras ativas', 'Gestão operacional da obra', 'Suporte prioritário'],
+      limites: { obrasAtivas: 3 },
+    },
+    enterprise: {
+      nome: 'Pro',
+      precoMensal: 249,
+      features: ['10 obras ativas', 'Gestão operacional da obra', 'Suporte prioritário'],
+      limites: { obrasAtivas: 10 },
     },
   },
 };

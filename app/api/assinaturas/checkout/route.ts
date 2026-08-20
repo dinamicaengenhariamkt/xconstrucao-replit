@@ -4,33 +4,78 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { recordAudit } from "@features/auth/api/audit";
 import { iniciarCheckout } from "@features/planos/assinatura-service";
+import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
+import { db } from "@shared/db/db";
+import { planos } from "@shared/db/schema";
+import { eq } from "drizzle-orm";
 
 const bodySchema = z.object({
   planoId: z.string().min(1),
   ciclo: z.enum(["mensal", "anual"]).optional(),
+  persona: z.enum(["xgestao"]).optional(),
 });
 
 /** POST /api/assinaturas/checkout — inicia assinatura (ativa via adapter manual). */
 export async function POST(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
-  if (guard.user.role !== "contratante" && guard.user.role !== "empreiteiro") {
-    const r = NextResponse.json({ message: "Plano não aplicável a este perfil." }, { status: 403 });
-    setNoCacheHeaders(r);
-    return r;
-  }
-  if (isRateLimited(`assinatura.checkout:user:${guard.user.id}`, 10, 60 * 1000)) {
-    const r = NextResponse.json({ message: "Muitas requisições. Aguarde um minuto." }, { status: 429 });
-    setNoCacheHeaders(r);
-    return r;
-  }
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     const r = NextResponse.json({ message: "Dados inválidos.", errors: parsed.error.flatten() }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
   }
+  if (parsed.data.persona === "xgestao") {
+    const entitlement = await assertXgestaoUser(guard.user.id);
+    if (!entitlement) {
+      const r = NextResponse.json({ message: "Acesso xgestão não autorizado." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+  } else if (guard.user.role !== "contratante" && guard.user.role !== "empreiteiro") {
+    const r = NextResponse.json({ message: "Plano não aplicável a este perfil." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const [plano] = await db
+    .select({ persona: planos.persona, ativo: planos.ativo })
+    .from(planos)
+    .where(eq(planos.id, parsed.data.planoId))
+    .limit(1);
+  if (!plano || !plano.ativo) {
+    const r = NextResponse.json({ message: "Plano inválido.", code: "PLANO_INVALIDO" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
 
+  let personaCheckout: "empreiteiro" | "contratante" | "xgestao";
+  if (plano.persona === "xgestao") {
+    const entitlement = await assertXgestaoUser(guard.user.id);
+    if (!entitlement) {
+      const r = NextResponse.json({ message: "Acesso xgestão não autorizado." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    personaCheckout = "xgestao";
+  } else if (parsed.data.persona === "xgestao") {
+    const r = NextResponse.json({ message: "Plano não pertence ao xgestão.", code: "PLANO_INVALIDO" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  } else if (
+    (guard.user.role !== "contratante" && guard.user.role !== "empreiteiro") ||
+    (plano.persona !== "ambos" && plano.persona !== guard.user.role)
+  ) {
+    const r = NextResponse.json({ message: "Plano não aplicável a este perfil." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  } else {
+    personaCheckout = guard.user.role;
+  }
+  if (isRateLimited(`assinatura.checkout:user:${guard.user.id}`, 10, 60 * 1000)) {
+    const r = NextResponse.json({ message: "Muitas requisições. Aguarde um minuto." }, { status: 429 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   // Header opt-in para modo pendente: usado apenas em testes E2E (NODE_ENV !== production).
   // Faz o ManualGateway retornar kind:"redirect" em vez de ativar imediatamente, permitindo
   // exercitar o ciclo completo checkout → POST /api/webhooks/gateway → ativa.
@@ -41,6 +86,7 @@ export async function POST(request: NextRequest) {
     userId: guard.user.id,
     planoId: parsed.data.planoId,
     ciclo: parsed.data.ciclo,
+    persona: personaCheckout,
     pendingMode,
   });
 

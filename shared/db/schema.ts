@@ -1040,7 +1040,7 @@ export type InsertDisputaMensagem = typeof disputaMensagens.$inferInsert;
 // webhook. Gateway de pagamento fica atrás de uma porta (features/planos/gateway).
 // Schema criado idempotente em server/bootstrap-planos.ts.
 // ---------------------------------------------------------------------------
-export const planoPersonaEnum = pgEnum("plano_persona", ["contratante", "empreiteiro", "ambos"]);
+export const planoPersonaEnum = pgEnum("plano_persona", ["contratante", "empreiteiro", "xgestao", "ambos"]);
 export const assinaturaStatusEnum = pgEnum("assinatura_status", ["ativa", "cancelada", "inadimplente", "expirada", "pendente_reativacao"]);
 
 export const planos = pgTable(
@@ -1071,6 +1071,9 @@ export const assinaturas = pgTable(
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     planoId: varchar("plano_id").notNull().references(() => planos.id),
+    // Persona é um snapshot do produto da assinatura. Permite que xgestão e
+    // marketplace tenham assinaturas ativas independentes para a mesma conta.
+    persona: planoPersonaEnum("persona").notNull(),
     status: assinaturaStatusEnum("status").notNull().default("ativa"),
     ciclo: text("ciclo").notNull().default("mensal"), // mensal | anual
     iniciadaEm: timestamp("iniciada_em").defaultNow().notNull(),
@@ -1092,8 +1095,7 @@ export const assinaturas = pgTable(
   },
   (t) => ({
     idxUser: index("idx_assinaturas_user").on(t.userId),
-    // No máximo uma assinatura ATIVA por usuário (índice parcial no bootstrap).
-    uqUserAtiva: uniqueIndex("uq_assinaturas_user_ativa").on(t.userId),
+    // O índice parcial real por (user, persona) é criado no bootstrap.
   }),
 );
 

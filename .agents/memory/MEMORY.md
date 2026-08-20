@@ -2,3 +2,4 @@
 - [E2E payment gateway isolation](e2e-payment-gateway.md) — must set PAYMENT_GATEWAY=manual in playwright.config.ts webServer env or tests call real ASAAS API and fail
 - [Production runtime has no Nix node](prod-node-runtime.md) — deploys must use the bundled npm "node" package binary; Nix paths/PATH don't exist in the prod container
 - [npm peer-dep conflicts in deployment](npm-legacy-peer-deps.md) — project requires legacy-peer-deps=true in .npmrc; deployment runs clean npm install and fails without it
+- [xgestão subscription isolation](xgestao-subscription-isolation.md) — xgestão is a separate product entitlement and must never alter marketplace tiers or limits.

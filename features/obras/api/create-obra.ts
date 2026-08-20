@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { db } from "@shared/db/db";
 import { obras } from "@shared/db/schema";
@@ -75,14 +75,27 @@ export async function createObra(
     };
   }
 
-  const limiteObras = await getLimiteRecurso(userId, "obrasAbertas");
+  // Marketplace conserva a resolução habitual por role. Já o xgestão passa a
+  // persona explicitamente dentro da transação, pois o usuário continua tendo
+  // role base "empreiteiro".
+  const limiteMarketplace =
+    owner.kind === "contratante" ? await getLimiteRecurso(userId, "obrasAbertas") : null;
   let created: typeof obras.$inferSelect;
   try {
     created = await db.transaction(async (tx) => {
+      // Serializa a reserva de capacidade da empreiteira. Sem esse lock, duas
+      // criações concorrentes poderiam ambas observar a última vaga disponível.
+      if (owner.kind === "xgestao") {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${owner.empreiteiraId}))`);
+      }
       const ownerFilter =
         owner.kind === "contratante"
           ? eq(obras.clienteId, owner.clienteId)
-          : eq(obras.empreiteiraId, owner.empreiteiraId);
+          : and(eq(obras.empreiteiraId, owner.empreiteiraId), isNull(obras.clienteId));
+      const limiteObras =
+        owner.kind === "xgestao"
+          ? await getLimiteRecurso(userId, "obrasAtivas", tx, "xgestao")
+          : limiteMarketplace;
       if (limiteObras != null && limiteObras < 9999) {
         const [{ abertas }] = await tx
           .select({ abertas: sql<number>`COUNT(*)::int` })

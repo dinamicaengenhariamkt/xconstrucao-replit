@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "user não encontrado" }, { status: 404 });
   }
 
-  const [plano] = await db.select({ id: planos.id }).from(planos).where(eq(planos.ativo, true)).limit(1);
-  if (!plano) {
+  const [plano] = await db.select({ id: planos.id, persona: planos.persona }).from(planos).where(eq(planos.ativo, true)).limit(1);
+  if (!plano || plano.persona === "ambos") {
     return NextResponse.json({ error: "nenhum plano ativo encontrado" }, { status: 500 });
   }
 
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     .values({
       userId: user.id,
       planoId: plano.id,
+      persona: plano.persona,
       status: "inadimplente",
       ciclo: ciclo as "mensal" | "anual",
       renovaEm: renovaVencida,

@@ -42,11 +42,11 @@ export interface PerfilPlano {
 const CFG = { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } as const;
 
 /** Lista os planos reais da persona do usuário (`GET /api/planos`). */
-export function usePlanos(): UseQueryResult<PlanoApi[], Error> {
+export function usePlanos(persona?: PlanoPersona): UseQueryResult<PlanoApi[], Error> {
   return useQuery({
-    queryKey: ['planos', 'lista'],
+    queryKey: ['planos', 'lista', persona ?? 'padrao'],
     queryFn: async () => {
-      const res = await fetch('/api/planos');
+      const res = await fetch(persona ? `/api/planos?persona=${persona}` : '/api/planos');
       if (!res.ok) throw new Error('Erro ao buscar planos');
       return res.json();
     },
@@ -55,11 +55,11 @@ export function usePlanos(): UseQueryResult<PlanoApi[], Error> {
 }
 
 /** Plano atual + uso/limites (`GET /api/perfil/plano`). */
-export function usePerfilPlano(): UseQueryResult<PerfilPlano, Error> {
+export function usePerfilPlano(persona?: PlanoPersona): UseQueryResult<PerfilPlano, Error> {
   return useQuery({
-    queryKey: ['perfil', 'plano'],
+    queryKey: ['perfil', 'plano', persona ?? 'padrao'],
     queryFn: async () => {
-      const res = await fetch('/api/perfil/plano');
+      const res = await fetch(persona ? `/api/perfil/plano?persona=${persona}` : '/api/perfil/plano');
       if (!res.ok) throw new Error('Erro ao buscar plano atual');
       return res.json();
     },
@@ -83,14 +83,14 @@ export class CheckoutError extends Error {
 }
 
 /** Inicia o checkout. Trata os dois `kind` (activated/redirect) no caller. */
-export function useCheckout() {
+export function useCheckout(persona?: PlanoPersona) {
   const qc = useQueryClient();
   return useMutation<CheckoutResponse, CheckoutError, { planoId: string; ciclo: 'mensal' | 'anual' }>({
     mutationFn: async ({ planoId, ciclo }) => {
       const res = await fetch('/api/assinaturas/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planoId, ciclo }),
+        body: JSON.stringify({ planoId, ciclo, ...(persona ? { persona } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -111,11 +111,15 @@ export function useCheckout() {
 }
 
 /** Cancela a assinatura ativa (volta para free). */
-export function useCancelarAssinatura() {
+export function useCancelarAssinatura(persona?: PlanoPersona) {
   const qc = useQueryClient();
   return useMutation<{ ok: boolean }, Error, void>({
     mutationFn: async () => {
-      const res = await fetch('/api/assinaturas/cancelar', { method: 'POST' });
+      const res = await fetch('/api/assinaturas/cancelar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(persona ? { persona } : {}),
+      });
       if (!res.ok) throw new Error('Erro ao cancelar assinatura');
       return res.json();
     },
