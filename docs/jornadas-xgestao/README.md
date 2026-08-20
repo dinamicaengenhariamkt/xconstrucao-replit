@@ -12,7 +12,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 
 | # | Jornada | Bloco | Status | Prioridade | Risco |
 |---|---|---|---|---|---|
-| [XG01](01-fundacoes-e-shell.md) | Fundações e shell do xgestão | 1 | planejada | alta | baixo |
+| [XG01](01-fundacoes-e-shell.md) | Fundações e shell do xgestão | 1 | pronto | alta | baixo |
 | [XG02](02-obra-do-empreiteiro.md) | Obra criada e editada pelo empreiteiro | 2 | planejada | alta | baixo |
 | [XG03](03-planos-limites-trial.md) | Planos, limites e teste de 3 meses | 3 | planejada (§8 bloqueada) | alta | médio |
 | [XG04](04-link-publico-obra.md) | Link público de acompanhamento | 4 | planejada | alta | médio |

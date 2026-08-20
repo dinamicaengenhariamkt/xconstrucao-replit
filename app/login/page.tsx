@@ -62,7 +62,7 @@ export default function LoginPage() {
     if (user) {
       const next = searchParams.get('next');
       // J51 — desvia ao wizard de onboarding no primeiro acesso (gate via /me).
-      const dest = await resolvePostLoginDestination(user.role, next);
+      const dest = await resolvePostLoginDestination(user.role, next, user.roles);
       router.replace(dest);
     }
   };

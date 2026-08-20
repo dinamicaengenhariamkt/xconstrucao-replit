@@ -29,6 +29,11 @@ export async function bootstrapAnunciosSelfServiceSchema(): Promise<void> {
     await db.execute(
       sql`DO $$ BEGIN CREATE TYPE user_additive_role AS ENUM ('contratante','empreiteiro','anunciante'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
     );
+    // XG01 — produto adicional para empreiteiros. Mantemos users.role como
+    // "empreiteiro"; a permissão xgestão é concedida pontualmente em user_roles.
+    // ADD VALUE fica fora de DO/transação porque versões antigas do Postgres não
+    // permitem esse comando dentro de bloco transacional.
+    await db.execute(sql`ALTER TYPE user_additive_role ADD VALUE IF NOT EXISTS 'xgestao'`);
     await db.execute(
       sql`DO $$ BEGIN CREATE TYPE pedido_anuncio_status AS ENUM ('em_analise','aprovado','recusado','publicado','encerrado'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`,
     );

@@ -35,19 +35,23 @@ async function findUser(email: string) {
 }
 
 /**
- * Em modo de teste, neutraliza o gate `mustChangePassword` do usuário-alvo.
- * O propósito do `login-as` é logar pulando os gates de senha/email para
- * exercitar os guards downstream; o gate de troca obrigatória (J22/J30) tem
- * o mesmo efeito de bloquear TODA rota autenticada, então precisa ser
- * limpo aqui também — senão um seed/estado com `must_change_password=true`
- * (ex.: admin promovido a superadmin) faz qualquer teste de rota admin
- * receber 403 PASSWORD_CHANGE_REQUIRED. Só roda sob E2E_TEST_AUTH=1.
+ * Em modo de teste, neutraliza os gates de senha e e-mail do usuário-alvo.
+ * O propósito do `login-as` é exercitar guards downstream; se o usuário
+ * recém-criado fica com `email_verified=null`, o guard retorna 403 e a suíte
+ * passa a testar confirmação de e-mail por acidente, não a funcionalidade
+ * solicitada. Só roda sob E2E_TEST_AUTH=1.
  */
-async function ensureNoPasswordGate(
+async function ensureTestUserGates(
   user: NonNullable<Awaited<ReturnType<typeof findUser>>>,
 ): Promise<void> {
-  if (user.mustChangePassword) {
-    await db.update(users).set({ mustChangePassword: false }).where(eq(users.id, user.id));
+  if (user.mustChangePassword || !user.emailVerified) {
+    await db
+      .update(users)
+      .set({
+        ...(user.mustChangePassword ? { mustChangePassword: false } : {}),
+        ...(!user.emailVerified ? { emailVerified: new Date() } : {}),
+      })
+      .where(eq(users.id, user.id));
   }
 }
 
@@ -106,7 +110,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "user não encontrado" }, { status: 404 });
   }
 
-  await ensureNoPasswordGate(user);
+  await ensureTestUserGates(user);
   const { accessToken, refreshToken } = await issueSession(user);
 
   const host = request.headers.get("host") ?? "127.0.0.1:5000";
@@ -147,7 +151,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "user não encontrado" }, { status: 404 });
   }
 
-  await ensureNoPasswordGate(user);
+  await ensureTestUserGates(user);
   const { accessToken, refreshToken } = await issueSession(user);
 
   const response = NextResponse.json({

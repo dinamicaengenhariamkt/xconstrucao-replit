@@ -1,0 +1,10 @@
+{
+  "/api/admin/usuarios/[id]/route": "app/api/admin/usuarios/[id]/route.js",
+  "/api/admin/usuarios/route": "app/api/admin/usuarios/route.js",
+  "/api/auth/logout/route": "app/api/auth/logout/route.js",
+  "/api/auth/register/route": "app/api/auth/register/route.js",
+  "/api/planos/route": "app/api/planos/route.js",
+  "/api/test/ensure-users/route": "app/api/test/ensure-users/route.js",
+  "/api/test/login-as/route": "app/api/test/login-as/route.js",
+  "/xgestao/obras/page": "app/xgestao/obras/page.js"
+}

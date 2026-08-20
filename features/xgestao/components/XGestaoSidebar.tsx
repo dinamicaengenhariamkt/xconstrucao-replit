@@ -38,7 +38,7 @@ export function XGestaoSidebar() {
     <Sidebar className="border-r border-[#d8e0dc] bg-[#f4f7f5] text-[#25332f] dark:border-[#2e3b37] dark:bg-[#18221f] dark:text-[#edf3ef]">
       <SidebarHeader className="px-5 pb-5 pt-6">
         <Link
-          href="/xgestao/dashboard"
+          href="/xgestao/obras"
           className="group block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[#e06d36] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f7f5] dark:focus-visible:ring-offset-[#18221f]"
         >
           <div className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export function XGestaoSidebar() {
         </Link>
         <div className="mt-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#83918b]">
           <span className="size-1.5 rounded-full bg-[#e06d36]" />
-          Área do contratante
+          Área do empreiteiro
         </div>
       </SidebarHeader>
 

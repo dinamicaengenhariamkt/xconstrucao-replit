@@ -30,6 +30,8 @@ const DEFAULTS: Record<SettingKey, Record<string, unknown>> = {
     clienteLogin: true,
     manutencao: false,
     relatorios: false,
+    xgestao: true,
+    marketplaceVisivel: true,
   },
   seguranca: {
     timeout: "30",

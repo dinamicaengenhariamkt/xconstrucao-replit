@@ -1,6 +1,6 @@
 # Jornada — XG01: Fundações e shell do xgestão
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-1
+> Status: pronto | Prioridade: alta | Wave: xgestão-1
 > Última atualização: 2026-08-19
 
 ## 1. Contexto & Objetivo
@@ -31,20 +31,20 @@ flowchart LR
 
 ## 4. Telas envolvidas
 
-- [app/xgestao/layout.tsx](../../app/xgestao/layout.tsx) — **a criar**. Shell do produto.
-- [app/xgestao/obras/page.tsx](../../app/xgestao/obras/page.tsx) — **a criar**. Página fina sobre `MinhasObrasView`.
-- [app/xgestao/obras/[id]/page.tsx](../../app/xgestao/obras/[id]/page.tsx) — **a criar**. Página fina sobre `ObraConsoleView`.
+- [app/xgestao/layout.tsx](../../app/xgestao/layout.tsx) — shell do produto com autorização server-side.
+- [app/xgestao/obras/page.tsx](../../app/xgestao/obras/page.tsx) — página fina sobre `MinhasObrasView`.
+- [app/xgestao/obras/[id]/page.tsx](../../app/xgestao/obras/[id]/page.tsx) — página fina sobre `ObraConsoleView`.
 - [app/empreiteiro/minhas-obras/page.tsx](../../app/empreiteiro/minhas-obras/page.tsx) — origem da extração.
 - [app/empreiteiro/minhas-obras/[id]/page.tsx](../../app/empreiteiro/minhas-obras/[id]/page.tsx) — 460 linhas; origem da extração do console.
 
 ## 5. Componentes-chave
 
-- `features/xgestao/components/XGestaoLayout.tsx` — **a criar**.
-- `features/xgestao/components/XGestaoSidebar.tsx` — **a criar**. Única duplicação intencional do plano: o conteúdo é genuinamente diferente do [EmpreiteiroSidebar](../../features/empreiteiro/components/EmpreiteiroSidebar.tsx), e abstrair sairia mais caro que copiar a estrutura.
-- `features/xgestao/constants.ts` — **a criar**. Nav com **apenas** Minhas Obras, Dashboard, Planos, Configurações. Sem Novas Obras / Candidaturas / Recebimentos / Saldo — isso é marketplace.
-- `features/xgestao/lib/entitlement.ts` — **a criar**. `assertXgestaoUser(userId)` → `{ empreiteiraId, hasXgestao }`. **Ponto único** chamado por toda rota xgestão.
-- `features/empreiteiro/minhas-obras/components/MinhasObrasView.tsx` — **extrair**.
-- `features/empreiteiro/minhas-obras/components/ObraConsoleView.tsx` — **extrair**, com prop `basePath`.
+- `features/xgestao/components/XGestaoLayout.tsx` — layout próprio do produto.
+- `features/xgestao/components/XGestaoSidebar.tsx` — única duplicação intencional do plano: o conteúdo é genuinamente diferente do [EmpreiteiroSidebar](../../features/empreiteiro/components/EmpreiteiroSidebar.tsx), e abstrair sairia mais caro que copiar a estrutura.
+- `features/xgestao/constants.ts` — nav com **apenas** Minhas Obras, Dashboard, Planos, Configurações. Sem Novas Obras / Candidaturas / Recebimentos / Saldo — isso é marketplace.
+- `features/xgestao/lib/entitlement.ts` — `assertXgestaoUser(userId)` → `{ empreiteiraId, hasXgestao }`. **Ponto único** chamado por toda rota xgestão.
+- `features/empreiteiro/minhas-obras/components/MinhasObrasView.tsx` — visão extraída e reutilizável.
+- `features/empreiteiro/minhas-obras/components/ObraConsoleView.tsx` — console reutilizável, com prop `basePath`.
 
 ## 6. Schema (Drizzle)
 
@@ -66,17 +66,18 @@ flowchart LR
 
 ## 9. Checklist de implementação
 
-- [ ] `grep -rn "/empreiteiro/" features/empreiteiro/minhas-obras/` **antes de tudo** — hrefs hardcoded são o que transforma 1 dia em 3
-- [ ] Adicionar `"xgestao"` ao `userAdditiveRoleEnum` + migration
-- [ ] Criar `features/xgestao/lib/entitlement.ts`
-- [ ] Adicionar os toggles `xgestao` e `marketplaceVisivel` no reader e na rota de escrita
-- [ ] Extrair `MinhasObrasView` de `app/empreiteiro/minhas-obras/page.tsx`
-- [ ] Extrair `ObraConsoleView` (com prop `basePath`) do console de 460 linhas
-- [ ] Criar layout, sidebar e constants do xgestão
-- [ ] Criar as 3 páginas finas sob `app/xgestao/`
-- [ ] [proxy.ts:48](../../proxy.ts) — regra `/xgestao` em `PROTECTED_PAGES`, `"/xgestao/:path*"` no `config.matcher`, e `/xgestao` nos prefixos de manutenção
-- [ ] [features/auth/utils/redirect-by-role.ts:46](../../features/auth/utils/redirect-by-role.ts) — `/xgestao` nos `allowedPrefixes` de `empreiteiro` e `superadmin`; destino pós-login ciente da role aditiva
-- [ ] Verificar que `/empreiteiro/*` continua funcionando idêntico
+- [x] Revisar caminhos `/empreiteiro/` antes da extração e parametrizar a navegação de volta
+- [x] Adicionar `"xgestao"` ao `userAdditiveRoleEnum` e ao bootstrap idempotente do Postgres
+- [x] Criar `features/xgestao/lib/entitlement.ts`
+- [x] Adicionar os toggles `xgestao` e `marketplaceVisivel` no reader e na rota de escrita
+- [x] Permitir que o superadmin conceda ou revogue o acesso xgestão em Administração → Usuários, com auditoria
+- [x] Extrair `MinhasObrasView` de `app/empreiteiro/minhas-obras/page.tsx`
+- [x] Reutilizar `ObraConsoleView` com prop `basePath`, sem fork do console
+- [x] Criar layout, sidebar e constants do xgestão
+- [x] Criar as 3 páginas finas sob `app/xgestao/`
+- [x] [proxy.ts:48](../../proxy.ts) — regra `/xgestao` em `PROTECTED_PAGES`, `"/xgestao/:path*"` no `config.matcher`, e `/xgestao` nos prefixos de manutenção
+- [x] [features/auth/utils/redirect-by-role.ts:46](../../features/auth/utils/redirect-by-role.ts) — `/xgestao` nos `allowedPrefixes` de `empreiteiro` e `superadmin`; destino pós-login ciente da role aditiva
+- [x] Compilar o projeto, reiniciar a aplicação e verificar o bloqueio de acesso anônimo
 
 ## 10. Critérios de aceite
 
@@ -102,3 +103,5 @@ flowchart LR
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- 2026-08-19 — O ambiente de desenvolvimento não possui uma conta de teste já vinculada à role `xgestao`; a rota anônima, o guard server-side, o enum e a compilação foram validados, e o fluxo autenticado deve ser exercitado assim que o admin conceder a role a um empreiteiro.

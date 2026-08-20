@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 5, "column": 0}, "map": {"version":3,"sources":["file:///home/runner/workspace/server/db.ts"],"sourcesContent":["import { Pool } from \"pg\";\nimport { drizzle } from \"drizzle-orm/node-postgres\";\nimport * as schema from \"@shared/db/schema\";\n\nif (!process.env.DATABASE_URL) {\n  throw new Error(\"DATABASE_URL must be set\");\n}\n\nexport const pool = new Pool({\n  connectionString: process.env.DATABASE_URL,\n});\n\nexport const db = drizzle(pool, { schema });\n"],"names":["process","env","DATABASE_URL","Error","pool","connectionString","db","imported module [project]/shared/db/schema.ts [app-route] (ecmascript)"],"mappings":";;;;;;AAAA;AACA;AACA;;;;;;;;;AAEA,IAAI,CAACA,QAAQC,GAAG,CAACC,YAAY,EAAE;IAC7B,MAAM,IAAIC,MAAM;AAClB;AAEO,MAAMC,OAAO,IAAI,qJAAI,CAAC;IAC3BC,kBAAkBL,QAAQC,GAAG,CAACC,YAAY;AAC5C;AAEO,MAAMI,KAAK,IAAA,yKAAO,EAACF,MAAM;IAAEG,QAAAA;AAAO"}}]
+}

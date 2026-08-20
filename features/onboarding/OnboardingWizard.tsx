@@ -38,6 +38,8 @@ type Persona = 'contratante' | 'empreiteiro' | 'anunciante';
 interface OnboardingWizardProps {
   /** Papel primário do usuário (do /api/auth/me). */
   role: Persona;
+  /** Papéis efetivos, incluindo as capacidades adicionais do produto. */
+  roles?: string[];
 }
 
 /**
@@ -50,7 +52,7 @@ interface OnboardingWizardProps {
  * NÃO cria/toca conta Asaas (isso já ocorre no cadastro, J44). Concluir E pular
  * chamam `POST /api/onboarding/concluir`; o gate pós-login não reabre o wizard.
  */
-export function OnboardingWizard({ role }: OnboardingWizardProps) {
+export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const concluir = useConcluirOnboarding();
@@ -73,7 +75,7 @@ export function OnboardingWizard({ role }: OnboardingWizardProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const current = steps[stepIndex];
 
-  const irParaDashboard = () => router.replace(getRedirectPathByRole(role));
+  const irParaDashboard = () => router.replace(getRedirectPathByRole(role, roles));
 
   const finalizar = async () => {
     try {

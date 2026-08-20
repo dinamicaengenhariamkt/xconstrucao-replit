@@ -64,7 +64,9 @@ export function readImpersonationFromRequest(request: NextRequest): Impersonatio
 export function setImpersonationCookie(response: NextResponse, token: string): void {
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: true,
+    // O endpoint E2E usa HTTP em 127.0.0.1. Fora desse modo de teste explícito,
+    // a sessão de impersonação permanece sempre restrita a HTTPS.
+    secure: process.env.E2E_TEST_AUTH !== "1",
     sameSite: "lax",
     path: "/",
     maxAge: TTL_SECONDS,

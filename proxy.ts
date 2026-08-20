@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyAccessToken, verifyAccessTokenAllowExpired } from "@features/auth/api/auth-service";
+import { verifyImpersonationToken } from "@features/auth/api/impersonation";
 import { isManutencaoAtiva } from "@features/admin/platform-settings/server/settings-reader";
 // XG06 — módulo PURO (sem DB, sem audit), seguro para o bundle do proxy.
 import { adminPodeAcessar } from "@features/auth/api/admin-scope";
@@ -11,7 +12,7 @@ function isAdminLike(role: string): boolean {
 }
 
 /** Prefixos das áreas logadas afetadas pelo modo manutenção (admin é isento). */
-const MAINTENANCE_AFFECTED_PREFIXES = ["/contratante", "/empreiteiro"];
+const MAINTENANCE_AFFECTED_PREFIXES = ["/contratante", "/empreiteiro", "/xgestao"];
 
 /** Extrai a role do token (tolera expirado-mas-íntegro), ou null. */
 function roleFromToken(accessToken: string | undefined): string | null {
@@ -51,6 +52,10 @@ const PASSWORD_CHANGE_API_ALLOWLIST = new Set<string>([
 const PROTECTED_PAGES: Array<{ prefix: string; allow: (role: string) => boolean }> = [
   { prefix: "/contratante", allow: (r) => r === "contratante" || r === "superadmin" },
   { prefix: "/empreiteiro", allow: (r) => r === "empreiteiro" || r === "superadmin" },
+  // O JWT só carrega o papel primário ("empreiteiro"). A role aditiva xgestão
+  // é conferida novamente no layout/servidor para impedir acesso indevido.
+  // Superadmin só atravessa esta borda em "Ver como"; o layout confere o alvo.
+  { prefix: "/xgestao", allow: (r) => r === "empreiteiro" || r === "superadmin" },
   { prefix: "/admin", allow: (r) => isAdminLike(r) },
 ];
 
@@ -187,6 +192,13 @@ export async function proxy(request: NextRequest) {
     if (payload?.sub) {
       // Token VÁLIDO → fonte de verdade da role. Role errada para a área → bloqueia.
       if (!rule.allow(payload.role)) return loginRedirect(request);
+      if (
+        rule.prefix === "/xgestao" &&
+        payload.role === "superadmin" &&
+        verifyImpersonationToken(request.cookies.get("impersonation_token")?.value ?? "")?.actorId !== payload.sub
+      ) {
+        return loginRedirect(request);
+      }
     } else {
       // Token presente mas inválido. Se for só EXPIRADO (assinatura íntegra,
       // exp vencido), deixa passar: o access token vive 15 min e o `useAuth`
@@ -196,6 +208,13 @@ export async function proxy(request: NextRequest) {
       const claims = verifyAccessTokenAllowExpired(accessToken);
       if (!claims?.sub) return loginRedirect(request);
       if (!rule.allow(claims.role)) return loginRedirect(request);
+      if (
+        rule.prefix === "/xgestao" &&
+        claims.role === "superadmin" &&
+        verifyImpersonationToken(request.cookies.get("impersonation_token")?.value ?? "")?.actorId !== claims.sub
+      ) {
+        return loginRedirect(request);
+      }
     }
   }
 
@@ -207,6 +226,7 @@ export const config = {
   matcher: [
     "/contratante/:path*",
     "/empreiteiro/:path*",
+    "/xgestao/:path*",
     "/admin/:path*",
     "/api/:path*",
   ],

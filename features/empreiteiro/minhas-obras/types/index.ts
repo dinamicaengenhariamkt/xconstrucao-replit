@@ -190,6 +190,7 @@ export interface MinhaObraCardProps {
 
 export interface MinhasObrasGridProps {
   obras: MinhaObra[];
+  basePath?: string;
 }
 
 export interface MinhasObrasFilterProps {

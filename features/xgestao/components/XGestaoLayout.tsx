@@ -37,7 +37,7 @@ export function XGestaoLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="ml-auto hidden items-center gap-2 rounded-full border border-[#dce5df] bg-[#f0f5f1] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#6e7d75] sm:flex dark:border-[#314039] dark:bg-[#202e29]">
             <span className="size-1.5 rounded-full bg-[#4e9b71]" />
-            Ambiente de produção
+            Operação ativa
           </div>
         </header>
         <main className="min-h-0 flex-1 overflow-auto">{children}</main>

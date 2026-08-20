@@ -63,7 +63,13 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'lucro', label: 'Lucro', Icon: IconPayments },
 ];
 
-export default function MinhaObraDetalhePage() {
+export function ObraConsoleView({
+  basePath,
+  showMarketplaceContact = true,
+}: {
+  basePath: string;
+  showMarketplaceContact?: boolean;
+}) {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params.id as string;
@@ -101,7 +107,7 @@ export default function MinhaObraDetalhePage() {
       <div className="p-10 text-center py-20">
         <IconConstruction className="text-5xl text-gray-300 block mb-4" />
         <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
-        <Link href="/empreiteiro/minhas-obras" className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">
+        <Link href={basePath} className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">
           Voltar para Minhas Obras
         </Link>
       </div>
@@ -118,7 +124,7 @@ export default function MinhaObraDetalhePage() {
       {/* Breadcrumb */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
         <Link
-          href="/empreiteiro/minhas-obras"
+          href={basePath}
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
           data-testid="link-back"
         >
@@ -126,7 +132,7 @@ export default function MinhaObraDetalhePage() {
           Voltar
         </Link>
         <nav className="flex items-center gap-2 text-sm flex-wrap">
-          <Link href="/empreiteiro/minhas-obras" className="text-gray-400 hover:text-primary transition-colors">
+          <Link href={basePath} className="text-gray-400 hover:text-primary transition-colors">
             Minhas Obras
           </Link>
           <IconChevronRight className="text-gray-300 text-base" />
@@ -415,10 +421,12 @@ export default function MinhaObraDetalhePage() {
         <ContratoCard obraId={obra.id} />
       </motion.div>
 
-      {/* BLOCO 13: Contato do Contratante */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40 }}>
-        <ContatoContratanteCard contratante={obra.contratante} obraId={obra.id} obraTitulo={obra.titulo} />
-      </motion.div>
+      {/* O xgestão não expõe o chat do marketplace; obras próprias não têm contratante. */}
+      {showMarketplaceContact && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40 }}>
+          <ContatoContratanteCard contratante={obra.contratante} obraId={obra.id} obraTitulo={obra.titulo} />
+        </motion.div>
+      )}
 
       {/* BLOCO 15: Localização */}
       {obra.localizacao && (
@@ -436,6 +444,10 @@ export default function MinhaObraDetalhePage() {
 
     </div>
   );
+}
+
+export default function MinhaObraDetalhePage() {
+  return <ObraConsoleView basePath="/empreiteiro/minhas-obras" />;
 }
 
 function ObraJ06Section({ obraId }: { obraId: string }) {

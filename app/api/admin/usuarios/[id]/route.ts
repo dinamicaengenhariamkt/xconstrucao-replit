@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { users } from "@shared/db/schema";
-import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { userRoles, users } from "@shared/db/schema";
+import { getUserRoles, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { getUser, getUserByEmail } from "@features/auth/api/auth-storage";
 import { recordAudit } from "@features/auth/api/audit";
 import { canManage, hasUsersTabAccess } from "../route";
@@ -19,6 +19,7 @@ const patchSchema = z.object({
   canManageUsers: z.boolean().optional(),
   // XG06 — escopo administrativo. Mesmas travas de canManageUsers.
   adminEscopo: z.enum(["global", "xgestao"]).optional(),
+  xgestao: z.boolean().optional(),
 });
 
 function jsonNoStore(payload: unknown, status = 200): NextResponse {
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
+  const roles = await getUserRoles(target.id);
   return jsonNoStore({
     id: target.id,
     name: target.name,
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     mustChangePassword: target.mustChangePassword,
     emailVerified: target.emailVerified,
     createdAt: target.createdAt,
+    xgestao: roles.includes("xgestao"),
   });
 }
 
@@ -74,6 +77,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (!canManage(guard.user.role, target.role as Role)) {
     return jsonNoStore({ message: "Acesso negado" }, 403);
   }
+  const [existingXGestao] = await db
+    .select({ id: userRoles.id })
+    .from(userRoles)
+    .where(and(eq(userRoles.userId, id), eq(userRoles.role, "xgestao")))
+    .limit(1);
 
   const body = await request.json().catch(() => ({}));
   const parsed = patchSchema.safeParse(body);
@@ -120,6 +128,18 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   }
 
+  // A capacidade xgestão é operacional, não um perfil primário. Somente
+  // superadmin pode delegá-la, e ela só faz sentido para um empreiteiro.
+  const finalRole = (updates.role ?? target.role) as Role;
+  if (updates.xgestao !== undefined) {
+    if (guard.user.role !== "superadmin") {
+      return jsonNoStore({ message: "Apenas super admin pode alterar o acesso ao xgestão." }, 403);
+    }
+    if (finalRole !== "empreiteiro") {
+      return jsonNoStore({ message: "O acesso ao xgestão só pode ser atribuído a empreiteiros." }, 400);
+    }
+  }
+
   // Email change: validate uniqueness → 409 conflict
   if (updates.email && updates.email !== target.email) {
     const conflict = await getUserByEmail(updates.email);
@@ -128,9 +148,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
   }
 
-  const [updated] = await db
-    .update(users)
-    .set({
+  const [updated] = await db.transaction(async (tx) => {
+    const userChanges = {
       ...(updates.name !== undefined ? { name: updates.name } : {}),
       ...(updates.email !== undefined ? { email: updates.email } : {}),
       ...(updates.phone !== undefined ? { phone: updates.phone } : {}),
@@ -138,9 +157,35 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       ...(updates.ativo !== undefined ? { ativo: updates.ativo } : {}),
       ...(updates.canManageUsers !== undefined ? { canManageUsers: updates.canManageUsers } : {}),
       ...(updates.adminEscopo !== undefined ? { adminEscopo: updates.adminEscopo } : {}),
-    })
-    .where(eq(users.id, id))
-    .returning();
+    };
+    const saved =
+      Object.keys(userChanges).length > 0
+        ? (
+            await tx
+              .update(users)
+              .set(userChanges)
+              .where(eq(users.id, id))
+              .returning()
+          )[0]
+        : target;
+
+    // Ao deixar de ser empreiteiro, revoga a capacidade incompatível para não
+    // deixar uma linha aditiva que jamais poderá ser usada.
+    const willHaveXGestao =
+      finalRole === "empreiteiro" && (updates.xgestao ?? Boolean(existingXGestao));
+    if (willHaveXGestao && !existingXGestao) {
+      await tx
+        .insert(userRoles)
+        .values({ userId: id, role: "xgestao", origem: "upgrade" })
+        .onConflictDoNothing();
+    } else if (!willHaveXGestao && existingXGestao) {
+      await tx
+        .delete(userRoles)
+        .where(and(eq(userRoles.userId, id), eq(userRoles.role, "xgestao")));
+    }
+
+    return [saved];
+  });
 
   await recordAudit({
     actorId: guard.user.id,
@@ -158,6 +203,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     phone: updated.phone,
     ativo: updated.ativo,
     canManageUsers: (updated as { canManageUsers?: boolean }).canManageUsers ?? false,
+    xgestao: finalRole === "empreiteiro" && (updates.xgestao ?? Boolean(existingXGestao)),
   });
 }
 

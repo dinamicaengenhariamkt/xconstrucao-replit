@@ -16,8 +16,9 @@ import { resolvePostLoginRedirect } from "./redirect-by-role";
 export async function resolvePostLoginDestination(
   role: string,
   nextParam: string | null,
+  roles: string[] = [],
 ): Promise<string> {
-  const fallback = resolvePostLoginRedirect(role, nextParam);
+  const fallback = resolvePostLoginRedirect(role, nextParam, roles);
 
   // Admin/superadmin nunca passam pelo wizard.
   if (role === "admin" || role === "superadmin") return fallback;
@@ -29,9 +30,9 @@ export async function resolvePostLoginDestination(
       cache: "no-store",
     });
     if (!res.ok) return fallback;
-    const data = (await res.json()) as { onboardingConcluido?: boolean };
+    const data = (await res.json()) as { onboardingConcluido?: boolean; roles?: string[] };
     if (data.onboardingConcluido === false) return "/onboarding";
-    return fallback;
+    return resolvePostLoginRedirect(role, nextParam, data.roles ?? roles);
   } catch {
     // Best-effort: nunca prender o usuário fora do produto por falha de rede.
     return fallback;

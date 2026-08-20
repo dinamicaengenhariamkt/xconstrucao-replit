@@ -39,6 +39,7 @@ interface UserRow {
   canManageUsers?: boolean;
   /** XG06 — "global" | "xgestao". Ausente ⇒ "global". */
   adminEscopo?: string;
+  xgestao?: boolean;
   mustChangePassword: boolean;
   emailVerified: string | null;
   createdAt: string;
@@ -100,8 +101,10 @@ export function UsuariosTab() {
       const data = await res.json();
       toast({ title: 'Modo "Ver como" ativado', description: 'Você está visualizando em modo somente leitura.' });
       const role = data?.target?.role as Role | undefined;
+      const roles = (data?.target?.roles ?? []) as string[];
       const dest =
-        role === 'empreiteiro' ? '/empreiteiro/dashboard'
+        role === 'empreiteiro' && roles.includes('xgestao') ? '/xgestao/obras'
+        : role === 'empreiteiro' ? '/empreiteiro/dashboard'
         : role === 'admin' || role === 'superadmin' ? '/admin/financeiro'
         : '/contratante/dashboard';
       window.location.href = dest;
@@ -383,6 +386,7 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
   const [canManageUsers, setCanManageUsers] = useState<boolean>(user.canManageUsers === true);
   // XG06 — escopo administrativo. Default "global" = comportamento histórico.
   const [adminEscopo, setAdminEscopo] = useState<string>(user.adminEscopo ?? 'global');
+  const [xgestao, setXgestao] = useState(user.xgestao === true);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -398,6 +402,9 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
         if (role === 'admin') {
           payload.canManageUsers = canManageUsers;
           payload.adminEscopo = adminEscopo;
+        }
+        if (role === 'empreiteiro') {
+          payload.xgestao = xgestao;
         }
       }
       const r = await fetch(`/api/admin/usuarios/${user.id}`, {
@@ -472,6 +479,23 @@ function EditUserDialog({ user, isSuper, onClose }: { user: UserRow; isSuper: bo
               enxerga clientes, obras do marketplace, financeiro nem configurações.
             </p>
           </div>
+        )}
+        {isSuper && role === 'empreiteiro' && (
+          <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={xgestao}
+              onChange={(e) => setXgestao(e.target.checked)}
+              className="mt-0.5"
+              data-testid="checkbox-xgestao"
+            />
+            <span className="text-sm">
+              <span className="font-medium">Acesso ao xgestão</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                Permite que este empreiteiro acesse e teste o produto xgestão. O papel principal não é alterado.
+              </span>
+            </span>
+          </label>
         )}
         {isSuper && role === 'admin' && (
           <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">

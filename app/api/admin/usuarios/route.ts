@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, asc, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { users } from "@shared/db/schema";
+import { userRoles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders, getBaseUrl } from "@features/auth/api/auth-utils";
 import { createUserWithProfile, getUserByEmail } from "@features/auth/api/auth-storage";
 import { hashPassword } from "@features/auth/api/auth-service";
@@ -90,6 +90,10 @@ export async function GET(request: NextRequest) {
       // a permissão/escopo de um admin.
       canManageUsers: users.canManageUsers,
       adminEscopo: users.adminEscopo,
+      xgestao: sql<boolean>`exists (
+        select 1 from ${userRoles}
+        where ${userRoles.userId} = ${users.id} and ${userRoles.role} = 'xgestao'
+      )`.as("xgestao"),
       mustChangePassword: users.mustChangePassword,
       emailVerified: users.emailVerified,
       createdAt: users.createdAt,

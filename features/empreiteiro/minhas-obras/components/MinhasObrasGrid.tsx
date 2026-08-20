@@ -5,7 +5,7 @@ import type { MinhasObrasGridProps } from '../types';
 import { IconConstruction } from '@shared/components/icons';
 import { useObrasHealthMap } from '@features/shared/health';
 
-export function MinhasObrasGrid({ obras }: MinhasObrasGridProps) {
+export function MinhasObrasGrid({ obras, basePath }: MinhasObrasGridProps) {
   const { data: healthMap } = useObrasHealthMap('empreiteiro');
 
   if (obras.length === 0) {
@@ -25,6 +25,7 @@ export function MinhasObrasGrid({ obras }: MinhasObrasGridProps) {
           key={obra.id}
           obra={obra}
           healthStatus={healthMap?.[obra.id]?.status}
+          basePath={basePath}
         />
       ))}
     </div>

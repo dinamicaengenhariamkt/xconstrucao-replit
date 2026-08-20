@@ -200,7 +200,12 @@ export const userRoleOrigemEnum = pgEnum("user_role_origem", ["signup", "upgrade
 // J23 — enum DEDICADO para papéis aditivos: NÃO inclui admin/superadmin. Transforma
 // "papel aditivo nunca é privilegiado" em constraint de banco, não convenção de app.
 // O backfill só insere papéis primários de usuários comuns (admins não recebem linha).
-export const userAdditiveRoleEnum = pgEnum("user_additive_role", ["contratante", "empreiteiro", "anunciante"]);
+export const userAdditiveRoleEnum = pgEnum("user_additive_role", [
+  "contratante",
+  "empreiteiro",
+  "anunciante",
+  "xgestao",
+]);
 
 export const userRoles = pgTable(
   "user_roles",

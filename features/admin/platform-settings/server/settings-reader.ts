@@ -36,6 +36,8 @@ const DEFAULTS: PlatformSettings = {
     clienteLogin: true,
     manutencao: false,
     relatorios: false,
+    xgestao: true,
+    marketplaceVisivel: true,
   },
   seguranca: {
     timeout: "30",

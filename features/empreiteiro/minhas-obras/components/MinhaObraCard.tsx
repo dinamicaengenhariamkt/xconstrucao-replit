@@ -7,7 +7,8 @@ import type { MinhaObraCardProps } from '../types';
 export function MinhaObraCard({
   obra,
   healthStatus,
-}: MinhaObraCardProps & { healthStatus?: HealthStatus }) {
+  basePath = "/empreiteiro/minhas-obras",
+}: MinhaObraCardProps & { healthStatus?: HealthStatus; basePath?: string }) {
   return (
     <ObraCard
       obraId={obra.id}
@@ -22,7 +23,7 @@ export function MinhaObraCard({
       tipo={obra.tipo}
       parteContraria={obra.contratante}
       parteContrariaRole="Contratante"
-      basePath="/empreiteiro/minhas-obras"
+      basePath={basePath}
       dateMode="range"
       healthStatus={healthStatus}
     />

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { getUser } from "@features/auth/api/auth-storage";
+import { getUserRoles } from "@features/auth/api/auth-utils";
 import { createImpersonationToken, setImpersonationCookie } from "@features/auth/api/impersonation";
 import { recordAudit } from "@features/auth/api/audit";
 
@@ -31,9 +32,10 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     request,
   });
 
+  const roles = await getUserRoles(target.id);
   const response = jsonNoStore({
     ok: true,
-    target: { id: target.id, name: target.name, email: target.email, role: target.role },
+    target: { id: target.id, name: target.name, email: target.email, role: target.role, roles },
   });
   setImpersonationCookie(response, token);
   return response;

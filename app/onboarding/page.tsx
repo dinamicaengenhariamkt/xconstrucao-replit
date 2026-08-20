@@ -38,5 +38,5 @@ export default function OnboardingPage() {
     );
   }
 
-  return <OnboardingWizard role={user.role} />;
+  return <OnboardingWizard role={user.role} roles={user.roles} />;
 }

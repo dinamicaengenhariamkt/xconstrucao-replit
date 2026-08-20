@@ -2,9 +2,13 @@
  * Função para determinar a rota de redirecionamento baseada no role do usuário
  */
 
-export type UserRole = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro' | 'anunciante';
+export type UserRole = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro' | 'anunciante' | 'xgestao';
 
-export function getRedirectPathByRole(role: string): string {
+export function getRedirectPathByRole(role: string, roles: string[] = []): string {
+  if (role === 'empreiteiro' && roles.includes('xgestao')) {
+    return '/xgestao/obras';
+  }
+
   switch (role) {
     case 'empreiteiro':
       return '/empreiteiro/dashboard';
@@ -36,19 +40,24 @@ export function canAccessRoute(userRole: string, requiredRole: string): boolean 
  * Bloqueia: URLs absolutas (open redirect), protocol-relative (`//evil.com`),
  * paths de outra role (escalação cruzada), `/admin*` para não-admin.
  */
-export function resolvePostLoginRedirect(role: string, nextParam: string | null): string {
-  const fallback = getRedirectPathByRole(role);
+export function resolvePostLoginRedirect(
+  role: string,
+  nextParam: string | null,
+  roles: string[] = [],
+): string {
+  const fallback = getRedirectPathByRole(role, roles);
 
   if (!nextParam) return fallback;
   // Bloqueia open redirect e URLs absolutas
   if (!nextParam.startsWith("/") || nextParam.startsWith("//")) return fallback;
 
   const allowedPrefixes: Record<string, string[]> = {
-    // superadmin pode acessar qualquer área (modo "Ver como")
+    // O xgestão exige um empreiteiro autorizado como sujeito operacional e só
+    // é aberto a superadmin com o cookie assinado de "Ver como".
     superadmin: ["/admin", "/contratante", "/empreiteiro", "/anunciante"],
     admin: ["/admin"],
     contratante: ["/contratante"],
-    empreiteiro: ["/empreiteiro"],
+    empreiteiro: roles.includes('xgestao') ? ["/empreiteiro", "/xgestao"] : ["/empreiteiro"],
     anunciante: ["/anunciante"],
   };
 
