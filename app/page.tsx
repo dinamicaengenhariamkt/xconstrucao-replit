@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
-import { IconShield, IconDashboardCustomize, IconTarget, IconHub, IconBolt } from '@shared/components/icons';
+import { IconShield, IconDashboardCustomize, IconTarget, IconBolt } from '@shared/components/icons';
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
-import { MarketplaceNotificacaoModal } from "@features/landing/components/MarketplaceNotificacaoModal";
 import { AdSidebarSlot } from "@features/shared/anuncios/components/AdSidebarSlot";
 import { ObrasDestaqueCarousel } from "@features/landing/components/ObrasDestaqueCarousel";
 import { MercadoEmFoco } from "@features/landing/components/MercadoEmFoco";
@@ -16,7 +14,6 @@ import { AnuncieAqui } from "@features/landing/components/AnuncieAqui";
 import { usePublicConfig } from "@features/shared/hooks/use-public-config";
 
 export default function HomePage() {
-  const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
   const { config } = usePublicConfig();
 
   return (
@@ -87,21 +84,21 @@ export default function HomePage() {
               ) : (
                 <>
                   <Link
-                    href="/xgestao-inteligente"
+                    href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
                     prefetch={false}
                     className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                     data-testid="link-acessar-xgestao"
                   >
                     Acessar xgestão
                   </Link>
-                  <a
-                    href="#solucoes"
-                    className="bg-[#7C3AED] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex flex-col items-center justify-center leading-tight"
-                    data-testid="link-marketplace-em-breve"
+                  <Link
+                    href="/cadastro?perfil=xgestao"
+                    prefetch={false}
+                    className="bg-white dark:bg-[#2A2D30] text-[#333333] dark:text-white font-bold h-14 px-10 rounded-full border-2 border-[#333333] dark:border-white/20 hover:brightness-95 transition-all inline-flex items-center justify-center"
+                    data-testid="link-criar-conta-xgestao"
                   >
-                    <span>Marketplace</span>
-                    <span className="text-xs font-medium opacity-80">(em breve)</span>
-                  </a>
+                    Criar conta xgestão
+                  </Link>
                 </>
               )}
             </div>
@@ -164,7 +161,9 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Card xgestão inteligente */}
               <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
+                className={`bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px] ${
+                  !config.marketplaceVisivel ? "md:col-span-2 md:max-w-[586px] md:w-full md:mx-auto" : ""
+                }`}
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
               >
                 <IconDashboardCustomize className="text-5xl text-[#333333] dark:text-white mb-6" />
@@ -176,16 +175,16 @@ export default function HomePage() {
                     (Solução ativa — já disponível)
                   </p>
                   <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
-                    Sistema completo de gestão de obras com dashboards financeiros,
-                    progresso real-time, alertas, relatórios e SINAPI integrado.
-                    Controle total, transparência e previsibilidade desde o primeiro dia.
+                    Sistema de gestão de obras com acompanhamento de progresso,
+                    planejamento e uma visão centralizada da execução.
+                    Controle e previsibilidade desde o primeiro dia.
                   </p>
                   <p className="text-slate-700 dark:text-slate-200 text-sm font-bold mb-8">
-                    Teste Grátis por 3 meses
+                    Comece pelo plano Freemium
                   </p>
                   <div className="mt-auto">
                     <Link
-                      href="/xgestao-inteligente"
+                      href="/cadastro?perfil=xgestao"
                       prefetch={false}
                       className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
                       data-testid="link-comecar-xgestao"
@@ -196,28 +195,24 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Card Marketplace xconstrução (em breve) */}
-              <div
-                className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
-                style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
-              >
-                <IconHub className="text-5xl text-[#7C3AED] mb-6" />
-                <div className="flex-1 flex flex-col">
-                  <h3 className="text-xl md:text-2xl font-extrabold mb-1">
-                    Marketplace xconstrução
-                  </h3>
-                  <p className="text-[#7C3AED] text-sm font-medium italic mb-5">
-                    {config.marketplaceVisivel ? "(disponível)" : "(em breve)"}
-                  </p>
-                  <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
-                    Conexão direta entre contratantes e empreiteiros qualificados,
-                    com intermediação segura, escrow e oportunidades exclusivas.
-                    Acesso a profissionais verificados com Responsabilidade Técnica
-                    ativa (ART/RRT) e portfólio validado — qualidade, legalidade
-                    e experiência comprovada em cada projeto.
-                  </p>
-                  <div className="mt-auto">
-                    {config.marketplaceVisivel ? (
+              {config.marketplaceVisivel && (
+                <div
+                  className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
+                  style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+                >
+                  <IconBolt className="text-5xl text-[#7C3AED] mb-6" />
+                  <div className="flex-1 flex flex-col">
+                    <h3 className="text-xl md:text-2xl font-extrabold mb-1">
+                      Marketplace xconstrução
+                    </h3>
+                    <p className="text-[#7C3AED] text-sm font-medium italic mb-5">
+                      (disponível)
+                    </p>
+                    <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
+                      Conexão direta entre contratantes e empreiteiros qualificados,
+                      com intermediação segura e oportunidades exclusivas.
+                    </p>
+                    <div className="mt-auto">
                       <Link
                         href="/acesso-plataforma"
                         prefetch={false}
@@ -226,19 +221,10 @@ export default function HomePage() {
                       >
                         Acessar marketplace
                       </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setMarketplaceModalOpen(true)}
-                        className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold px-8 py-3 rounded-full transition-colors inline-flex items-center text-sm"
-                        data-testid="button-notificar-marketplace"
-                      >
-                        Quero ser notificado quando lançar
-                      </button>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
@@ -347,13 +333,6 @@ export default function HomePage() {
       </main>
 
       <SiteFooter />
-
-      {!config.marketplaceVisivel && (
-        <MarketplaceNotificacaoModal
-          open={marketplaceModalOpen}
-          onOpenChange={setMarketplaceModalOpen}
-        />
-      )}
     </div>
   );
 }

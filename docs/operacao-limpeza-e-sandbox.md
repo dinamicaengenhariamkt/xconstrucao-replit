@@ -59,7 +59,51 @@ sem pedir confirmação.
 
 ---
 
-## 2. Asaas sandbox no ambiente publicado
+## 2. Base de demonstração xgestão (somente desenvolvimento)
+
+Para demonstrar o xgestão sem apagar os dados existentes do marketplace, use o
+seed aditivo abaixo. Ele recusa produção e bancos com host desconhecido, não
+executa `DELETE` e só cria/atualiza as contas de demonstração reservadas.
+
+```bash
+# Prévia sem escrita
+npm run db:demo:xgestao:preview
+
+# Criar/atualizar a base de demonstração
+CONFIRM_XGESTAO_DEMO=SIM npm run db:demo:xgestao
+
+# Conferir que as contas, a obra própria e o modo público xgestão estão prontos
+npm run db:demo:xgestao:check
+```
+
+O processo preserva todos os usuários, obras e configurações do marketplace,
+inclusive o administrador global. Caso ainda não exista, cria
+`admin@xconstrucao.com` como administrador global; se já existir, não o altera.
+
+Além dele, garante duas identidades exclusivas de desenvolvimento:
+
+| Conta | Finalidade |
+|---|---|
+| `admin.xgestao@xconstrucao.test` | Administrador limitado ao painel xgestão |
+| `demo.xgestao@xconstrucao.test` | Empreiteiro com entitlement xgestão, perfil completo e obra própria |
+
+As duas contas de demonstração usam a senha de desenvolvimento
+`Xgestao@2026!Demo`. O seed também desliga `marketplaceVisivel`, deixando a
+superfície pública focada no xgestão. Para reativar o marketplace depois, basta
+religar o toggle administrativo; nenhum dado foi removido.
+
+Depois de executar o seed com a aplicação já aberta, recarregue a página após
+até 30 segundos ou reinicie a aplicação. Esse é o TTL do leitor público de
+configurações; o comando altera o banco diretamente e não consegue limpar o
+cache de outro processo.
+
+> Não use `db:limpar` para essa finalidade. A limpeza remove todos os usuários
+> não administrativos e as operações do marketplace, que este seed foi criado
+> justamente para preservar.
+
+---
+
+## 3. Asaas sandbox no ambiente publicado
 
 A escolha do ambiente Asaas é **independente de `NODE_ENV`** — de propósito. Dá para publicar
 a aplicação, apontando para o banco de produção, com os pagamentos ainda simulados. É o modo
@@ -99,7 +143,7 @@ ambiente que de fato é sandbox faria o usuário acreditar que pagou de verdade.
 
 ---
 
-## 3. Testes continuam só em desenvolvimento
+## 4. Testes continuam só em desenvolvimento
 
 `tests/e2e/guards.ts` roda como `globalSetup` e aborta a suíte se a `DATABASE_URL` não for de
 um host de dev conhecido, ou se `PAYMENT_GATEWAY` não for `manual`. Nada muda aqui.
@@ -118,7 +162,7 @@ npm run test:e2e:browser          # project "browser", com E2E_BROWSER=1
 
 ---
 
-## 4. Backfill de `users.cpf_cnpj` (rodar uma vez por banco)
+## 5. Backfill de `users.cpf_cnpj` (rodar uma vez por banco)
 
 ```bash
 npx tsx scripts/backfill-user-cpf-cnpj.ts --dry-run   # mostra o que faria

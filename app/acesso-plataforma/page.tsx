@@ -73,16 +73,16 @@ export default function AcessoPlataformaPage() {
                   </div>
                 </>
               ) : (
-                <>
-                  <div
-                    className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center"
-                    data-testid="card-xgestao"
-                  >
-                    <IconConstruction className="text-6xl text-[#333333] dark:text-white mb-6" />
-                    <h3 className="text-2xl font-bold mb-3">xgestão</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
-                      Controle suas obras, equipe e resultados em um só lugar.
-                    </p>
+                <div
+                  className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center md:col-span-2 md:max-w-md md:mx-auto md:w-full"
+                  data-testid="card-xgestao"
+                >
+                  <IconConstruction className="text-6xl text-[#333333] dark:text-white mb-6" />
+                  <h3 className="text-2xl font-bold mb-3">xgestão</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                    Controle suas obras, equipe e resultados em um só lugar.
+                  </p>
+                  <div className="w-full space-y-3">
                     <Link
                       href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
                       className="w-full bg-[#333333] text-white font-bold py-4 rounded-full hover:scale-105 transition-transform text-sm leading-tight inline-flex items-center justify-center"
@@ -90,18 +90,15 @@ export default function AcessoPlataformaPage() {
                     >
                       Acessar xgestão
                     </Link>
+                    <Link
+                      href="/cadastro?perfil=xgestao"
+                      className="w-full border-2 border-[#333333] dark:border-white/30 text-[#333333] dark:text-white font-bold py-4 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm leading-tight inline-flex items-center justify-center"
+                      data-testid="link-cadastro-xgestao"
+                    >
+                      Criar conta xgestão
+                    </Link>
                   </div>
-                  <div
-                    className="bg-slate-50 dark:bg-slate-900/30 rounded-3xl p-12 border border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center text-center"
-                    data-testid="card-marketplace-em-breve"
-                  >
-                    <IconBusiness className="text-6xl text-[#7C3AED] mb-6" />
-                    <h3 className="text-2xl font-bold mb-3">Marketplace xconstrução</h3>
-                    <p className="text-[#7C3AED] text-sm font-medium italic">
-                      Em breve
-                    </p>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           </div>

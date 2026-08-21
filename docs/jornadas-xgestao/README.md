@@ -13,13 +13,13 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | # | Jornada | Bloco | Status | Prioridade | Risco |
 |---|---|---|---|---|---|
 | [XG01](01-fundacoes-e-shell.md) | Fundações e shell do xgestão | 1 | pronto | alta | baixo |
-| [XG02](02-obra-do-empreiteiro.md) | Obra criada e editada pelo empreiteiro | 2 | planejada | alta | baixo |
-| [XG03](03-planos-limites-trial.md) | Planos, limites e teste de 3 meses | 3 | planejada (§8 bloqueada) | alta | médio |
-| [XG04](04-link-publico-obra.md) | Link público de acompanhamento | 4 | planejada | alta | médio |
-| [XG05](05-ocultar-marketplace.md) | Ocultar o marketplace | 5 | planejada | alta | baixo |
-| [XG06](06-admin-xgestao.md) | Visão administrativa do xgestão | 6 | planejada (escopo a confirmar) | média | baixo |
+| [XG02](02-obra-do-empreiteiro.md) | Obra criada e editada pelo empreiteiro | 2 | pronto | alta | baixo |
+| [XG03](03-planos-limites-trial.md) | Planos, limites e teste de 3 meses | 3 | parcial (§8 trial bloqueado) | alta | médio |
+| [XG04](04-link-publico-obra.md) | Link público de acompanhamento | 4 | pronto | alta | médio |
+| [XG05](05-ocultar-marketplace.md) | Ocultar o marketplace | 5 | pronto | alta | baixo |
+| [XG06](06-admin-xgestao.md) | Visão administrativa do xgestão | 6 | pronto (escopo mínimo) | média | baixo |
 | [XG07](07-integracao-sinapi.md) | Integração SINAPI (preços de referência) | — | ❄️ **congelada** | — | — |
-| [XG08](08-visao-obra-read-only.md) | Visão da obra em modo leitura | 4 | planejada | alta | **médio-alto** |
+| [XG08](08-visao-obra-read-only.md) | Visão da obra em modo leitura | 4 | pronto | alta | **médio-alto** |
 
 ## Contexto
 
@@ -57,7 +57,7 @@ Esse recorte é o critério para decidir o que entra e o que sai: tudo que não 
 4. **O banco já permite obra sem contratante.** Em [`shared/db/schema.ts:219-220`](../../shared/db/schema.ts), `clienteId` e `empreiteiraId` são nullable, e [`features/obras/api/access.ts`](../../features/obras/api/access.ts) concede acesso por `empreiteiraId` sem exigir candidatura. **Não há migration do modelo central.**
 5. **Extrair e parametrizar, nunca duplicar.** Reafirmado pelo cliente em 2026-08-19 para as telas do link público. Vale para todo o projeto: quando o mesmo componente serve dois produtos, ele ganha uma prop — não uma cópia. A exceção é o *layout* genuinamente diferente (sidebar do xgestão, shell público), onde abstrair custa mais que escrever. Ver [XG08 §8](08-visao-obra-read-only.md).
 
-## Ordem de execução
+## Ordem de execução original
 
 Com SINAPI e anunciante fora, o caminho crítico ficou mais curto e mais linear:
 
@@ -68,7 +68,7 @@ XG01  fundações e shell
      ├─ XG05  ocultar marketplace   (independente, barato)
      └─ XG08  extração read-only
          └─ XG04  link público
-             └─ XG06  admin          (última; escopo a confirmar)
+              └─ XG06  admin          (escopo mínimo entregue)
 
 ❄️ congeladas: XG07 (SINAPI) · jornada do anunciante (J12/J16/J23/J31)
 ```

@@ -50,12 +50,15 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
 
       await page.goto('/');
       await expect(page.getByTestId('link-acessar-xgestao')).toBeVisible();
+      await expect(page.getByTestId('link-criar-conta-xgestao')).toBeVisible();
       await expect(page.getByTestId('link-sou-empreiteiro')).toHaveCount(0);
-      await expect(page.getByTestId('link-marketplace-em-breve')).toBeVisible();
+      await expect(page.getByTestId('link-marketplace-em-breve')).toHaveCount(0);
+      await expect(page.getByTestId('link-acessar-marketplace')).toHaveCount(0);
 
       await page.goto('/acesso-plataforma');
       await expect(page.getByTestId('link-login-xgestao')).toBeVisible();
-      await expect(page.getByTestId('card-marketplace-em-breve')).toBeVisible();
+      await expect(page.getByTestId('link-cadastro-xgestao')).toBeVisible();
+      await expect(page.getByTestId('card-marketplace-em-breve')).toHaveCount(0);
 
       await loginAs(request, SEED_EMPREITEIRO_EMAIL);
       await page.goto('/empreiteiro/dashboard');
