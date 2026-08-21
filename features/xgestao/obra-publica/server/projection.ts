@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, like } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import {
   obraChecklistItens,
@@ -13,6 +13,13 @@ import {
   userFiles,
 } from '@shared/db/schema';
 import type { ObraPublicaView } from '../types';
+import { createSignedReadUrl } from '@shared/lib/storage/r2';
+
+const PUBLIC_LINK_MEDIA_TTL_SECONDS = 12 * 60 * 60;
+
+async function signedPublicMediaUrl(bucketKey: string): Promise<string> {
+  return createSignedReadUrl({ key: bucketKey, expiresIn: PUBLIC_LINK_MEDIA_TTL_SECONDS });
+}
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -27,7 +34,8 @@ function mostRecent(...dates: Array<Date | string | null | undefined>): string |
 /**
  * Constrói, campo a campo, o conteúdo que poderá ser enviado a quem possuir
  * um link público. A validação do link/token fica na XG04; esta projeção nunca
- * lê campos financeiros, contatos, identificadores de pessoas ou arquivos privados.
+ * lê campos financeiros, contatos ou identificadores de pessoas. URLs de mídia
+ * só são assinadas depois de a página pública validar o token.
  */
 export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaView | null> {
   const [obra] = await db
@@ -39,16 +47,23 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       cidade: obras.cidade,
       uf: obras.uf,
       dataPrevisao: obras.dataPrevisao,
-      imagemUrl: userFiles.publicUrl,
+       imagemBucketKey: userFiles.bucketKey,
     })
     .from(obras)
     .leftJoin(
+      obraFotos,
+      and(
+        eq(obraFotos.obraId, obras.id),
+        eq(obraFotos.fileId, obras.fotoCapaFileId),
+        eq(obraFotos.enviadaAoContratante, true),
+      ),
+    )
+    .leftJoin(
       userFiles,
       and(
-        eq(userFiles.id, obras.fotoCapaFileId),
-        eq(userFiles.visibility, 'public'),
+        eq(userFiles.id, obraFotos.fileId),
         isNull(userFiles.deletedAt),
-        isNotNull(userFiles.publicUrl),
+        like(userFiles.mime, 'image/%'),
       ),
     )
     .where(eq(obras.id, obraId));
@@ -71,7 +86,6 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .select({
         id: obraDiario.id,
         texto: obraDiario.texto,
-        fotoFileIds: obraDiario.fotoFileIds,
         createdAt: obraDiario.createdAt,
       })
       .from(obraDiario)
@@ -84,7 +98,6 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         descricao: obraOcorrencias.descricao,
         gravidade: obraOcorrencias.gravidade,
         status: obraOcorrencias.status,
-        fotoFileId: obraOcorrencias.fotoFileId,
         resolvidoEm: obraOcorrencias.resolvidoEm,
         createdAt: obraOcorrencias.createdAt,
       })
@@ -94,7 +107,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
     db
       .select({
         id: obraFotos.id,
-        url: userFiles.publicUrl,
+         bucketKey: userFiles.bucketKey,
         fase: obraFotos.fase,
         tag: obraFotos.tag,
         createdAt: obraFotos.createdAt,
@@ -104,9 +117,8 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         userFiles,
         and(
           eq(userFiles.id, obraFotos.fileId),
-          eq(userFiles.visibility, 'public'),
           isNull(userFiles.deletedAt),
-          isNotNull(userFiles.publicUrl),
+           like(userFiles.mime, 'image/%'),
         ),
       )
       .where(and(eq(obraFotos.obraId, obraId), eq(obraFotos.enviadaAoContratante, true)))
@@ -125,24 +137,10 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .orderBy(asc(obraChecklists.createdAt)),
   ]);
 
-  const requestedPhotoIds = Array.from(
-    new Set([
-      ...diarioRows.flatMap((entry) => entry.fotoFileIds ?? []),
-      ...ocorrenciaRows.map((entry) => entry.fotoFileId).filter((id): id is string => Boolean(id)),
-    ]),
-  );
-  const publicFiles = requestedPhotoIds.length === 0
-    ? []
-    : await db
-      .select({ id: userFiles.id, url: userFiles.publicUrl })
-      .from(userFiles)
-      .where(and(
-        inArray(userFiles.id, requestedPhotoIds),
-        eq(userFiles.visibility, 'public'),
-        isNull(userFiles.deletedAt),
-        isNotNull(userFiles.publicUrl),
-      ));
-  const publicUrlByFileId = new Map(publicFiles.map((file) => [file.id, file.url]));
+  const fotoRowsWithUrls = await Promise.all(fotoRows.map(async (foto) => ({
+    ...foto,
+    url: await signedPublicMediaUrl(foto.bucketKey),
+  })));
 
   const checklistIds = checklistRows.map((checklist) => checklist.id);
   const checklistItems = checklistIds.length === 0
@@ -167,11 +165,11 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       cidade: obra.cidade,
       uf: obra.uf,
       dataPrevisao: obra.dataPrevisao,
-      imagemUrl: obra.imagemUrl,
+       imagemUrl: obra.imagemBucketKey ? await signedPublicMediaUrl(obra.imagemBucketKey) : null,
       ultimaAtualizacao: mostRecent(
         diarioRows[0]?.createdAt,
         ocorrenciaRows[0]?.createdAt,
-        fotoRows[0]?.createdAt,
+       fotoRowsWithUrls[0]?.createdAt,
       ),
     },
     etapas: etapas.map((etapa) => ({
@@ -183,9 +181,9 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       id: entry.id,
       texto: entry.texto,
       createdAt: toIso(entry.createdAt) ?? '',
-      fotos: (entry.fotoFileIds ?? [])
-        .map((fileId) => publicUrlByFileId.get(fileId))
-        .filter((url): url is string => Boolean(url)),
+      // Não assinamos anexos de diário por IDs soltos: a galeria obra_fotos é
+      // o único vínculo de mídia com escopo de obra verificável nesta projeção.
+      fotos: [],
     })),
     ocorrencias: ocorrenciaRows.map((entry) => ({
       id: entry.id,
@@ -193,13 +191,11 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       descricao: entry.descricao,
       gravidade: entry.gravidade,
       status: entry.status,
-      fotoUrl: entry.fotoFileId ? publicUrlByFileId.get(entry.fotoFileId) ?? null : null,
+       fotoUrl: null,
       resolvidoEm: toIso(entry.resolvidoEm) ?? undefined,
       createdAt: toIso(entry.createdAt) ?? '',
     })),
-    fotos: fotoRows
-      .filter((foto): foto is typeof foto & { url: string } => Boolean(foto.url))
-      .map((foto) => ({
+     fotos: fotoRowsWithUrls.map((foto) => ({
         id: foto.id,
         url: foto.url,
         fase: foto.fase,

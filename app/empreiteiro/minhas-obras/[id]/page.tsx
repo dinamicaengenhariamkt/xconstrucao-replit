@@ -32,6 +32,7 @@ import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups,
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
 import { EditarObraModal } from '@features/xgestao/components/EditarObraModal';
+import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -79,6 +80,7 @@ export function ObraConsoleView({
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
   const [showAtualizacao, setShowAtualizacao] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
 
@@ -205,7 +207,16 @@ export function ObraConsoleView({
                   </div>
                 )}
                 {allowOwnWorkEdit && obra.isObraPropria && (
-                  <EditarObraModal obra={obra} />
+                  <>
+                    <EditarObraModal obra={obra} />
+                    <button
+                      type="button"
+                      onClick={() => setShowShare(true)}
+                      className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all cursor-pointer"
+                    >
+                      Compartilhar link
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => setShowAtualizacao(true)}
@@ -449,6 +460,13 @@ export function ObraConsoleView({
         obraId={obra.id}
         obraTitulo={obra.titulo}
       />
+      {allowOwnWorkEdit && obra.isObraPropria && (
+        <CompartilharModal
+          open={showShare}
+          onOpenChange={setShowShare}
+          obra={obra}
+        />
+      )}
 
     </div>
   );

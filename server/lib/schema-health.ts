@@ -154,6 +154,21 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["visibilidade", "status_moderacao", "destaque", "foto_capa_file_id", "cidade", "uf"],
     label: "obras (extended columns)",
   },
+  // Capability de link público xgestão (bootstrap-obra-share-links).
+  {
+    table: "obra_share_links",
+    columns: [
+      "obra_id",
+      "token",
+      "criado_por",
+      "ativo",
+      "expira_em",
+      "visualizacoes",
+      "ultimo_acesso_em",
+      "criado_em",
+    ],
+    label: "obra_share_links (xgestão public links)",
+  },
   // Chat file attachment columns (bootstrap-chat) — root cause of the incident
   {
     table: "chat_mensagens",

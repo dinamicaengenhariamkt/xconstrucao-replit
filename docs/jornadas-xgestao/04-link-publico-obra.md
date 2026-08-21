@@ -1,6 +1,6 @@
 # Jornada — XG04: Link público de acompanhamento
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-4
+> Status: concluída | Prioridade: alta | Wave: xgestão-4
 > Última atualização: 2026-08-19
 
 ## 1. Contexto & Objetivo
@@ -160,19 +160,19 @@ A projeção mora em `features/xgestao/obra-publica/server/projection.ts`, com `
 
 ## 9. Checklist de implementação
 
-- [ ] Criar a tabela `obra_share_links` + migration
-- [ ] `POST`/`GET`/`DELETE /api/xgestao/obras/[id]/share`, guardados por `requireVerifiedUser` + `canWriteObraContent` de [features/obras/api/access.ts](../../features/obras/api/access.ts)
-- [ ] `features/xgestao/obra-publica/server/token.ts` — emissão com `crypto.randomBytes(32)` em base64url. **Nunca derivar o token do `obraId`**
-- [ ] `features/xgestao/obra-publica/server/projection.ts` como allowlist, com `import 'server-only'`
-- [ ] **O teste de vazamento (§8) antes da UI** — é o gate, não a conferência final
-- [ ] `app/publico/layout.tsx` + `app/publico/obra/[token]/page.tsx` como **Server Component**
-- [ ] `metadata` com `noindex` — o cliente quer que os clientes dele vejam, não o Google
-- [ ] `expiresIn` estendido nas signed URLs + `export const dynamic = 'force-dynamic'` (§8)
-- [ ] Estados de borda: link inválido, revogado, expirado, obra excluída
-- [ ] Rate limit por IP reusando o `isRateLimited` de [app/api/obras/route.ts](../../app/api/obras/route.ts)
-- [ ] Incrementar `visualizacoes` sem bloquear o render
-- [ ] Reescrever o `CompartilharModal` — WhatsApp e e-mail já existem no modal e passam a carregar a URL nova
-- [ ] Spec `tests/e2e/integration/xgestao-share.integration.spec.ts`
+- [x] Criar a tabela `obra_share_links` + migration
+- [x] `POST`/`GET`/`DELETE /api/xgestao/obras/[id]/share`, guardados por `requireVerifiedUser` + `canWriteObraContent` de [features/obras/api/access.ts](../../features/obras/api/access.ts)
+- [x] `features/xgestao/obra-publica/server/token.ts` — emissão com `crypto.randomBytes(32)` em base64url. **Nunca derivar o token do `obraId`**
+- [x] `features/xgestao/obra-publica/server/projection.ts` como allowlist, com `import 'server-only'`
+- [x] **O teste de vazamento (§8) antes da UI** — é o gate, não a conferência final
+- [x] `app/publico/layout.tsx` + `app/publico/obra/[token]/page.tsx` como **Server Component**
+- [x] `metadata` com `noindex` — o cliente quer que os clientes dele vejam, não o Google
+- [x] `expiresIn` estendido nas signed URLs + `export const dynamic = 'force-dynamic'` (§8)
+- [x] Estados de borda: link inválido, revogado, expirado, obra excluída
+- [x] Rate limit por IP reusando o `isRateLimited` de [app/api/obras/route.ts](../../app/api/obras/route.ts)
+- [x] Incrementar `visualizacoes` sem bloquear o render
+- [x] Reescrever o `CompartilharModal` — WhatsApp e e-mail já existem no modal e passam a carregar a URL nova
+- [x] Spec `tests/e2e/integration/xgestao-share.integration.spec.ts`
 
 > **Congelado em 2026-08-19 — a zona de anúncio sai do MVP.** O plano previa `"publico-obra"` no array `ZONAS`, com card "Marketplace em breve" para os clientes do empreiteiro verem que o marketplace vem aí. A jornada do anunciante foi congelada na reunião 002 (*"então a gente congela por enquanto, né? Foca nessa parte do empreiteiro de fato"*, 16:04). Volta como fase 2, junto com o relançamento do marketplace. O trabalho é barato quando voltar: `zona` é TEXT validado contra `ZONA_IDS` em [anuncios-service.ts:12](../../features/anuncios/anuncios-service.ts), **sem migration**, e `GET /api/anuncios` já é rota pública com cache.
 

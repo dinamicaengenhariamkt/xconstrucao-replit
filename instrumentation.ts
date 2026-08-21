@@ -111,6 +111,9 @@ export async function register() {
     const { bootstrapObraOperacaoSchema } = await import("./server/bootstrap-obra-operacao");
     await runBootstrap("obra-operacao", bootstrapObraOperacaoSchema);
 
+    const { bootstrapObraShareLinksSchema } = await import("./server/bootstrap-obra-share-links");
+    await runBootstrap("obra-share-links", bootstrapObraShareLinksSchema);
+
     const { bootstrapNotificacoesSchema } = await import("./server/bootstrap-notificacoes");
     await runBootstrap("notificacoes", bootstrapNotificacoesSchema);
 

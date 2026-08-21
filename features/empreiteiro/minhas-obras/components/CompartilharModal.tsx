@@ -33,13 +33,61 @@ export function CompartilharModal({
   const { toast } = useToast();
   const [url, setUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   useEffect(() => {
-    if (open && typeof window !== 'undefined') {
-      setUrl(window.location.href);
+    if (!open) return;
+    let active = true;
+    setCopied(false);
+    setLoading(true);
+    fetch(`/api/xgestao/obras/${obra.id}/share`, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Não foi possível consultar o link.');
+        return res.json() as Promise<{ share: { path: string } | null }>;
+      })
+      .then((payload) => {
+        if (active) setUrl(payload.share ? new URL(payload.share.path, window.location.origin).toString() : '');
+      })
+      .catch(() => {
+        if (active) {
+          setUrl('');
+          toast({ title: 'Erro ao consultar link', description: 'Tente novamente em instantes.', variant: 'destructive' });
+        }
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [open, obra.id, toast]);
+
+  const handleGerar = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/xgestao/obras/${obra.id}/share`, { method: 'POST' });
+      if (!res.ok) throw new Error();
+      const payload = await res.json() as { share: { path: string } };
+      setUrl(new URL(payload.share.path, window.location.origin).toString());
       setCopied(false);
+      toast({ title: 'Link público gerado', description: 'Envie este link para acompanhar a obra sem login.' });
+    } catch {
+      toast({ title: 'Erro ao gerar link', description: 'Não foi possível criar o link agora.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-  }, [open]);
+  };
+
+  const handleRevogar = async () => {
+    setRevoking(true);
+    try {
+      const res = await fetch(`/api/xgestao/obras/${obra.id}/share`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setUrl('');
+      toast({ title: 'Link revogado', description: 'Quem tiver o link não conseguirá mais abrir esta obra.' });
+    } catch {
+      toast({ title: 'Erro ao revogar link', description: 'Não foi possível revogar o link agora.', variant: 'destructive' });
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const handleCopiar = async () => {
     try {
@@ -80,11 +128,12 @@ export function CompartilharModal({
         <div className="p-5 flex flex-col gap-4">
           {/* URL + Copiar */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">Link da obra</p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Link público da obra</p>
             <div className="flex gap-2">
               <Input
                 readOnly
                 value={url}
+                placeholder={loading ? 'Consultando link…' : 'Gere um link para compartilhar'}
                 className="flex-1 text-xs bg-gray-50 dark:bg-gray-800 cursor-text"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
@@ -93,11 +142,22 @@ export function CompartilharModal({
                 size="sm"
                 variant={copied ? 'outline' : 'default'}
                 onClick={handleCopiar}
+                disabled={!url || loading}
                 className="shrink-0"
               >
                 {copied ? <IconCheck className="text-sm mr-1" /> : <IconContentCopy className="text-sm mr-1" />}
                 {copied ? 'Copiado' : 'Copiar'}
               </Button>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <Button type="button" size="sm" variant="outline" onClick={handleGerar} disabled={loading}>
+                {url ? 'Gerar novo link' : 'Gerar link'}
+              </Button>
+              {url && (
+                <Button type="button" size="sm" variant="ghost" onClick={handleRevogar} disabled={revoking || loading} className="text-destructive hover:text-destructive">
+                  {revoking ? 'Revogando…' : 'Revogar'}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -107,10 +167,11 @@ export function CompartilharModal({
             <div className="flex gap-3">
               {/* WhatsApp */}
               <a
-                href={whatsappUrl}
+                href={url ? whatsappUrl : undefined}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all"
+                aria-disabled={!url}
+                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all aria-disabled:pointer-events-none aria-disabled:opacity-50"
               >
                 <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                   <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white">
@@ -123,8 +184,9 @@ export function CompartilharModal({
 
               {/* E-mail */}
               <a
-                href={emailUrl}
-                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all"
+                href={url ? emailUrl : undefined}
+                aria-disabled={!url}
+                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all aria-disabled:pointer-events-none aria-disabled:opacity-50"
               >
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                   <IconMail className="text-white text-xl" />
@@ -136,7 +198,8 @@ export function CompartilharModal({
               <button
                 type="button"
                 onClick={handleCopiar}
-                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer"
+                disabled={!url || loading}
+                className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50"
               >
                 <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
                   <IconLink className="text-white text-xl" />

@@ -270,6 +270,37 @@ export const obras = pgTable("obras", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+/**
+ * Links de acompanhamento anônimo das obras próprias do xgestão.
+ *
+ * O token é armazenado em claro intencionalmente: o dono precisa recuperar o
+ * mesmo link depois de compartilhá-lo. A capacidade do token é limitada pela
+ * projeção pública, que não inclui finanças, documentos ou dados pessoais.
+ */
+export const obraShareLinks = pgTable(
+  "obra_share_links",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    criadoPor: varchar("criado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
+    ativo: boolean("ativo").notNull().default(true),
+    expiraEm: timestamp("expira_em"),
+    visualizacoes: integer("visualizacoes").notNull().default(0),
+    ultimoAcessoEm: timestamp("ultimo_acesso_em"),
+    criadoEm: timestamp("criado_em").notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqToken: uniqueIndex("obra_share_links_token_uniq").on(t.token),
+    idxObraAtivo: index("obra_share_links_obra_ativo_idx").on(t.obraId, t.ativo),
+    // Cada obra tem no máximo uma capability ativa; links revogados continuam
+    // preservados para auditoria e histórico.
+    uniqActiveObra: uniqueIndex("obra_share_links_one_active_obra_uniq")
+      .on(t.obraId)
+      .where(sql`${t.ativo} = true`),
+  }),
+);
+
 export const obraAnexos = pgTable("obra_anexos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),

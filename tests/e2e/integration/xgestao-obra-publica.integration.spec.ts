@@ -21,14 +21,15 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     expect(types).toContain('export interface ObraPublicaView');
     expect(types).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|autorNome|autorId|registroProfissional|assinadoPor/);
     expect(projection).toContain("import 'server-only';");
-    expect(projection).not.toMatch(/\busers\b|bucketKey|valorPago|valorTotal|autorId|autorNome|resolvidoPorId/);
+    expect(projection).not.toMatch(/\busers\b|valorPago|valorTotal|autorId|autorNome|resolvidoPorId/);
 
-    // A projeção entrega somente arquivos publicáveis, e as fotos principais
-    // exigem também a marcação explícita para o cliente.
-    expect(projection).toContain("eq(userFiles.visibility, 'public')");
+    // Mídias nunca ficam permanentemente públicas: somente arquivos ainda
+    // existentes, ligados à galeria da obra e aprovados para o cliente recebem
+    // capability temporária após a validação do token.
     expect(projection).toContain('isNull(userFiles.deletedAt)');
     expect(projection).toContain("eq(obraFotos.enviadaAoContratante, true)");
-    expect(projection).toContain('userFiles.publicUrl');
+    expect(projection).toContain('createSignedReadUrl');
+    expect(projection).toContain('PUBLIC_LINK_MEDIA_TTL_SECONDS');
   });
 
   test('wrappers públicos injetam dados e nunca habilitam escrita ou fetch autenticado', async () => {

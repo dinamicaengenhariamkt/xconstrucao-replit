@@ -44,7 +44,9 @@ export interface ObraPublicaChecklist {
 
 /**
  * Contrato mínimo e deliberadamente anônimo do conteúdo compartilhável.
- * Não acrescente finanças, contato, identificadores pessoais ou URLs assinadas.
+ * Não acrescente finanças, contato, identificadores pessoais ou chaves de
+ * armazenamento. URLs de mídia já são capabilities temporárias resolvidas no
+ * servidor apenas após validar o link da obra.
  */
 export interface ObraPublicaView {
   obra: {
