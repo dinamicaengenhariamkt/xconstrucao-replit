@@ -29,3 +29,18 @@ export const EMPREITEIRO_BOTTOM_NAV_ITEMS: NavItem[] = [
   { title: 'Perguntas Frequentes', url: '/empreiteiro/faq', icon: RiQuestionLine },
   { title: 'Configurações', url: '/empreiteiro/configuracoes', icon: RiSettings3Line },
 ];
+
+const MARKETPLACE_NAV_URLS = new Set([
+  '/empreiteiro/novas-obras',
+  '/empreiteiro/obras-salvas',
+  '/empreiteiro/minhas-candidaturas',
+  '/empreiteiro/pagamentos',
+  '/empreiteiro/saldo',
+]);
+
+/** Mantém as rotas existentes, mas pode ocultar sua descoberta no lançamento xgestão. */
+export function getEmpreiteiroNavItems(marketplaceVisivel: boolean): NavItem[] {
+  return marketplaceVisivel
+    ? EMPREITEIRO_NAV_ITEMS
+    : EMPREITEIRO_NAV_ITEMS.filter((item) => !MARKETPLACE_NAV_URLS.has(item.url));
+}

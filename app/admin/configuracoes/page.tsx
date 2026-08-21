@@ -684,6 +684,7 @@ const PLATAFORMA_DEFAULTS = {
   clienteLogin: true,
   manutencao: false,
   relatorios: false,
+  marketplaceVisivel: true,
 };
 
 function SecaoPlataforma() {
@@ -750,6 +751,12 @@ function SecaoPlataforma() {
             description="Permite acesso à central de ajuda pelos usuários."
             checked={features.faq}
             onCheckedChange={toggle('faq')}
+          />
+          <SwitchRow
+            label="Marketplace visível"
+            description="Mostra os pontos públicos de descoberta do marketplace. Desligado, o xgestão fica em primeiro plano e as rotas existentes continuam acessíveis."
+            checked={features.marketplaceVisivel}
+            onCheckedChange={toggle('marketplaceVisivel')}
           />
           <SwitchRow
             label="Modo manutenção"

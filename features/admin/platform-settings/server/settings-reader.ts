@@ -198,6 +198,12 @@ export async function isRelatoriosHabilitado(): Promise<boolean> {
   return plataforma?.relatorios === true;
 }
 
+/** XG05 — controla somente a visibilidade pública do marketplace. Fail-open → visível. */
+export async function isMarketplaceVisivel(): Promise<boolean> {
+  const plataforma = await getPlatformSetting("plataforma");
+  return plataforma?.marketplaceVisivel !== false;
+}
+
 /** Zera o cache para refletir uma escrita imediatamente (chamar no PATCH). */
 export function invalidatePlatformSettingsCache(): void {
   cache = null;

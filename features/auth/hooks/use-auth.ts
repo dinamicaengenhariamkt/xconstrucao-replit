@@ -26,6 +26,7 @@ export interface RegisterData {
   role: string;
   phone?: string;
   cpfCnpj?: string;
+  xgestao?: boolean;
   acceptTerms: true;
 }
 

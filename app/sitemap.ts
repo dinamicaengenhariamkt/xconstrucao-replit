@@ -1,9 +1,15 @@
 import { MetadataRoute } from 'next'
+import { isMarketplaceVisivel } from '@features/admin/platform-settings/server/settings-reader'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// A fonte de verdade tem cache próprio de até 30 segundos. Não congele o
+// sitemap no build, ou a reativação exigiria uma nova publicação.
+export const dynamic = 'force-dynamic'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://xconstrucao.com.br'
+  const marketplaceVisivel = await isMarketplaceVisivel()
 
-  return [
+  const pages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date('2026-02-13'),
@@ -29,4 +35,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
   ]
+
+  // A rota continua funcionando quando oculta, mas só é descoberta por
+  // buscadores quando o marketplace estiver oficialmente apresentado.
+  if (marketplaceVisivel) {
+    pages.splice(2, 0, {
+      url: `${baseUrl}/acesso-plataforma`,
+      lastModified: new Date('2026-02-13'),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    })
+  }
+
+  return pages
 }

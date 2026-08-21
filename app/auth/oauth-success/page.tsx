@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
 
 export default function OAuthSuccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +49,8 @@ export default function OAuthSuccessPage() {
       });
       if (meRes.ok) {
         const userData = await meRes.json();
-        const role = userData?.role || userData?.user?.role;
+        const role = userData?.role || userData?.user?.role || "contratante";
+        const roles = userData?.roles || userData?.user?.roles || [];
         // J51 — primeiro acesso via Google também passa pelo wizard de onboarding
         // (exceto admin, que não se cadastra por aqui). Reusa o mesmo /me já lido.
         const onboardingConcluido =
@@ -56,11 +59,7 @@ export default function OAuthSuccessPage() {
         const target =
           !isAdmin && onboardingConcluido === false
             ? "/onboarding"
-            : role === "empreiteiro"
-              ? "/empreiteiro/dashboard"
-              : isAdmin
-                ? "/admin/financeiro"
-                : "/contratante/dashboard";
+            : resolvePostLoginRedirect(role, searchParams.get("next"), roles);
         router.replace(target);
       } else {
         router.replace("/contratante/dashboard");

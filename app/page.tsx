@@ -13,9 +13,11 @@ import { AdSidebarSlot } from "@features/shared/anuncios/components/AdSidebarSlo
 import { ObrasDestaqueCarousel } from "@features/landing/components/ObrasDestaqueCarousel";
 import { MercadoEmFoco } from "@features/landing/components/MercadoEmFoco";
 import { AnuncieAqui } from "@features/landing/components/AnuncieAqui";
+import { usePublicConfig } from "@features/shared/hooks/use-public-config";
 
 export default function HomePage() {
   const [marketplaceModalOpen, setMarketplaceModalOpen] = useState(false);
+  const { config } = usePublicConfig();
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
@@ -63,30 +65,45 @@ export default function HomePage() {
               precisão, previsibilidade e inovação em cada etapa.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/login?perfil=empreiteiro"
-                prefetch={false}
-                className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
-                data-testid="link-sou-empreiteiro"
-              >
-                Sou Empreiteiro
-              </Link>
-              <Link
-                href="/login?perfil=contratante"
-                prefetch={false}
-                className="bg-white dark:bg-[#2A2D30] text-[#333333] dark:text-white font-bold h-14 px-10 rounded-full border-2 border-[#333333] dark:border-white/20 hover:brightness-95 transition-all inline-flex items-center justify-center"
-                data-testid="link-sou-contratante"
-              >
-                Sou Contratante
-              </Link>
-              <a
-                href="#solucoes"
-                className="bg-[#7C3AED] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex flex-col items-center justify-center leading-tight"
-                data-testid="link-marketplace-em-breve"
-              >
-                <span>marketplace</span>
-                <span className="text-xs font-medium opacity-80">(em breve)</span>
-              </a>
+              {config.marketplaceVisivel ? (
+                <>
+                  <Link
+                    href="/login?perfil=empreiteiro"
+                    prefetch={false}
+                    className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
+                    data-testid="link-sou-empreiteiro"
+                  >
+                    Sou Empreiteiro
+                  </Link>
+                  <Link
+                    href="/login?perfil=contratante"
+                    prefetch={false}
+                    className="bg-white dark:bg-[#2A2D30] text-[#333333] dark:text-white font-bold h-14 px-10 rounded-full border-2 border-[#333333] dark:border-white/20 hover:brightness-95 transition-all inline-flex items-center justify-center"
+                    data-testid="link-sou-contratante"
+                  >
+                    Sou Contratante
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/xgestao-inteligente"
+                    prefetch={false}
+                    className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
+                    data-testid="link-acessar-xgestao"
+                  >
+                    Acessar xgestão
+                  </Link>
+                  <a
+                    href="#solucoes"
+                    className="bg-[#7C3AED] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex flex-col items-center justify-center leading-tight"
+                    data-testid="link-marketplace-em-breve"
+                  >
+                    <span>Marketplace</span>
+                    <span className="text-xs font-medium opacity-80">(em breve)</span>
+                  </a>
+                </>
+              )}
             </div>
             {/* Imagem ilustrativa */}
             <div className="mt-12 w-full">
@@ -168,7 +185,7 @@ export default function HomePage() {
                   </p>
                   <div className="mt-auto">
                     <Link
-                      href="/acesso-plataforma"
+                      href="/xgestao-inteligente"
                       prefetch={false}
                       className="bg-[#333333] text-white font-bold px-8 py-3 rounded-full hover:brightness-110 transition-all inline-flex items-center text-sm"
                       data-testid="link-comecar-xgestao"
@@ -190,7 +207,7 @@ export default function HomePage() {
                     Marketplace xconstrução
                   </h3>
                   <p className="text-[#7C3AED] text-sm font-medium italic mb-5">
-                    (em breve)
+                    {config.marketplaceVisivel ? "(disponível)" : "(em breve)"}
                   </p>
                   <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed mb-4">
                     Conexão direta entre contratantes e empreiteiros qualificados,
@@ -200,14 +217,25 @@ export default function HomePage() {
                     e experiência comprovada em cada projeto.
                   </p>
                   <div className="mt-auto">
-                    <button
-                      type="button"
-                      onClick={() => setMarketplaceModalOpen(true)}
-                      className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold px-8 py-3 rounded-full transition-colors inline-flex items-center text-sm"
-                      data-testid="button-notificar-marketplace"
-                    >
-                      Quero ser notificado quando lançar
-                    </button>
+                    {config.marketplaceVisivel ? (
+                      <Link
+                        href="/acesso-plataforma"
+                        prefetch={false}
+                        className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold px-8 py-3 rounded-full transition-colors inline-flex items-center text-sm"
+                        data-testid="link-acessar-marketplace"
+                      >
+                        Acessar marketplace
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setMarketplaceModalOpen(true)}
+                        className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold px-8 py-3 rounded-full transition-colors inline-flex items-center text-sm"
+                        data-testid="button-notificar-marketplace"
+                      >
+                        Quero ser notificado quando lançar
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -278,18 +306,20 @@ export default function HomePage() {
         </section>
 
         {/* Projetos em Destaque — curadoria dinâmica do admin (J25). Some quando vazio. */}
-        <ObrasDestaqueCarousel />
+        {config.marketplaceVisivel && <ObrasDestaqueCarousel />}
 
         {/* Mercado em Foco — vitrine dinâmica de anúncios (J24). Some quando vazia. */}
-        <MercadoEmFoco />
+        {config.marketplaceVisivel && <MercadoEmFoco />}
 
         {/* Slot de anúncio público (J16) — invisível enquanto não há campanha ativa */}
-        <div className="max-w-[420px] mx-auto px-6">
-          <AdSidebarSlot zoneId="banner-qa" />
-        </div>
+        {config.marketplaceVisivel && (
+          <div className="max-w-[420px] mx-auto px-6">
+            <AdSidebarSlot zoneId="banner-qa" />
+          </div>
+        )}
 
         {/* J23 — convite para anunciar (self-service) */}
-        <AnuncieAqui />
+        {config.marketplaceVisivel && <AnuncieAqui />}
 
         {/* CTA Final */}
         <section className="relative py-32 px-6 bg-[#333333] text-white overflow-hidden">
@@ -302,7 +332,7 @@ export default function HomePage() {
             </p>
             <div className="flex justify-center">
               <Link
-                href="/acesso-plataforma"
+                href="/xgestao-inteligente"
                 prefetch={false}
                 className="bg-white text-[#333333] font-bold h-14 px-10 rounded-full hover:scale-105 transition-transform inline-flex items-center justify-center"
                 data-testid="link-cta-acesso"
@@ -318,10 +348,12 @@ export default function HomePage() {
 
       <SiteFooter />
 
-      <MarketplaceNotificacaoModal
-        open={marketplaceModalOpen}
-        onOpenChange={setMarketplaceModalOpen}
-      />
+      {!config.marketplaceVisivel && (
+        <MarketplaceNotificacaoModal
+          open={marketplaceModalOpen}
+          onOpenChange={setMarketplaceModalOpen}
+        />
+      )}
     </div>
   );
 }

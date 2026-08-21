@@ -33,6 +33,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string; role: string }> = {
   contratante: { Icon: IconBusiness, text: "Contratante", role: "contratante" },
   empreiteiro: { Icon: IconConstruction, text: "Empreiteiro", role: "empreiteiro" },
+  xgestao: { Icon: IconConstruction, text: "xgestão", role: "empreiteiro" },
   administrador: { Icon: IconAdminPanelSettings, text: "Administrador", role: "admin" },
 };
 
@@ -50,6 +51,10 @@ export default function LoginPage() {
   const { login, verifyTwoFactor } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
+  const oauthNext = searchParams.get("next") ?? (perfil === "xgestao" ? "/xgestao/obras" : null);
+  const oauthCallbackUrl = oauthNext
+    ? `/auth/oauth-success?next=${encodeURIComponent(oauthNext)}`
+    : "/auth/oauth-success";
 
   // 2FA (J22): quando o login pede segundo fator, guardamos o challengeToken e
   // trocamos o formulário pelo input do código.
@@ -206,9 +211,9 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const persona = perfil === "empreiteiro" ? "empreiteiro" : "contratante";
+                  const persona = perfil === "empreiteiro" || perfil === "xgestao" ? perfil : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
-                  signIn("google", { callbackUrl: "/auth/oauth-success" });
+                  signIn("google", { callbackUrl: oauthCallbackUrl });
                 }}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
                 data-testid="button-google-login"

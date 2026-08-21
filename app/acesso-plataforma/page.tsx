@@ -4,8 +4,11 @@ import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { IconBusiness, IconConstruction } from "@shared/components/icons";
+import { usePublicConfig } from "@features/shared/hooks/use-public-config";
 
 export default function AcessoPlataformaPage() {
+  const { config } = usePublicConfig();
+
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
       <GlassNav showAccessButton={false} showAdminButton={true} />
@@ -17,17 +20,21 @@ export default function AcessoPlataformaPage() {
               className="text-4xl md:text-6xl font-extrabold tracking-[-0.04em] leading-[0.95] mb-6"
               data-testid="text-acesso-title"
             >
-              Acesso à{" "}
+              {config.marketplaceVisivel ? "Acesso à " : "Acesse a "}
               <span className="text-[#333333] dark:text-white">
-                plataforma xconstrução
+                {config.marketplaceVisivel ? "plataforma xconstrução" : "xgestão"}
               </span>
             </h1>
             <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 font-medium max-w-[600px] mx-auto leading-relaxed mb-16">
-              Escolha como deseja acessar a plataforma xconstrução
+              {config.marketplaceVisivel
+                ? "Escolha como deseja acessar a plataforma xconstrução"
+                : "Gestão de obras para empreiteiros, do planejamento ao acompanhamento."}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[800px] mx-auto">
-              <div
+              {config.marketplaceVisivel ? (
+                <>
+                  <div
                 className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col items-center text-center"
                 data-testid="card-contratante"
               >
@@ -44,9 +51,9 @@ export default function AcessoPlataformaPage() {
                 >
                   Acessar
                 </Link>
-              </div>
+                  </div>
 
-              <div
+                  <div
                 className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col items-center text-center"
                 data-testid="card-empreiteiro"
               >
@@ -63,7 +70,39 @@ export default function AcessoPlataformaPage() {
                 >
                   Acessar
                 </Link>
-              </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center"
+                    data-testid="card-xgestao"
+                  >
+                    <IconConstruction className="text-6xl text-[#333333] dark:text-white mb-6" />
+                    <h3 className="text-2xl font-bold mb-3">xgestão</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                      Controle suas obras, equipe e resultados em um só lugar.
+                    </p>
+                    <Link
+                      href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
+                      className="w-full bg-[#333333] text-white font-bold py-4 rounded-full hover:scale-105 transition-transform text-sm leading-tight inline-flex items-center justify-center"
+                      data-testid="link-login-xgestao"
+                    >
+                      Acessar xgestão
+                    </Link>
+                  </div>
+                  <div
+                    className="bg-slate-50 dark:bg-slate-900/30 rounded-3xl p-12 border border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center text-center"
+                    data-testid="card-marketplace-em-breve"
+                  >
+                    <IconBusiness className="text-6xl text-[#7C3AED] mb-6" />
+                    <h3 className="text-2xl font-bold mb-3">Marketplace xconstrução</h3>
+                    <p className="text-[#7C3AED] text-sm font-medium italic">
+                      Em breve
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </section>

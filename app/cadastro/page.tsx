@@ -38,12 +38,14 @@ type RegisterFormInput = Omit<RegisterValues, "acceptTerms"> & { acceptTerms: bo
 const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
   contratante: { Icon: IconBusiness, text: "Contratante" },
   empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
+  xgestao: { Icon: IconConstruction, text: "xgestão" },
   // J23 — cadastro de anunciante (outsider que entra direto pela vitrine de anúncios).
   anunciante: { Icon: IconBusiness, text: "Anunciante" },
 };
 
 const ROLES_CADASTRO = ["contratante", "empreiteiro", "anunciante"] as const;
 function perfilParaRole(perfil: string): "contratante" | "empreiteiro" | "anunciante" {
+  if (perfil === "xgestao") return "empreiteiro";
   return (ROLES_CADASTRO as readonly string[]).includes(perfil)
     ? (perfil as "contratante" | "empreiteiro" | "anunciante")
     : "contratante";
@@ -58,6 +60,9 @@ export default function CadastroPage() {
   const { register: registerUser } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
+  const oauthCallbackUrl = perfil === "xgestao"
+    ? "/auth/oauth-success?next=%2Fxgestao%2Fobras"
+    : "/auth/oauth-success";
 
   useEffect(() => {
     if (perfil === "administrador") {
@@ -73,6 +78,7 @@ export default function CadastroPage() {
       username: "",
       password: "",
       role: perfilParaRole(perfil),
+      xgestao: perfil === "xgestao",
       phone: "",
       acceptTerms: false,
     },
@@ -94,6 +100,7 @@ export default function CadastroPage() {
         await registerUser({
           ...values,
           role: perfilParaRole(perfil),
+          xgestao: perfil === "xgestao",
           acceptTerms: true,
           antiBot: antiBot.getPayload(),
         });
@@ -167,9 +174,9 @@ export default function CadastroPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const persona = perfil === "empreiteiro" ? "empreiteiro" : "contratante";
+                  const persona = perfil === "empreiteiro" || perfil === "xgestao" ? perfil : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
-                  signIn("google", { callbackUrl: "/auth/oauth-success" });
+                  signIn("google", { callbackUrl: oauthCallbackUrl });
                 }}
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
                 data-testid="button-google-register"

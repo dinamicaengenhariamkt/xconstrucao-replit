@@ -126,7 +126,7 @@ export default function XGestaoInteligentePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/acesso-plataforma"
+                href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
                 className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                 data-testid="link-testar-gratis"
               >
@@ -231,7 +231,7 @@ export default function XGestaoInteligentePage() {
             </p>
             <div className="flex justify-center">
               <Link
-                href="/acesso-plataforma"
+                href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
                 className="bg-white text-[#333333] font-bold h-14 px-10 rounded-full hover:scale-105 transition-transform inline-flex items-center justify-center"
                 data-testid="link-cta-teste"
               >

@@ -24,9 +24,10 @@ import { RiMegaphoneLine } from 'react-icons/ri';
 import { useHasRole } from '@features/auth/store/auth-store';
 import { AdSidebarSlot } from '@features/shared/anuncios/components/AdSidebarSlot';
 import { useEmpreiteiroUnreadCount } from '@features/empreiteiro/xchat/hooks/use-unread-count';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import {
-  EMPREITEIRO_NAV_ITEMS,
   EMPREITEIRO_BOTTOM_NAV_ITEMS,
+  getEmpreiteiroNavItems,
 } from '../constants';
 
 export function EmpreiteiroSidebar() {
@@ -34,11 +35,12 @@ export function EmpreiteiroSidebar() {
   const router = useRouter();
   const { logout } = useAuth();
   const { data: unreadCount = 0 } = useEmpreiteiroUnreadCount();
+  const { config } = usePublicConfig();
   // J23/D6 — "Meus Anúncios" embutido quando o empreiteiro tem o papel anunciante.
   const isAnunciante = useHasRole('anunciante');
-  const navItems = isAnunciante
-    ? [...EMPREITEIRO_NAV_ITEMS, { title: 'Meus Anúncios', url: '/empreiteiro/meus-anuncios', icon: RiMegaphoneLine }]
-    : EMPREITEIRO_NAV_ITEMS;
+  const navItems = isAnunciante && config.marketplaceVisivel
+    ? [...getEmpreiteiroNavItems(true), { title: 'Meus Anúncios', url: '/empreiteiro/meus-anuncios', icon: RiMegaphoneLine }]
+    : getEmpreiteiroNavItems(config.marketplaceVisivel);
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();

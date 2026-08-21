@@ -30,6 +30,9 @@ export const registerSchema = z
       .regex(/^[a-z0-9_.]+$/, "Use apenas letras, números, ponto ou underline"),
     password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
     role: z.enum(["contratante", "empreiteiro", "anunciante"]),
+    // Produto adicional: mantém users.role como empreiteiro e provisiona o
+    // entitlement xgestão separadamente no registro.
+    xgestao: z.boolean().optional(),
     phone: z.string().optional(),
     // CPF/CNPJ é OPCIONAL no cadastro (J61). A primeira tela pede só os dados
     // básicos; o documento é coletado depois, no wizard de onboarding (J51) ou

@@ -13,8 +13,10 @@ import {
   updateUserRole,
 } from "@features/auth/api/auth-storage";
 import { storage } from "@/server/storage";
+import { db } from "@shared/db/db";
+import { userRoles } from "@shared/db/schema";
 
-const VALID_PERSONAS = new Set(["contratante", "empreiteiro"]);
+const VALID_PERSONAS = new Set(["contratante", "empreiteiro", "xgestao"]);
 
 /**
  * Endpoint para converter sessão NextAuth (OAuth) em tokens JWT custom
@@ -53,17 +55,20 @@ export async function POST(request: NextRequest) {
     // diferente da role default persistida pelo adapter, atualiza a role
     // ANTES de criar o profile row para evitar criar a row errada.
     const personaCookie = request.cookies.get("x_signup_persona")?.value;
+    const xgestaoSignup = personaCookie === "xgestao";
+    const roleEscolhida = xgestaoSignup ? "empreiteiro" : personaCookie;
+    let isFirstLogin = false;
     if (
       personaCookie &&
       VALID_PERSONAS.has(personaCookie) &&
-      personaCookie !== dbUser.role &&
+      roleEscolhida !== dbUser.role &&
       dbUser.role !== "admin"
     ) {
-      const isFirstLogin = !(await hasAnyProfileRow(dbUser.id));
+      isFirstLogin = !(await hasAnyProfileRow(dbUser.id));
       if (isFirstLogin) {
         const updated = await updateUserRole(
           dbUser.id,
-          personaCookie as "contratante" | "empreiteiro"
+          roleEscolhida as "contratante" | "empreiteiro"
         );
         if (updated) dbUser = updated;
       }
@@ -89,6 +94,12 @@ export async function POST(request: NextRequest) {
       );
       setNoCacheHeaders(response);
       return response;
+    }
+    if (xgestaoSignup && isFirstLogin && dbUser.role === "empreiteiro") {
+      await db
+        .insert(userRoles)
+        .values({ userId: dbUser.id, role: "xgestao", origem: "signup" })
+        .onConflictDoNothing();
     }
 
     // Preparar dados do usuário para JWT

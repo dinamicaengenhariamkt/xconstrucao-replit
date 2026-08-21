@@ -7,11 +7,17 @@ import { usePathname } from "next/navigation";
 import { RiMenuLine } from 'react-icons/ri';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@shared/components/ui/sheet";
 import type { GlassNavProps } from '../types';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 
 export function GlassNav({ showAccessButton = true, showAdminButton = false }: GlassNavProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { config } = usePublicConfig();
+  const accessHref = config.marketplaceVisivel
+    ? "/acesso-plataforma"
+    : "/login?perfil=xgestao&next=%2Fxgestao%2Fobras";
+  const accessLabel = config.marketplaceVisivel ? "Acesso à Plataforma" : "Acessar xgestão";
 
   useEffect(() => {
     setMounted(true);
@@ -85,12 +91,12 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
           )}
           {showAccessButton && !showAdminButton && (
             <Link
-              href="/acesso-plataforma"
+              href={accessHref}
               prefetch={false}
               className="bg-[#333333] text-white text-sm font-bold px-6 py-2 rounded-full hover:brightness-110 transition-all"
               data-testid="link-acesso-plataforma"
             >
-              Acesso à Plataforma
+              {accessLabel}
             </Link>
           )}
         </div>
@@ -151,12 +157,12 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
             )}
             {showAccessButton && !showAdminButton && (
               <Link
-                href="/acesso-plataforma"
+                href={accessHref}
                 prefetch={false}
                 className="block w-full bg-[#333333] text-white text-sm font-bold px-6 py-3 rounded-full hover:brightness-110 transition-all text-center"
                 data-testid="link-acesso-plataforma-mobile"
               >
-                Acesso à Plataforma
+                {accessLabel}
               </Link>
             )}
           </div>

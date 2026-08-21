@@ -7,6 +7,8 @@ export interface PublicConfig {
   descricao: string;
   anuncios: boolean;
   faq: boolean;
+  /** Exibe os pontos públicos de descoberta do marketplace. */
+  marketplaceVisivel: boolean;
   adPaymentEnabled: boolean;
   /** Gateway em sandbox: nenhuma cobrança é real, mesmo em produção. */
   pagamentoSandbox: boolean;
@@ -17,6 +19,8 @@ const DEFAULTS: PublicConfig = {
   descricao: "Plataforma de gestão de obras e conexão entre contratantes e empreiteiras.",
   anuncios: true,
   faq: true,
+  // Fail-open: em caso de erro de leitura, preserva a experiência existente.
+  marketplaceVisivel: true,
   // fail-safe: nunca prometer cobrança real que não está ligada.
   adPaymentEnabled: false,
   // fail-safe na direção oposta ao de cima: avisar "é teste" quando na dúvida

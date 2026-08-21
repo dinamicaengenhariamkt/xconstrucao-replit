@@ -1,7 +1,7 @@
 # Jornada — XG05: Ocultar o marketplace
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-5
-> Última atualização: 2026-08-19
+> Status: concluída | Prioridade: alta | Wave: xgestão-5
+> Última atualização: 2026-08-21
 
 > **Confirmado na reunião 002 (2026-08-19):** ocultar o marketplace e a jornada do contratante segue no escopo, sem mudança. *"Das questões que você trouxe, a questão do MVP, da questão de ocultar o marketplace ali, ocultar a jornada do contratante, ele já está ok, já está confirmado da nossa parte"* (03:41).
 >
@@ -59,13 +59,13 @@ Nenhum novo. **As rotas e APIs do marketplace continuam vivas e respondendo** �
 
 ## 9. Checklist de implementação
 
-- [ ] Gatear os CTAs de marketplace na home pelo `marketplaceVisivel`, com estado "em breve"
-- [ ] Apontar os CTAs do xgestão para `/xgestao-inteligente` (ou direto ao login do xgestão)
-- [ ] Mesmo gate em `/acesso-plataforma`
-- [ ] Ocultar do menu do empreiteiro: Novas Obras Disponíveis, Obras Salvas, Minhas Candidaturas, Meus Recebimentos, Meu Saldo
-- [ ] Remover URLs de marketplace do sitemap enquanto oculto
-- [ ] Login próprio do xgestão, com marca
-- [ ] Spec `tests/e2e/integration/xgestao-marketplace-oculto.integration.spec.ts`
+- [x] Gatear os CTAs de marketplace na home pelo `marketplaceVisivel`, com estado "em breve"
+- [x] Apontar os CTAs do xgestão para `/xgestao-inteligente` (ou direto ao login do xgestão)
+- [x] Mesmo gate em `/acesso-plataforma`
+- [x] Ocultar do menu do empreiteiro: Novas Obras Disponíveis, Obras Salvas, Minhas Candidaturas, Meus Recebimentos, Meu Saldo
+- [x] Remover URLs de marketplace do sitemap enquanto oculto
+- [x] Login próprio do xgestão, com marca
+- [x] Spec `tests/e2e/integration/xgestao-marketplace-oculto.integration.spec.ts`
 
 > ⚠️ **Nenhuma rota apagada, nenhum componente comentado, nada removido de [features/marketplace/](../../features/marketplace/).** Ocultação é sempre condicional de renderização lida do toggle.
 
@@ -91,3 +91,5 @@ Nenhum novo. **As rotas e APIs do marketplace continuam vivas e respondendo** �
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- 2026-08-21 — A entrega preserva todas as rotas e APIs legadas: o toggle controla somente a descoberta pública, o menu e os links de entrada. O sitemap também acompanha a configuração, sem exigir nova publicação.

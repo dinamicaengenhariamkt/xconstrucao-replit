@@ -34,6 +34,7 @@ import {
   RiBookmarkLine,
 } from 'react-icons/ri';
 import { useEmpreiteiroNotifications } from '@features/empreiteiro/notifications/hooks/use-notifications';
+import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 import { cn } from '@shared/lib/utils';
 import type { NotificacaoTipo } from '@features/empreiteiro/notifications/types';
 
@@ -69,6 +70,7 @@ function formatNotifTime(isoDate: string): string {
 }
 
 export function EmpreiteiroTopbar() {
+  const { config } = usePublicConfig();
   const { user, logout } = useAuth();
   const router = useRouter();
   const { topbarNotifications: notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } = useEmpreiteiroNotifications();
@@ -102,32 +104,36 @@ export function EmpreiteiroTopbar() {
         {/* Desktop Sidebar Toggle */}
         <SidebarTrigger icon={RiMenuLine} className="hidden md:flex" />
 
-        {/* Mobile: Botão Ícone de Busca */}
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setSearchOpen(true)}
-          className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-          aria-label="Abrir busca"
-          data-testid="button-search-mobile"
-        >
-          <RiSearchLine className="w-5 h-5" />
-        </Button>
+        {config.marketplaceVisivel && (
+          <>
+            {/* Mobile: Botão Ícone de Busca */}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setSearchOpen(true)}
+              className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+              aria-label="Abrir busca"
+              data-testid="button-search-mobile"
+            >
+              <RiSearchLine className="w-5 h-5" />
+            </Button>
 
-        {/* Desktop: Trigger de Busca Global (abre EmpreiteiroSearchDialog) */}
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
-          aria-label="Abrir busca global"
-          data-testid="button-search"
-        >
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <span className="flex-1 truncate">{EMPREITEIRO_SEARCH_CONFIG.triggerLabel}</span>
-          <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 tabular-nums">
-            ⌘K
-          </kbd>
-        </button>
+            {/* Desktop: Trigger de Busca Global (abre EmpreiteiroSearchDialog) */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
+              aria-label="Abrir busca global"
+              data-testid="button-search"
+            >
+              <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <span className="flex-1 truncate">{EMPREITEIRO_SEARCH_CONFIG.triggerLabel}</span>
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 tabular-nums">
+                ⌘K
+              </kbd>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Actions */}
@@ -279,10 +285,12 @@ export function EmpreiteiroTopbar() {
               <RiUserLine className="w-4 h-4 mr-2" />
               Meu perfil
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/empreiteiro/obras-salvas')}>
-              <RiBookmarkLine className="w-4 h-4 mr-2" />
-              Obras Salvas
-            </DropdownMenuItem>
+            {config.marketplaceVisivel && (
+              <DropdownMenuItem onClick={() => router.push('/empreiteiro/obras-salvas')}>
+                <RiBookmarkLine className="w-4 h-4 mr-2" />
+                Obras Salvas
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => router.push('/empreiteiro/configuracoes')}>
               <RiSettings3Line className="w-4 h-4 mr-2" />
               Configurações
@@ -300,7 +308,10 @@ export function EmpreiteiroTopbar() {
       </div>
 
       {/* Dialog de Busca Global (desktop + mobile) */}
-      <EmpreiteiroSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <EmpreiteiroSearchDialog
+        open={config.marketplaceVisivel && searchOpen}
+        onOpenChange={setSearchOpen}
+      />
     </header>
   );
 }

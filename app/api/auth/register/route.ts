@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, username, password, role, phone, cpfCnpj } = parsed.data;
+    const { name, email, username, password, role, phone, cpfCnpj, xgestao } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
 
     // J30 — bloqueio de cadastro por perfil. `anunciante` nunca é bloqueado (porta
@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
         },
         403,
       );
+    }
+    if (xgestao && role !== "empreiteiro") {
+      return jsonNoStore({ message: "O xgestão exige uma conta de empreiteiro." }, 400);
     }
 
     // J26: reforça o tamanho mínimo de senha configurado pelo admin (piso 8).
@@ -99,7 +102,7 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         emailVerified: null,
       },
-      { cpfCnpj: cpfCnpj || undefined },
+      { cpfCnpj: cpfCnpj || undefined, xgestao },
     );
 
     // Persistir aceite LGPD (termos + privacidade) em user_consents.

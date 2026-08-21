@@ -22,6 +22,9 @@ export async function GET() {
     // flags de módulo: default ON; só `false` explícito desliga.
     anuncios: plataforma.anuncios !== false,
     faq: plataforma.faq !== false,
+    // XG05 — flag pública de apresentação. Não bloqueia rotas nem APIs do
+    // marketplace; só controla os pontos de entrada e descoberta.
+    marketplaceVisivel: plataforma.marketplaceVisivel !== false,
     // J53 — cobrança real de anúncio ligada? (gate env AD_PAYMENT_GATEWAY + gateway
     // Asaas). Default false = protótipo; a UI só oferece "Pagar" quando true.
     adPaymentEnabled: isAdPaymentEnabled(),

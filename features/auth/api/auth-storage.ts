@@ -105,7 +105,7 @@ export async function ensureProfileRow(user: User): Promise<void> {
  */
 export async function createUserWithProfile(
   data: InsertUser,
-  profileExtras?: { cpfCnpj?: string },
+  profileExtras?: { cpfCnpj?: string; xgestao?: boolean },
 ): Promise<User> {
   // cpfCnpj vem normalizado (só dígitos) do registerSchema. ≤11 dígitos → CPF
   // (Pessoa Física); mais que isso → CNPJ (Pessoa Jurídica). Persistido no
@@ -178,6 +178,12 @@ export async function createUserWithProfile(
       await tx
         .insert(userRoles)
         .values({ userId: user.id, role: user.role, origem: "signup" })
+        .onConflictDoNothing();
+    }
+    if (profileExtras?.xgestao) {
+      await tx
+        .insert(userRoles)
+        .values({ userId: user.id, role: "xgestao", origem: "signup" })
         .onConflictDoNothing();
     }
 
