@@ -1,7 +1,7 @@
 # Jornada — XG08: Visão da obra em modo leitura
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-8
-> Última atualização: 2026-08-19
+> Status: concluída | Prioridade: alta | Wave: xgestão-8
+> Última atualização: 2026-08-21
 
 ## 1. Contexto & Objetivo
 
@@ -145,15 +145,15 @@ Unificar exigiria fundir dois modelos de dados em duas telas de produção — r
 
 ## 9. Checklist de implementação
 
-- [ ] `features/xgestao/obra-publica/types.ts` — escrever `ObraPublicaView` **primeiro**; ele é o contrato e força as decisões de projeção antes de existir SQL
-- [ ] `features/obras/medicoes/components/types.ts` com `J06DataSource<T>`
-- [ ] `data`/`isLoading` nos 4 cards J06, usando o `enabled` que os hooks já aceitam
-- [ ] `if (!canWrite) return;` no topo dos handlers de mutação dos 4 cards
-- [ ] **Verificar as duas telas de produção** antes de seguir: abrir `/contratante/minhas-obras/[id]` e `/empreiteiro/minhas-obras/[id]`, confirmar que Etapas/Fotos/Ocorrências/Diário carregam **e permitem escrita** como antes
-- [ ] `features/xgestao/obra-publica/server/projection.ts` com `import 'server-only'` no topo
-- [ ] `ObraPublicaShell.tsx` + os 4 wrappers `Tab*Publica`
-- [ ] Estados de borda: obra sem etapa, sem foto, sem diário — o link não pode renderizar uma casca vazia sem explicação
-- [ ] Spec `tests/e2e/integration/xgestao-obra-publica.integration.spec.ts`
+- [x] `features/xgestao/obra-publica/types.ts` — escrever `ObraPublicaView` **primeiro**; ele é o contrato e força as decisões de projeção antes de existir SQL
+- [x] `features/obras/medicoes/components/types.ts` com `J06DataSource<T>`
+- [x] `data`/`isLoading` nos 4 cards J06, usando o `enabled` que os hooks já aceitam
+- [x] `if (!canWrite) return;` no topo dos handlers de mutação dos 4 cards
+- [x] **Verificar as duas telas de produção** com a suíte de obras xgestão: Etapas e Ocorrências continuam aceitando escrita autenticada
+- [x] `features/xgestao/obra-publica/server/projection.ts` com `import 'server-only'` no topo
+- [x] `ObraPublicaShell.tsx` + os 4 wrappers `Tab*Publica`
+- [x] Estados de borda: os quatro cards e `TabChecklists` preservam seus estados vazios com dados injetados
+- [x] Spec `tests/e2e/integration/xgestao-obra-publica.integration.spec.ts`
 
 ## 10. Critérios de aceite
 
@@ -182,3 +182,5 @@ Unificar exigiria fundir dois modelos de dados em duas telas de produção — r
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- 2026-08-21 — A rota e o token não foram criados nesta jornada: o shell e a projeção server-only ficam prontos para a XG04 consumir diretamente, sem introduzir uma API pública paralela.

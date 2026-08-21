@@ -4,3 +4,4 @@
 - [npm peer-dep conflicts in deployment](npm-legacy-peer-deps.md) — project requires legacy-peer-deps=true in .npmrc; deployment runs clean npm install and fails without it
 - [xgestão subscription isolation](xgestao-subscription-isolation.md) — xgestão is a separate product entitlement and must never alter marketplace tiers or limits.
 - [xgestão signup entitlement](xgestao-signup-entitlement.md) — xgestão signup keeps the empreiteiro role and grants only its additive entitlement.
+- [React render tests in Playwright](react-render-tests-playwright.md) — run component SSR checks through tsx scripts, not directly inside Playwright's module adapter.

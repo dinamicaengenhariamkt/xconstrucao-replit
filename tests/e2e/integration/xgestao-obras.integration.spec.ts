@@ -139,6 +139,13 @@ test.describe('xgestão — obras próprias', () => {
       data: { titulo: 'Acesso ao canteiro', descricao: 'Confirmar chave de acesso com a equipe.', gravidade: 'baixo' },
     });
     expect(ocorrencia.status(), await ocorrencia.text()).toBe(201);
+    const etapasDaObraPropria = await request.get(`/api/obras/${obra.id}/etapas`);
+    expect(etapasDaObraPropria.status()).toBe(200);
+    expect((await etapasDaObraPropria.json()) as { rows: Array<{ id: string }> }).toMatchObject({
+      rows: expect.arrayContaining([expect.objectContaining({ id: etapaBody.id })]),
+    });
+    const ocorrenciasDaObraPropria = await request.get(`/api/obras/${obra.id}/ocorrencias`);
+    expect(ocorrenciasDaObraPropria.status()).toBe(200);
     await logout(request);
 
     const contratanteEmail = await registrar(request, 'contratante', 'xgestao-obras-cli');
@@ -188,6 +195,18 @@ test.describe('xgestão — obras próprias', () => {
       data: {},
     });
     expect(aceita.status(), await aceita.text()).toBe(200);
+    const etapaMarketplace = await request.post(`/api/obras/${marketplace.id}/etapas`, {
+      data: { nome: 'Fundação', descricao: 'Preparar a primeira etapa do cronograma.' },
+    });
+    expect(etapaMarketplace.status(), await etapaMarketplace.text()).toBe(201);
+    const ocorrenciaMarketplace = await request.post(`/api/obras/${marketplace.id}/ocorrencias`, {
+      data: { titulo: 'Visita técnica', descricao: 'Registrar a vistoria inicial com a equipe.', gravidade: 'baixo' },
+    });
+    expect(ocorrenciaMarketplace.status(), await ocorrenciaMarketplace.text()).toBe(201);
+    const etapasMarketplace = await request.get(`/api/obras/${marketplace.id}/etapas`);
+    expect(etapasMarketplace.status()).toBe(200);
+    const ocorrenciasMarketplace = await request.get(`/api/obras/${marketplace.id}/ocorrencias`);
+    expect(ocorrenciasMarketplace.status()).toBe(200);
     await logout(request);
 
     await loginAs(request, empreiteiroEmail);

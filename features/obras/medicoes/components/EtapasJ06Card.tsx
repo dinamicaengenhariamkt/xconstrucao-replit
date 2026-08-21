@@ -17,8 +17,9 @@ import {
   useDeleteEtapa,
   type EtapaStatus,
 } from '../hooks/use-obra-j06';
+import type { EtapaJ06Data, J06DataSource } from './types';
 
-interface Props {
+interface Props extends J06DataSource<EtapaJ06Data> {
   obraId: string;
   canWrite: boolean;
   canEditScope: boolean; // contratante/admin
@@ -38,8 +39,11 @@ const STATUS_BADGE: Record<EtapaStatus, string> = {
   concluido: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
-export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
-  const { data: etapas, isLoading } = useObraEtapas(obraId);
+export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading: isLoadingProp }: Props) {
+  const injected = data !== undefined;
+  const query = useObraEtapas(obraId, !injected);
+  const etapas = injected ? data : query.data;
+  const isLoading = injected ? (isLoadingProp ?? false) : query.isLoading;
   const createMut = useCreateEtapa(obraId);
   const updateMut = useUpdateEtapa(obraId);
   const deleteMut = useDeleteEtapa(obraId);
@@ -50,6 +54,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
   const [responsavel, setResponsavel] = useState('');
 
   const handleCreate = async () => {
+    if (!canWrite) return;
     if (nome.trim().length < 2) return;
     try {
       await createMut.mutateAsync({
@@ -65,6 +70,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
   };
 
   const handleProgresso = async (etapaId: string, progresso: number) => {
+    if (!canWrite) return;
     try {
       await updateMut.mutateAsync({ etapaId, progresso });
     } catch (e) {
@@ -73,6 +79,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
   };
 
   const handleStatus = async (etapaId: string, status: EtapaStatus) => {
+    if (!canWrite) return;
     try {
       await updateMut.mutateAsync({ etapaId, status });
     } catch (e) {
@@ -81,6 +88,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
   };
 
   const handleDelete = async (etapaId: string) => {
+    if (!canWrite) return;
     if (!confirm('Excluir esta etapa?')) return;
     try {
       await deleteMut.mutateAsync(etapaId);
@@ -132,7 +140,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope }: Props) {
                   <div className="min-w-0">
                     <p className="font-semibold">{e.nome}</p>
                     {e.descricao && <p className="text-xs text-muted-foreground mt-0.5">{e.descricao}</p>}
-                    {e.responsavel && <p className="text-xs text-muted-foreground">Responsável: {e.responsavel}</p>}
+                     {e.responsavel && <p className="text-xs text-muted-foreground">Responsável: {e.responsavel}</p>}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_BADGE[e.status]}`}>{STATUS_LABEL[e.status]}</span>
                 </div>

@@ -10,15 +10,19 @@ import { FileUploader } from '@features/shared/components/FileUploader';
 import { RiDeleteBinLine, RiImageLine, RiLoader4Line, RiSendPlaneFill } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import { useObraDiario, useCreateDiario, useDeleteDiario } from '../hooks/use-obra-j06';
+import type { DiarioJ06Data, J06DataSource } from './types';
 
-interface Props {
+interface Props extends J06DataSource<DiarioJ06Data> {
   obraId: string;
   canWrite: boolean;
   currentUserId?: string | null;
 }
 
-export function DiarioJ06Card({ obraId, canWrite, currentUserId }: Props) {
-  const { data: entries, isLoading } = useObraDiario(obraId);
+export function DiarioJ06Card({ obraId, canWrite, currentUserId, data, isLoading: isLoadingProp }: Props) {
+  const injected = data !== undefined;
+  const query = useObraDiario(obraId, !injected);
+  const entries = injected ? data : query.data;
+  const isLoading = injected ? (isLoadingProp ?? false) : query.isLoading;
   const createMut = useCreateDiario(obraId);
   const deleteMut = useDeleteDiario(obraId);
   const { toast } = useToast();
@@ -26,6 +30,7 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId }: Props) {
   const [fotoIds, setFotoIds] = useState<{ id: string; url: string }[]>([]);
 
   const handleSubmit = async () => {
+    if (!canWrite) return;
     if (texto.trim().length < 2) return;
     try {
       await createMut.mutateAsync({ texto: texto.trim(), fotoFileIds: fotoIds.map((f) => f.id) });
@@ -37,6 +42,7 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId }: Props) {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canWrite) return;
     if (!confirm('Excluir esta entrada do diário?')) return;
     try { await deleteMut.mutateAsync(id); toast({ title: 'Removido' }); }
     catch (e) { toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }); }
@@ -96,7 +102,7 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId }: Props) {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">
-                        <strong className="text-foreground">{e.autorNome}</strong> · {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true, locale: ptBR })}
+                         <strong className="text-foreground">{e.autorNome ?? 'Equipe da obra'}</strong> · {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true, locale: ptBR })}
                       </p>
                       <p className="text-sm mt-1 whitespace-pre-wrap break-words">{e.texto}</p>
                       {e.fotos.length > 0 && (

@@ -14,8 +14,9 @@ import { FileUploader } from '@features/shared/components/FileUploader';
 import { RiAddLine, RiCheckLine, RiLoader4Line } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import { useObraOcorrencias, useCreateOcorrencia, useResolverOcorrencia, type OcorrenciaGravidade } from '../hooks/use-obra-j06';
+import type { J06DataSource, OcorrenciaJ06Data } from './types';
 
-interface Props {
+interface Props extends J06DataSource<OcorrenciaJ06Data> {
   obraId: string;
   canWrite: boolean;
 }
@@ -27,8 +28,11 @@ const GRAVIDADE_BADGE: Record<OcorrenciaGravidade, string> = {
   baixo: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
-export function OcorrenciasJ06Card({ obraId, canWrite }: Props) {
-  const { data: rows, isLoading } = useObraOcorrencias(obraId);
+export function OcorrenciasJ06Card({ obraId, canWrite, data, isLoading: isLoadingProp }: Props) {
+  const injected = data !== undefined;
+  const query = useObraOcorrencias(obraId, !injected);
+  const rows = injected ? data : query.data;
+  const isLoading = injected ? (isLoadingProp ?? false) : query.isLoading;
   const createMut = useCreateOcorrencia(obraId);
   const resolverMut = useResolverOcorrencia(obraId);
   const { toast } = useToast();
@@ -39,6 +43,7 @@ export function OcorrenciasJ06Card({ obraId, canWrite }: Props) {
   const [fotoFileId, setFotoFileId] = useState<string | null>(null);
 
   const handleCreate = async () => {
+    if (!canWrite) return;
     if (titulo.trim().length < 3 || desc.trim().length < 3) return;
     try {
       await createMut.mutateAsync({ titulo: titulo.trim(), descricao: desc.trim(), gravidade: grav, fotoFileId });
@@ -48,6 +53,7 @@ export function OcorrenciasJ06Card({ obraId, canWrite }: Props) {
   };
 
   const handleResolver = async (id: string) => {
+    if (!canWrite) return;
     try { await resolverMut.mutateAsync(id); toast({ title: 'Ocorrência resolvida' }); }
     catch (e) { toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }); }
   };
@@ -115,7 +121,7 @@ export function OcorrenciasJ06Card({ obraId, canWrite }: Props) {
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words">{o.descricao}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Por <strong className="text-foreground">{o.autorNome}</strong> · {formatDistanceToNow(new Date(o.createdAt), { addSuffix: true, locale: ptBR })}
+                       Por <strong className="text-foreground">{o.autorNome ?? 'Equipe da obra'}</strong> · {formatDistanceToNow(new Date(o.createdAt), { addSuffix: true, locale: ptBR })}
                       {o.resolvidoPorNome && o.resolvidoEm && (
                         <> · Resolvida por <strong className="text-foreground">{o.resolvidoPorNome}</strong> {formatDistanceToNow(new Date(o.resolvidoEm), { addSuffix: true, locale: ptBR })}</>
                       )}
