@@ -1,6 +1,7 @@
 export type AdminObraStatus = 'em_andamento' | 'concluida' | 'pausada' | 'planejamento';
 export type AdminObraVisibilidade = 'rascunho' | 'publicada' | 'pausada' | 'arquivada';
 export type AdminObraStatusModeracao = 'pendente' | 'aprovada' | 'rejeitada';
+export type AdminObraProduto = 'marketplace' | 'xgestao';
 
 export const OBRA_MODERACAO_LABEL: Record<AdminObraStatusModeracao, string> = {
   pendente: 'Em revisão',
@@ -92,4 +93,5 @@ export interface AdminObrasFilters {
   periodoInicio?: string;
   periodoFim?: string;
   q?: string;
+  produto?: AdminObraProduto;
 }

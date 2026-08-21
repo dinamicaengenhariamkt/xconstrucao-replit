@@ -19,6 +19,7 @@ import {
 } from '@features/admin/obras/types/list';
 import type {
   AdminObraStatus,
+  AdminObraProduto,
   AdminObraVisibilidade,
 } from '@features/admin/obras/types/list';
 import { formatCurrency } from '@shared/lib/formatters';
@@ -68,6 +69,7 @@ export default function AdminObrasPage() {
   const [periodoInicio, setPeriodoInicio] = useState('');
   const [periodoFim, setPeriodoFim] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [produto, setProduto] = useState<AdminObraProduto | ''>('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading } = useAdminObras({
@@ -80,6 +82,7 @@ export default function AdminObrasPage() {
     periodoInicio: periodoInicio || undefined,
     periodoFim: periodoFim || undefined,
     q: searchQuery || undefined,
+    produto: produto || undefined,
   });
 
   const obras = data?.rows ?? [];
@@ -101,7 +104,8 @@ export default function AdminObrasPage() {
     (visibilidadeSelected.length > 0 ? 1 : 0) +
     (clienteId ? 1 : 0) +
     (empreiteiraId ? 1 : 0) +
-    (periodoInicio || periodoFim ? 1 : 0);
+    (periodoInicio || periodoFim ? 1 : 0) +
+    (produto ? 1 : 0);
 
   const clearAllAdvanced = () => {
     setStatusSelected([]);
@@ -110,6 +114,7 @@ export default function AdminObrasPage() {
     setEmpreiteiraId('');
     setPeriodoInicio('');
     setPeriodoFim('');
+    setProduto('');
     setCurrentPage(1);
   };
 
@@ -234,6 +239,19 @@ export default function AdminObrasPage() {
               onMaxChange={onFilterChange(setPeriodoFim)}
               testIdPrefix="filter-periodo"
             />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Produto</label>
+              <select
+                value={produto}
+                onChange={(event) => onFilterChange(setProduto)(event.target.value as AdminObraProduto | '')}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                data-testid="filter-produto"
+              >
+                <option value="">Todos os produtos</option>
+                <option value="marketplace">Marketplace</option>
+                <option value="xgestao">xgestão</option>
+              </select>
+            </div>
           </AdvancedFiltersPopover>
 
           <div className="relative w-full sm:flex-1 sm:max-w-md sm:ml-auto">
@@ -288,6 +306,13 @@ export default function AdminObrasPage() {
                   setPeriodoFim('');
                 }}
                 testId="active-chip-periodo"
+              />
+            )}
+            {produto && (
+              <ActiveFilterChip
+                label={`Produto: ${produto === 'xgestao' ? 'xgestão' : 'Marketplace'}`}
+                onRemove={() => setProduto('')}
+                testId="active-chip-produto"
               />
             )}
           </div>

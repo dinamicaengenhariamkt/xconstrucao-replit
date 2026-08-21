@@ -28,7 +28,9 @@ const ID_FAKE = "00000000-0000-0000-0000-000000000000";
 /** Rota admin fora da allowlist do escopo xgestão — o alvo do 403. */
 const ROTA_FORA_DO_ESCOPO = "/api/admin/financeiro/dashboard-stats";
 /** Rota admin dentro da allowlist. */
-const ROTA_NO_ESCOPO = "/api/admin/planos";
+const ROTA_NO_ESCOPO = "/api/admin/xgestao";
+/** Planos genéricos incluem marketplace e não pertencem ao escopo xgestão. */
+const ROTA_PLANOS_MARKETPLACE = "/api/admin/planos";
 
 /** Cria um admin descartável e devolve o id. Requer sessão de superadmin. */
 async function criarAdminDescartavel(
@@ -121,6 +123,12 @@ test.describe("XG06 — escopo administrativo", () => {
       permitido.status(),
       "admin de escopo xgestão deve acessar a allowlist",
     ).not.toBe(403);
+
+    const planosMarketplace = await request.get(ROTA_PLANOS_MARKETPLACE);
+    expect(
+      planosMarketplace.status(),
+      "admin de escopo xgestão não deve ler ou editar planos do marketplace",
+    ).toBe(403);
 
     // Cleanup: volta ao superadmin para remover a conta descartável.
     await logout(request);

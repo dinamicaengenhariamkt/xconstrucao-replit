@@ -44,7 +44,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
 ];
 
 export const ADMIN_BOTTOM_NAV_ITEMS: NavItem[] = [
-  { title: 'Planos', url: '/admin/planos', icon: RiVipCrownLine, escopos: ['global', 'xgestao'] },
+  { title: 'Planos', url: '/admin/planos', icon: RiVipCrownLine },
   { title: 'Perguntas Frequentes', url: '/admin/faq', icon: RiQuestionLine },
   { title: 'Documentos Legais', url: '/admin/legal', icon: RiFileTextLine },
   { title: 'Contratos', url: '/admin/contratos', icon: RiFileList3Line },

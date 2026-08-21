@@ -66,9 +66,7 @@ export function isAdminXgestao(actor: AdminScopeActor | null | undefined): boole
  */
 export const XGESTAO_ADMIN_PREFIXES: readonly string[] = [
   "/admin/xgestao",
-  "/admin/planos",
   "/api/admin/xgestao",
-  "/api/admin/planos",
 ];
 
 /**

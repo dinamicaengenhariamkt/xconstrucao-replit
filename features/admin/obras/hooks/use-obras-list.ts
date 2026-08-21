@@ -18,6 +18,7 @@ function buildQS(filters: AdminObrasFilters): string {
   if (filters.periodoInicio) params.set('periodo_inicio', filters.periodoInicio);
   if (filters.periodoFim) params.set('periodo_fim', filters.periodoFim);
   if (filters.q?.trim()) params.set('q', filters.q.trim());
+  if (filters.produto) params.set('produto', filters.produto);
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }

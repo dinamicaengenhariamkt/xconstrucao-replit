@@ -7,4 +7,4 @@ xgestão subscriptions must always be handled independently from marketplace sub
 
 **Why:** A single account can pay for both products. Letting lifecycle events, status lookups, or cancellation of one product inspect or write the other causes accidental access grants or revocations.
 
-**How to apply:** Whenever handling a subscription, derive and filter its product persona. Only marketplace lifecycle paths may update the legacy marketplace tier; xgestão lifecycle paths must leave it unchanged.
+**How to apply:** Whenever handling a subscription, derive and filter its product persona. Only marketplace lifecycle paths may update the legacy marketplace tier; xgestão lifecycle paths must leave it unchanged. For xgestão admin reporting, count subscribers from the additive `xgestao` entitlement and use only an active xgestão subscription to enrich the tier, so free users are not omitted.

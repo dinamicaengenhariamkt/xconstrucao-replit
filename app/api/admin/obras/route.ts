@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, obras, users } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -7,7 +7,7 @@ import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/a
 /**
  * GET /api/admin/obras
  *  Gate isAdminLike (admin + superadmin).
- *  Filtros: cliente_id, empreiteira_id, status, visibilidade, periodo_inicio, periodo_fim, q.
+ *  Filtros: cliente_id, empreiteira_id, status, visibilidade, periodo_inicio, periodo_fim, q, produto.
  *  Paginação: page (≥1), pageSize (1..100, default 20).
  *  Devolve { rows, total, page, pageSize, totalPages } com join leve (clienteNome, empreiteiraNome).
  */
@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
   const periodoInicio = q.get("periodo_inicio");
   const periodoFim = q.get("periodo_fim");
   const search = q.get("q")?.trim();
+  const produto = q.get("produto");
   const page = Math.max(1, Number(q.get("page") ?? 1) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(q.get("pageSize") ?? 20) || 20));
 
@@ -56,6 +57,8 @@ export async function GET(request: NextRequest) {
       ),
     );
   }
+  if (produto === "marketplace") filters.push(isNotNull(obras.clienteId));
+  if (produto === "xgestao") filters.push(and(isNull(obras.clienteId), isNotNull(obras.empreiteiraId)));
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 

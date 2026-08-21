@@ -1,7 +1,7 @@
 # Jornada — XG06: Visão administrativa do xgestão
 
-> Status: planejada (escopo a confirmar com o cliente) | Prioridade: média | Wave: xgestão-6
-> Última atualização: 2026-08-19
+> Status: concluída | Prioridade: média | Wave: xgestão-6
+> Última atualização: 2026-08-21
 
 ## 1. Contexto & Objetivo
 
@@ -60,12 +60,12 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 
 ## 9. Checklist de implementação
 
-- [ ] Confirmar o escopo mínimo com o cliente
-- [ ] `GET /api/admin/xgestao`
-- [ ] `app/admin/xgestao/page.tsx` com a lista e os 4 contadores
-- [ ] Entrada na navegação do admin
-- [ ] Filtro `produto` em `/admin/obras`
-- [ ] Verificar que a listagem de obras do admin continua correta para o marketplace
+- [x] Confirmar o escopo mínimo com o cliente
+- [x] `GET /api/admin/xgestao`
+- [x] `app/admin/xgestao/page.tsx` com a lista e os 4 contadores
+- [x] Entrada na navegação do admin
+- [x] Filtro `produto` em `/admin/obras`
+- [x] Verificar que a listagem de obras do admin continua correta para o marketplace
 
 ## 10. Critérios de aceite
 
