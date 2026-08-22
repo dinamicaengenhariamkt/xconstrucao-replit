@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "scripts/seed-demo-xgestao-core.ts",
+    "scripts/seed-demo-xgestao.ts",
+    "scripts/seed-demo-xgestao.test.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".next-e2e"
+  ]
+}

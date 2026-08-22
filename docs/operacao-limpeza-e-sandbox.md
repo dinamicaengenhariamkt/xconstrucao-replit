@@ -74,6 +74,9 @@ CONFIRM_XGESTAO_DEMO=SIM npm run db:demo:xgestao
 
 # Conferir que as contas, a obra própria e o modo público xgestão estão prontos
 npm run db:demo:xgestao:check
+
+# Executar as salvaguardas automatizadas do seed (sem conectar ao banco)
+npm run test:seed:xgestao
 ```
 
 O processo preserva todos os usuários, obras e configurações do marketplace,
