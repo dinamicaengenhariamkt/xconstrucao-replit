@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
 
-export default function OAuthSuccessPage() {
+function OAuthSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -93,5 +93,13 @@ export default function OAuthSuccessPage() {
         <p className="text-muted-foreground">Finalizando login...</p>
       </div>
     </div>
+  );
+}
+
+export default function OAuthSuccessPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Finalizando login...</div>}>
+      <OAuthSuccessContent />
+    </Suspense>
   );
 }
