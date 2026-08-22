@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import {
+  BROWSER_DISPONIVEL,
   clearCapturedEmails,
+  MOTIVO_BROWSER_INDISPONIVEL,
   uniqueEmail,
   uniqueUsername,
   waitForVerificationEmail,
@@ -260,5 +262,57 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     expect(convertBody.user.email).toBe(email);
 
     await request.delete(`/api/test/oauth-simulate?email=${encodeURIComponent(email)}`);
+  });
+
+  test("OAuth: retorno com next válido encaminha para o destino seguro", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+
+    const request = page.request;
+    const email = uniqueEmail("oauth-retorno");
+    const userData = { email, name: "OAuth Retorno E2E" };
+
+    try {
+      // O endpoint test-only assina a sessão NextAuth sem depender do Google.
+      const simulated = await request.post("/api/test/oauth-simulate", {
+        data: userData,
+      });
+      expect(simulated.ok()).toBeTruthy();
+
+      // Prepara a conta descartável para que o retorno possa testar o `next`,
+      // em vez de ser interrompido pelo wizard de primeiro acesso.
+      const initialConvert = await request.post("/api/auth/oauth-convert");
+      expect(initialConvert.ok()).toBeTruthy();
+      const concludeOnboarding = await request.post("/api/onboarding/concluir");
+      expect(concludeOnboarding.ok()).toBeTruthy();
+
+      // Simula novamente a etapa externa: agora a navegação visual abaixo é
+      // responsável por converter a sessão e redirecionar.
+      const callbackSession = await request.post("/api/test/oauth-simulate", {
+        data: userData,
+      });
+      expect(callbackSession.ok()).toBeTruthy();
+
+      await page.goto("/auth/oauth-success?next=%2Fcontratante%2Fdashboard");
+      await expect(page).toHaveURL(/\/contratante\/dashboard$/, { timeout: 15_000 });
+    } finally {
+      await request.delete(`/api/test/oauth-simulate?email=${encodeURIComponent(email)}`);
+    }
+  });
+
+  test("OAuth: falha ao converter sessão exibe erro e retorna ao login", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+
+    await page.route("**/api/auth/oauth-convert", (route) =>
+      route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Sessão não encontrada" }),
+      }),
+    );
+
+    await page.goto("/auth/oauth-success");
+    await expect(page.getByText("Erro ao processar login. Tente novamente.")).toBeVisible();
+    await expect(page.getByText("Redirecionando para login...")).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/, { timeout: 8_000 });
   });
 });
