@@ -3,6 +3,7 @@ import { getAccessTokenFromCookieHeader, verifyAccessToken } from "./auth-servic
 import { getUser } from "./auth-storage";
 import { readImpersonationFromRequest, isReadOnlyMethod, type ImpersonationPayload } from "./impersonation";
 import { recordAudit } from "./audit";
+import { adminPodeAcessar } from "./admin-scope";
 import type { User } from "@shared/db/schema";
 
 /**
@@ -61,12 +62,28 @@ export async function requireVerifiedUser(request: NextRequest): Promise<AuthGua
     return { user: null, error: response, impersonation: null, actor: null };
   }
 
+  // O JWT carrega o escopo somente como informação de sessão e pode ficar
+  // desatualizado por até 15 minutos. Para endpoints administrativos, a conta
+  // recém-lida do banco é a fonte de verdade: restringir ou liberar um admin
+  // passa a valer na próxima requisição, inclusive com um token antigo.
+  const pathname = new URL(request.url).pathname;
+  if (pathname.startsWith("/api/admin/") && !adminPodeAcessar(actorUser, pathname)) {
+    const response = NextResponse.json(
+      {
+        error: "ADMIN_ESCOPO_NEGADO",
+        message: "Seu perfil administrativo não tem acesso a esta área.",
+      },
+      { status: 403 },
+    );
+    setNoCacheHeaders(response);
+    return { user: null, error: response, impersonation: null, actor: null };
+  }
+
   // ----- Forced password change gate -----
   // Quando must_change_password=true, bloqueia toda navegação autenticada
   // até a troca, exceto para um conjunto pequeno de endpoints essenciais
   // (troca de senha, logout, /me, refresh).
   if (actorUser.mustChangePassword) {
-    const pathname = new URL(request.url).pathname;
     if (!isPasswordChangeAllowedPath(pathname)) {
       const response = NextResponse.json(
         {

@@ -54,6 +54,11 @@ async function criarAdminDescartavel(
   return body.id ?? body.user?.id ?? null;
 }
 
+async function accessTokenAtual(request: APIRequestContext): Promise<string | null> {
+  const state = await request.storageState();
+  return state.cookies.find((cookie) => cookie.name === "access_token")?.value ?? null;
+}
+
 test.describe("XG06 — escopo administrativo", () => {
   test("admin global (seed) segue acessando rota fora da allowlist do xgestão", async ({
     request,
@@ -132,6 +137,52 @@ test.describe("XG06 — escopo administrativo", () => {
 
     // Cleanup: volta ao superadmin para remover a conta descartável.
     await logout(request);
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    await request.delete(`/api/admin/usuarios/${id}`).catch(() => {});
+    await logout(request);
+  });
+
+  test("restringir o escopo bloqueia imediatamente a sessão administrativa já emitida", async ({
+    request,
+  }) => {
+    await loginAs(request, SEED_ADMIN_EMAIL);
+
+    const email = uniqueEmail("escopo-sessao-antiga");
+    const id = await criarAdminDescartavel(request, email);
+    test.skip(!id, "superadmin/criação de usuário indisponível neste ambiente");
+
+    await logout(request);
+    await loginAs(request, email);
+    const tokenAntigo = await accessTokenAtual(request);
+    test.skip(!tokenAntigo, "login do admin descartável não retornou access_token");
+
+    // Confirma que este é um token global emitido ANTES da mudança de escopo.
+    const antesDaRestricao = await request.get(ROTA_FORA_DO_ESCOPO);
+    expect(antesDaRestricao.status()).not.toBe(403);
+
+    await logout(request);
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    const patch = await request.patch(`/api/admin/usuarios/${id}`, {
+      data: { adminEscopo: "xgestao" },
+    });
+    test.skip(
+      !patch.ok(),
+      `PATCH de escopo exige superadmin; seed não é superadmin (status ${patch.status()})`,
+    );
+    await logout(request);
+
+    const staleSessionHeaders = { Cookie: `access_token=${tokenAntigo}` };
+    const apiNegada = await request.get(ROTA_FORA_DO_ESCOPO, { headers: staleSessionHeaders });
+    expect(apiNegada.status(), "API deve negar o token emitido antes da restrição").toBe(403);
+    expect((await apiNegada.json()).error).toBe("ADMIN_ESCOPO_NEGADO");
+
+    const paginaNegada = await request.get("/admin/financeiro", { headers: staleSessionHeaders });
+    expect(paginaNegada.status(), "página deve negar o token emitido antes da restrição").toBe(403);
+    expect((await paginaNegada.json()).error).toBe("ADMIN_ESCOPO_NEGADO");
+
+    const apiPermitida = await request.get(ROTA_NO_ESCOPO, { headers: staleSessionHeaders });
+    expect(apiPermitida.status(), "allowlist xgestão deve continuar acessível").not.toBe(403);
+
     await loginAs(request, SEED_ADMIN_EMAIL);
     await request.delete(`/api/admin/usuarios/${id}`).catch(() => {});
     await logout(request);
