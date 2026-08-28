@@ -11,7 +11,7 @@ export type { PaymentGateway, CheckoutInput, CheckoutResult, NormalizedWebhookEv
  *
  * Adapters disponíveis:
  *   manual — stub sem cobrança (testes/dev; bloqueado em produção)
- *   asaas  — ASAS checkout hospedado (PIX, Boleto, Cartão); sandbox e prod
+ *   asaas  — checkout hospedado recorrente do Asaas (Cartão); sandbox e prod
  */
 let cached: PaymentGateway | null = null;
 

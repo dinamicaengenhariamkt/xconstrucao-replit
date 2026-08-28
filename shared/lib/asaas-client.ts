@@ -56,6 +56,12 @@ export function isAsaasSandbox(): boolean {
   return getAsaasEnvironment() === "sandbox";
 }
 
+/** URL hospedada do Checkout a partir do ID retornado pelo Asaas. */
+export function getAsaasCheckoutUrl(checkoutId: string): string {
+  const host = isAsaasSandbox() ? "https://sandbox.asaas.com" : "https://asaas.com";
+  return `${host}/checkoutSession/show?id=${encodeURIComponent(checkoutId)}`;
+}
+
 function getApiKey(): string {
   const key = process.env.ASAAS_API_KEY;
   if (!key) throw new Error("[asaas] ASAAS_API_KEY não configurado");
@@ -114,8 +120,9 @@ export interface AsaasCustomerList {
 
 export interface AsaasCheckout {
   id: string;
-  url: string;
-  status: string;
+  /** Presente em versões anteriores da API; no contrato atual o link é montado pelo ID. */
+  url?: string;
+  status?: string;
   split?: AsaasSplit[];
 }
 

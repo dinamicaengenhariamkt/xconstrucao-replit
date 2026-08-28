@@ -91,9 +91,18 @@ export async function POST(request: NextRequest) {
   });
 
   if (result.ok === false) {
+    if (result.code === "GATEWAY_ERROR") {
+      console.error("[checkout] gateway error:", result.detail);
+      const r = NextResponse.json({
+        message: "Não foi possível abrir o pagamento agora. Tente novamente em instantes.",
+        code: result.code,
+      }, { status: 502 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     if (result.code === "INTERNAL_ERROR") {
       console.error("[checkout] iniciarCheckout error:", result.detail);
-      const r = NextResponse.json({ message: "Erro interno no checkout.", detail: result.detail }, { status: 500 });
+      const r = NextResponse.json({ message: "Erro interno no checkout." }, { status: 500 });
       setNoCacheHeaders(r);
       return r;
     }

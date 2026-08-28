@@ -2,8 +2,8 @@
  * Adapter ASAAS — J14.
  *
  * Implementa `PaymentGateway` usando o checkout hospedado do ASAS (redirect).
- * PIX, Boleto e Cartão de crédito disponíveis. Cobrança recorrente gerenciada
- * pelo ASAS; ativação da assinatura via webhook (PAYMENT_CONFIRMED/RECEIVED).
+ * O Checkout recorrente atual do Asaas usa cartão de crédito. A cobrança é
+ * gerenciada pelo Asaas; a ativação ocorre via webhook de pagamento confirmado.
  *
  * Env vars obrigatórias (server-side):
  *   ASAAS_API_KEY        — chave de API (prefixo $aact_hmlg_ em sandbox)
@@ -19,6 +19,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   asaasRequest,
+  getAsaasCheckoutUrl,
   type AsaasCheckout,
   type AsaasCustomer,
   type AsaasCustomerList,
@@ -50,7 +51,11 @@ export function parseExternalRef(ref: string): { userId: string; planoId: string
 /** Busca customer ASAS por email; cria se não existir. Atualiza cpfCnpj se já
  *  existe mas estava faltando — evita HTTP 400 em cobranças recorrentes.
  *  Exportado para provisionamento proativo do customer no cadastro (J44). */
-export async function findOrCreateCustomer(email: string, name: string, cpfCnpj?: string): Promise<AsaasCustomer> {
+export async function findOrCreateCustomer(
+  email: string,
+  name: string,
+  cpfCnpj?: string,
+): Promise<AsaasCustomer> {
   // Tenta encontrar por email
   const list = await asaasRequest<AsaasCustomerList>("GET", `/customers?email=${encodeURIComponent(email)}&limit=1`);
   if (list.data?.length > 0) {
@@ -84,6 +89,11 @@ const CYCLE_MAP: Record<string, string> = {
   anual: "YEARLY",
 };
 
+/** O Asaas exige data/hora no formato YYYY-MM-DD HH:mm:ss para a primeira cobrança. */
+function nextDueDate(): string {
+  return new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 19).replace("T", " ");
+}
+
 // ── Mapeamento de eventos ────────────────────────────────────────────────────
 
 // Apenas eventos explicitamente mapeados são processados — todos os outros
@@ -105,50 +115,7 @@ export class AsaasGateway implements PaymentGateway {
   readonly provider = "asaas";
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-    const email = input.userEmail ?? `user_${input.userId}@xconstrucao.placeholder`;
-    const name = input.userName ?? `Usuário ${input.userId.slice(0, 8)}`;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://xconstrucao.com.br";
-
-    // J44 — resolve o customer Asaas. Prioridade: ID cacheado → lookup por email.
-    //
-    // O ID cacheado é VALIDADO contra o ambiente atual antes de ser usado:
-    // um ID de sandbox não existe em produção (e vice-versa), então a rota
-    // GET /customers/{id} retornaria HTTP 400/404. Nesse caso fazemos fallback
-    // silencioso para findOrCreateCustomer, que encontra ou cria o customer
-    // correto no ambiente atual.
-    //
-    // O ID resolvido é devolvido no CheckoutResult.redirect.gatewayCustomerId
-    // para que assinatura-service o persista em users.asaas_customer_id — assim
-    // o próximo checkout usa o ID correto sem precisar revalidar.
-    let customerId: string;
-    if (input.userAsaasCustomerId) {
-      try {
-        const cached = await asaasRequest<AsaasCustomer>("GET", `/customers/${input.userAsaasCustomerId}`);
-        // Customer válido no ambiente atual. Atualiza CPF se estava faltando.
-        if (input.userCpfCnpj && !cached.cpfCnpj) {
-          try {
-            await asaasRequest<AsaasCustomer>("PUT", `/customers/${cached.id}`, { name, email, cpfCnpj: input.userCpfCnpj });
-            console.info(`[asaas] cpfCnpj atualizado no customer ${cached.id}`);
-          } catch (e) {
-            console.warn(`[asaas] falha ao atualizar cpfCnpj do customer ${cached.id}:`, e);
-          }
-        }
-        customerId = cached.id;
-        console.info(`[asaas] customer cacheado válido: ${customerId}`);
-      } catch (err) {
-        // ID inválido no ambiente atual (ex: ID de sandbox reutilizado em produção
-        // ou vice-versa). Recria o customer via lookup por e-mail.
-        console.warn(
-          `[asaas] customer ID cacheado "${input.userAsaasCustomerId}" inválido no ambiente atual ` +
-            `— recriando via e-mail. Motivo: ${err}`,
-        );
-        const fresh = await findOrCreateCustomer(email, name, input.userCpfCnpj);
-        customerId = fresh.id;
-      }
-    } else {
-      const fresh = await findOrCreateCustomer(email, name, input.userCpfCnpj);
-      customerId = fresh.id;
-    }
 
     const externalRef = buildExternalRef(input.userId, input.planoId, input.ciclo);
 
@@ -159,15 +126,19 @@ export class AsaasGateway implements PaymentGateway {
       `Plano XConstrução ${tierLabel[input.tier] ?? input.tier} – ${cicloLabel[input.ciclo] ?? input.ciclo}`;
 
     const checkout = await asaasRequest<AsaasCheckout>("POST", "/checkouts", {
-      billingType: "UNDEFINED",
-      chargeType: "RECURRENT",
-      cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
-      items: [{ name: itemName, value: input.valor, quantity: 1 }],
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      minutesToExpire: 60,
+      items: [{ name: itemName, description: itemName, value: input.valor, quantity: 1 }],
       externalReference: externalRef,
-      customer: customerId,
+      subscription: {
+        cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
+        nextDueDate: nextDueDate(),
+      },
       callback: {
         successUrl: input.successUrl ?? `${baseUrl}/planos/sucesso`,
         cancelUrl: input.cancelUrl ?? `${baseUrl}/planos`,
+        expiredUrl: input.cancelUrl ?? `${baseUrl}/planos`,
       },
     });
 
@@ -179,14 +150,13 @@ export class AsaasGateway implements PaymentGateway {
     // cancelSubscription/checkPaymentStatus baterem em /subscriptions/{id}
     // inexistente (404). O checkout.id é usado apenas para rastreio via log.
     //
-    // Retornamos `gatewayCustomerId` para que assinatura-service persista o ID
-    // resolvido em users.asaas_customer_id — garantindo que checkouts futuros
-    // usem o ID correto para o ambiente atual sem precisar revalidar.
-    console.info(`[asaas] checkout criado: checkoutId=${checkout.id} customer=${customerId}`);
+    // O contrato atual permite omitir customer/customerData. Assim, o pagador
+    // completa os dados exigidos na página hospedada e o customer criado pelo
+    // Asaas chega no webhook junto com a externalReference.
+    console.info(`[asaas] checkout criado: checkoutId=${checkout.id}`);
     return {
       kind: "redirect",
-      url: checkout.url,
-      gatewayCustomerId: customerId,
+      url: checkout.url ?? getAsaasCheckoutUrl(checkout.id),
     };
   }
 

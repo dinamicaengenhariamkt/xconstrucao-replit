@@ -9,3 +9,4 @@
 - [xgestão production activation](xgestao-production-activation.md) — publishing code does not copy the development demo seed or marketplace visibility toggle into production.
 - [xgestão visual inheritance](xgestao-visual-inheritance.md) — xgestão must reuse the approved marketplace identity and patterns, trimming features without mixing product data.
 - [Production bootstrap readiness](production-bootstrap-readiness.md) — Autoscale health probes must not wait for slow schema/bootstrap work during Next.js startup.
+- [Asaas recurring checkout contract](asaas-recurring-checkout.md) — recurring checkout uses plural arrays and must not send an incomplete saved customer.

@@ -101,6 +101,7 @@ export type CheckoutResult =
   | { ok: true; kind: "redirect"; url: string; vigenciaEm: string }
   | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" }
   | { ok: false; code: "PERFIL_INCOMPLETO"; detail: string }
+  | { ok: false; code: "GATEWAY_ERROR"; detail: string }
   | { ok: false; code: "INTERNAL_ERROR"; detail: string };
 
 /**
@@ -124,6 +125,9 @@ export async function iniciarCheckout(args: {
     return await _iniciarCheckoutImpl(args);
   } catch (err) {
     console.error("[iniciarCheckout] erro inesperado:", err);
+    if (err instanceof Error && err.message.startsWith("[asaas]")) {
+      return { ok: false, code: "GATEWAY_ERROR", detail: err.message };
+    }
     return { ok: false, code: "INTERNAL_ERROR", detail: String(err) };
   }
 }
@@ -155,7 +159,12 @@ async function _iniciarCheckoutImpl(args: {
   // Busca nome/email/role do usuário para gateways externos (ex: ASAAS) que precisam
   // criar/encontrar um customer. Falha silenciosa: campos opcionais no adapter.
   const [userRow] = await db
-    .select({ name: users.name, email: users.email, role: users.role, asaasCustomerId: users.asaasCustomerId })
+    .select({
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      asaasCustomerId: users.asaasCustomerId,
+    })
     .from(users)
     .where(eq(users.id, args.userId))
     .limit(1);
@@ -211,6 +220,11 @@ async function _iniciarCheckoutImpl(args: {
     valor,
     planoNome: plano.nome,
     successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
+    cancelUrl: process.env.NEXT_PUBLIC_BASE_URL
+      ? args.persona === "xgestao"
+        ? `${process.env.NEXT_PUBLIC_BASE_URL}/xgestao/configuracoes?tab=plano`
+        : `${process.env.NEXT_PUBLIC_BASE_URL}/${personaAssinatura}/planos`
+      : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
     userCpfCnpj,

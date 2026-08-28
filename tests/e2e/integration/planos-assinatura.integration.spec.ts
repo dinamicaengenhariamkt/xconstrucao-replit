@@ -1126,12 +1126,11 @@ test.describe("ASAAS Sandbox — checkout gera URL de redirect válida", () => {
     await logout(request);
   });
 
-  test("payload do checkout ASAAS não gera HTTP 400 (campos billingType/chargeType válidos)", async ({
+  test("payload do checkout ASAAS não gera HTTP 400 com o contrato recorrente atual", async ({
     request,
   }) => {
-    // Este teste confirma especificamente que billingType="UNDEFINED" e
-    // chargeType="RECURRENT" são aceitos pela API ASAAS sem retornar 400.
-    // É a regressão direta da correção de campos da task que criou este spec.
+    // Regressão do contrato antigo: billingTypes/chargeTypes são arrays e a
+    // recorrência é informada no objeto subscription.
     await loginAs(request, SEED_EMPREITEIRO_EMAIL);
     await request.post("/api/assinaturas/cancelar").catch(() => {});
 
@@ -1157,10 +1156,10 @@ test.describe("ASAAS Sandbox — checkout gera URL de redirect válida", () => {
       data: { planoId: proPlan.id, ciclo: "mensal" },
     });
 
-    // O ponto crítico: não deve retornar 400 (que era o bug de billingType/chargeType)
+    // O ponto crítico: o Asaas deve aceitar o payload recorrente sem HTTP 400.
     expect(
       checkoutRes.status(),
-      `API ASAAS não deve retornar 400 — verifique billingType e chargeType no payload. Status: ${checkoutRes.status()}`,
+      `API ASAAS não deve retornar 400 — verifique billingTypes, chargeTypes e subscription. Status: ${checkoutRes.status()}`,
     ).not.toBe(400);
 
     expect(
