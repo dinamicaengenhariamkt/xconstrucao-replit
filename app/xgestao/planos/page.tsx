@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { RiCheckLine, RiErrorWarningLine, RiPriceTag3Line, RiVipCrownLine } from 'react-icons/ri';
 import { Button } from '@shared/components/ui/button';
@@ -30,15 +31,18 @@ function PlanCard({
   currentTier,
   onChoose,
   pending,
+  canChoosePaid,
 }: {
   plano: PlanoApi;
   currentTier: PlanoTier;
   onChoose: (plano: PlanoApi) => void;
   pending: boolean;
+  canChoosePaid: boolean;
 }) {
   const isCurrent = plano.tier === currentTier;
   const isFree = plano.tier === 'free';
   const isFeatured = plano.tier === 'pro';
+  const blockedByDocument = !isFree && !canChoosePaid;
 
   return (
     <article
@@ -83,17 +87,26 @@ function PlanCard({
         type="button"
         variant={isFeatured ? 'secondary' : 'outline'}
         className={isFeatured ? 'text-primary' : ''}
-        disabled={isCurrent || pending}
+        disabled={isCurrent || pending || blockedByDocument}
         onClick={() => onChoose(plano)}
         data-testid={`xgestao-assinar-${plano.tier}`}
       >
-        {isCurrent ? 'Plano atual' : pending ? 'Processando…' : isFree ? 'Começar grátis' : 'Escolher plano'}
+        {isCurrent
+          ? 'Plano atual'
+          : pending
+            ? 'Processando…'
+            : blockedByDocument
+              ? 'Informe o CNPJ'
+              : isFree
+                ? 'Começar grátis'
+                : 'Escolher plano'}
       </Button>
     </article>
   );
 }
 
 export default function XGestaoPlanosPage() {
+  const router = useRouter();
   const { data: planos, isLoading: loadingPlanos } = usePlanos('xgestao');
   const { data: perfil, isLoading: loadingPerfil } = usePerfilPlano('xgestao');
   const checkout = useCheckout('xgestao');
@@ -103,6 +116,15 @@ export default function XGestaoPlanosPage() {
 
   function choosePlan(plano: PlanoApi) {
     if (checkout.isPending || plano.tier === currentTier) return;
+    if (plano.tier !== 'free' && perfil?.hasCpfCnpj !== true) {
+      toast({
+        title: 'CNPJ necessário',
+        description: 'Complete os dados da empresa antes de assinar um plano pago.',
+        variant: 'destructive',
+      });
+      router.push('/xgestao/configuracoes?tab=empresa');
+      return;
+    }
     setActiveRequest(plano.id);
     checkout.mutate(
       { planoId: plano.id, ciclo: 'mensal' },
@@ -111,16 +133,23 @@ export default function XGestaoPlanosPage() {
           toast({ title: 'Plano atualizado', description: `${plano.nome} está ativo para sua conta xgestão.` });
         },
         onError: (error: CheckoutError) => {
+          if (error.code === 'SESSION_EXPIRED') {
+            window.location.assign(
+              `/login?perfil=xgestao&next=${encodeURIComponent('/xgestao/planos')}&reason=session_expired`,
+            );
+            return;
+          }
           if (error.code === 'PERFIL_INCOMPLETO') {
             toast({
               title: 'CNPJ necessário',
               description: 'Complete os dados da empreiteira em Configurações antes de assinar.',
               variant: 'destructive',
             });
+            router.push('/xgestao/configuracoes?tab=empresa');
             return;
           }
           toast({
-            title: 'Não foi possível alterar o plano',
+            title: 'Não foi possível iniciar o pagamento',
             description: error.message || 'Tente novamente em instantes.',
             variant: 'destructive',
           });
@@ -167,7 +196,7 @@ export default function XGestaoPlanosPage() {
             <RiErrorWarningLine className="mt-0.5 size-5 shrink-0" />
             <p>
               Informe o CNPJ da sua empreiteira em{' '}
-              <Link href="/xgestao/configuracoes" className="font-semibold underline underline-offset-2">
+              <Link href="/xgestao/configuracoes?tab=empresa" className="font-semibold underline underline-offset-2">
                 Configurações
               </Link>{' '}
               para assinar um plano pago.
@@ -188,6 +217,7 @@ export default function XGestaoPlanosPage() {
                   currentTier={currentTier}
                   onChoose={choosePlan}
                   pending={checkout.isPending && activeRequest === plano.id}
+                  canChoosePaid={perfil?.hasCpfCnpj === true}
                 />
               ) : null;
             })}

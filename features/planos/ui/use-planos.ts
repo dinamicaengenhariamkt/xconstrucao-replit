@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type { PlanoTier, PlanoPersona } from '@shared/lib/plans-catalog';
+import { fetchWithSessionRefresh, SessionExpiredError } from '@features/auth/utils/authenticated-fetch';
 
 /**
  * Hooks client-side da UI de assinatura (J15). Consomem os endpoints reais da
@@ -87,13 +88,24 @@ export function useCheckout(persona?: PlanoPersona) {
   const qc = useQueryClient();
   return useMutation<CheckoutResponse, CheckoutError, { planoId: string; ciclo: 'mensal' | 'anual' }>({
     mutationFn: async ({ planoId, ciclo }) => {
-      const res = await fetch('/api/assinaturas/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planoId, ciclo, ...(persona ? { persona } : {}) }),
-      });
+      let res: Response;
+      try {
+        res = await fetchWithSessionRefresh('/api/assinaturas/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planoId, ciclo, ...(persona ? { persona } : {}) }),
+        });
+      } catch (error) {
+        if (error instanceof SessionExpiredError) {
+          throw new CheckoutError(error.message, 401, 'SESSION_EXPIRED');
+        }
+        throw error;
+      }
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 401) {
+          throw new CheckoutError('Sua sessão expirou. Faça login novamente para continuar.', 401, 'SESSION_EXPIRED');
+        }
         throw new CheckoutError(data?.message ?? 'Erro ao assinar.', res.status, data?.code);
       }
       return data as CheckoutResponse;

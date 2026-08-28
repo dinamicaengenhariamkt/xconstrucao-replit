@@ -3,7 +3,7 @@
 // Prevent static generation for auth pages (use dynamic hooks)
 export const dynamic = 'force-dynamic'
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -61,6 +61,15 @@ export default function LoginPage() {
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [codigo2fa, setCodigo2fa] = useState('');
   const [verificando2fa, setVerificando2fa] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("reason") !== "session_expired") return;
+    toast({
+      title: "Sessão expirada",
+      description: "Entre novamente para continuar de onde parou.",
+      variant: "destructive",
+    });
+  }, [searchParams, toast]);
 
   const navegarPosLogin = async () => {
     const user = useAuthStore.getState().user;

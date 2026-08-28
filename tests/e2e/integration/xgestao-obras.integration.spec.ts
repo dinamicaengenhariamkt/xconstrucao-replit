@@ -61,6 +61,86 @@ async function concederXGestao(request: APIRequestContext, email: string) {
 }
 
 test.describe('xgestão — obras próprias', () => {
+  test('permite completar pela UI todas as pendências e então criar a primeira obra', async ({ page, request }) => {
+    const email = await registrar(request, 'empreiteiro', 'xgestao-ui-perfil-operacional');
+    await concederXGestao(request, email);
+
+    const login = await page.request.post('/api/test/login-as', { data: { email } });
+    expect(login.status(), await login.text()).toBe(200);
+    await page.goto('/xgestao/configuracoes?tab=empresa');
+
+    await page.getByTestId('xgestao-empresa-cep').fill('01310100');
+    await page.getByTestId('xgestao-empresa-endereco').fill('Avenida Paulista, 1000');
+    await page.getByTestId('xgestao-empresa-cidade').fill('São Paulo');
+    await page.getByTestId('xgestao-empresa-estado').fill('SP');
+    await page.getByTestId('xgestao-empresa-raio-km').fill('50');
+    await page.getByTestId('xgestao-especialidade-Pintura').click();
+
+    const saved = page.waitForResponse((response) =>
+      response.url().includes('/api/perfil/empreiteiro') &&
+      response.request().method() === 'PATCH',
+    );
+    await page.getByRole('button', { name: 'Salvar empresa' }).click();
+    expect((await saved).status()).toBe(200);
+
+    const status = await page.request.get('/api/xgestao/perfil-status');
+    expect(status.status(), await status.text()).toBe(200);
+    expect(await status.json()).toMatchObject({ ok: true, faltando: [] });
+
+    await page.goto('/xgestao/obras');
+    await page.getByTestId('xgestao-nova-obra').click();
+    await expect(page.getByRole('dialog', { name: 'Nova obra' })).toBeVisible();
+    await page.getByTestId('xgestao-obra-nome').fill('Primeira obra pela interface');
+    await page.getByTestId('xgestao-obra-endereco').fill('Avenida Paulista, 1000');
+    const criada = page.waitForResponse((response) =>
+      response.url().endsWith('/api/xgestao/obras') &&
+      response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Criar obra' }).click();
+    expect((await criada).status()).toBe(201);
+  });
+
+  test('informa pendências operacionais reais e valida CEP/endereço da empresa', async ({ request }) => {
+    const email = await registrar(request, 'empreiteiro', 'xgestao-perfil-operacional');
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const statusIncompleto = await request.get('/api/xgestao/perfil-status');
+    expect(statusIncompleto.status(), await statusIncompleto.text()).toBe(200);
+    expect(await statusIncompleto.json()).toMatchObject({
+      ok: false,
+      faltando: expect.arrayContaining([
+        expect.objectContaining({ campo: 'endereco' }),
+        expect.objectContaining({ campo: 'cep' }),
+      ]),
+    });
+
+    const bloqueada = await request.post('/api/xgestao/obras', {
+      data: { nome: 'Obra preservada no formulário', endereco: 'Rua Digitada, 10' },
+    });
+    expect(bloqueada.status(), await bloqueada.text()).toBe(422);
+    expect(await bloqueada.json()).toMatchObject({
+      code: 'PERFIL_INCOMPLETO',
+      faltando: expect.any(Array),
+    });
+
+    const cepInvalido = await request.patch('/api/perfil/empreiteiro', {
+      data: { cep: '123', endereco: 'Rua válida, 10' },
+    });
+    expect(cepInvalido.status(), await cepInvalido.text()).toBe(400);
+
+    const enderecoInvalido = await request.patch('/api/perfil/empreiteiro', {
+      data: { cep: '01310100', endereco: 'x' },
+    });
+    expect(enderecoInvalido.status(), await enderecoInvalido.text()).toBe(400);
+
+    await completarPerfilOperacional(request, 'empreiteiro');
+    const statusCompleto = await request.get('/api/xgestao/perfil-status');
+    expect(statusCompleto.status(), await statusCompleto.text()).toBe(200);
+    expect(await statusCompleto.json()).toMatchObject({ ok: true, faltando: [] });
+    await logout(request);
+  });
+
   test('cria, gerencia e edita obra própria sem liberar edição de obra marketplace', async ({
     request,
   }) => {

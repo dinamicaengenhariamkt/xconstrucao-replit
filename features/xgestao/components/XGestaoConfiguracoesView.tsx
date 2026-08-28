@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   RiBellLine,
   RiBuilding2Line,
@@ -21,9 +22,14 @@ import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Switch } from '@shared/components/ui/switch';
+import { Checkbox } from '@shared/components/ui/checkbox';
 import { Textarea } from '@shared/components/ui/textarea';
 import { cn } from '@shared/lib/utils';
 import { useToast } from '@shared/hooks/use-toast';
+import { CepInput } from '@features/perfil/components/CepInput';
+import { formatCnpj, isCepValid, isCnpjValid, unformatCnpj } from '@shared/lib/masks';
+import { XGESTAO_PERFIL_OPERACIONAL_KEY } from '@features/xgestao/hooks/use-perfil-operacional';
+import { ESPECIALIDADES_PERMITIDAS } from '@shared/lib/especialidades';
 
 type Section = 'perfil' | 'empresa' | 'notificacoes' | 'seguranca' | 'plano';
 
@@ -47,6 +53,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function XGestaoConfiguracoesView() {
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const requested = searchParams.get('tab') as Section | null;
   const [section, setSection] = useState<Section>(
@@ -68,8 +75,11 @@ export function XGestaoConfiguracoesView() {
     cidade: '',
     estado: '',
     descricao: '',
+    raioKm: '',
+    especialidades: [] as string[],
   });
   const [notifications, setNotifications] = useState<Record<string, boolean>>(NOTIFICATION_DEFAULTS);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (requested && NAV_ITEMS.some((item) => item.id === requested)) setSection(requested);
@@ -87,6 +97,8 @@ export function XGestaoConfiguracoesView() {
       cidade: perfil.cidade ?? '',
       estado: perfil.estado ?? '',
       descricao: perfil.descricao ?? '',
+      raioKm: perfil.raioKm == null ? '' : String(perfil.raioKm),
+      especialidades: perfil.especialidades ?? [],
     });
   }, [perfil]);
 
@@ -96,12 +108,34 @@ export function XGestaoConfiguracoesView() {
     }
   }, [preferencias]);
 
-  const setField = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const setField = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
+    setFieldErrors((current) => ({ ...current, [key]: '' }));
+  };
 
   const saveProfile = async () => {
+    const errors: Record<string, string> = {};
+    if (form.cnpj && !isCnpjValid(form.cnpj)) errors.cnpj = 'Informe um CNPJ válido.';
+    if (form.cep && !isCepValid(form.cep)) errors.cep = 'Informe um CEP com 8 dígitos.';
+    if (form.endereco.trim() && form.endereco.trim().length < 3) {
+      errors.endereco = 'Informe um endereço válido.';
+    }
+    if (form.raioKm && (!Number.isFinite(Number(form.raioKm)) || Number(form.raioKm) <= 0)) {
+      errors.raioKm = 'Informe um raio de atuação maior que zero.';
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     try {
-      await updatePerfil.mutateAsync(form);
+      await updatePerfil.mutateAsync({
+        ...form,
+        cnpj: form.cnpj ? unformatCnpj(form.cnpj) : null,
+        cep: form.cep || null,
+        endereco: form.endereco.trim() || null,
+        raioKm: form.raioKm ? Number(form.raioKm) : null,
+        especialidades: form.especialidades,
+      });
+      await queryClient.invalidateQueries({ queryKey: XGESTAO_PERFIL_OPERACIONAL_KEY });
       toast({ title: 'Dados salvos', description: 'As informações da sua conta xgestão foram atualizadas.' });
     } catch {
       toast({ title: 'Não foi possível salvar', description: 'Revise os dados e tente novamente.', variant: 'destructive' });
@@ -173,11 +207,89 @@ export function XGestaoConfiguracoesView() {
                   <CardHeader><CardTitle>Dados da empresa</CardTitle></CardHeader>
                   <CardContent className="grid gap-5 sm:grid-cols-2">
                     <Field label="Nome da empresa"><Input value={form.nome} onChange={setField('nome')} /></Field>
-                    <Field label="CNPJ"><Input value={form.cnpj} onChange={setField('cnpj')} /></Field>
-                    <Field label="CEP"><Input value={form.cep} onChange={setField('cep')} /></Field>
-                    <Field label="Endereço"><Input value={form.endereco} onChange={setField('endereco')} /></Field>
-                    <Field label="Cidade"><Input value={form.cidade} onChange={setField('cidade')} /></Field>
-                    <Field label="Estado"><Input value={form.estado} onChange={setField('estado')} maxLength={2} /></Field>
+                    <Field label="CNPJ">
+                      <Input
+                        value={formatCnpj(form.cnpj)}
+                        onChange={(event) => {
+                          setForm((current) => ({ ...current, cnpj: unformatCnpj(event.target.value) }));
+                          setFieldErrors((current) => ({ ...current, cnpj: '' }));
+                        }}
+                        inputMode="numeric"
+                        maxLength={18}
+                        aria-invalid={Boolean(fieldErrors.cnpj)}
+                        data-testid="xgestao-empresa-cnpj"
+                      />
+                      {fieldErrors.cnpj && <p className="text-xs text-destructive">{fieldErrors.cnpj}</p>}
+                    </Field>
+                    <Field label="CEP">
+                      <CepInput
+                        value={form.cep}
+                        onChange={(cep) => {
+                          setForm((current) => ({ ...current, cep }));
+                          setFieldErrors((current) => ({ ...current, cep: '' }));
+                        }}
+                        onClear={() => setForm((current) => ({ ...current, endereco: '', cidade: '', estado: '' }))}
+                        onAutofill={(address) => setForm((current) => ({
+                          ...current,
+                          endereco: current.endereco || address.endereco,
+                          cidade: address.cidade,
+                          estado: address.estado,
+                        }))}
+                        onLookupFailed={() => setFieldErrors((current) => ({
+                          ...current,
+                          cep: 'CEP não encontrado. Confira os dígitos ou preencha o endereço manualmente.',
+                        }))}
+                        data-testid="xgestao-empresa-cep"
+                      />
+                      {fieldErrors.cep && <p className="text-xs text-destructive">{fieldErrors.cep}</p>}
+                    </Field>
+                    <Field label="Endereço">
+                      <Input
+                        value={form.endereco}
+                        onChange={setField('endereco')}
+                        aria-invalid={Boolean(fieldErrors.endereco)}
+                        data-testid="xgestao-empresa-endereco"
+                      />
+                      {fieldErrors.endereco && <p className="text-xs text-destructive">{fieldErrors.endereco}</p>}
+                    </Field>
+                    <Field label="Cidade"><Input value={form.cidade} onChange={setField('cidade')} data-testid="xgestao-empresa-cidade" /></Field>
+                    <Field label="Estado"><Input value={form.estado} onChange={setField('estado')} maxLength={2} data-testid="xgestao-empresa-estado" /></Field>
+                    <Field label="Raio de atuação (km)">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={form.raioKm}
+                        onChange={setField('raioKm')}
+                        aria-invalid={Boolean(fieldErrors.raioKm)}
+                        data-testid="xgestao-empresa-raio-km"
+                      />
+                      {fieldErrors.raioKm && <p className="text-xs text-destructive">{fieldErrors.raioKm}</p>}
+                    </Field>
+                    <div className="sm:col-span-2 space-y-2">
+                      <Label>Especialidades</Label>
+                      <p className="text-xs text-muted-foreground">Selecione ao menos uma área em que sua equipe atua.</p>
+                      <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2" data-testid="xgestao-empresa-especialidades">
+                        {ESPECIALIDADES_PERMITIDAS.map((especialidade) => {
+                          const checked = form.especialidades.includes(especialidade);
+                          return (
+                            <label key={especialidade} className="flex cursor-pointer items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(next) => setForm((current) => ({
+                                  ...current,
+                                  especialidades: next
+                                    ? [...current.especialidades, especialidade]
+                                    : current.especialidades.filter((item) => item !== especialidade),
+                                }))}
+                                data-testid={`xgestao-especialidade-${especialidade}`}
+                              />
+                              {especialidade}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                     <div className="sm:col-span-2"><Field label="Descrição"><Textarea value={form.descricao} onChange={setField('descricao')} rows={4} /></Field></div>
                     <div className="sm:col-span-2 flex justify-end"><Button onClick={saveProfile} disabled={updatePerfil.isPending}><RiSave3Line className="mr-2 size-4" />Salvar empresa</Button></div>
                   </CardContent>

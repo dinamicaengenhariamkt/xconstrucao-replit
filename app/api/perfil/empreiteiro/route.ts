@@ -6,22 +6,8 @@ import { empreiteiras, users } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { ensureProfileRow } from "@features/auth/api/auth-storage";
 import { findMunicipio, loadMunicipios } from "@shared/lib/ibge-municipios";
-import { isCnpjValid, unformatCnpj } from "@shared/lib/masks";
-
-export const ESPECIALIDADES_PERMITIDAS = [
-  "Alvenaria",
-  "Elétrica",
-  "Hidráulica",
-  "Pintura",
-  "Acabamento",
-  "Fundações",
-  "Estrutura Metálica",
-  "Gesso/Drywall",
-  "Cobertura/Telhado",
-  "Paisagismo",
-  "Reformas",
-  "Obras Comerciais",
-] as const;
+import { isCepValid, isCnpjValid, unformatCep, unformatCnpj } from "@shared/lib/masks";
+import { ESPECIALIDADES_PERMITIDAS } from "@shared/lib/especialidades";
 
 const especialidadesSchema = z
   .array(z.string().trim().min(2).max(60))
@@ -57,8 +43,19 @@ const updateSchema = z.object({
     .refine((v) => !v || isCnpjValid(v), {
       message: "CNPJ inválido — o cadastro de empreiteiro é de pessoa jurídica",
     }),
-  cep: z.string().optional().nullable(),
-  endereco: z.string().optional().nullable(),
+  cep: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v == null ? v : unformatCep(v)))
+    .refine((v) => !v || isCepValid(v), { message: "CEP inválido" }),
+  endereco: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v == null ? v : v.trim()))
+    .refine((v) => !v || v.length >= 3, { message: "Endereço inválido" })
+    .refine((v) => !v || v.length <= 255, { message: "Endereço muito longo" }),
   cidade: z.string().optional().nullable(),
   estado: z.string().optional().nullable(),
   avatarUrl: z.string().max(2_500_000).optional().nullable(),
