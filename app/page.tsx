@@ -14,7 +14,7 @@ import { AnuncieAqui } from "@features/landing/components/AnuncieAqui";
 import { usePublicConfig } from "@features/shared/hooks/use-public-config";
 
 export default function HomePage() {
-  const { config } = usePublicConfig();
+  const { config, isLoading } = usePublicConfig();
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300">
@@ -62,7 +62,16 @@ export default function HomePage() {
               precisão, previsibilidade e inovação em cada etapa.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {config.marketplaceVisivel ? (
+              {isLoading ? (
+                <div
+                  className="flex flex-col sm:flex-row gap-4 justify-center"
+                  role="status"
+                  aria-label="Carregando opções de acesso"
+                >
+                  <div className="h-14 w-52 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                  <div className="h-14 w-52 rounded-full bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                </div>
+              ) : config.marketplaceVisivel ? (
                 <>
                   <Link
                     href="/login?perfil=empreiteiro"
@@ -195,7 +204,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {config.marketplaceVisivel && (
+              {!isLoading && config.marketplaceVisivel && (
                 <div
                   className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
                   style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
@@ -292,20 +301,20 @@ export default function HomePage() {
         </section>
 
         {/* Projetos em Destaque — curadoria dinâmica do admin (J25). Some quando vazio. */}
-        {config.marketplaceVisivel && <ObrasDestaqueCarousel />}
+        {!isLoading && config.marketplaceVisivel && <ObrasDestaqueCarousel />}
 
         {/* Mercado em Foco — vitrine dinâmica de anúncios (J24). Some quando vazia. */}
-        {config.marketplaceVisivel && <MercadoEmFoco />}
+        {!isLoading && config.marketplaceVisivel && <MercadoEmFoco />}
 
         {/* Slot de anúncio público (J16) — invisível enquanto não há campanha ativa */}
-        {config.marketplaceVisivel && (
+        {!isLoading && config.marketplaceVisivel && (
           <div className="max-w-[420px] mx-auto px-6">
             <AdSidebarSlot zoneId="banner-qa" />
           </div>
         )}
 
         {/* J23 — convite para anunciar (self-service) */}
-        {config.marketplaceVisivel && <AnuncieAqui />}
+        {!isLoading && config.marketplaceVisivel && <AnuncieAqui />}
 
         {/* CTA Final */}
         <section className="relative py-32 px-6 bg-[#333333] text-white overflow-hidden">
@@ -314,7 +323,7 @@ export default function HomePage() {
               Pronto para o próximo nível?
             </h2>
             <p className="text-xl opacity-80 max-w-[600px] mx-auto mb-12 font-light">
-              Comece agora com a xgestão inteligente (3 meses grátis) e prepare-se para o marketplace completo.
+              Organize suas obras com mais controle, clareza e previsibilidade em um só lugar.
             </p>
             <div className="flex justify-center">
               <Link

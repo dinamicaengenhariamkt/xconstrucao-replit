@@ -7,7 +7,7 @@ import { IconBusiness, IconConstruction } from "@shared/components/icons";
 import { usePublicConfig } from "@features/shared/hooks/use-public-config";
 
 export default function AcessoPlataformaPage() {
-  const { config } = usePublicConfig();
+  const { config, isLoading } = usePublicConfig();
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
@@ -20,19 +20,35 @@ export default function AcessoPlataformaPage() {
               className="text-4xl md:text-6xl font-extrabold tracking-[-0.04em] leading-[0.95] mb-6"
               data-testid="text-acesso-title"
             >
-              {config.marketplaceVisivel ? "Acesso à " : "Acesse a "}
-              <span className="text-[#333333] dark:text-white">
-                {config.marketplaceVisivel ? "plataforma xconstrução" : "xgestão"}
-              </span>
+              {isLoading ? (
+                <span
+                  className="inline-block h-14 md:h-20 w-full max-w-2xl rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse"
+                  aria-hidden="true"
+                />
+              ) : (
+                <>
+                  {config.marketplaceVisivel ? "Acesso à " : "Acesse a "}
+                  <span className="text-[#333333] dark:text-white">
+                    {config.marketplaceVisivel ? "plataforma xconstrução" : "xgestão"}
+                  </span>
+                </>
+              )}
             </h1>
             <p className="text-lg md:text-xl text-slate-500 dark:text-slate-400 font-medium max-w-[600px] mx-auto leading-relaxed mb-16">
-              {config.marketplaceVisivel
-                ? "Escolha como deseja acessar a plataforma xconstrução"
-                : "Gestão de obras para empreiteiros, do planejamento ao acompanhamento."}
+              {isLoading
+                ? "Carregando opções de acesso..."
+                : config.marketplaceVisivel
+                  ? "Escolha como deseja acessar a plataforma xconstrução"
+                  : "Gestão de obras para empreiteiros, do planejamento ao acompanhamento."}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[800px] mx-auto">
-              {config.marketplaceVisivel ? (
+              {isLoading ? (
+                <>
+                  <div className="h-80 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                  <div className="h-80 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                </>
+              ) : config.marketplaceVisivel ? (
                 <>
                   <div
                 className="bg-white dark:bg-slate-900/50 rounded-3xl p-12 border border-slate-100 dark:border-slate-800 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all duration-300 flex flex-col items-center text-center"

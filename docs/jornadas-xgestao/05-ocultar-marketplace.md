@@ -1,7 +1,7 @@
 # Jornada — XG05: Ocultar o marketplace
 
 > Status: concluída | Prioridade: alta | Wave: xgestão-5
-> Última atualização: 2026-08-21
+> Última atualização: 2026-08-28
 
 > **Confirmado na reunião 002 (2026-08-19):** ocultar o marketplace e a jornada do contratante segue no escopo, sem mudança. *"Das questões que você trouxe, a questão do MVP, da questão de ocultar o marketplace ali, ocultar a jornada do contratante, ele já está ok, já está confirmado da nossa parte"* (03:41).
 >
@@ -17,7 +17,7 @@ A reversibilidade é o entregável desta jornada — vale demonstrar ao vivo par
 
 ## 2. Personas
 
-- **Visitante**: vê só o xgestão na home; marketplace aparece como "em breve".
+- **Visitante**: vê somente o xgestão na home, sem cartão ou chamada residual do marketplace.
 - **Empreiteiro**: não vê mais os itens de menu do marketplace enquanto o toggle estiver desligado.
 - **Superadmin**: liga e desliga o toggle.
 
@@ -53,13 +53,13 @@ Nenhuma alteração. `platformSettings` é JSONB key/value e o toggle já foi cr
 
 Nenhum novo. **As rotas e APIs do marketplace continuam vivas e respondendo** — é justamente o que o spec de integração prova.
 
-## 8. Achado: uma landing pronta e desligada
+## 8. Landing do produto
 
-[app/xgestao-inteligente/page.tsx](../../app/xgestao-inteligente/page.tsx) já existe, está escrita, tem a copy certa ("Teste Grátis por 3 meses") e é estática — mas **nada aponta para ela**: o card do xgestão na home leva a `/acesso-plataforma`. São duas linhas para destravar uma página já pronta.
+[app/xgestao-inteligente/page.tsx](../../app/xgestao-inteligente/page.tsx) permanece como página de apresentação do produto. Entradas de acesso e cadastro podem apontar diretamente para login/cadastro, mas nenhuma superfície pública deve prometer trial enquanto a definição comercial de [XG03 §8](03-planos-limites-trial.md) estiver bloqueada.
 
 ## 9. Checklist de implementação
 
-- [x] Gatear os CTAs de marketplace na home pelo `marketplaceVisivel`, com estado "em breve"
+- [x] Gatear os CTAs de marketplace na home pelo `marketplaceVisivel`, sem cartão ou chamada residual quando oculto
 - [x] Apontar os CTAs do xgestão para `/xgestao-inteligente` (ou direto ao login do xgestão)
 - [x] Mesmo gate em `/acesso-plataforma`
 - [x] Ocultar do menu do empreiteiro: Novas Obras Disponíveis, Obras Salvas, Minhas Candidaturas, Meus Recebimentos, Meu Saldo
@@ -71,7 +71,7 @@ Nenhum novo. **As rotas e APIs do marketplace continuam vivas e respondendo** �
 
 ## 10. Critérios de aceite
 
-1. Com `marketplaceVisivel = false`: a home mostra só a entrada do xgestão; o marketplace aparece como "em breve".
+1. Com `marketplaceVisivel = false`: a home mostra somente a entrada do xgestão, sem conteúdo residual do marketplace.
 2. O menu do empreiteiro perde os itens de marketplace.
 3. **As APIs do marketplace continuam respondendo normalmente** — a prova de que foi ocultado, não removido.
 4. Voltar o toggle para `true` restaura tudo em ≤30s (TTL do cache), sem deploy.

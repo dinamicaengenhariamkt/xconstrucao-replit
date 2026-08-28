@@ -13,7 +13,7 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { config } = usePublicConfig();
+  const { config, isLoading } = usePublicConfig();
   const accessHref = config.marketplaceVisivel
     ? "/acesso-plataforma"
     : "/login?perfil=xgestao&next=%2Fxgestao%2Fobras";
@@ -70,13 +70,15 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
           >
             Soluções
           </Link>
-          <Link
-            className="text-sm font-medium hover:opacity-70 transition-opacity"
-            href="/#projetos"
-            data-testid="link-nav-projetos"
-          >
-            Projetos
-          </Link>
+          {!isLoading && config.marketplaceVisivel && (
+            <Link
+              className="text-sm font-medium hover:opacity-70 transition-opacity"
+              href="/#projetos"
+              data-testid="link-nav-projetos"
+            >
+              Projetos
+            </Link>
+          )}
         </div>
 
         <div className="hidden md:flex items-center">
@@ -89,7 +91,14 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
               Administrador
             </Link>
           )}
-          {showAccessButton && !showAdminButton && (
+          {showAccessButton && !showAdminButton && isLoading && (
+            <div
+              className="h-9 w-40 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"
+              aria-label="Carregando acesso"
+              role="status"
+            />
+          )}
+          {showAccessButton && !showAdminButton && !isLoading && (
             <Link
               href={accessHref}
               prefetch={false}
@@ -135,14 +144,16 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
             >
               Soluções
             </Link>
-            <Link
-              href="/#projetos"
-              onClick={() => setIsOpen(false)}
-              className="text-lg font-medium py-3 px-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-              data-testid="link-nav-projetos-mobile"
-            >
-              Projetos
-            </Link>
+            {!isLoading && config.marketplaceVisivel && (
+              <Link
+                href="/#projetos"
+                onClick={() => setIsOpen(false)}
+                className="text-lg font-medium py-3 px-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+                data-testid="link-nav-projetos-mobile"
+              >
+                Projetos
+              </Link>
+            )}
           </nav>
 
           <div className="mt-auto pt-6 border-t border-white/20">
@@ -155,7 +166,14 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
                 Administrador
               </Link>
             )}
-            {showAccessButton && !showAdminButton && (
+            {showAccessButton && !showAdminButton && isLoading && (
+              <div
+                className="h-11 w-full rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"
+                aria-label="Carregando acesso"
+                role="status"
+              />
+            )}
+            {showAccessButton && !showAdminButton && !isLoading && (
               <Link
                 href={accessHref}
                 prefetch={false}

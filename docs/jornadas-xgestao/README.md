@@ -88,12 +88,10 @@ XG01  fundações e shell
 
 ## Definições pendentes
 
-Sobraram **3**. Nenhuma bloqueia o início do desenvolvimento.
+Sobraram **2**. Nenhuma bloqueia o desenvolvimento já entregue.
 
 1. **Preços finais e composição funcional dos 3 planos** — bloqueia apenas [XG03 §8](03-planos-limites-trial.md) (a mecânica do teste) e o seed de preços. O cliente ficou de enviar o documento (18:44). **Atenção:** a reunião 002 (*"ele vai ter o acesso ao plano dele"*, 14:41) **contradiz** o PDF de monetização (*"3 meses 100% grátis irrestrito"*). São implementações diferentes — a segunda exige um job de downgrade inteiro. Resolver antes de codificar §8.
 2. **Fim do teste com obras acima do limite** — o que acontece quando o período acaba e o usuário tem mais obras que o plano permite. Depende da resposta 1. A recomendação da jornada continua valendo: **nunca retirar acesso de leitura**, bloquear apenas a criação de novas.
-3. **Domínio xconstrução** — acesso ao registrador para apontar o DNS. O Eder tem os dados com o Felipe e ficou de destravar (16:17-18:09). **Bloqueia o go-live, não o desenvolvimento** — dá para continuar na dinâmica atual e apontar depois.
-
 ### Respondidas em 2026-08-19
 
 | Pergunta original | Resposta |
@@ -104,8 +102,9 @@ Sobraram **3**. Nenhuma bloqueia o início do desenvolvimento.
 | ~~Quota de consultas SINAPI por plano~~ | Prejudicada — SINAPI congelado |
 | ~~Jornada do anunciante neste MVP?~~ | **Congelada** (16:04) |
 | ~~O que a visão admin precisa mostrar?~~ | Não respondida, mas **despriorizada** — XG06 é a última da ordem e não bloqueia o MVP |
+| ~~Domínio xconstrução~~ | **Resolvido em 2026-08-28** — `dinamicareforma.com.br` está apontado e serve a publicação ativa. |
 
-> Ao receber respostas às 3 pendências restantes, atualizar **os dois** — este índice e o script [`gerar-pdf-xgestao.py`](../../scripts/gerar-pdf-xgestao.py), que é a fonte do PDF entregue ao cliente.
+> Ao receber respostas às 2 pendências restantes, atualizar **os dois** — este índice e o script [`gerar-pdf-xgestao.py`](../../scripts/gerar-pdf-xgestao.py), que é a fonte do PDF entregue ao cliente.
 
 ## Nota de formato
 
