@@ -8,3 +8,4 @@
 - [Public work media revocation](public-work-media-revocation.md) — XG04 accepts 12-hour signed media URL lifetime after link validation; page revocation remains immediate.
 - [xgestão production activation](xgestao-production-activation.md) — publishing code does not copy the development demo seed or marketplace visibility toggle into production.
 - [xgestão visual inheritance](xgestao-visual-inheritance.md) — xgestão must reuse the approved marketplace identity and patterns, trimming features without mixing product data.
+- [Production bootstrap readiness](production-bootstrap-readiness.md) — Autoscale health probes must not wait for slow schema/bootstrap work during Next.js startup.

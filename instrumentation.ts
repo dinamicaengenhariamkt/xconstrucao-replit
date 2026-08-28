@@ -1,5 +1,4 @@
-export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
+async function initializeNodeRuntime() {
     // J33-B — Sentry server SDK (graceful: no-op se SENTRY_DSN ausente)
     await import("./sentry.server.config").catch(() => {});
 
@@ -263,6 +262,23 @@ export async function register() {
         stack: error.stack,
         route: "bootstrap.schema-health",
       }).catch(() => {});
+    }
+}
+
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    if (process.env.NODE_ENV === "production") {
+      console.info("[instrumentation] starting production bootstrap in background");
+      void initializeNodeRuntime()
+        .then(() => {
+          console.info("[instrumentation] production bootstrap complete");
+        })
+        .catch((error: unknown) => {
+          console.error("[instrumentation] production bootstrap failed:", error);
+          process.exit(1);
+        });
+    } else {
+      await initializeNodeRuntime();
     }
   }
 
