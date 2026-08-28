@@ -74,21 +74,21 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
 
   const statusOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    (obras ?? []).forEach((o) => {
+    (obras ?? []).filter((o) => !xgestao || o.isObraPropria).forEach((o) => {
       counts[o.status] = (counts[o.status] || 0) + 1;
     });
     return Object.entries(STATUS_LABELS).map(([value, label]) => ({
       value,
       label: `${label} (${counts[value] || 0})`,
     }));
-  }, [obras]);
+  }, [obras, xgestao]);
 
   const tipoOptions = useMemo(() => {
-    const set = new Set((obras ?? []).map((o) => o.tipo));
+    const set = new Set((obras ?? []).filter((o) => !xgestao || o.isObraPropria).map((o) => o.tipo));
     return Array.from(set)
       .sort((a, b) => a.localeCompare(b, 'pt-BR'))
       .map((t) => ({ value: t, label: t }));
-  }, [obras]);
+  }, [obras, xgestao]);
 
   const contratanteOptions = useMemo(() => {
     const set = new Set((obras ?? []).filter((o) => o.temContratante).map((o) => o.contratante.nome));
@@ -99,7 +99,7 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
 
   const filteredObras = useMemo(() => {
     if (!obras) return [];
-    let result = obras;
+    let result = xgestao ? obras.filter((obra) => obra.isObraPropria) : obras;
     if (statusSelected.length > 0) result = result.filter((o) => statusSelected.includes(o.status));
     if (saude.value) result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
     if (tipoSelected.length > 0) result = result.filter((o) => tipoSelected.includes(o.tipo));
@@ -129,6 +129,7 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
     progMinNum,
     progMaxNum,
     searchQuery,
+    xgestao,
   ]);
 
   const totalPages = Math.ceil(filteredObras.length / ITEMS_PER_PAGE);
@@ -136,12 +137,18 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
-  const healthSummary = useMemo(() => summarizeHealthMap(healthMap), [healthMap]);
+  const healthSummary = useMemo(() => {
+    if (!xgestao) return summarizeHealthMap(healthMap);
+    const ownIds = new Set((obras ?? []).filter((obra) => obra.isObraPropria).map((obra) => obra.id));
+    return summarizeHealthMap(
+      Object.fromEntries(Object.entries(healthMap ?? {}).filter(([obraId]) => ownIds.has(obraId))),
+    );
+  }, [healthMap, obras, xgestao]);
   const advancedActiveCount =
     (statusSelected.length > 0 ? 1 : 0) +
     (saude.value ? 1 : 0) +
     (tipoSelected.length > 0 ? 1 : 0) +
-    (contratanteSelected.length > 0 ? 1 : 0) +
+    (!xgestao && contratanteSelected.length > 0 ? 1 : 0) +
     (orcMinNum !== undefined || orcMaxNum !== undefined ? 1 : 0) +
     (progMinNum !== undefined || progMaxNum !== undefined ? 1 : 0);
 
@@ -160,12 +167,19 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
   if (isLoading) return <MinhasObrasSkeleton />;
 
   return (
-    <div className="mb-12 flex flex-col gap-10 p-10" data-testid="minhas-obras-empreiteiro-page">
+    <div
+      className="mb-12 flex flex-col gap-10 p-6 md:p-10"
+      data-testid={xgestao ? 'xgestao-obras-page' : 'minhas-obras-empreiteiro-page'}
+    >
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <PageHeader
             title="Minhas Obras"
-            subtitle="Gerencie suas obras em execução e acompanhe o progresso operacional."
+            subtitle={
+              xgestao
+                ? 'Gerencie suas obras próprias e acompanhe o progresso da execução.'
+                : 'Gerencie suas obras em execução e acompanhe o progresso operacional.'
+            }
           />
           {xgestao && <NovaObraModal />}
         </div>
@@ -193,15 +207,17 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                 placeholder="Todos os tipos"
                 testIdPrefix="filter-tipo"
               />
-              <MultiSelectDropdown
-                label="Contratante"
-                options={contratanteOptions}
-                values={contratanteSelected}
-                onChange={onFilterChange(setContratanteSelected)}
-                placeholder="Todos os contratantes"
-                searchPlaceholder="Buscar contratante..."
-                testIdPrefix="filter-contratante"
-              />
+              {!xgestao && (
+                <MultiSelectDropdown
+                  label="Contratante"
+                  options={contratanteOptions}
+                  values={contratanteSelected}
+                  onChange={onFilterChange(setContratanteSelected)}
+                  placeholder="Todos os contratantes"
+                  searchPlaceholder="Buscar contratante..."
+                  testIdPrefix="filter-contratante"
+                />
+              )}
               <RangeNumberInput
                 label="Orçamento"
                 min={orcamentoMin}
@@ -267,7 +283,7 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                   testId={`active-chip-tipo-${tipo}`}
                 />
               ))}
-              {contratanteSelected.map((nome) => (
+              {!xgestao && contratanteSelected.map((nome) => (
                 <ActiveFilterChip
                   key={nome}
                   label={`Contratante: ${nome}`}

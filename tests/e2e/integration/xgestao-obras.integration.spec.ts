@@ -118,6 +118,8 @@ test.describe('xgestão — obras próprias', () => {
       temContratante: false,
       isObraPropria: true,
     });
+    const rotaDaObraPropria = await request.get(`/xgestao/obras/${obra.id}`, { maxRedirects: 0 });
+    expect(rotaDaObraPropria.status()).toBe(200);
 
     const editada = await request.patch(`/api/obras/${obra.id}`, {
       data: { nome: 'Reforma da sede xgestão — atualizada', endereco: 'Rua das Obras, 321' },
@@ -210,6 +212,11 @@ test.describe('xgestão — obras próprias', () => {
     await logout(request);
 
     await loginAs(request, empreiteiroEmail);
+    const marketplaceOcultaNoProduto = await request.get(`/xgestao/obras/${marketplace.id}`, {
+      maxRedirects: 0,
+    });
+    expect(marketplaceOcultaNoProduto.status()).toBe(404);
+
     const marketplaceBloqueada = await request.patch(`/api/obras/${marketplace.id}`, {
       data: { nome: 'Tentativa de editar marketplace' },
     });

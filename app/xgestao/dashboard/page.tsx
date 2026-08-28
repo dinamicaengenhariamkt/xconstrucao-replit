@@ -1,10 +1,5 @@
-import { XGestaoComingSoonPage } from '@features/xgestao/components/XGestaoComingSoonPage';
+import { XGestaoDashboard } from '@features/xgestao/components/XGestaoDashboard';
 
 export default function XGestaoDashboardPage() {
-  return (
-    <XGestaoComingSoonPage
-      title="Dashboard em preparação"
-      description="Os indicadores operacionais do xgestão serão entregues nas próximas etapas. Enquanto isso, acompanhe suas obras em andamento."
-    />
-  );
+  return <XGestaoDashboard />;
 }
