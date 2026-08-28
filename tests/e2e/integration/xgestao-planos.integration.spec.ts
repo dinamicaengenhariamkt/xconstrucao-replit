@@ -59,6 +59,25 @@ function obra(nome: string) {
 }
 
 test.describe('xgestão — planos e limites', () => {
+  test('centraliza Plano e Uso em Configurações e mantém o acesso legado', async ({ page, request }) => {
+    const email = await registrar(request, 'empreiteiro', 'xgestao-planos-navegacao');
+    await concederXGestao(request, email);
+
+    const login = await page.request.post('/api/test/login-as', { data: { email } });
+    expect(login.status(), await login.text()).toBe(200);
+
+    await page.goto('/xgestao/planos');
+    await expect(page).toHaveURL(/\/xgestao\/configuracoes\?tab=plano$/);
+    await expect(page.getByTestId('xgestao-planos-section')).toBeVisible();
+    await expect(page.getByText('Compare os planos')).toBeVisible();
+    await expect(page.getByTestId('xgestao-sidebar-upgrade')).toContainText('Faça upgrade do seu plano');
+    await expect(page.getByRole('link', { name: 'Planos', exact: true })).toHaveCount(0);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId('xgestao-planos-section')).toBeVisible();
+    await expect(page.getByText('Compare os planos')).toBeVisible();
+  });
+
   test('Freemium limita uma obra, conclusão libera vaga e Basic limita três', async ({ request }) => {
     const empreiteiroEmail = await registrar(request, 'empreiteiro', 'xgestao-planos-emp');
     await loginAs(request, empreiteiroEmail);

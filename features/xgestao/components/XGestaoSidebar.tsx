@@ -4,8 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback } from 'react';
-import { RiLogoutBoxRLine } from 'react-icons/ri';
+import { RiLogoutBoxRLine, RiRocketLine } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
+import { usePerfilPlano } from '@features/planos/ui/use-planos';
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +25,7 @@ export function XGestaoSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  const { data: plano } = usePerfilPlano('xgestao');
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -84,6 +86,28 @@ export function XGestaoSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
+          <SidebarMenuItem>
+            <Link
+              href="/xgestao/configuracoes?tab=plano"
+              data-testid="xgestao-sidebar-upgrade"
+              className={[
+                'mb-2 flex items-start gap-2 rounded-xl border p-3 transition-colors',
+                plano?.plano === 'enterprise'
+                  ? 'border-border bg-background hover:bg-muted'
+                  : 'border-primary/25 bg-primary/5 hover:bg-primary/10',
+              ].join(' ')}
+            >
+              <RiRocketLine className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span className="min-w-0">
+                <span className="block text-xs font-bold text-foreground">
+                  {plano?.plano === 'free' || !plano ? 'Faça upgrade do seu plano' : plano.plano === 'pro' ? 'Mais espaço para sua operação' : 'Plano Enterprise'}
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
+                  {plano?.plano === 'enterprise' ? 'Plano máximo ativo' : 'Veja opções e limites'}
+                </span>
+              </span>
+            </Link>
+          </SidebarMenuItem>
           {XGESTAO_BOTTOM_NAV_ITEMS.map((item) => {
             const active = isActive(item.url);
             return (

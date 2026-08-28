@@ -18,7 +18,7 @@ export interface PlanoUpsellDialogProps {
   /** Descrição do recurso atingido, ex: "5 propostas/mês", "1 obra aberta" */
   descricaoLimite: string;
   /** URL para a página de planos da persona */
-  planosHref: '/empreiteiro/planos' | '/contratante/planos' | '/xgestao/planos';
+  planosHref: '/empreiteiro/planos' | '/contratante/planos' | '/xgestao/planos' | '/xgestao/configuracoes?tab=plano';
 }
 
 /**

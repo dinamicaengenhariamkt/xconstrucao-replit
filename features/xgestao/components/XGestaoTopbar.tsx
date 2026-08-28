@@ -79,7 +79,7 @@ export function XGestaoTopbar() {
             <RiUserLine className="mr-2 size-4" />
             Meu perfil
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/xgestao/planos')}>
+          <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes?tab=plano')}>
             <RiPriceTag3Line className="mr-2 size-4" />
             Plano e uso
           </DropdownMenuItem>

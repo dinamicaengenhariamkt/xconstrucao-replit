@@ -13,7 +13,7 @@ import {
 } from 'react-icons/ri';
 import { usePerfilEmpreiteiro, useUpdatePerfilEmpreiteiro } from '@features/perfil/hooks/use-perfil';
 import { usePreferencias, useUpdatePreferencias } from '@features/perfil/hooks/use-preferencias';
-import { usePerfilPlano } from '@features/planos/ui/use-planos';
+import { XGestaoPlanosSection } from './XGestaoPlanosSection';
 import { ContaSection } from '@features/perfil/components/ContaSection';
 import { TwoFactorSection } from '@features/auth/components/TwoFactorSection';
 import { Button } from '@shared/components/ui/button';
@@ -64,7 +64,6 @@ export function XGestaoConfiguracoesView() {
   const updatePerfil = useUpdatePerfilEmpreiteiro();
   const { data: preferencias } = usePreferencias();
   const updatePreferencias = useUpdatePreferencias();
-  const { data: plano, isLoading: planoLoading } = usePerfilPlano('xgestao');
   const [form, setForm] = useState({
     nome: '',
     responsavel: '',
@@ -324,25 +323,7 @@ export function XGestaoConfiguracoesView() {
               )}
 
               {section === 'plano' && (
-                <Card>
-                  <CardHeader><CardTitle>Plano e uso</CardTitle></CardHeader>
-                  <CardContent>
-                    {planoLoading ? <Skeleton className="h-40" /> : plano ? (
-                      <div className="space-y-5">
-                        <div><p className="text-sm text-muted-foreground">Plano atual</p><p className="text-2xl font-bold">{plano.catalogo.nome}</p></div>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {plano.uso.map((item) => (
-                            <div key={item.key} className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
-                              <p className="text-xs text-muted-foreground">{item.label}</p>
-                              <p className="mt-1 text-xl font-bold">{item.current} <span className="text-sm font-normal text-muted-foreground">de {item.max >= 9999 ? 'ilimitado' : item.max}</span></p>
-                            </div>
-                          ))}
-                        </div>
-                        <Button asChild><a href="/xgestao/planos">Ver planos xgestão</a></Button>
-                      </div>
-                    ) : <p className="text-sm text-muted-foreground">Não foi possível carregar seu plano.</p>}
-                  </CardContent>
-                </Card>
+                <XGestaoPlanosSection />
               )}
             </>
           )}

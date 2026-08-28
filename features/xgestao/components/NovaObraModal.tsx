@@ -285,7 +285,7 @@ export function NovaObraModal() {
         open={upsellLimite !== null}
         onClose={() => setUpsellLimite(null)}
         descricaoLimite={`${upsellLimite ?? 1} obra(s) ativa(s)`}
-        planosHref="/xgestao/planos"
+        planosHref="/xgestao/configuracoes?tab=plano"
       />
     </>
   );
