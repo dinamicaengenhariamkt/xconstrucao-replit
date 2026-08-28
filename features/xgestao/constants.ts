@@ -15,16 +15,16 @@ export type XGestaoNavItem = {
 
 export const XGESTAO_NAV_ITEMS: XGestaoNavItem[] = [
   {
-    title: 'Minhas Obras',
-    url: '/xgestao/obras',
-    icon: RiBuilding4Line,
-    description: 'Obras e frentes de trabalho',
-  },
-  {
     title: 'Dashboard',
     url: '/xgestao/dashboard',
     icon: RiDashboardLine,
     description: 'Visão geral da operação',
+  },
+  {
+    title: 'Minhas Obras',
+    url: '/xgestao/obras',
+    icon: RiBuilding4Line,
+    description: 'Obras e frentes de trabalho',
   },
   {
     title: 'Planos',
@@ -32,6 +32,9 @@ export const XGESTAO_NAV_ITEMS: XGestaoNavItem[] = [
     icon: RiPriceTag3Line,
     description: 'Plano e limites da conta',
   },
+];
+
+export const XGESTAO_BOTTOM_NAV_ITEMS: XGestaoNavItem[] = [
   {
     title: 'Configurações',
     url: '/xgestao/configuracoes',

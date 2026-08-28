@@ -10,6 +10,7 @@ import {
   RiUserLine,
 } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
+import { usePerfilPlano } from '@features/planos/ui/use-planos';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
 import {
@@ -24,6 +25,7 @@ import {
 export function XGestaoTopbar() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { data: plano } = usePerfilPlano('xgestao');
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout();
@@ -52,6 +54,9 @@ export function XGestaoTopbar() {
                 {user?.name ?? 'Empreiteiro'}
               </p>
               <p className="mt-1 text-[11px] font-medium text-gray-500">Conta xgestão</p>
+              <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                {plano?.catalogo.nome ?? 'Plano xgestão'}
+              </span>
             </div>
             <Avatar className="size-10 border border-border-light">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
@@ -65,6 +70,9 @@ export function XGestaoTopbar() {
           <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
             <span className="text-sm font-semibold">{user?.name ?? 'Empreiteiro'}</span>
             <span className="text-xs font-normal text-muted-foreground">{user?.email}</span>
+            <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              {plano?.catalogo.nome ?? 'Plano xgestão'}
+            </span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes?tab=perfil')}>

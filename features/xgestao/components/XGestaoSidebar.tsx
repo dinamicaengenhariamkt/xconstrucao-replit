@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
 } from '@shared/components/ui/sidebar';
 import { Separator } from '@shared/components/ui/separator';
-import { XGESTAO_NAV_ITEMS } from '../constants';
+import { XGESTAO_BOTTOM_NAV_ITEMS, XGESTAO_NAV_ITEMS } from '../constants';
 
 export function XGestaoSidebar() {
   const pathname = usePathname();
@@ -84,6 +84,23 @@ export function XGestaoSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
+          {XGESTAO_BOTTOM_NAV_ITEMS.map((item) => {
+            const active = isActive(item.url);
+            return (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active}
+                  className={active ? 'border-r-3 border-primary bg-[#f3f7f8] font-semibold dark:bg-gray-800' : ''}
+                >
+                  <Link href={item.url}>
+                    <item.icon className="size-4" />
+                    <span className="text-sm font-medium">{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
           <Separator className="my-2" />
           <SidebarMenuItem>
             <SidebarMenuButton
