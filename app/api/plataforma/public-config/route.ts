@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getPlatformSetting } from "@features/admin/platform-settings/server/settings-reader";
+import {
+  getPlatformSetting,
+  resolveMarketplaceVisivel,
+} from "@features/admin/platform-settings/server/settings-reader";
 import { isAdPaymentEnabled } from "@features/anuncios/self-service/flags";
 import { getAsaasEnvironment } from "@shared/lib/asaas-client";
 
@@ -7,9 +10,13 @@ import { getAsaasEnvironment } from "@shared/lib/asaas-client";
  * GET /api/plataforma/public-config — config pública NÃO-sensível (J26).
  *
  * Leva ao client (footer, gating de FAQ, etc.) apenas uma whitelist explícita,
- * sem expor o endpoint admin de configurações. Cacheável 30s (alinhado ao TTL
- * do settings-reader).
+ * sem expor o endpoint admin de configurações. A resposta é sempre fresca
+ * porque esta flag troca a experiência pública inteira.
  */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 export async function GET() {
   const [geral, plataforma] = await Promise.all([
     getPlatformSetting("geral"),
@@ -24,7 +31,7 @@ export async function GET() {
     faq: plataforma.faq !== false,
     // XG05 — flag pública de apresentação. Não bloqueia rotas nem APIs do
     // marketplace; só controla os pontos de entrada e descoberta.
-    marketplaceVisivel: plataforma.marketplaceVisivel !== false,
+    marketplaceVisivel: resolveMarketplaceVisivel(plataforma),
     // J53 — cobrança real de anúncio ligada? (gate env AD_PAYMENT_GATEWAY + gateway
     // Asaas). Default false = protótipo; a UI só oferece "Pagar" quando true.
     adPaymentEnabled: isAdPaymentEnabled(),
@@ -36,6 +43,6 @@ export async function GET() {
   };
 
   const r = NextResponse.json(body);
-  r.headers.set("Cache-Control", "public, max-age=30, s-maxage=30, stale-while-revalidate=60");
+  r.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
   return r;
 }

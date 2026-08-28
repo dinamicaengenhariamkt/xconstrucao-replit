@@ -41,7 +41,7 @@ flowchart LR
 
 ## 5. Componentes-chave
 
-- [features/admin/platform-settings/server/settings-reader.ts](../../features/admin/platform-settings/server/settings-reader.ts) — toggle `marketplaceVisivel` (criado em XG01). Cache de 30s, fail-open.
+- [features/admin/platform-settings/server/settings-reader.ts](../../features/admin/platform-settings/server/settings-reader.ts) — toggle `marketplaceVisivel` (criado em XG01). Em produção, o override `MARKETPLACE_PUBLIC_VISIBILITY` tem precedência; fora dela, o valor persistido continua soberano.
 - [features/empreiteiro/constants.ts](../../features/empreiteiro/constants.ts) e [EmpreiteiroSidebar.tsx](../../features/empreiteiro/components/EmpreiteiroSidebar.tsx) — nav condicional.
 - [features/landing/components/GlassNav.tsx](../../features/landing/components/GlassNav.tsx) — navegação pública.
 
@@ -74,7 +74,7 @@ Nenhum novo. **As rotas e APIs do marketplace continuam vivas e respondendo** �
 1. Com `marketplaceVisivel = false`: a home mostra somente a entrada do xgestão, sem conteúdo residual do marketplace.
 2. O menu do empreiteiro perde os itens de marketplace.
 3. **As APIs do marketplace continuam respondendo normalmente** — a prova de que foi ocultado, não removido.
-4. Voltar o toggle para `true` restaura tudo em ≤30s (TTL do cache), sem deploy.
+4. Sem override de ambiente, voltar o toggle para `true` restaura tudo em ≤30s, sem deploy. Em produção com `MARKETPLACE_PUBLIC_VISIBILITY` definido, alterar a variável e republicar é deliberadamente obrigatório.
 5. `git diff` não mostra remoção de rota nem de componente do marketplace.
 6. O fluxo completo do marketplace (contratante → candidatura → obra) segue funcionando com o toggle ligado.
 

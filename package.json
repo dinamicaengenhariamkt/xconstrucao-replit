@@ -15,6 +15,7 @@
     "db:demo:xgestao:preview": "tsx scripts/seed-demo-xgestao.ts --dry-run",
     "db:demo:xgestao:check": "tsx scripts/seed-demo-xgestao.ts --check",
     "test:seed:xgestao": "tsc -p tsconfig.seed-xgestao.json && tsx --test scripts/seed-demo-xgestao.test.ts",
+    "test:xgestao:config": "tsx --test features/admin/platform-settings/server/settings-reader.test.ts",
     "clean": "rm -rf .next",
     "test:e2e": "playwright test --project=api",
     "test:e2e:browser": "E2E_BROWSER=1 playwright test --project=browser",

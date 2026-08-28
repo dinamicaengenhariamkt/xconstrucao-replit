@@ -37,12 +37,13 @@ export function usePublicConfig() {
   const query = useQuery<PublicConfig>({
     queryKey: ["plataforma", "public-config"],
     queryFn: async () => {
-      const res = await fetch("/api/plataforma/public-config");
+      const res = await fetch("/api/plataforma/public-config", { cache: "no-store" });
       if (!res.ok) throw new Error("Erro ao buscar config pública");
       return res.json();
     },
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
   // Sempre devolve um valor utilizável (defaults enquanto carrega / em erro).
   return { config: query.data ?? DEFAULTS, isLoading: query.isLoading };

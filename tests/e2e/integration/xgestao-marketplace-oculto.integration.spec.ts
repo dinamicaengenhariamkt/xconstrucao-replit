@@ -45,6 +45,16 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
     }).plataforma.marketplaceVisivel !== false;
 
     try {
+      const home = await request.get('/');
+      expect(home.status(), await home.text()).toBe(200);
+      expect(home.headers()['cache-control']).toContain('no-cache');
+      expect(home.headers()['cache-control']).not.toContain('s-maxage=31536000');
+
+      const acesso = await request.get('/acesso-plataforma');
+      expect(acesso.status(), await acesso.text()).toBe(200);
+      expect(acesso.headers()['cache-control']).toContain('no-cache');
+      expect(acesso.headers()['cache-control']).not.toContain('s-maxage=31536000');
+
       await setMarketplaceVisibility(request, false);
       await logout(request);
 
@@ -52,6 +62,8 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
       await expect(page.getByTestId('link-acessar-xgestao')).toBeVisible();
       await expect(page.getByTestId('link-criar-conta-xgestao')).toBeVisible();
       await expect(page.getByTestId('link-sou-empreiteiro')).toHaveCount(0);
+      await expect(page.getByTestId('link-sou-contratante')).toHaveCount(0);
+      await expect(page.getByTestId('link-nav-projetos')).toHaveCount(0);
       await expect(page.getByTestId('link-marketplace-em-breve')).toHaveCount(0);
       await expect(page.getByTestId('link-acessar-marketplace')).toHaveCount(0);
 
@@ -128,6 +140,8 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
 
       const oculto = await request.get('/api/plataforma/public-config');
       expect(oculto.status(), await oculto.text()).toBe(200);
+      expect(oculto.headers()['cache-control']).toContain('no-store');
+      expect(oculto.headers()['cache-control']).not.toContain('stale-while-revalidate');
       expect((await oculto.json()) as { marketplaceVisivel: boolean }).toMatchObject({
         marketplaceVisivel: false,
       });
@@ -148,6 +162,7 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
 
       const reativado = await request.get('/api/plataforma/public-config');
       expect(reativado.status(), await reativado.text()).toBe(200);
+      expect(reativado.headers()['cache-control']).toContain('no-store');
       expect((await reativado.json()) as { marketplaceVisivel: boolean }).toMatchObject({
         marketplaceVisivel: true,
       });

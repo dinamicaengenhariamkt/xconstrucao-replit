@@ -199,9 +199,23 @@ export async function isRelatoriosHabilitado(): Promise<boolean> {
 }
 
 /** XG05 — controla somente a visibilidade pública do marketplace. Fail-open → visível. */
+export function resolveMarketplaceVisivel(
+  plataforma: Record<string, unknown>,
+  runtime: { nodeEnv?: string; override?: string } = {
+    nodeEnv: process.env.NODE_ENV,
+    override: process.env.MARKETPLACE_PUBLIC_VISIBILITY,
+  },
+): boolean {
+  const override = runtime.override?.trim().toLowerCase();
+  if (runtime.nodeEnv === "production" && override === "false") return false;
+  if (runtime.nodeEnv === "production" && override === "true") return true;
+  return plataforma?.marketplaceVisivel !== false;
+}
+
+/** XG05 — respeita um override operacional por ambiente antes do valor persistido. */
 export async function isMarketplaceVisivel(): Promise<boolean> {
   const plataforma = await getPlatformSetting("plataforma");
-  return plataforma?.marketplaceVisivel !== false;
+  return resolveMarketplaceVisivel(plataforma);
 }
 
 /** Zera o cache para refletir uma escrita imediatamente (chamar no PATCH). */

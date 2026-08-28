@@ -100,6 +100,19 @@ até 30 segundos ou reinicie a aplicação. Esse é o TTL do leitor público de
 configurações; o comando altera o banco diretamente e não consegue limpar o
 cache de outro processo.
 
+### Visibilidade pública em produção
+
+`MARKETPLACE_PUBLIC_VISIBILITY` é um override operacional aplicado somente quando
+`NODE_ENV=production`. Com valor `false`, ele mantém a descoberta pública do
+marketplace oculta mesmo que o banco ainda possua `marketplaceVisivel=true`.
+Desenvolvimento, preview e testes ignoram esse override e continuam obedecendo ao
+valor persistido.
+
+Enquanto o override estiver definido em produção, o painel administrativo não o
+substitui. Para reexibir o marketplace publicamente, altere ou remova a variável
+de produção e publique novamente. Nenhum dado, rota ou API do marketplace é
+apagado por esse mecanismo.
+
 > Não use `db:limpar` para essa finalidade. A limpeza remove todos os usuários
 > não administrativos e as operações do marketplace, que este seed foi criado
 > justamente para preservar.
