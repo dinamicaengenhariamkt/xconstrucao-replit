@@ -3,6 +3,7 @@
 import { StatsCard } from '@features/shared/components/StatsCard';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { useXgestaoAdminDashboard } from '@features/xgestao/admin/hooks/use-admin-dashboard';
+import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
 import { RiGroupLine, RiHammerLine, RiLinkM, RiPieChart2Line } from 'react-icons/ri';
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
@@ -12,7 +13,7 @@ function tierLabel(tier: string) {
 }
 
 export default function AdminXgestaoPage() {
-  const { data, isLoading } = useXgestaoAdminDashboard();
+  const { data, isLoading, isError, refetch, isFetching } = useXgestaoAdminDashboard();
   const indicadores = data?.indicadores;
   const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0 };
   const cards = [
@@ -31,6 +32,15 @@ export default function AdminXgestaoPage() {
         </div>
         <Skeleton className="h-72 rounded-2xl" />
       </div>
+    );
+  }
+
+  if (isError && !data) {
+    return (
+      <AdminDashboardError
+        isRetrying={isFetching}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

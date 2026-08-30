@@ -88,4 +88,23 @@ describe("auth store logout", () => {
       redirect: "/login?perfil=contratante",
     });
   });
+
+  it("mantém superadmin no login administrativo quando a API falha", async () => {
+    global.fetch = (async () => new Response(null, { status: 503 })) as typeof fetch;
+    useAuthStore.setState({
+      user: {
+        id: "user-superadmin",
+        email: "superadmin@example.com",
+        name: "Super Admin",
+        role: "superadmin",
+      },
+    });
+
+    const result = await useAuthStore.getState().logout();
+
+    assert.deepEqual(result, {
+      persona: "administrador",
+      redirect: "/login?perfil=administrador",
+    });
+  });
 });

@@ -309,7 +309,7 @@ export const useAuthStore = create<AuthState>()(
           const { setUser, user } = get();
           const fallbackPersona =
             options?.persona ??
-            (user?.role === 'admin'
+            (user?.role === 'admin' || user?.role === 'superadmin'
               ? 'administrador'
               : user?.role === 'empreiteiro'
                 ? 'empreiteiro'

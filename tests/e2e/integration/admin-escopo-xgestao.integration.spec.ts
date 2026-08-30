@@ -1,5 +1,10 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { loginAs, logout, uniqueEmail, SEED_ADMIN_EMAIL } from "../helpers";
+import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
+import { db } from "@shared/db/db";
+import { sessions, users } from "@shared/db/schema";
+import { eq } from "drizzle-orm";
+import { hashPassword } from "@features/auth/api/auth-service";
 
 /**
  * Integração (XG06) — escopo administrativo (`users.admin_escopo`).
@@ -36,14 +41,16 @@ const ROTA_PLANOS_MARKETPLACE = "/api/admin/planos";
 async function criarAdminDescartavel(
   request: APIRequestContext,
   email: string,
+  password?: string,
 ): Promise<string | null> {
   const res = await request.post("/api/admin/usuarios", {
     data: {
       name: "Admin Escopo E2E",
       email,
       role: "admin",
-      // senhaModo é obrigatório no createSchema; "random" evita política de senha.
-      senhaModo: "random",
+      senhaModo: password ? "manual" : "random",
+      senhaManual: password,
+      forceChangeOnFirstLogin: password ? false : undefined,
     },
   });
   if (!res.ok()) return null;
@@ -60,6 +67,84 @@ async function accessTokenAtual(request: APIRequestContext): Promise<string | nu
 }
 
 test.describe("XG06 — escopo administrativo", () => {
+  test("login administrativo é único e não oferece cadastro público", async ({
+    request,
+  }) => {
+    const loginPage = await request.get("/login?perfil=administrador");
+    expect(loginPage.ok()).toBeTruthy();
+    const html = await loginPage.text();
+    expect(html).toContain("Administrador");
+    expect(html).not.toContain("Cadastre-se");
+
+    const cadastroAdmin = await request.post("/api/auth/register", {
+      data: {
+        name: "Admin público indevido",
+        email: uniqueEmail("admin-publico-negado"),
+        username: `admin-publico-${Date.now()}`,
+        password: "Xconstr@E2E2026!",
+        role: "admin",
+        acceptTerms: true,
+        website: "",
+        mountedAt: Date.now() - 5_000,
+      },
+    });
+    expect(cadastroAdmin.status(), "cadastro público nunca deve aceitar role admin").toBe(400);
+  });
+
+  test("login administrativo respeita o escopo xgestão", async ({ request }) => {
+    const email = uniqueEmail("login-admin-xgestao");
+    const password = "AdminXGestao@2026!";
+    const [admin] = await db.insert(users).values({
+      name: "Admin xgestão E2E",
+      email,
+      password: await hashPassword(password),
+      role: "admin",
+      adminEscopo: "xgestao",
+      ativo: true,
+      emailVerified: new Date(),
+      mustChangePassword: false,
+    }).returning({ id: users.id });
+
+    try {
+      const login = await request.post("/api/auth/login", {
+        data: {
+          email,
+          password,
+          expectedRole: "admin",
+          website: "",
+          mountedAt: Date.now() - 5_000,
+        },
+      });
+      expect(login.status(), await login.text()).toBe(200);
+      const loginBody = (await login.json()) as {
+        user: { role: string; adminEscopo: string; roles?: string[] };
+      };
+      expect(loginBody.user).toMatchObject({ role: "admin", adminEscopo: "xgestao" });
+      expect(
+        resolvePostLoginRedirect(
+          loginBody.user.role,
+          null,
+          loginBody.user.roles,
+          loginBody.user.adminEscopo,
+        ),
+      ).toBe("/admin/xgestao");
+
+      // Os cookies de sessão são Secure; o APIRequestContext local usa HTTP e
+      // por isso precisa reenviar explicitamente o token recém-emitido.
+      const token = await accessTokenAtual(request);
+      expect(token, "login real deve emitir access_token").toBeTruthy();
+      const headers = { Cookie: `access_token=${token}` };
+
+      expect((await request.get("/admin/xgestao", { headers, maxRedirects: 0 })).status()).toBe(200);
+      expect((await request.get(ROTA_NO_ESCOPO, { headers })).status()).toBe(200);
+      expect((await request.get(ROTA_FORA_DO_ESCOPO, { headers })).status()).toBe(403);
+    } finally {
+      await logout(request);
+      await db.delete(sessions).where(eq(sessions.userId, admin.id));
+      await db.delete(users).where(eq(users.id, admin.id));
+    }
+  });
+
   test("admin global (seed) segue acessando rota fora da allowlist do xgestão", async ({
     request,
   }) => {

@@ -15,6 +15,7 @@ export interface User {
   name: string;
   role: string;
   roles?: string[];
+  adminEscopo?: string;
   image?: string | null;
   avatarUrl?: string | null;
 }

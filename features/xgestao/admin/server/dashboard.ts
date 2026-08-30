@@ -90,19 +90,24 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         .from(obras)
         .where(and(XGESTAO_OBRA, inArray(obras.empreiteiraId, empreiteiraIds)))
         .groupBy(obras.empreiteiraId),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(obras)
-      .where(XGESTAO_OBRA),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(obraShareLinks)
-      .innerJoin(obras, eq(obras.id, obraShareLinks.obraId))
-      .where(and(
-        eq(obraShareLinks.ativo, true),
-        or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
-        XGESTAO_OBRA,
-      )),
+    empreiteiraIds.length === 0
+      ? Promise.resolve([{ total: 0 }])
+      : db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(obras)
+        .where(and(XGESTAO_OBRA, inArray(obras.empreiteiraId, empreiteiraIds))),
+    empreiteiraIds.length === 0
+      ? Promise.resolve([{ total: 0 }])
+      : db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(obraShareLinks)
+        .innerJoin(obras, eq(obras.id, obraShareLinks.obraId))
+        .where(and(
+          eq(obraShareLinks.ativo, true),
+          or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
+          XGESTAO_OBRA,
+          inArray(obras.empreiteiraId, empreiteiraIds),
+        )),
   ]);
 
   const activeSubscriptions = new Map<string, typeof subscriptionRows[number]>();

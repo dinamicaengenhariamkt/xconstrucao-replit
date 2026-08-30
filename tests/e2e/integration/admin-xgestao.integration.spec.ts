@@ -65,6 +65,7 @@ async function concederXGestao(request: APIRequestContext, email: string) {
   const response = await request.patch(`/api/admin/usuarios/${payload.rows[0].id}`, { data: { xgestao: true } });
   expect(response.status(), await response.text()).toBe(200);
   await logout(request);
+  return payload.rows[0].id;
 }
 
 test.describe('XG06 — visão administrativa do xgestão', () => {
@@ -78,7 +79,7 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     await loginAs(request, empreiteiroEmail);
     await completarPerfilOperacional(request, 'empreiteiro');
     await logout(request);
-    await concederXGestao(request, empreiteiroEmail);
+    const empreiteiroId = await concederXGestao(request, empreiteiroEmail);
 
     await loginAs(request, empreiteiroEmail);
     const obraXgestao = await request.post('/api/xgestao/obras', {
@@ -153,6 +154,29 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     const obrasMarketplace = (await marketplace.json()) as { rows: Array<{ id: string; clienteId: string | null }>; total: number };
     expect(obrasMarketplace.total).toBe(1);
     expect(obrasMarketplace.rows[0]?.clienteId).toBeTruthy();
+
+    // Uma obra com formato técnico de obra própria não pertence ao recorte
+    // administrativo depois que o entitlement xgestão é removido.
+    const revogar = await request.patch(`/api/admin/usuarios/${empreiteiroId}`, {
+      data: { xgestao: false },
+    });
+    expect(revogar.status(), await revogar.text()).toBe(200);
+    const aposRevogar = (await (await request.get('/api/admin/xgestao')).json()) as Dashboard;
+    expect(aposRevogar.assinantes.some((item) => item.email === empreiteiroEmail)).toBe(false);
+    expect(aposRevogar.indicadores.assinantes).toBe(antes.indicadores.assinantes);
+    expect(aposRevogar.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas);
+    expect(aposRevogar.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos);
+    expect(aposRevogar.indicadores.distribuicaoPlanos.pro).toBe(antes.indicadores.distribuicaoPlanos.pro);
+    await logout(request);
+  });
+
+  test('bloqueia anônimos e usuários comuns no dashboard administrativo', async ({ request }) => {
+    await logout(request);
+    expect((await request.get('/api/admin/xgestao')).status()).toBe(401);
+
+    const email = await registrar(request, 'empreiteiro', 'admin-xgestao-negado');
+    await loginAs(request, email);
+    expect((await request.get('/api/admin/xgestao')).status()).toBe(403);
     await logout(request);
   });
 });

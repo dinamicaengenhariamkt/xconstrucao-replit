@@ -14,7 +14,7 @@ interface NotificacoesResponse {
  * Lê as notificações do próprio usuário via `/api/notificacoes` (mesma fonte do
  * sino das demais personas). Substitui o antigo mock em memória.
  */
-export function useAdminNotifications() {
+export function useAdminNotifications(enabled = true) {
   const queryClient = useQueryClient();
 
   const { data } = useQuery<NotificacoesResponse>({
@@ -26,6 +26,7 @@ export function useAdminNotifications() {
     },
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled,
   });
 
   const notifications = data?.items ?? [];

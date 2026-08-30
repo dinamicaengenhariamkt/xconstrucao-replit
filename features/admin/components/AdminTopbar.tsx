@@ -67,7 +67,9 @@ function formatNotifTime(isoDate: string): string {
 export function AdminTopbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const { notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } = useAdminNotifications();
+  const isXgestaoAdmin = user?.role === 'admin' && user.adminEscopo === 'xgestao';
+  const { notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } =
+    useAdminNotifications(!isXgestaoAdmin);
 
   const handleLogout = async () => {
     const { redirect } = await logout();
@@ -78,6 +80,7 @@ export function AdminTopbar() {
 
   // Atalho de teclado Cmd/Ctrl + K para abrir busca global
   useEffect(() => {
+    if (isXgestaoAdmin) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -86,7 +89,7 @@ export function AdminTopbar() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [isXgestaoAdmin]);
 
   return (
     <header className="h-20 flex items-center justify-between px-4 md:px-12 py-2 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
@@ -99,7 +102,7 @@ export function AdminTopbar() {
         <SidebarTrigger icon={RiMenuLine} className="hidden md:flex" />
 
         {/* Mobile: Botão Ícone de Busca */}
-        <Button
+        {!isXgestaoAdmin && <Button
           size="icon"
           variant="ghost"
           onClick={() => setSearchOpen(true)}
@@ -108,10 +111,10 @@ export function AdminTopbar() {
           data-testid="button-search-mobile"
         >
           <RiSearchLine className="w-5 h-5" />
-        </Button>
+        </Button>}
 
         {/* Desktop: Trigger de Busca Global (abre AdminSearchDialog) */}
-        <button
+        {!isXgestaoAdmin && <button
           type="button"
           onClick={() => setSearchOpen(true)}
           className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
@@ -123,13 +126,13 @@ export function AdminTopbar() {
           <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 tabular-nums">
             ⌘K
           </kbd>
-        </button>
+        </button>}
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-3">
         {/* Notificações */}
-        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+        {!isXgestaoAdmin && <Popover open={notifOpen} onOpenChange={setNotifOpen}>
           <div className="relative">
             <PopoverTrigger asChild>
               <Button
@@ -236,7 +239,7 @@ export function AdminTopbar() {
               </button>
             </div>
           </PopoverContent>
-        </Popover>
+        </Popover>}
 
         {/* Separator */}
         <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
@@ -249,7 +252,9 @@ export function AdminTopbar() {
                 <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
                   {user?.name ?? 'Administrador'}
                 </p>
-                <p className="text-[11px] text-gray-500 font-medium">Administrador</p>
+                <p className="text-[11px] text-gray-500 font-medium">
+                  {isXgestaoAdmin ? 'Administrador xgestão' : 'Administrador'}
+                </p>
               </div>
               <Avatar className="w-10 h-10 border border-border-light">
                 {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || ''} />}
@@ -264,15 +269,19 @@ export function AdminTopbar() {
               <span className="text-sm font-semibold">{user?.name ?? 'Administrador'}</span>
               <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/admin/configuracoes?tab=perfil')}>
-              <RiUserLine className="w-4 h-4 mr-2" />
-              Meu perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/admin/configuracoes')}>
-              <RiSettings3Line className="w-4 h-4 mr-2" />
-              Configurações
-            </DropdownMenuItem>
+            {!isXgestaoAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/admin/configuracoes?tab=perfil')}>
+                  <RiUserLine className="w-4 h-4 mr-2" />
+                  Meu perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/admin/configuracoes')}>
+                  <RiSettings3Line className="w-4 h-4 mr-2" />
+                  Configurações
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
@@ -286,7 +295,7 @@ export function AdminTopbar() {
       </div>
 
       {/* Dialog de Busca Global (desktop + mobile) */}
-      <AdminSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      {!isXgestaoAdmin && <AdminSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />}
     </header>
   );
 }

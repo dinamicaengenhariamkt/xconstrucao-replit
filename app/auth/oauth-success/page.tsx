@@ -51,6 +51,7 @@ function OAuthSuccessContent() {
         const userData = await meRes.json();
         const role = userData?.role || userData?.user?.role || "contratante";
         const roles = userData?.roles || userData?.user?.roles || [];
+        const adminEscopo = userData?.adminEscopo || userData?.user?.adminEscopo;
         // J51 — primeiro acesso via Google também passa pelo wizard de onboarding
         // (exceto admin, que não se cadastra por aqui). Reusa o mesmo /me já lido.
         const onboardingConcluido =
@@ -59,7 +60,7 @@ function OAuthSuccessContent() {
         const target =
           !isAdmin && onboardingConcluido === false
             ? "/onboarding"
-            : resolvePostLoginRedirect(role, searchParams.get("next"), roles);
+            : resolvePostLoginRedirect(role, searchParams.get("next"), roles, adminEscopo);
         router.replace(target);
       } else {
         router.replace("/contratante/dashboard");
