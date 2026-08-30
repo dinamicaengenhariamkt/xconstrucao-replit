@@ -6,6 +6,7 @@
 'use client';
 
 import { useAuthStore } from '../store/auth-store';
+import type { LogoutOptions } from '../store/auth-store';
 
 // Re-exportar types para compatibilidade
 export interface User {
@@ -31,7 +32,7 @@ export interface RegisterData {
 }
 
 export interface LogoutResult {
-  persona: 'contratante' | 'empreiteiro' | 'administrador';
+  persona: 'contratante' | 'empreiteiro' | 'administrador' | 'xgestao';
   redirect: string;
 }
 
@@ -46,7 +47,7 @@ export interface AuthContextType {
   ) => Promise<{ twoFactorRequired: boolean; challengeToken?: string }>;
   verifyTwoFactor: (challengeToken: string, codigo: string) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
-  logout: () => Promise<LogoutResult>;
+  logout: (options?: LogoutOptions) => Promise<LogoutResult>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth?: () => Promise<void>;
 }

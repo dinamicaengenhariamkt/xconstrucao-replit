@@ -28,7 +28,7 @@ export function XGestaoSidebar() {
   const { data: plano } = usePerfilPlano('xgestao');
 
   const handleLogout = useCallback(async () => {
-    const { redirect } = await logout();
+    const { redirect } = await logout({ persona: 'xgestao', next: '/xgestao/obras' });
     router.push(redirect);
   }, [logout, router]);
 

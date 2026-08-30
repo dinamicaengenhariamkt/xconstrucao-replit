@@ -6,14 +6,20 @@ import { clearAuthCookies, setNoCacheHeaders } from "@features/auth/api/auth-uti
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { db } from "@shared/db/db";
 import { sessions } from "@shared/db/schema";
+import { buildLogoutRedirect, type LogoutPersona } from "@features/auth/utils/logout-redirect";
 
-function roleToPersona(role: string | undefined): "contratante" | "empreiteiro" | "administrador" {
+function roleToPersona(role: string | undefined): Exclude<LogoutPersona, "xgestao"> {
   if (role === "admin") return "administrador";
   if (role === "empreiteiro") return "empreiteiro";
   return "contratante";
 }
 
 export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => ({})) as { persona?: unknown; next?: unknown };
+  const requestedXGestao = body.persona === "xgestao";
+  const requestedNext = typeof body.next === "string" ? body.next : undefined;
+  const fallbackPersona: LogoutPersona = requestedXGestao ? "xgestao" : "contratante";
+
   try {
     // Captura a role ANTES de limpar cookies para devolver a persona ao cliente.
     // Se não houver token válido, devolvemos persona=null para o client cair no
@@ -21,7 +27,11 @@ export async function POST(request: NextRequest) {
     const cookieHeader = request.headers.get("cookie");
     const token = getAccessTokenFromCookieHeader(cookieHeader);
     const payload = token ? verifyAccessToken(token) : null;
-    const persona = payload?.role ? roleToPersona(payload.role) : null;
+    const persona: LogoutPersona | null = requestedXGestao
+      ? "xgestao"
+      : payload?.role
+        ? roleToPersona(payload.role)
+        : null;
 
     try {
       const refreshMatch = cookieHeader?.match(/(?:^|; )refresh_token=([^;]+)/);
@@ -38,7 +48,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: "Logout realizado com sucesso",
       persona,
-      redirect: persona ? `/login?perfil=${persona}` : null,
+      redirect: persona ? buildLogoutRedirect(persona, persona === "xgestao" ? requestedNext : undefined) : null,
     });
 
     setNoCacheHeaders(response);
@@ -63,7 +73,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     void logError("error", "Erro no logout", { stack: (error as Error)?.stack, route: "/api/auth/logout" });
     const response = NextResponse.json(
-      { error: "Erro interno do servidor", persona: "contratante", redirect: "/login?perfil=contratante" },
+      {
+        error: "Erro interno do servidor",
+        persona: fallbackPersona,
+        redirect: buildLogoutRedirect(fallbackPersona, fallbackPersona === "xgestao" ? requestedNext : undefined),
+      },
       { status: 500 }
     );
     setNoCacheHeaders(response);

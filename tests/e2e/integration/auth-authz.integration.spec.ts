@@ -42,6 +42,23 @@ async function noverExiste(request: APIRequestContext): Promise<boolean> {
 }
 
 test.describe("Integração — Auth & Autorização", () => {
+  test("logout do xgestão preserva persona e next e encerra a sessão", async ({ request }) => {
+    await loginAs(request, EMPREITEIRO_EMAIL);
+
+    const res = await request.post("/api/auth/logout", {
+      data: { persona: "xgestao", next: "/xgestao/obras" },
+    });
+    expect(res.ok(), "logout xgestão deve responder 200").toBeTruthy();
+    expect(await res.json()).toMatchObject({
+      success: true,
+      persona: "xgestao",
+      redirect: "/login?perfil=xgestao&next=%2Fxgestao%2Fobras",
+    });
+
+    const me = await request.get("/api/auth/me");
+    expect(me.status(), "cookies de sessão devem ser removidos após logout").toBe(401);
+  });
+
   // ---- T2.1: EMAIL_NOT_VERIFIED -------------------------------------------
 
   test("usuário com email NÃO verificado é barrado (403 EMAIL_NOT_VERIFIED) em rota autenticada", async ({

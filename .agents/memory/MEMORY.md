@@ -10,3 +10,4 @@
 - [xgestão visual inheritance](xgestao-visual-inheritance.md) — xgestão must reuse the approved marketplace identity and patterns, trimming features without mixing product data.
 - [Production bootstrap readiness](production-bootstrap-readiness.md) — Autoscale health probes must not wait for slow schema/bootstrap work during Next.js startup.
 - [Asaas recurring checkout contract](asaas-recurring-checkout.md) — recurring checkout uses plural arrays and must not send an incomplete saved customer.
+- [xgestão navigation context](xgestao-navigation-context.md) — navigation cannot infer xgestão from the primary empreiteiro role; product entry points must carry explicit context.

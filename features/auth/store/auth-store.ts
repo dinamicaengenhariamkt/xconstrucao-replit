@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { queryClient } from '@shared/lib/queryClient';
+import { buildLogoutRedirect, type LogoutPersona } from '@features/auth/utils/logout-redirect';
 
 // Tipos
 interface User {
@@ -62,12 +63,17 @@ interface AuthState {
   // 2º passo do login (J22): troca o challengeToken + código por uma sessão.
   verifyTwoFactor: (challengeToken: string, codigo: string) => Promise<void>;
   register: (data: RegisterData & { antiBot?: { website: string; mountedAt: number } }) => Promise<void>;
-  logout: () => Promise<{ persona: 'contratante' | 'empreiteiro' | 'administrador'; redirect: string }>;
+  logout: (options?: LogoutOptions) => Promise<{ persona: LogoutPersona; redirect: string }>;
   refreshToken: (signal?: AbortSignal) => Promise<boolean>;
   checkAuth: () => Promise<void>;
   confirmSessionReady: () => Promise<boolean>;
   createAbortController: () => AbortController;
   abortPendingRequests: () => void;
+}
+
+export interface LogoutOptions {
+  persona?: LogoutPersona;
+  next?: string;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -299,17 +305,18 @@ export const useAuthStore = create<AuthState>()(
         },
 
         // Logout
-        logout: async () => {
+        logout: async (options?: LogoutOptions) => {
           const { setUser, user } = get();
           const fallbackPersona =
-            user?.role === 'admin'
+            options?.persona ??
+            (user?.role === 'admin'
               ? 'administrador'
               : user?.role === 'empreiteiro'
                 ? 'empreiteiro'
-                : 'contratante';
+                : 'contratante');
           const fallback = {
-            persona: fallbackPersona as 'contratante' | 'empreiteiro' | 'administrador',
-            redirect: `/login?perfil=${fallbackPersona}`,
+            persona: fallbackPersona as LogoutPersona,
+            redirect: buildLogoutRedirect(fallbackPersona as LogoutPersona, options?.next),
           };
 
           try {
@@ -317,13 +324,18 @@ export const useAuthStore = create<AuthState>()(
             const res = await fetch('/api/auth/logout', {
               method: 'POST',
               credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(options ?? {}),
             });
             setUser(null);
             if (!res.ok) return fallback;
             const data = (await res.json().catch(() => ({}))) as {
-              persona?: 'contratante' | 'empreiteiro' | 'administrador';
+              persona?: LogoutPersona;
               redirect?: string;
             };
+            // The product context is more specific than the primary role:
+            // xgestão users are empreiteiros with an additional entitlement.
+            if (options?.persona) return fallback;
             return {
               persona: data.persona ?? fallback.persona,
               redirect: data.redirect ?? fallback.redirect,
