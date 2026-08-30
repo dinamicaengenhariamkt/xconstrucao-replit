@@ -1,11 +1,11 @@
 # Jornada — XG06: Visão administrativa do xgestão
 
 > Status: concluída | Prioridade: média | Wave: xgestão-6
-> Última atualização: 2026-08-21
+> Última atualização: 2026-08-30
 
 ## 1. Contexto & Objetivo
 
-Hoje o admin só enxerga o marketplace. Precisa passar a ver o xgestão como produto distinto: quem são os assinantes, quantas obras gerenciam e em que plano estão.
+O administrador precisa acompanhar o xgestão como produto distinto — quem são os assinantes, quantas obras gerenciam e em que plano estão — sem perder a visão completa do marketplace quando estiver no escopo global.
 
 **Escopo deliberadamente apertado.** [features/admin/](../../features/admin/) tem 145 arquivos; espelhar isso para o xgestão seria semanas. Esta jornada entrega uma página e um filtro — e nada mais até o cliente definir o que realmente precisa acompanhar.
 
@@ -24,13 +24,14 @@ flowchart LR
 
 ## 4. Telas envolvidas
 
-- [app/admin/xgestao/page.tsx](../../app/admin/xgestao/page.tsx) — **a criar**. Uma página.
-- [app/admin/obras/page.tsx](../../app/admin/obras/page.tsx) — ganha filtro por produto.
+- [app/admin/xgestao/page.tsx](../../app/admin/xgestao/page.tsx) — página enxuta de acompanhamento do xgestão.
+- [app/admin/obras/page.tsx](../../app/admin/obras/page.tsx) — mantém a visão operacional global do marketplace.
 
 ## 5. Componentes-chave
 
-- Constantes de navegação do admin — adicionar a entrada.
+- Constantes de navegação do admin — entrada xgestão visível para os escopos global e xgestão.
 - Componentes de tabela e KPI já existentes em [features/admin/](../../features/admin/) — reaproveitar, não recriar.
+- Escopo administrativo — `adminEscopo="global"` preserva o painel existente; `adminEscopo="xgestao"` usa uma allowlist positiva e não abre as seções do marketplace.
 
 ## 6. Schema (Drizzle)
 
@@ -45,8 +46,8 @@ Não é preciso coluna nova.
 
 ## 7. Endpoints
 
-- `GET /api/admin/xgestao` — **a criar**. Lista de assinantes + contadores.
-- `GET /api/admin/obras` — **alterar**: aceitar parâmetro `produto`.
+- `GET /api/admin/xgestao` — lista de assinantes + contadores, protegida pelo escopo administrativo.
+- `GET /api/admin/obras` — permanece disponível ao administrador global; a visão xgestão não depende dessa rota compartilhada.
 
 ## 8. Conteúdo mínimo proposto
 
@@ -54,9 +55,9 @@ Lista de assinantes, com: nome da empreiteira, e-mail, quantidade de obras, plan
 
 Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuição entre os 3 planos, links públicos ativos.
 
-> ⚠️ **Escopo ainda pendente de confirmação.** Sem um "sim" explícito do cliente sobre esse mínimo, a jornada expande sem limite. *(2026-08-19: a reunião 002 não tocou neste ponto — a pauta foi consumida por SINAPI, planos e o formato do link público. Segue pendente, mas **não é bloqueio de caminho crítico**: XG06 é a última jornada da ordem de execução e o objetivo do MVP é o Dedé testar em obra real, não a visão admin. Reapresentar na próxima conversa.)*
+> **Escopo confirmado:** a visão administrativa xgestão é deliberadamente enxuta, somente leitura e sem chat, relatórios, configurações globais ou operações financeiras do marketplace. O administrador global continua vendo tudo como antes.
 >
-> **Ajuste de 2026-08-19:** o contador de *links públicos ativos* depende de [XG04](04-link-publico-obra.md) e do plano de corte dela — se a v1 do link sair sem contadores, este número sai junto. Não é motivo para segurar a jornada. E **não incluir painel de quota SINAPI** enquanto [XG07](07-integracao-sinapi.md) estiver congelada.
+> **Ajuste de 2026-08-30:** o contador de *links públicos ativos* depende de [XG04](04-link-publico-obra.md). Não incluir painel de quota SINAPI enquanto [XG07](07-integracao-sinapi.md) estiver congelada.
 
 ## 9. Checklist de implementação
 
@@ -74,11 +75,14 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 3. Em `/admin/obras`, filtrar por produto separa corretamente obras de marketplace das de xgestão.
 4. Sem filtro, a listagem continua mostrando tudo, como hoje.
 5. Verificação: a contagem da tela bate com `SELECT COUNT(*) FROM user_roles WHERE role = 'xgestao'`.
+6. Um administrador global ou superadmin continua chegando a `/admin/financeiro` e acessando as seções do marketplace.
+7. Um administrador com `adminEscopo="xgestao"` chega a `/admin/xgestao`, não recebe cadastro administrativo público e é bloqueado server-side fora da allowlist xgestão.
 
 ## 11. Riscos / Pontos de atenção
 
-- **Risco de escopo, não técnico.** "Visão admin" é pedido aberto; sem definição vira projeto paralelo. Entregar o mínimo e iterar.
+- **Risco de escopo, não técnico.** A visão permanece mínima para não virar uma segunda suíte administrativa.
 - Um empreiteiro pode ser assinante do xgestão **e** ter atividade no marketplace. A lista deve deixar claro que enxerga o recorte xgestão, não o usuário inteiro.
+- Superadmin é sempre global; para uma operação restrita, criar uma conta `admin` separada com `adminEscopo="xgestao"` em vez de rebaixar o superadmin.
 
 ## 12. Links cruzados
 
@@ -88,3 +92,6 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- **2026-08-30 — contexto de acesso:** role continua sendo `admin`/`superadmin`; o recorte xgestão é uma dimensão adicional. O destino pós-login e o guard server-side precisam considerar `adminEscopo`, enquanto valores ausentes continuam globais por compatibilidade.
+- **2026-08-30 — preservação do marketplace:** o painel global não é duplicado nem reconfigurado. A visão xgestão usa uma allowlist própria e não recebe acesso indireto a configurações, planos ou operações financeiras do marketplace.
