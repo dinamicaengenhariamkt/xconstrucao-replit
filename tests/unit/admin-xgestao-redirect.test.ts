@@ -29,4 +29,60 @@ describe("redirecionamento do administrador xgestão", () => {
     assert.equal(getRedirectPathByRole("admin", [], "global"), "/admin/financeiro");
     assert.equal(getRedirectPathByRole("superadmin", [], "xgestao"), "/admin/financeiro");
   });
+
+  it("usa a visão administrativa xgestão quando o login veio desse produto", () => {
+    assert.equal(
+      resolvePostLoginRedirect(
+        "superadmin",
+        "/xgestao/obras",
+        [],
+        "global",
+        "xgestao",
+      ),
+      "/admin/xgestao",
+    );
+    assert.equal(
+      resolvePostLoginRedirect(
+        "admin",
+        "/admin/financeiro",
+        [],
+        "global",
+        "xgestao",
+      ),
+      "/admin/xgestao",
+    );
+  });
+
+  it("preserva o destino xgestão apenas para empreiteiro autorizado", () => {
+    assert.equal(
+      resolvePostLoginRedirect(
+        "empreiteiro",
+        "/xgestao/obras",
+        ["empreiteiro", "xgestao"],
+        undefined,
+        "xgestao",
+      ),
+      "/xgestao/obras",
+    );
+    assert.equal(
+      resolvePostLoginRedirect(
+        "empreiteiro",
+        "/xgestao/obras",
+        ["empreiteiro"],
+        undefined,
+        "xgestao",
+      ),
+      "/empreiteiro/dashboard",
+    );
+    assert.equal(
+      resolvePostLoginRedirect(
+        "contratante",
+        "/admin/xgestao",
+        ["contratante"],
+        undefined,
+        "xgestao",
+      ),
+      "/contratante/dashboard",
+    );
+  });
 });

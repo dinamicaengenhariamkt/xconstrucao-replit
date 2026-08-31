@@ -3,6 +3,7 @@
  */
 
 export type UserRole = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro' | 'anunciante' | 'xgestao';
+export type LoginContext = 'xgestao';
 
 export function getRedirectPathByRole(
   role: string,
@@ -50,8 +51,13 @@ export function resolvePostLoginRedirect(
   nextParam: string | null,
   roles: string[] = [],
   adminEscopo?: string,
+  loginContext?: LoginContext,
 ): string {
-  const fallback = getRedirectPathByRole(role, roles, adminEscopo);
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  const fallback =
+    loginContext === 'xgestao' && isAdmin
+      ? '/admin/xgestao'
+      : getRedirectPathByRole(role, roles, adminEscopo);
 
   if (!nextParam) return fallback;
   // Bloqueia open redirect e URLs absolutas
@@ -60,8 +66,12 @@ export function resolvePostLoginRedirect(
   const allowedPrefixes: Record<string, string[]> = {
     // O xgestão exige um empreiteiro autorizado como sujeito operacional e só
     // é aberto a superadmin com o cookie assinado de "Ver como".
-    superadmin: ["/admin", "/contratante", "/empreiteiro", "/anunciante"],
-    admin: adminEscopo === 'xgestao' ? ["/admin/xgestao"] : ["/admin"],
+    superadmin: loginContext === 'xgestao'
+      ? ["/admin/xgestao"]
+      : ["/admin", "/contratante", "/empreiteiro", "/anunciante"],
+    admin: loginContext === 'xgestao' || adminEscopo === 'xgestao'
+      ? ["/admin/xgestao"]
+      : ["/admin"],
     contratante: ["/contratante"],
     empreiteiro: roles.includes('xgestao') ? ["/empreiteiro", "/xgestao"] : ["/empreiteiro"],
     anunciante: ["/anunciante"],

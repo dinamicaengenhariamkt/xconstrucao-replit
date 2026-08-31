@@ -57,10 +57,18 @@ function OAuthSuccessContent() {
         const onboardingConcluido =
           userData?.onboardingConcluido ?? userData?.user?.onboardingConcluido;
         const isAdmin = role === "admin" || role === "superadmin";
+        const loginContext =
+          searchParams.get("context") === "xgestao" ? "xgestao" : undefined;
         const target =
           !isAdmin && onboardingConcluido === false
             ? "/onboarding"
-            : resolvePostLoginRedirect(role, searchParams.get("next"), roles, adminEscopo);
+            : resolvePostLoginRedirect(
+                role,
+                searchParams.get("next"),
+                roles,
+                adminEscopo,
+                loginContext,
+              );
         router.replace(target);
       } else {
         router.replace("/contratante/dashboard");

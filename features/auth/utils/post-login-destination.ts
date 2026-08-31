@@ -1,4 +1,7 @@
-import { resolvePostLoginRedirect } from "./redirect-by-role";
+import {
+  resolvePostLoginRedirect,
+  type LoginContext,
+} from "./redirect-by-role";
 
 /**
  * J51 — Resolve o destino pós-login considerando o gate do wizard de onboarding.
@@ -18,8 +21,15 @@ export async function resolvePostLoginDestination(
   nextParam: string | null,
   roles: string[] = [],
   adminEscopo?: string,
+  loginContext?: LoginContext,
 ): Promise<string> {
-  const fallback = resolvePostLoginRedirect(role, nextParam, roles, adminEscopo);
+  const fallback = resolvePostLoginRedirect(
+    role,
+    nextParam,
+    roles,
+    adminEscopo,
+    loginContext,
+  );
 
   // Admin/superadmin nunca passam pelo wizard.
   if (role === "admin" || role === "superadmin") return fallback;
@@ -33,7 +43,13 @@ export async function resolvePostLoginDestination(
     if (!res.ok) return fallback;
     const data = (await res.json()) as { onboardingConcluido?: boolean; roles?: string[] };
     if (data.onboardingConcluido === false) return "/onboarding";
-    return resolvePostLoginRedirect(role, nextParam, data.roles ?? roles, adminEscopo);
+    return resolvePostLoginRedirect(
+      role,
+      nextParam,
+      data.roles ?? roles,
+      adminEscopo,
+      loginContext,
+    );
   } catch {
     // Best-effort: nunca prender o usuário fora do produto por falha de rede.
     return fallback;

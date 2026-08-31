@@ -15,6 +15,7 @@ import {
 import { storage } from "@/server/storage";
 import { db } from "@shared/db/db";
 import { userRoles } from "@shared/db/schema";
+import { canApplySignupPersonaToRole } from "@features/auth/utils/oauth-persona";
 
 const VALID_PERSONAS = new Set(["contratante", "empreiteiro", "xgestao"]);
 
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       personaCookie &&
       VALID_PERSONAS.has(personaCookie) &&
       roleEscolhida !== dbUser.role &&
-      dbUser.role !== "admin"
+      canApplySignupPersonaToRole(dbUser.role)
     ) {
       isFirstLogin = !(await hasAnyProfileRow(dbUser.id));
       if (isFirstLogin) {

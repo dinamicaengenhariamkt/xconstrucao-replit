@@ -77,6 +77,7 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 5. Verificação: a contagem da tela bate com `SELECT COUNT(*) FROM user_roles WHERE role = 'xgestao'`.
 6. Um administrador global ou superadmin continua chegando a `/admin/financeiro` e acessando as seções do marketplace.
 7. Um administrador com `adminEscopo="xgestao"` chega a `/admin/xgestao`, não recebe cadastro administrativo público e é bloqueado server-side fora da allowlist xgestão.
+8. Um admin ou superadmin que entra pela tela contextual do xgestão é reconhecido sem precisar trocar para uma tela de login separada e chega a `/admin/xgestao`.
 
 ## 11. Riscos / Pontos de atenção
 
@@ -95,3 +96,4 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 
 - **2026-08-30 — contexto de acesso:** role continua sendo `admin`/`superadmin`; o recorte xgestão é uma dimensão adicional. O destino pós-login e o guard server-side precisam considerar `adminEscopo`, enquanto valores ausentes continuam globais por compatibilidade.
 - **2026-08-30 — preservação do marketplace:** o painel global não é duplicado nem reconfigurado. A visão xgestão usa uma allowlist própria e não recebe acesso indireto a configurações, planos ou operações financeiras do marketplace.
+- **2026-08-31 — login único do produto:** `/login?perfil=xgestao` aceita a autenticação de admin/superadmin e empreiteiro; o contexto só define o destino seguro, nunca a permissão, que continua baseada em role, escopo e entitlement no servidor.

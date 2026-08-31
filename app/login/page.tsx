@@ -14,6 +14,11 @@ import { loginSchema } from "@features/auth/schemas";
 import { useAuth } from "@features/auth/hooks/use-auth";
 import { useAuthStore } from "@features/auth/store/auth-store";
 import { resolvePostLoginDestination } from "@features/auth/utils/post-login-destination";
+import {
+  buildOAuthSuccessCallback,
+  getExpectedRoleForLogin,
+  getLoginContext,
+} from "@features/auth/utils/login-context";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
@@ -30,11 +35,11 @@ import {
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string; role: string }> = {
-  contratante: { Icon: IconBusiness, text: "Contratante", role: "contratante" },
-  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro", role: "empreiteiro" },
-  xgestao: { Icon: IconConstruction, text: "xgestão", role: "empreiteiro" },
-  administrador: { Icon: IconAdminPanelSettings, text: "Administrador", role: "admin" },
+const perfilConfig: Record<string, { Icon: React.ComponentType<{ className?: string }>; text: string }> = {
+  contratante: { Icon: IconBusiness, text: "Contratante" },
+  empreiteiro: { Icon: IconConstruction, text: "Empreiteiro" },
+  xgestao: { Icon: IconConstruction, text: "xgestão" },
+  administrador: { Icon: IconAdminPanelSettings, text: "Administrador" },
 };
 
 export default function LoginPage() {
@@ -45,16 +50,15 @@ export default function LoginPage() {
   const perfilParam = searchParams.get("perfil");
   const perfil = perfilParam || "contratante";
   const config = perfilConfig[perfil] || perfilConfig.contratante;
-  // Só impõe expectedRole quando o usuário entrou explicitamente
-  // pela tela específica de um perfil; /login sem ?perfil= aceita qualquer role.
-  const enforceRole = !!perfilParam && !!perfilConfig[perfilParam];
+  const loginContext = getLoginContext(perfilParam);
+  // xgestão é contexto de produto, não role esperada: aceita admin/superadmin
+  // ou empreiteiro e só então resolve o destino autorizado.
+  const expectedRole = getExpectedRoleForLogin(perfilParam);
   const { login, verifyTwoFactor } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
   const oauthNext = searchParams.get("next") ?? (perfil === "xgestao" ? "/xgestao/obras" : null);
-  const oauthCallbackUrl = oauthNext
-    ? `/auth/oauth-success?next=${encodeURIComponent(oauthNext)}`
-    : "/auth/oauth-success";
+  const oauthCallbackUrl = buildOAuthSuccessCallback(oauthNext, loginContext);
 
   // 2FA (J22): quando o login pede segundo fator, guardamos o challengeToken e
   // trocamos o formulário pelo input do código.
@@ -81,6 +85,7 @@ export default function LoginPage() {
         next,
         user.roles,
         user.adminEscopo,
+        loginContext,
       );
       router.replace(dest);
     }
@@ -113,7 +118,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const result = await login(values.email, values.password, rememberMe, {
-        expectedRole: enforceRole ? config.role : undefined,
+        expectedRole,
         antiBot: antiBot.getPayload(),
       });
 
@@ -156,7 +161,7 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
-      <GlassNav />
+      <GlassNav showAccessButton={perfil !== "xgestao"} />
 
       <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-md">

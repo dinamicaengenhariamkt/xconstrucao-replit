@@ -5,6 +5,10 @@ import { db } from "@shared/db/db";
 import { sessions, users } from "@shared/db/schema";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "@features/auth/api/auth-service";
+import {
+  getExpectedRoleForLogin,
+  getLoginContext,
+} from "@features/auth/utils/login-context";
 
 /**
  * Integração (XG06) — escopo administrativo (`users.admin_escopo`).
@@ -91,6 +95,20 @@ test.describe("XG06 — escopo administrativo", () => {
     expect(cadastroAdmin.status(), "cadastro público nunca deve aceitar role admin").toBe(400);
   });
 
+  test("tela xgestão usa contexto de produto sem impor role empreiteiro", async ({
+    request,
+  }) => {
+    const loginPage = await request.get(
+      "/login?perfil=xgestao&next=%2Fxgestao%2Fobras",
+    );
+    expect(loginPage.ok()).toBeTruthy();
+    const html = await loginPage.text();
+    expect(html).toContain("xgestão");
+    expect(html).not.toContain("Acessar xgestão");
+    expect(getLoginContext("xgestao")).toBe("xgestao");
+    expect(getExpectedRoleForLogin("xgestao")).toBeUndefined();
+  });
+
   test("login administrativo respeita o escopo xgestão", async ({ request }) => {
     const email = uniqueEmail("login-admin-xgestao");
     const password = "AdminXGestao@2026!";
@@ -138,6 +156,51 @@ test.describe("XG06 — escopo administrativo", () => {
       expect((await request.get("/admin/xgestao", { headers, maxRedirects: 0 })).status()).toBe(200);
       expect((await request.get(ROTA_NO_ESCOPO, { headers })).status()).toBe(200);
       expect((await request.get(ROTA_FORA_DO_ESCOPO, { headers })).status()).toBe(403);
+    } finally {
+      await logout(request);
+      await db.delete(sessions).where(eq(sessions.userId, admin.id));
+      await db.delete(users).where(eq(users.id, admin.id));
+    }
+  });
+
+  test("entrada única xgestão reconhece administrador sem aceitar next de empreiteiro", async ({
+    request,
+  }) => {
+    const email = uniqueEmail("login-unico-admin-xgestao");
+    const password = "AdminXGestao@2026!";
+    const [admin] = await db.insert(users).values({
+      name: "Admin Login Único xgestão E2E",
+      email,
+      password: await hashPassword(password),
+      role: "admin",
+      adminEscopo: "xgestao",
+      ativo: true,
+      emailVerified: new Date(),
+      mustChangePassword: false,
+    }).returning({ id: users.id });
+
+    try {
+      const login = await request.post("/api/auth/login", {
+        data: {
+          email,
+          password,
+          website: "",
+          mountedAt: Date.now() - 5_000,
+        },
+      });
+      expect(login.status(), await login.text()).toBe(200);
+      const body = (await login.json()) as {
+        user: { role: string; adminEscopo: string; roles?: string[] };
+      };
+      expect(
+        resolvePostLoginRedirect(
+          body.user.role,
+          "/xgestao/obras",
+          body.user.roles,
+          body.user.adminEscopo,
+          "xgestao",
+        ),
+      ).toBe("/admin/xgestao");
     } finally {
       await logout(request);
       await db.delete(sessions).where(eq(sessions.userId, admin.id));

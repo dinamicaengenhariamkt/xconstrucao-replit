@@ -1,7 +1,7 @@
 # Jornada — XG01: Fundações e shell do xgestão
 
 > Status: pronto | Prioridade: alta | Wave: xgestão-1
-> Última atualização: 2026-08-19
+> Última atualização: 2026-08-31
 
 ## 1. Contexto & Objetivo
 
@@ -18,9 +18,11 @@ O cliente foi explícito na reunião: *"teria que ter essa diferenciação do ca
 
 ```mermaid
 flowchart LR
-  A[Empreiteiro faz login] --> B{tem role aditiva xgestao?}
-  B -- sim --> C[/xgestao/obras]
-  B -- não --> D[/empreiteiro/dashboard]
+  A[Conta entra pelo login xgestão] --> B{role administrativa?}
+  B -- sim --> F[/admin/xgestao]
+  B -- não --> G{empreiteiro com entitlement xgestao?}
+  G -- sim --> C[/xgestao/obras]
+  G -- não --> D[/empreiteiro/dashboard]
   C --> E[Console de obra reaproveitado]
 ```
 
@@ -87,6 +89,7 @@ flowchart LR
 4. Contratante acessando `/xgestao` é redirecionado ao login.
 5. Nenhum arquivo de `features/empreiteiro/minhas-obras/` foi copiado — confirmar por `git diff --stat` (extrações aparecem como alteração, não como arquivo novo duplicado).
 6. Verificação: `SELECT role, COUNT(*) FROM user_roles GROUP BY role` inclui `xgestao`.
+7. A entrada `/login?perfil=xgestao` reconhece administrador e empreiteiro depois da autenticação: admin abre `/admin/xgestao`; empreiteiro autorizado abre `/xgestao/obras`.
 
 ## 11. Riscos / Pontos de atenção
 
@@ -105,3 +108,4 @@ flowchart LR
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
 
 - 2026-08-19 — O ambiente de desenvolvimento não possui uma conta de teste já vinculada à role `xgestao`; a rota anônima, o guard server-side, o enum e a compilação foram validados, e o fluxo autenticado deve ser exercitado assim que o admin conceder a role a um empreiteiro.
+- 2026-08-31 — O login xgestão passou a ser uma entrada única de produto: não exige antecipadamente a role empreiteiro, resolve o destino pela conta autenticada e mantém as entradas do marketplace inalteradas.
