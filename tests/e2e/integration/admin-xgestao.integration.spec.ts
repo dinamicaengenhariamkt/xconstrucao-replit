@@ -15,7 +15,17 @@ type Dashboard = {
   indicadores: {
     assinantes: number;
     obrasGerenciadas: number;
+    obrasAtivas: number;
+    progressoMedio: number;
+    orcamentoGerenciado: number;
+    valorPago: number;
     distribuicaoPlanos: { free: number; pro: number; enterprise: number };
+    distribuicaoStatus: {
+      em_andamento: number;
+      concluida: number;
+      pausada: number;
+      planejamento: number;
+    };
     linksPublicosAtivos: number;
   };
   assinantes: Array<{
@@ -25,6 +35,23 @@ type Dashboard = {
     plano: { tier: string };
     fimTeste: string | null;
   }>;
+  obras: Array<{
+    id: string;
+    empreiteira: string;
+    status: string;
+    progresso: number;
+    valorTotal: number;
+    valorPago: number;
+    linkPublicoAtivo: boolean;
+  }>;
+  alertas: {
+    totais: {
+      ocorrenciasAbertas: number;
+      pagamentosAtrasados: number;
+      obrasPausadas: number;
+    };
+    itens: Array<{ obraId: string; tipo: string; severidade: string }>;
+  };
 };
 
 function proximoCnpjValido() {
@@ -135,8 +162,30 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     });
     expect(dashboard.indicadores.assinantes).toBe(antes.indicadores.assinantes + 1);
     expect(dashboard.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas + 1);
+    expect(dashboard.indicadores.obrasAtivas).toBe(antes.indicadores.obrasAtivas);
+    expect(dashboard.indicadores.progressoMedio).toBeGreaterThanOrEqual(0);
+    expect(dashboard.indicadores.orcamentoGerenciado).toBeGreaterThanOrEqual(0);
+    expect(dashboard.indicadores.valorPago).toBeGreaterThanOrEqual(0);
+    expect(dashboard.indicadores.distribuicaoStatus.planejamento).toBe(
+      antes.indicadores.distribuicaoStatus.planejamento + 1,
+    );
     expect(dashboard.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos + 1);
     expect(dashboard.indicadores.distribuicaoPlanos.pro).toBe(antes.indicadores.distribuicaoPlanos.pro + 1);
+    expect(dashboard.obras).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: obraXgestaoBody.id,
+        status: 'planejamento',
+        progresso: 0,
+        valorTotal: 0,
+        valorPago: 0,
+        linkPublicoAtivo: true,
+      }),
+    ]));
+    expect(dashboard.alertas.totais).toEqual(expect.objectContaining({
+      ocorrenciasAbertas: expect.any(Number),
+      pagamentosAtrasados: expect.any(Number),
+      obrasPausadas: expect.any(Number),
+    }));
 
     const semFiltro = await request.get(`/api/admin/obras?q=${encodeURIComponent(tag)}`);
     const todas = (await semFiltro.json()) as { rows: Array<{ id: string }>; total: number };
@@ -167,6 +216,7 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     expect(aposRevogar.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas);
     expect(aposRevogar.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos);
     expect(aposRevogar.indicadores.distribuicaoPlanos.pro).toBe(antes.indicadores.distribuicaoPlanos.pro);
+    expect(aposRevogar.obras.some((item) => item.id === obraXgestaoBody.id)).toBe(false);
     await logout(request);
   });
 

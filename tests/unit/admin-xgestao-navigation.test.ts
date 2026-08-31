@@ -20,7 +20,6 @@ describe('navegação administrativa do xgestão', () => {
     assert.deepEqual(context, {
       escopo: 'global',
       isXgestao: true,
-      canReturnToMarketplace: true,
     });
     assert.deepEqual(
       getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).map(
@@ -47,7 +46,6 @@ describe('navegação administrativa do xgestão', () => {
     assert.deepEqual(context, {
       escopo: 'global',
       isXgestao: false,
-      canReturnToMarketplace: false,
     });
     assert.equal(
       getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).length,
@@ -73,7 +71,6 @@ describe('navegação administrativa do xgestão', () => {
       {
         escopo: 'xgestao',
         isXgestao: true,
-        canReturnToMarketplace: false,
       },
     );
     assert.deepEqual(
@@ -100,7 +97,6 @@ describe('navegação administrativa do xgestão', () => {
       {
         escopo: 'global',
         isXgestao: true,
-        canReturnToMarketplace: true,
       },
     );
     assert.equal(isAdminXgestaoPath('/admin/xgestao-interno'), false);

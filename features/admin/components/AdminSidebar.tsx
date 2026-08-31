@@ -21,7 +21,6 @@ import Image from 'next/image';
 import {
   ADMIN_NAV_ITEMS,
   ADMIN_BOTTOM_NAV_ITEMS,
-  ADMIN_MARKETPLACE_RETURN_ITEM,
 } from '../constants';
 import {
   getAdminNavigationContext,
@@ -45,7 +44,7 @@ export function AdminSidebar() {
     () => getAdminNavigationContext(user, pathname),
     [user, pathname],
   );
-  const { isXgestao, canReturnToMarketplace } = navigationContext;
+  const { isXgestao } = navigationContext;
 
   const navItems = useMemo(
     () => getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, navigationContext),
@@ -114,18 +113,6 @@ export function AdminSidebar() {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          {canReturnToMarketplace && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={ADMIN_MARKETPLACE_RETURN_ITEM.url}>
-                  <ADMIN_MARKETPLACE_RETURN_ITEM.icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    {ADMIN_MARKETPLACE_RETURN_ITEM.title}
-                  </span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
           {bottomNavItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>

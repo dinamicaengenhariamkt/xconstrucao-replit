@@ -20,7 +20,6 @@ import {
   RiFileList3Line,
   RiHeartPulseLine,
   RiDashboardLine,
-  RiArrowLeftLine,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -52,9 +51,3 @@ export const ADMIN_BOTTOM_NAV_ITEMS: NavItem[] = [
   { title: 'Auditoria', url: '/admin/auditoria', icon: RiHistoryLine },
   { title: 'Configurações', url: '/admin/configuracoes', icon: RiSettings3Line },
 ];
-
-export const ADMIN_MARKETPLACE_RETURN_ITEM: NavItem = {
-  title: 'Voltar ao marketplace',
-  url: '/admin/financeiro',
-  icon: RiArrowLeftLine,
-};

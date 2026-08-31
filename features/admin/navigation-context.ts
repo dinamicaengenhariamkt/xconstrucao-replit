@@ -7,7 +7,6 @@ import {
 export interface AdminNavigationContext {
   escopo: AdminEscopo;
   isXgestao: boolean;
-  canReturnToMarketplace: boolean;
 }
 
 export interface AdminTopbarControls {
@@ -39,7 +38,6 @@ export function getAdminNavigationContext(
   return {
     escopo,
     isXgestao,
-    canReturnToMarketplace: isXgestao && escopo === 'global',
   };
 }
 
