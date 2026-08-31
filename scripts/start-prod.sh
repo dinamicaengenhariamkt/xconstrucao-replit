@@ -38,6 +38,9 @@ if [ -z "$NODE_BIN" ]; then
 fi
 
 echo "[start-prod] node: $NODE_BIN — $("$NODE_BIN" --version)"
-echo "[start-prod] Iniciando Next.js na porta 5000..."
+PORT="${PORT:-5000}"
+HOSTNAME="${HOSTNAME:-0.0.0.0}"
 
-exec "$NODE_BIN" node_modules/next/dist/bin/next start -p 5000 -H 0.0.0.0
+echo "[start-prod] Iniciando Next.js standalone em ${HOSTNAME}:${PORT}..."
+
+exec env PORT="$PORT" HOSTNAME="$HOSTNAME" "$NODE_BIN" .next/standalone/server.js
