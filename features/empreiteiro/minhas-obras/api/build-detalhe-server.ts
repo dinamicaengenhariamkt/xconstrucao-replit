@@ -102,7 +102,10 @@ function timelineRelativa(d: Date): string {
 }
 
 /** Lista obras vinculadas a um empreiteiro (via empreiteiras.userId). */
-export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> {
+export async function listMinhasObrasReal(
+  userId: string,
+  options: { includeXgestao?: boolean } = {},
+): Promise<MinhaObra[]> {
   const [emp] = await db
     .select({ id: empreiteiras.id })
     .from(empreiteiras)
@@ -136,7 +139,9 @@ export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> 
     for (const p of probs) problemMap.set(p.obraId, Number(p.n));
   }
 
-  return rows.map((r) => {
+  return rows
+    .filter((r) => options.includeXgestao !== false || r.o.clienteId !== null)
+    .map((r) => {
     const o = r.o;
     const dias = diasAtrasoFor(o.dataPrevisao, o.status);
     const problemas = problemMap.get(o.id) ?? 0;
@@ -150,7 +155,7 @@ export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> 
       id: o.id,
       titulo: o.nome,
       endereco: enderecoFull || o.endereco,
-      imagemUrl: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600",
+      imagemUrl: "",
       status,
       progresso: o.progresso ?? 0,
       orcamento: Number(o.valorTotal ?? 0),
@@ -166,7 +171,7 @@ export async function listMinhasObrasReal(userId: string): Promise<MinhaObra[]> 
       isObraPropria: !temContratante,
       tipo: o.tipo ?? "Obra",
     };
-  });
+    });
 }
 
 async function resolveSignedFotoUrl(file: {
@@ -605,7 +610,7 @@ export async function buildMinhaObraDetalheReal(
     id: obra.id,
     titulo: obra.nome,
     endereco: enderecoFull || obra.endereco,
-    imagemUrl: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1200",
+    imagemUrl: fotos[0]?.url ?? "",
     status,
     progresso,
     orcamento: valorTotal,

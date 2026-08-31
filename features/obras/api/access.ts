@@ -60,7 +60,10 @@ export async function findObraAccess(
   if (user.role === "empreiteiro") {
     const [emp] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, user.id));
     const isAssigned = !!(emp && obra.empreiteiraId === emp.id);
-    const isPublica = obra.visibilidade === "publicada" && obra.empreiteiraId === null;
+    const isPublica =
+      obra.visibilidade === "publicada" &&
+      obra.empreiteiraId === null &&
+      obra.statusModeracao === "aprovada";
     if (!isAssigned && !isPublica) return null;
     // Fail-closed: só libera discovery se o caller pedir explicitamente.
     if (!isAssigned && !opts.allowDiscovery) return null;

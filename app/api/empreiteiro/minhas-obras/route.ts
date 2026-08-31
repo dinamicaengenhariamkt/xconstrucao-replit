@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { requireVerifiedUser, setNoCacheHeaders, userHasRole } from "@features/auth/api/auth-utils";
 import { listMinhasObrasReal } from "@features/empreiteiro/minhas-obras/api/build-detalhe-server";
 
 export async function GET(request: NextRequest) {
@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     setNoCacheHeaders(r);
     return r;
   }
-  const obras = await listMinhasObrasReal(guard.user.id);
+  const includeXgestao =
+    guard.user.role === "superadmin" ||
+    await userHasRole(guard.user.id, "xgestao");
+  const obras = await listMinhasObrasReal(guard.user.id, { includeXgestao });
   const r = NextResponse.json(obras);
   setNoCacheHeaders(r);
   return r;

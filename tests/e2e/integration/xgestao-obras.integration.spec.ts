@@ -58,6 +58,7 @@ async function concederXGestao(request: APIRequestContext, email: string) {
   });
   expect(response.status(), await response.text()).toBe(200);
   await logout(request);
+  return payload.rows[0].id;
 }
 
 test.describe('xgestão — obras próprias', () => {
@@ -156,7 +157,7 @@ test.describe('xgestão — obras próprias', () => {
     expect(semEntitlement.status()).toBe(403);
     await logout(request);
 
-    await concederXGestao(request, empreiteiroEmail);
+    const empreiteiroId = await concederXGestao(request, empreiteiroEmail);
     await loginAs(request, empreiteiroEmail);
 
     const criada = await request.post('/api/xgestao/obras', {
@@ -221,6 +222,66 @@ test.describe('xgestão — obras próprias', () => {
       data: { titulo: 'Acesso ao canteiro', descricao: 'Confirmar chave de acesso com a equipe.', gravidade: 'baixo' },
     });
     expect(ocorrencia.status(), await ocorrencia.text()).toBe(201);
+
+    const diario = await request.post(`/api/obras/${obra.id}/diario`, {
+      data: { texto: 'Concretagem do pavimento concluída sem intercorrências.' },
+    });
+    expect(diario.status(), await diario.text()).toBe(201);
+
+    const checklist = await request.post(`/api/obras/${obra.id}/checklists`, {
+      data: {
+        nome: 'Inspeção diária',
+        tipo: 'seguranca',
+        itens: [{ titulo: 'EPIs verificados' }, { titulo: 'Área sinalizada' }],
+      },
+    });
+    expect(checklist.status(), await checklist.text()).toBe(201);
+
+    // Exercita o caminho real browser/API -> presign -> R2 -> HEAD/commit ->
+    // vínculo da galeria. O arquivo mínimo evita custo e tempo desnecessários.
+    const imagem = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    );
+    const presign = await request.post('/api/uploads/presign', {
+      data: {
+        kind: 'obra_foto',
+        mime: 'image/png',
+        size: imagem.byteLength,
+        filename: 'beta-xgestao.png',
+      },
+    });
+    expect(presign.status(), await presign.text()).toBe(200);
+    const presignPayload = await presign.json() as { uploadUrl: string; key: string };
+    const envioR2 = await request.put(presignPayload.uploadUrl, {
+      headers: { 'Content-Type': 'image/png' },
+      data: imagem,
+    });
+    expect(envioR2.ok(), await envioR2.text()).toBe(true);
+    const commit = await request.post('/api/uploads/commit', {
+      data: {
+        kind: 'obra_foto',
+        key: presignPayload.key,
+        mime: 'image/png',
+        size: imagem.byteLength,
+        originalName: 'beta-xgestao.png',
+      },
+    });
+    expect(commit.status(), await commit.text()).toBe(200);
+    const arquivo = await commit.json() as { id: string };
+    const foto = await request.post(`/api/obras/${obra.id}/fotos`, {
+      data: {
+        fileId: arquivo.id,
+        fase: 'durante',
+        tag: 'Estrutura',
+        enviadaAoContratante: true,
+      },
+    });
+    expect(foto.status(), await foto.text()).toBe(201);
+    const galeria = await request.get(`/api/obras/${obra.id}/fotos`);
+    expect(galeria.status()).toBe(200);
+    const galeriaPayload = await galeria.json() as { rows: Array<{ id: string; tag: string | null }> };
+    expect(galeriaPayload.rows.some((item) => item.tag === 'Estrutura')).toBe(true);
     const etapasDaObraPropria = await request.get(`/api/obras/${obra.id}/etapas`);
     expect(etapasDaObraPropria.status()).toBe(200);
     expect((await etapasDaObraPropria.json()) as { rows: Array<{ id: string }> }).toMatchObject({
@@ -301,6 +362,34 @@ test.describe('xgestão — obras próprias', () => {
       data: { nome: 'Tentativa de editar marketplace' },
     });
     expect(marketplaceBloqueada.status()).toBe(403);
+    await logout(request);
+
+    // Revogar o produto encerra também os caminhos genéricos de leitura e
+    // mutação da obra própria, sem retirar a obra marketplace já atribuída.
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    const revogada = await request.patch(`/api/admin/usuarios/${empreiteiroId}`, {
+      data: { xgestao: false },
+    });
+    expect(revogada.status(), await revogada.text()).toBe(200);
+    await logout(request);
+
+    await loginAs(request, empreiteiroEmail);
+    expect((await request.get(`/api/obras/${obra.id}`)).status()).toBe(404);
+    expect((await request.patch(`/api/obras/${obra.id}`, {
+      data: { nome: 'Edição após revogação' },
+    })).status()).toBe(404);
+    expect((await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`)).status()).toBe(404);
+    const listagemRevogada = await request.get('/api/empreiteiro/minhas-obras');
+    expect(listagemRevogada.status()).toBe(200);
+    const obrasVisiveis = (await listagemRevogada.json()) as Array<{ id: string }>;
+    expect(obrasVisiveis.some((item) => item.id === obra.id)).toBe(false);
+    expect(obrasVisiveis.some((item) => item.id === marketplace.id)).toBe(true);
+    await logout(request);
+
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    expect((await request.patch(`/api/admin/usuarios/${empreiteiroId}`, {
+      data: { xgestao: true },
+    })).status()).toBe(200);
     await logout(request);
   });
 });

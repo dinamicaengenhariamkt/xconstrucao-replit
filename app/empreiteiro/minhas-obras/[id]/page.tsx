@@ -9,7 +9,6 @@ import { STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
 import { TaskManagerSection } from '@features/empreiteiro/minhas-obras/components/TaskManagerSection';
 import { ChecklistsSection } from '@features/empreiteiro/minhas-obras/components/ChecklistsSection';
 import { TimelineSection } from '@features/empreiteiro/minhas-obras/components/TimelineSection';
-import { FotoGallerySection } from '@features/empreiteiro/minhas-obras/components/FotoGallerySection';
 import { DocumentosSection } from '@features/empreiteiro/minhas-obras/components/DocumentosSection';
 import { CronogramaSection } from '@features/empreiteiro/minhas-obras/components/CronogramaSection';
 import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/components/OcorrenciasSection';
@@ -76,6 +75,7 @@ export function ObraConsoleView({
 }) {
   const params = useParams();
   const searchParams = useSearchParams();
+  const user = useAuthStore((state) => state.user);
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
@@ -160,12 +160,14 @@ export function ObraConsoleView({
           via `URL.createObjectURL`, um blob local que sumia no F5 (J40 P0 #3).
           O empreiteiro registra imagens da obra pela aba Fotos, que persiste.
         */}
-        <div className="aspect-[16/7] relative overflow-hidden">
-          <img
-            src={obra.imagemUrl}
-            alt={obra.titulo}
-            className="w-full h-full object-cover"
-          />
+        <div className="aspect-[16/7] relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950">
+          {obra.imagemUrl && (
+            <img
+              src={obra.imagemUrl}
+              alt={obra.titulo}
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -390,7 +392,14 @@ export function ObraConsoleView({
               {activeTab === 'tarefas' && <TaskManagerSection obra={obra} />}
               {activeTab === 'checklists' && <ChecklistsSection obra={obra} />}
               {activeTab === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
-              {activeTab === 'fotos' && <FotoGallerySection obra={obra} />}
+              {activeTab === 'fotos' && (
+                <FotosJ06Card
+                  obraId={obra.id}
+                  canWrite
+                  currentUserId={user?.id ?? null}
+                  currentUserRole={user?.role}
+                />
+              )}
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
               {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}

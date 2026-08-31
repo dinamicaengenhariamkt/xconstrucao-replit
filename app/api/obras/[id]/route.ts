@@ -3,7 +3,6 @@ import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
-  clientes,
   empreiteiras,
   medicoes,
   obras,
@@ -18,48 +17,18 @@ import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararSurveyObraConcluida } from "@features/surveys/triggers";
-
-/**
- * Helper de scoping: devolve a obra se o usuário tiver acesso de leitura,
- * senão null (caller responde 404 — anti-enumeração).
- */
-async function findObraWithAccess(
-  obraId: string,
-  user: { id: string; role: string },
-): Promise<{ obra: typeof obras.$inferSelect; clienteId: string | null; empreiteiraId: string | null } | null> {
-  const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
-  if (!obra) return null;
-
-  if (isAdminLike(user.role)) {
-    return { obra, clienteId: null, empreiteiraId: null };
-  }
-
-  if (user.role === "contratante") {
-    const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, user.id));
-    if (!cli || obra.clienteId !== cli.id) return null;
-    return { obra, clienteId: cli.id, empreiteiraId: null };
-  }
-
-  if (user.role === "empreiteiro") {
-    const [emp] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, user.id));
-    const isPublicaAvailable =
-      obra.visibilidade === "publicada" &&
-      obra.empreiteiraId === null &&
-      obra.statusModeracao === "aprovada";
-    const isAssigned = emp && obra.empreiteiraId === emp.id;
-    if (!isPublicaAvailable && !isAssigned) return null;
-    return { obra, clienteId: null, empreiteiraId: emp?.id ?? null };
-  }
-
-  return null;
-}
+import { findObraAccess } from "@features/obras/api/access";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return guard.error;
 
   const { id } = await ctx.params;
-  const access = await findObraWithAccess(id, { id: guard.user.id, role: guard.user.role });
+  const access = await findObraAccess(
+    id,
+    { id: guard.user.id, role: guard.user.role },
+    { allowDiscovery: true },
+  );
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
@@ -276,7 +245,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (guard.error) return guard.error;
 
   const { id } = await ctx.params;
-  const access = await findObraWithAccess(id, { id: guard.user.id, role: guard.user.role });
+  const access = await findObraAccess(
+    id,
+    { id: guard.user.id, role: guard.user.role },
+    { allowDiscovery: true },
+  );
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
@@ -470,7 +443,11 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   if (guard.error) return guard.error;
 
   const { id } = await ctx.params;
-  const access = await findObraWithAccess(id, { id: guard.user.id, role: guard.user.role });
+  const access = await findObraAccess(
+    id,
+    { id: guard.user.id, role: guard.user.role },
+    { allowDiscovery: true },
+  );
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
