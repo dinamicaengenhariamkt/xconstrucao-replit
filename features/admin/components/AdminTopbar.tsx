@@ -25,7 +25,11 @@ import {
 import { useAdminNotifications } from '@features/admin/notifications/hooks/use-notifications';
 import { cn } from '@shared/lib/utils';
 import type { NotificacaoTipo } from '@features/admin/notifications/types';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  getAdminNavigationContext,
+  getAdminTopbarControls,
+} from '../navigation-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,9 +71,15 @@ function formatNotifTime(isoDate: string): string {
 export function AdminTopbar() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const isXgestaoAdmin = user?.role === 'admin' && user.adminEscopo === 'xgestao';
+  const pathname = usePathname();
+  const navigationContext = getAdminNavigationContext(user, pathname);
+  const {
+    showGlobalSearch,
+    showGlobalNotifications,
+    showGlobalAccountLinks,
+  } = getAdminTopbarControls(navigationContext);
   const { notifications, unreadCount, marcarComoLida, marcarTodasComoLidas } =
-    useAdminNotifications(!isXgestaoAdmin);
+    useAdminNotifications(showGlobalNotifications);
 
   const handleLogout = async () => {
     const { redirect } = await logout();
@@ -80,7 +90,7 @@ export function AdminTopbar() {
 
   // Atalho de teclado Cmd/Ctrl + K para abrir busca global
   useEffect(() => {
-    if (isXgestaoAdmin) return;
+    if (!showGlobalSearch) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -89,7 +99,7 @@ export function AdminTopbar() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isXgestaoAdmin]);
+  }, [showGlobalSearch]);
 
   return (
     <header className="h-20 flex items-center justify-between px-4 md:px-12 py-2 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
@@ -102,7 +112,7 @@ export function AdminTopbar() {
         <SidebarTrigger icon={RiMenuLine} className="hidden md:flex" />
 
         {/* Mobile: Botão Ícone de Busca */}
-        {!isXgestaoAdmin && <Button
+        {showGlobalSearch && <Button
           size="icon"
           variant="ghost"
           onClick={() => setSearchOpen(true)}
@@ -114,7 +124,7 @@ export function AdminTopbar() {
         </Button>}
 
         {/* Desktop: Trigger de Busca Global (abre AdminSearchDialog) */}
-        {!isXgestaoAdmin && <button
+        {showGlobalSearch && <button
           type="button"
           onClick={() => setSearchOpen(true)}
           className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
@@ -132,7 +142,7 @@ export function AdminTopbar() {
       {/* Actions */}
       <div className="flex items-center gap-3">
         {/* Notificações */}
-        {!isXgestaoAdmin && <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+        {showGlobalNotifications && <Popover open={notifOpen} onOpenChange={setNotifOpen}>
           <div className="relative">
             <PopoverTrigger asChild>
               <Button
@@ -253,7 +263,7 @@ export function AdminTopbar() {
                   {user?.name ?? 'Administrador'}
                 </p>
                 <p className="text-[11px] text-gray-500 font-medium">
-                  {isXgestaoAdmin ? 'Administrador xgestão' : 'Administrador'}
+                  {navigationContext.isXgestao ? 'Administrador xgestão' : 'Administrador'}
                 </p>
               </div>
               <Avatar className="w-10 h-10 border border-border-light">
@@ -269,7 +279,7 @@ export function AdminTopbar() {
               <span className="text-sm font-semibold">{user?.name ?? 'Administrador'}</span>
               <span className="text-xs text-muted-foreground font-normal">{user?.email}</span>
             </DropdownMenuLabel>
-            {!isXgestaoAdmin && (
+            {showGlobalAccountLinks && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/admin/configuracoes?tab=perfil')}>
@@ -295,7 +305,7 @@ export function AdminTopbar() {
       </div>
 
       {/* Dialog de Busca Global (desktop + mobile) */}
-      {!isXgestaoAdmin && <AdminSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />}
+      {showGlobalSearch && <AdminSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />}
     </header>
   );
 }

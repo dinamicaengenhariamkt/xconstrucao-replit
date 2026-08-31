@@ -1,7 +1,7 @@
 # Jornada — XG06: Visão administrativa do xgestão
 
 > Status: concluída | Prioridade: média | Wave: xgestão-6
-> Última atualização: 2026-08-30
+> Última atualização: 2026-08-31
 
 ## 1. Contexto & Objetivo
 
@@ -32,6 +32,7 @@ flowchart LR
 - Constantes de navegação do admin — entrada xgestão visível para os escopos global e xgestão.
 - Componentes de tabela e KPI já existentes em [features/admin/](../../features/admin/) — reaproveitar, não recriar.
 - Escopo administrativo — `adminEscopo="global"` preserva o painel existente; `adminEscopo="xgestao"` usa uma allowlist positiva e não abre as seções do marketplace.
+- Contexto visual — dentro de `/admin/xgestao`, o shell mostra somente o produto xgestão; admins globais podem voltar explicitamente ao marketplace, sem menu, busca, notificações ou atalhos globais misturados.
 
 ## 6. Schema (Drizzle)
 
@@ -67,6 +68,7 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 - [x] Entrada na navegação do admin
 - [x] Filtro `produto` em `/admin/obras`
 - [x] Verificar que a listagem de obras do admin continua correta para o marketplace
+- [x] Isolar visualmente o menu xgestão sem alterar a autorização do marketplace
 
 ## 10. Critérios de aceite
 
@@ -78,6 +80,8 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 6. Um administrador global ou superadmin continua chegando a `/admin/financeiro` e acessando as seções do marketplace.
 7. Um administrador com `adminEscopo="xgestao"` chega a `/admin/xgestao`, não recebe cadastro administrativo público e é bloqueado server-side fora da allowlist xgestão.
 8. Um admin ou superadmin que entra pela tela contextual do xgestão é reconhecido sem precisar trocar para uma tela de login separada e chega a `/admin/xgestao`.
+9. Em `/admin/xgestao`, moderação, financeiro, anúncios, leads, saúde, busca, notificações, configurações e demais operações globais não aparecem no shell.
+10. Um admin global ou superadmin continua vendo o menu completo ao voltar para uma rota administrativa do marketplace.
 
 ## 11. Riscos / Pontos de atenção
 
@@ -97,3 +101,4 @@ Quatro contadores: total de assinantes xgestão, obras gerenciadas, distribuiç�
 - **2026-08-30 — contexto de acesso:** role continua sendo `admin`/`superadmin`; o recorte xgestão é uma dimensão adicional. O destino pós-login e o guard server-side precisam considerar `adminEscopo`, enquanto valores ausentes continuam globais por compatibilidade.
 - **2026-08-30 — preservação do marketplace:** o painel global não é duplicado nem reconfigurado. A visão xgestão usa uma allowlist própria e não recebe acesso indireto a configurações, planos ou operações financeiras do marketplace.
 - **2026-08-31 — login único do produto:** `/login?perfil=xgestao` aceita a autenticação de admin/superadmin e empreiteiro; o contexto só define o destino seguro, nunca a permissão, que continua baseada em role, escopo e entitlement no servidor.
+- **2026-08-31 — shell por contexto:** a rota `/admin/xgestao` usa navegação mínima mesmo para admin global ou superadmin. Isso é separação visual de produto, não autorização; contas globais mantêm um retorno explícito ao marketplace e contas restritas continuam presas à allowlist server-side.
