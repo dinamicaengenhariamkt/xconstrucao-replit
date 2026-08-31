@@ -39,8 +39,11 @@ fi
 
 echo "[start-prod] node: $NODE_BIN — $("$NODE_BIN" --version)"
 PORT="${PORT:-5000}"
-HOSTNAME="${HOSTNAME:-0.0.0.0}"
+# Autoscale may set HOSTNAME to the public service domain. Next's standalone
+# server also reads HOSTNAME as its bind address, so never use that platform
+# value for listening. BIND_HOST can be overridden for local/manual runs.
+BIND_HOST="${BIND_HOST:-0.0.0.0}"
 
-echo "[start-prod] Iniciando Next.js standalone em ${HOSTNAME}:${PORT}..."
+echo "[start-prod] Iniciando Next.js standalone em ${BIND_HOST}:${PORT}..."
 
-exec env PORT="$PORT" HOSTNAME="$HOSTNAME" "$NODE_BIN" .next/standalone/server.js
+exec env PORT="$PORT" HOSTNAME="$BIND_HOST" "$NODE_BIN" .next/standalone/server.js
