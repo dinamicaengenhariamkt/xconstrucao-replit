@@ -24,6 +24,7 @@ import {
 } from '../constants';
 import {
   getAdminNavigationContext,
+  getAdminLogoutOptions,
   getVisibleAdminNavigationItems,
 } from '../navigation-context';
 
@@ -31,11 +32,6 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuth();
-
-  const handleLogout = useCallback(async () => {
-    const { redirect } = await logout();
-    router.push(redirect);
-  }, [logout, router]);
 
   // XG06 — o shell visual segue o produto aberto, enquanto a autorização segue
   // o escopo do ator. Um admin global em /admin/xgestao vê o menu enxuto, mas
@@ -45,6 +41,11 @@ export function AdminSidebar() {
     [user, pathname],
   );
   const { isXgestao } = navigationContext;
+
+  const handleLogout = useCallback(async () => {
+    const { redirect } = await logout(getAdminLogoutOptions(navigationContext));
+    router.push(redirect);
+  }, [logout, navigationContext, router]);
 
   const navItems = useMemo(
     () => getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, navigationContext),
@@ -127,6 +128,7 @@ export function AdminSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
+              data-testid="admin-sidebar-logout"
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <RiLogoutBoxRLine className="w-4 h-4" />

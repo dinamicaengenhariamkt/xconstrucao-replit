@@ -3,6 +3,7 @@ import {
   type AdminEscopo,
   type AdminScopeActor,
 } from '@features/auth/api/admin-scope';
+import type { LogoutOptions } from '@features/auth/store/auth-store';
 
 export interface AdminNavigationContext {
   escopo: AdminEscopo;
@@ -66,4 +67,12 @@ export function getAdminTopbarControls(
     showGlobalNotifications: showGlobalControls,
     showGlobalAccountLinks: showGlobalControls,
   };
+}
+
+export function getAdminLogoutOptions(
+  context: AdminNavigationContext,
+): LogoutOptions | undefined {
+  return context.isXgestao
+    ? { persona: 'xgestao', next: '/admin/xgestao' }
+    : undefined;
 }

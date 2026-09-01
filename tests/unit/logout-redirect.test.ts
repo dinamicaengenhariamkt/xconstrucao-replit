@@ -8,11 +8,16 @@ describe("buildLogoutRedirect", () => {
       buildLogoutRedirect("xgestao", "/xgestao/obras"),
       "/login?perfil=xgestao&next=%2Fxgestao%2Fobras",
     );
+    assert.equal(
+      buildLogoutRedirect("xgestao", "/admin/xgestao"),
+      "/login?perfil=xgestao&next=%2Fadmin%2Fxgestao",
+    );
   });
 
   it("não permite next externo ou fora do produto xgestão", () => {
     assert.equal(buildLogoutRedirect("xgestao", "https://example.com"), "/login?perfil=xgestao");
     assert.equal(buildLogoutRedirect("xgestao", "/admin"), "/login?perfil=xgestao");
+    assert.equal(buildLogoutRedirect("xgestao", "/admin/xgestao-interno"), "/login?perfil=xgestao");
     assert.equal(buildLogoutRedirect("xgestao", "//example.com"), "/login?perfil=xgestao");
   });
 

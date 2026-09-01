@@ -90,6 +90,7 @@ export function XGestaoTopbar() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}
+            data-testid="xgestao-topbar-logout"
             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
           >
             <RiLogoutBoxRLine className="mr-2 size-4" />

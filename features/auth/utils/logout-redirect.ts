@@ -17,6 +17,11 @@ function getSafeNext(persona: LogoutPersona, next?: string): string | null {
     return null;
   }
 
-  if (persona === "xgestao" && !next.startsWith("/xgestao")) return null;
+  if (
+    persona === "xgestao" &&
+    next !== "/admin/xgestao" &&
+    !next.startsWith("/admin/xgestao/") &&
+    !next.startsWith("/xgestao")
+  ) return null;
   return next;
 }

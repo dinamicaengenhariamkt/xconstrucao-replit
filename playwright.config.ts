@@ -75,6 +75,7 @@ export default defineConfig({
         "**/onboarding.spec.ts",
         "**/j03-nova-obra-aparece-imediato.spec.ts",
         "**/planos-redirect.spec.ts",
+        "**/logout-xgestao.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },

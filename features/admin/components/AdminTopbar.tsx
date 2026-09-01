@@ -28,6 +28,7 @@ import type { NotificacaoTipo } from '@features/admin/notifications/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   getAdminNavigationContext,
+  getAdminLogoutOptions,
   getAdminTopbarControls,
 } from '../navigation-context';
 import {
@@ -82,7 +83,7 @@ export function AdminTopbar() {
     useAdminNotifications(showGlobalNotifications);
 
   const handleLogout = async () => {
-    const { redirect } = await logout();
+    const { redirect } = await logout(getAdminLogoutOptions(navigationContext));
     router.push(redirect);
   };
   const [searchOpen, setSearchOpen] = useState(false);
@@ -295,6 +296,7 @@ export function AdminTopbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
+              data-testid="admin-topbar-logout"
               className="text-destructive focus:text-destructive focus:bg-destructive/10"
             >
               <RiLogoutBoxRLine className="w-4 h-4 mr-2" />

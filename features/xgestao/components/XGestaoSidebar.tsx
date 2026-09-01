@@ -129,6 +129,7 @@ export function XGestaoSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleLogout}
+              data-testid="xgestao-sidebar-logout"
               className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <RiLogoutBoxRLine className="size-4" />

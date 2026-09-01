@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   getAdminNavigationContext,
+  getAdminLogoutOptions,
   getAdminTopbarControls,
   getVisibleAdminNavigationItems,
   isAdminXgestaoPath,
@@ -36,6 +37,10 @@ describe('navegação administrativa do xgestão', () => {
       showGlobalNotifications: false,
       showGlobalAccountLinks: false,
     });
+    assert.deepEqual(getAdminLogoutOptions(context), {
+      persona: 'xgestao',
+      next: '/admin/xgestao',
+    });
   });
 
   it('mantém o shell completo do marketplace nas rotas globais', () => {
@@ -60,6 +65,7 @@ describe('navegação administrativa do xgestão', () => {
       showGlobalNotifications: true,
       showGlobalAccountLinks: true,
     });
+    assert.equal(getAdminLogoutOptions(context), undefined);
   });
 
   it('não oferece retorno ao marketplace para admin restrito', () => {

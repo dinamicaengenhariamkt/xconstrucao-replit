@@ -107,4 +107,29 @@ describe("auth store logout", () => {
       redirect: "/login?perfil=administrador",
     });
   });
+
+  it("mantém admin e superadmin no login xgestão quando o shell envia o contexto", async () => {
+    global.fetch = (async () => new Response(null, { status: 503 })) as typeof fetch;
+
+    for (const role of ["admin", "superadmin"]) {
+      useAuthStore.setState({
+        user: {
+          id: `user-${role}`,
+          email: `${role}@example.com`,
+          name: role,
+          role,
+        },
+      });
+
+      const result = await useAuthStore.getState().logout({
+        persona: "xgestao",
+        next: "/admin/xgestao",
+      });
+
+      assert.deepEqual(result, {
+        persona: "xgestao",
+        redirect: "/login?perfil=xgestao&next=%2Fadmin%2Fxgestao",
+      });
+    }
+  });
 });
