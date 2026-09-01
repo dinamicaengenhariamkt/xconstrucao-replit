@@ -167,13 +167,15 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div
+              className="grid grid-cols-1 gap-8 md:grid-cols-2"
+              data-testid="solutions-grid"
+            >
               {/* Card xgestão inteligente */}
               <div
-                className={`bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px] ${
-                  !config.marketplaceVisivel ? "md:col-span-2 md:max-w-[586px] md:w-full md:mx-auto" : ""
-                }`}
+                className="flex min-h-[360px] flex-col rounded-2xl bg-[#F4F5F5] p-10 dark:bg-[#2A2D30]"
                 style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+                data-testid="solution-card-xgestao"
               >
                 <IconDashboardCustomize className="text-5xl text-[#333333] dark:text-white mb-6" />
                 <div className="flex-1 flex flex-col">
@@ -208,6 +210,7 @@ export default function HomePage() {
                 <div
                   className="bg-[#F4F5F5] dark:bg-[#2A2D30] rounded-2xl p-10 flex flex-col min-h-[360px]"
                   style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+                  data-testid="solution-card-marketplace"
                 >
                   <IconBolt className="text-5xl text-[#7C3AED] mb-6" />
                   <div className="flex-1 flex flex-col">
