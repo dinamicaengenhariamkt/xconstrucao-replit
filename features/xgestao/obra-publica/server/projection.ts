@@ -51,17 +51,9 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
     })
     .from(obras)
     .leftJoin(
-      obraFotos,
-      and(
-        eq(obraFotos.obraId, obras.id),
-        eq(obraFotos.fileId, obras.fotoCapaFileId),
-        eq(obraFotos.enviadaAoContratante, true),
-      ),
-    )
-    .leftJoin(
       userFiles,
       and(
-        eq(userFiles.id, obraFotos.fileId),
+        eq(userFiles.id, obras.fotoCapaFileId),
         isNull(userFiles.deletedAt),
         like(userFiles.mime, 'image/%'),
       ),

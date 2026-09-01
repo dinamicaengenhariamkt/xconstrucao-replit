@@ -48,6 +48,7 @@ export interface ObraOcorrenciaApi {
 export type ObraFotoFase = 'antes' | 'durante' | 'agora' | null;
 export interface ObraFotoApi {
   id: string;
+  fileId?: string;
   url: string;
   fase: ObraFotoFase;
   tag: string | null;

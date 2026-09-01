@@ -30,7 +30,6 @@ import React from 'react';
 import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
-import { EditarObraModal } from '@features/xgestao/components/EditarObraModal';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
 
 const STATUS_BG: Record<string, string> = {
@@ -210,7 +209,13 @@ export function ObraConsoleView({
                 )}
                 {allowOwnWorkEdit && obra.isObraPropria && (
                   <>
-                    <EditarObraModal obra={obra} />
+                    <Link
+                      href={`${basePath}/${obra.id}/editar`}
+                      className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all"
+                      data-testid="xgestao-editar-obra"
+                    >
+                      Editar obra
+                    </Link>
                     <button
                       type="button"
                       onClick={() => setShowShare(true)}
@@ -441,7 +446,7 @@ export function ObraConsoleView({
 
       {/* BLOCO 12: Equipe e Colaboradores */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <EquipeSection obra={obra} />
+        <EquipeSection obra={obra} xgestaoReadOnly={allowOwnWorkEdit && obra.isObraPropria} />
       </motion.div>
 
       {/* J58 — Contrato entre as partes (auto-oculta se a obra não tem contrato). */}

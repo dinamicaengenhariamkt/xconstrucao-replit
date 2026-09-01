@@ -106,6 +106,7 @@ export interface TimelineEvent {
 
 export interface ObraFoto {
   id: string;
+  fileId?: string;
   url: string;
   data: string;
   tag?: string;

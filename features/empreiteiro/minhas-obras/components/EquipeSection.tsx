@@ -60,6 +60,7 @@ const PERMISSAO_BADGE: Record<NonNullable<MembroEquipe['permissao']>, { label: s
 interface MembroCardProps {
   membro: MembroEquipe;
   obraFinalizada: boolean;
+  readOnly?: boolean;
   onEditar: (m: MembroEquipe) => void;
   onPermissoes: (m: MembroEquipe) => void;
   onToggleAtivo: (m: MembroEquipe) => void;
@@ -69,6 +70,7 @@ interface MembroCardProps {
 function MembroCard({
   membro,
   obraFinalizada,
+  readOnly = false,
   onEditar,
   onPermissoes,
   onToggleAtivo,
@@ -80,7 +82,7 @@ function MembroCard({
   return (
     <div className={cn('p-5 rounded-xl border relative', theme.bg, theme.border)}>
       {/* ⋮ Menu */}
-      {!obraFinalizada && (
+      {!obraFinalizada && !readOnly && (
         <div className="absolute top-4 right-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -196,9 +198,10 @@ function MembroCard({
 
 interface EquipeSectionProps {
   obra: MinhaObraDetalhe;
+  xgestaoReadOnly?: boolean;
 }
 
-export function EquipeSection({ obra }: EquipeSectionProps) {
+export function EquipeSection({ obra, xgestaoReadOnly = false }: EquipeSectionProps) {
   const membros = obra.equipe;
   const [modal, setModal] = useState<ModalState>({ type: null, membro: null });
 
@@ -266,7 +269,9 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
         <div className="flex justify-between items-start mb-6 gap-4">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Equipe e Colaboradores</h3>
-            <p className="text-sm text-gray-500">Membros envolvidos no projeto</p>
+            <p className="text-sm text-gray-500">
+              {xgestaoReadOnly ? 'Visualização da equipe da obra' : 'Membros envolvidos no projeto'}
+            </p>
 
             {/* Stats chips */}
             <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -282,7 +287,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
             </div>
           </div>
 
-          <button
+          {!xgestaoReadOnly && <button
             type="button"
             disabled={obraFinalizada}
             onClick={() => openModal('novo')}
@@ -290,8 +295,23 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           >
             <IconPersonAdd className="text-sm" />
             Adicionar Membro
-          </button>
+          </button>}
         </div>
+
+        {xgestaoReadOnly && (
+          <div
+            className="mb-6 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-blue-200"
+            data-testid="xgestao-equipe-em-breve"
+          >
+            <IconGroup className="mt-0.5 shrink-0 text-lg" />
+            <div>
+              <p className="font-semibold">Gestão de equipe em breve</p>
+              <p className="mt-1 text-blue-800/80 dark:text-blue-200/70">
+                Você pode consultar os colaboradores desta obra. Convites, permissões e alterações estarão disponíveis em uma próxima versão.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -300,6 +320,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
               key={membro.id}
               membro={membro}
               obraFinalizada={obraFinalizada}
+              readOnly={xgestaoReadOnly}
               onEditar={(m) => openModal('editar', m)}
               onPermissoes={(m) => openModal('permissoes', m)}
               onToggleAtivo={handleToggleAtivo}
@@ -308,7 +329,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           ))}
 
           {/* Add member dashed card */}
-          {!obraFinalizada && (
+          {!obraFinalizada && !xgestaoReadOnly && (
             <button
               type="button"
               onClick={() => openModal('novo')}
@@ -327,7 +348,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           <div className="text-center py-16">
             <IconGroup className="text-4xl text-gray-300 dark:text-gray-700" />
             <p className="text-sm font-medium text-gray-400 mt-2">Nenhum membro na equipe</p>
-            {!obraFinalizada && (
+            {!obraFinalizada && !xgestaoReadOnly && (
               <button
                 type="button"
                 onClick={() => openModal('novo')}

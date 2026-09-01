@@ -180,7 +180,9 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo obra-capa" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "contratante" && role !== "superadmin") return { ok: false, reason: "role" };
+    if (role !== "contratante" && role !== "empreiteiro" && role !== "superadmin") {
+      return { ok: false, reason: "role" };
+    }
     return { ok: true };
   }
 

@@ -41,7 +41,7 @@ export const KIND_RULES: Record<UploadKind, KindRule> = {
   obra_capa: {
     maxBytes: 8_000_000,
     mimes: IMAGE_MIMES,
-    roles: ["contratante", "superadmin"],
+    roles: ["contratante", "empreiteiro", "superadmin"],
   },
   comprovante_pagamento: {
     maxBytes: 8_000_000,

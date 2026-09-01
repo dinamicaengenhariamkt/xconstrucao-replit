@@ -6,7 +6,7 @@ import { obraFotos, userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
-import { publicUrlForKey } from "@shared/lib/storage";
+import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 
 const createSchema = z.object({
   fileId: z.string().uuid(),
@@ -46,10 +46,12 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     .where(eq(obraFotos.obraId, id))
     .orderBy(desc(obraFotos.createdAt));
 
-  const out = rows.map((r) => ({
+  const out = await Promise.all(rows.map(async (r) => ({
     id: r.id,
     fileId: r.fileId,
-    url: r.visibility === "public" ? (r.publicUrl ?? publicUrlForKey(r.bucketKey)) : "",
+    url: r.visibility === "public"
+      ? (r.publicUrl ?? publicUrlForKey(r.bucketKey))
+      : await createSignedReadUrl({ key: r.bucketKey }).catch(() => ""),
     fase: r.fase,
     tag: r.tag,
     enviadaAoContratante: r.enviadaAoContratante,
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     autorNome: r.autorNome,
     autorRole: r.autorRole,
     createdAt: r.createdAt,
-  }));
+  })));
   const r = NextResponse.json({ rows: out });
   setNoCacheHeaders(r);
   return r;

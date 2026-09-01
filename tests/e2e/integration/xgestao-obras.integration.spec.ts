@@ -201,11 +201,36 @@ test.describe('xgestão — obras próprias', () => {
     });
     const rotaDaObraPropria = await request.get(`/xgestao/obras/${obra.id}`, { maxRedirects: 0 });
     expect(rotaDaObraPropria.status()).toBe(200);
+    const rotaDeEdicao = await request.get(`/xgestao/obras/${obra.id}/editar`, { maxRedirects: 0 });
+    expect(rotaDeEdicao.status()).toBe(200);
 
     const editada = await request.patch(`/api/obras/${obra.id}`, {
-      data: { nome: 'Reforma da sede xgestão — atualizada', endereco: 'Rua das Obras, 321' },
+      data: {
+        nome: 'Reforma da sede xgestão — atualizada',
+        tipo: 'Reforma comercial',
+        descricao: 'Modernização progressiva da sede própria.',
+        endereco: 'Rua das Obras',
+        numero: '321',
+        complemento: 'Galpão B',
+        cep: '01310-100',
+        cidade: 'São Paulo',
+        uf: 'SP',
+        areaM2: '420.5',
+        valorTotal: '350000',
+        dataInicio: '2026-09-01',
+        dataPrevisao: '2027-03-31',
+        status: 'em_andamento',
+        progresso: 18,
+      },
     });
     expect(editada.status(), await editada.text()).toBe(200);
+    expect(await editada.json()).toMatchObject({
+      nome: 'Reforma da sede xgestão — atualizada',
+      cidade: 'São Paulo',
+      uf: 'SP',
+      status: 'em_andamento',
+      progresso: 18,
+    });
 
     const etapa = await request.post(`/api/obras/${obra.id}/etapas`, {
       data: { nome: 'Preparação', descricao: 'Organizar o canteiro' },
@@ -282,6 +307,65 @@ test.describe('xgestão — obras próprias', () => {
     expect(galeria.status()).toBe(200);
     const galeriaPayload = await galeria.json() as { rows: Array<{ id: string; tag: string | null }> };
     expect(galeriaPayload.rows.some((item) => item.tag === 'Estrutura')).toBe(true);
+    expect(galeriaPayload.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fileId: arquivo.id, url: expect.any(String) }),
+      ]),
+    );
+    const definirCapa = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: arquivo.id },
+    });
+    expect(definirCapa.status(), await definirCapa.text()).toBe(200);
+    expect(await definirCapa.json()).toMatchObject({ fotoCapaFileId: arquivo.id });
+    const detalheComCapa = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect(detalheComCapa.status(), await detalheComCapa.text()).toBe(200);
+    expect(await detalheComCapa.json()).toMatchObject({ imagemUrl: expect.any(String) });
+
+    const presignCapa = await request.post('/api/uploads/presign', {
+      data: {
+        kind: 'obra_capa',
+        mime: 'image/png',
+        size: imagem.byteLength,
+        filename: 'capa-xgestao.png',
+      },
+    });
+    expect(presignCapa.status(), await presignCapa.text()).toBe(200);
+    const presignCapaPayload = await presignCapa.json() as { uploadUrl: string; key: string };
+    const envioCapa = await request.put(presignCapaPayload.uploadUrl, {
+      headers: { 'Content-Type': 'image/png' },
+      data: imagem,
+    });
+    expect(envioCapa.ok(), await envioCapa.text()).toBe(true);
+    const commitCapa = await request.post('/api/uploads/commit', {
+      data: {
+        kind: 'obra_capa',
+        key: presignCapaPayload.key,
+        mime: 'image/png',
+        size: imagem.byteLength,
+        originalName: 'capa-xgestao.png',
+      },
+    });
+    expect(commitCapa.status(), await commitCapa.text()).toBe(200);
+    const capaArquivo = await commitCapa.json() as { id: string };
+    const definirCapaNova = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: capaArquivo.id },
+    });
+    expect(definirCapaNova.status(), await definirCapaNova.text()).toBe(200);
+
+    const arquivoPrivado = await request.post('/api/test/file-setup', {
+      data: {
+        email: empreiteiroEmail,
+        kind: 'empreiteiro_documento',
+        mime: 'image/png',
+        originalName: 'documento-privado.png',
+      },
+    });
+    expect(arquivoPrivado.status(), await arquivoPrivado.text()).toBe(200);
+    const arquivoPrivadoPayload = await arquivoPrivado.json() as { fileId: string };
+    const capaPrivadaBloqueada = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: arquivoPrivadoPayload.fileId },
+    });
+    expect(capaPrivadaBloqueada.status(), await capaPrivadaBloqueada.text()).toBe(422);
     const etapasDaObraPropria = await request.get(`/api/obras/${obra.id}/etapas`);
     expect(etapasDaObraPropria.status()).toBe(200);
     expect((await etapasDaObraPropria.json()) as { rows: Array<{ id: string }> }).toMatchObject({

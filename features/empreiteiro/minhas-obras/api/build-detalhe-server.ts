@@ -139,6 +139,26 @@ export async function listMinhasObrasReal(
     for (const p of probs) problemMap.set(p.obraId, Number(p.n));
   }
 
+  const capaIds = rows
+    .map((row) => row.o.fotoCapaFileId)
+    .filter((id): id is string => Boolean(id));
+  const capaUrlMap = new Map<string, string>();
+  if (capaIds.length > 0) {
+    const capas = await db
+      .select({
+        id: userFiles.id,
+        bucketKey: userFiles.bucketKey,
+        visibility: userFiles.visibility,
+        publicUrl: userFiles.publicUrl,
+        originalName: userFiles.originalName,
+      })
+      .from(userFiles)
+      .where(and(inArray(userFiles.id, capaIds), isNull(userFiles.deletedAt)));
+    await Promise.all(capas.map(async (capa) => {
+      capaUrlMap.set(capa.id, await resolveSignedFotoUrl(capa));
+    }));
+  }
+
   return rows
     .filter((r) => options.includeXgestao !== false || r.o.clienteId !== null)
     .map((r) => {
@@ -155,7 +175,7 @@ export async function listMinhasObrasReal(
       id: o.id,
       titulo: o.nome,
       endereco: enderecoFull || o.endereco,
-      imagemUrl: "",
+      imagemUrl: o.fotoCapaFileId ? (capaUrlMap.get(o.fotoCapaFileId) ?? "") : "",
       status,
       progresso: o.progresso ?? 0,
       orcamento: Number(o.valorTotal ?? 0),
@@ -378,6 +398,7 @@ export async function buildMinhaObraDetalheReal(
   const fotos: ObraFoto[] = await Promise.all(
     fotosRows.map(async (row) => ({
       id: row.f.id,
+      fileId: row.f.fileId,
       url: await resolveSignedFotoUrl({
         bucketKey: row.bucketKey,
         visibility: row.visibility,
@@ -390,6 +411,25 @@ export async function buildMinhaObraDetalheReal(
       enviadaAoContratante: row.f.enviadaAoContratante,
     })),
   );
+
+  // A capa é uma referência explícita da obra e não necessariamente a foto
+  // mais recente. Mantém o hero consistente depois da edição no xgestão.
+  let capaUrl = fotos[0]?.url ?? "";
+  if (obra.fotoCapaFileId) {
+    const [capa] = await db
+      .select({
+        bucketKey: userFiles.bucketKey,
+        visibility: userFiles.visibility,
+        publicUrl: userFiles.publicUrl,
+        originalName: userFiles.originalName,
+      })
+      .from(userFiles)
+      .where(and(eq(userFiles.id, obra.fotoCapaFileId), isNull(userFiles.deletedAt)))
+      .limit(1);
+    if (capa) {
+      capaUrl = await resolveSignedFotoUrl(capa);
+    }
+  }
 
   // Documentos (anexos).
   const anexosRows = await db
@@ -610,7 +650,7 @@ export async function buildMinhaObraDetalheReal(
     id: obra.id,
     titulo: obra.nome,
     endereco: enderecoFull || obra.endereco,
-    imagemUrl: fotos[0]?.url ?? "",
+    imagemUrl: capaUrl,
     status,
     progresso,
     orcamento: valorTotal,

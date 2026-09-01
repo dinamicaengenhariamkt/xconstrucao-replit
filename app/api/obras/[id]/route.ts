@@ -8,6 +8,7 @@ import {
   obras,
   obraAnexos,
   obraEtapas,
+  obraFotos,
   users,
   userFiles,
 } from "@shared/db/schema";
@@ -353,11 +354,29 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       ? undefined
       : eq(userFiles.ownerUserId, guard.user.id);
     const [f] = await db
-      .select({ id: userFiles.id })
+      .select({
+        id: userFiles.id,
+        kind: userFiles.kind,
+        mime: userFiles.mime,
+      })
       .from(userFiles)
       .where(and(eq(userFiles.id, fileId), isNull(userFiles.deletedAt), ownerFilter))
       .limit(1);
-    if (!f) {
+    const isImage = Boolean(f?.mime?.startsWith("image/"));
+    let isAuthorizedWorkMedia = false;
+    if (f && !isAdminLike(guard.user.role) && f.kind === "obra_foto") {
+      const [linkedPhoto] = await db
+        .select({ id: obraFotos.id })
+        .from(obraFotos)
+        .where(and(eq(obraFotos.obraId, id), eq(obraFotos.fileId, fileId)))
+        .limit(1);
+      isAuthorizedWorkMedia = Boolean(linkedPhoto);
+    }
+    const allowedKind =
+      isAdminLike(guard.user.role) ||
+      f?.kind === "obra_capa" ||
+      isAuthorizedWorkMedia;
+    if (!f || !isImage || !allowedKind) {
       const r = NextResponse.json({ message: "Capa inválida." }, { status: 422 });
       setNoCacheHeaders(r);
       return r;
