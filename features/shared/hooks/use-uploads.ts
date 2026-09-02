@@ -48,11 +48,18 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
   return parsed as T;
 }
 
-function putWithProgress(url: string, file: File, mime: string, onProgress?: (p: number) => void): Promise<void> {
+function putWithProgress(
+  url: string,
+  file: File,
+  headers: Record<string, string>,
+  onProgress?: (p: number) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url, true);
-    xhr.setRequestHeader('Content-Type', mime);
+    for (const [name, value] of Object.entries(headers)) {
+      xhr.setRequestHeader(name, value);
+    }
     xhr.upload.onprogress = (evt) => {
       if (evt.lengthComputable && onProgress) {
         onProgress(Math.round((evt.loaded / evt.total) * 100));
@@ -62,13 +69,18 @@ function putWithProgress(url: string, file: File, mime: string, onProgress?: (p:
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        console.error('[upload] PUT retornou status inesperado', { status: xhr.status, url });
-        reject(new Error(`Não foi possível enviar o arquivo (${xhr.status}). Tente novamente.`));
+        console.error('[upload] PUT retornou status inesperado', { status: xhr.status });
+        reject(new Error(`O armazenamento recusou o arquivo (${xhr.status}). Tente novamente.`));
       }
     };
     xhr.onerror = () => {
-      console.error('[upload] erro de rede ao enviar arquivo via PUT', { url, fileName: file.name, size: file.size });
-      reject(new Error('Não foi possível enviar o arquivo. Verifique sua conexão e tente novamente.'));
+      console.error('[upload] erro de rede ao enviar arquivo via PUT', {
+        fileName: file.name,
+        size: file.size,
+      });
+      reject(new Error(
+        'Não foi possível conectar ao armazenamento. Verifique sua conexão ou tente novamente em instantes.',
+      ));
     };
     xhr.send(file);
   });
@@ -86,27 +98,40 @@ export function useUpload() {
     setPending(true);
     setProgress(0);
     try {
-      const presign = await postJSON<{ uploadUrl: string; key: string }>('/api/uploads/presign', {
-        kind: opts.kind,
-        mime: opts.file.type || 'application/octet-stream',
-        size: opts.file.size,
-        filename: opts.file.name,
-        extras: opts.extras,
-      });
+      const mime = opts.file.type || 'application/octet-stream';
+      let presign: { uploadUrl: string; key: string; headers: Record<string, string> };
+      try {
+        presign = await postJSON('/api/uploads/presign', {
+          kind: opts.kind,
+          mime,
+          size: opts.file.size,
+          filename: opts.file.name,
+          extras: opts.extras,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Tente novamente.';
+        throw new Error(`Não foi possível preparar o envio. ${detail}`);
+      }
 
-      await putWithProgress(presign.uploadUrl, opts.file, opts.file.type || 'application/octet-stream', (p) => {
+      await putWithProgress(presign.uploadUrl, opts.file, presign.headers, (p) => {
         setProgress(p);
         opts.onProgress?.(p);
       });
 
-      const commit = await postJSON<CommitResponse>('/api/uploads/commit', {
-        kind: opts.kind,
-        key: presign.key,
-        mime: opts.file.type || 'application/octet-stream',
-        size: opts.file.size,
-        originalName: opts.file.name,
-        extras: opts.extras,
-      });
+      let commit: CommitResponse;
+      try {
+        commit = await postJSON<CommitResponse>('/api/uploads/commit', {
+          kind: opts.kind,
+          key: presign.key,
+          mime,
+          size: opts.file.size,
+          originalName: opts.file.name,
+          extras: opts.extras,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Tente novamente.';
+        throw new Error(`O arquivo foi enviado, mas não foi possível confirmá-lo. ${detail}`);
+      }
       setProgress(100);
       // Avatar mudou → recarrega o usuário no store (reflete em topbar/sidebar imediatamente).
       if (opts.kind === 'avatar') {

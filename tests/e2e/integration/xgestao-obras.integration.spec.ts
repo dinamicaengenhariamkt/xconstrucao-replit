@@ -351,6 +351,54 @@ test.describe('xgestão — obras próprias', () => {
       data: { fotoCapaFileId: capaArquivo.id },
     });
     expect(definirCapaNova.status(), await definirCapaNova.text()).toBe(200);
+    const obraRecarregada = await request.get(`/api/obras/${obra.id}`);
+    expect(obraRecarregada.status(), await obraRecarregada.text()).toBe(200);
+    expect(await obraRecarregada.json()).toMatchObject({
+      fotoCapaFileId: capaArquivo.id,
+      fotoCapaUrl: expect.any(String),
+    });
+
+    // O commit não confia no MIME declarado pelo browser: compara com os
+    // metadados reais gravados pelo PUT antes de criar user_files.
+    const presignMimeDivergente = await request.post('/api/uploads/presign', {
+      data: {
+        kind: 'obra_capa',
+        mime: 'image/png',
+        size: imagem.byteLength,
+        filename: 'capa-mime-divergente.png',
+      },
+    });
+    expect(presignMimeDivergente.status(), await presignMimeDivergente.text()).toBe(200);
+    const mimeDivergentePayload = await presignMimeDivergente.json() as { uploadUrl: string; key: string };
+    const envioMimeDivergente = await request.put(mimeDivergentePayload.uploadUrl, {
+      headers: { 'Content-Type': 'image/png' },
+      data: imagem,
+    });
+    expect(envioMimeDivergente.ok(), await envioMimeDivergente.text()).toBe(true);
+    const commitMimeDivergente = await request.post('/api/uploads/commit', {
+      data: {
+        kind: 'obra_capa',
+        key: mimeDivergentePayload.key,
+        mime: 'image/jpeg',
+        size: imagem.byteLength,
+        originalName: 'capa-mime-divergente.png',
+      },
+    });
+    expect(commitMimeDivergente.status(), await commitMimeDivergente.text()).toBe(400);
+    expect(await commitMimeDivergente.json()).toMatchObject({
+      message: 'Formato real do arquivo divergente.',
+    });
+
+    // Nem admin pode usar o privilégio para transformar uma capa pública de
+    // outro usuário em mídia arbitrária de outra obra.
+    await logout(request);
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    const capaDeOutroUsuarioBloqueada = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: capaArquivo.id },
+    });
+    expect(capaDeOutroUsuarioBloqueada.status(), await capaDeOutroUsuarioBloqueada.text()).toBe(422);
+    await logout(request);
+    await loginAs(request, empreiteiroEmail);
 
     const arquivoPrivado = await request.post('/api/test/file-setup', {
       data: {

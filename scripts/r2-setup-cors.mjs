@@ -33,6 +33,8 @@ const client = new S3Client({
 
 // Origens permitidas (dev + produção). Ajuste a prod URL conforme necessário.
 const ALLOWED_ORIGINS = [
+  "https://dinamicareforma.com.br",
+  "https://attached-assets-dinamicaengenha.replit.app",
   "https://xconstrucao.replit.app",
   "https://*.replit.dev",
   "http://localhost:5000",
@@ -44,7 +46,7 @@ const corsRules = [
   {
     AllowedOrigins: ALLOWED_ORIGINS,
     AllowedMethods: ["PUT", "GET", "HEAD"],
-    AllowedHeaders: ["Content-Type", "Content-Length", "x-amz-*"],
+    AllowedHeaders: ["Content-Type", "x-amz-*"],
     ExposeHeaders: ["ETag"],
     MaxAgeSeconds: 3600,
   },

@@ -52,6 +52,7 @@ import { HealthDetailPanel, useObraHealth } from '@features/shared/health';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import type { ProgressColor } from '@features/contratante/minhas-obras/types';
 import { IconGroups } from '@shared/components/icons';
+import { useToast } from '@shared/hooks/use-toast';
 
 type ObraTab =
   | 'visao-geral'
@@ -108,6 +109,7 @@ export default function ObraDetalhePage() {
 
   // ── Botão "Trocar capa" (Item 13 J40) ────────────────────────────────────
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { upload, pending: uploadingCapa } = useUpload();
   const capaInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,22 +118,35 @@ export default function ObraDetalhePage() {
       const file = e.target.files?.[0];
       if (!file || !obra) return;
       try {
-        const result = await upload({ kind: 'obra_foto', file });
-        await fetch(`/api/obras/${id}`, {
+        const result = await upload({ kind: 'obra_capa', file });
+        const response = await fetch(`/api/obras/${id}`, {
           method: 'PATCH',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fotoCapaFileId: result.id }),
         });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            typeof body?.message === 'string'
+              ? body.message
+              : 'A imagem foi enviada, mas não pôde ser vinculada à obra.',
+          );
+        }
         await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', id] });
         await queryClient.invalidateQueries({ queryKey: ['contratante', 'minhas-obras'] });
-      } catch {
-        /* uploadError já está disponível no hook, UI pode exibi-lo externamente */
+        toast({ title: 'Capa atualizada' });
+      } catch (error) {
+        toast({
+          title: 'Não foi possível atualizar a capa',
+          description: error instanceof Error ? error.message : 'Tente novamente.',
+          variant: 'destructive',
+        });
       } finally {
         if (capaInputRef.current) capaInputRef.current.value = '';
       }
     },
-    [id, obra, upload, queryClient],
+    [id, obra, upload, queryClient, toast],
   );
 
   if (isLoading) {

@@ -44,7 +44,12 @@ export function FileUploader({
     setBusy(true);
     try {
       const result = await upload({ file, kind, extras });
-      await onUploaded(result);
+      try {
+        await onUploaded(result);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : 'Tente novamente.';
+        throw new Error(`O arquivo foi enviado, mas não foi possível vinculá-lo. ${detail}`);
+      }
       toast({ title: 'Arquivo enviado', description: file.name });
     } catch (err) {
       toast({

@@ -74,7 +74,22 @@ export async function POST(request: NextRequest) {
   }
 
   // Confirma que o objeto existe no R2 e bate com tamanho declarado.
-  const head = await headObject(key);
+  let head: Awaited<ReturnType<typeof headObject>>;
+  try {
+    head = await headObject(key);
+  } catch (error) {
+    console.error("[uploads/commit] falha ao verificar objeto", {
+      kind,
+      keyPrefix: key.split("/").slice(0, -1).join("/"),
+      errorName: error instanceof Error ? error.name : "unknown",
+    });
+    const r = NextResponse.json(
+      { message: "Armazenamento temporariamente indisponível. Tente confirmar o arquivo novamente." },
+      { status: 503 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (!head) {
     const r = NextResponse.json({ message: "Arquivo não encontrado no storage." }, { status: 404 });
     setNoCacheHeaders(r);
@@ -84,6 +99,13 @@ export async function POST(request: NextRequest) {
     // tamanho real diverge do declarado — apaga e rejeita
     await deleteObject(key).catch(() => null);
     const r = NextResponse.json({ message: "Tamanho do arquivo divergente." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const actualMime = head.contentType?.split(";", 1)[0]?.trim().toLowerCase() ?? null;
+  if (!actualMime || actualMime !== mime.toLowerCase()) {
+    await deleteObject(key).catch(() => null);
+    const r = NextResponse.json({ message: "Formato real do arquivo divergente." }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
   }
