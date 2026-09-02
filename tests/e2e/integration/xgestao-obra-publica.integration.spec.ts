@@ -19,15 +19,17 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     ]);
 
     expect(types).toContain('export interface ObraPublicaView');
-    expect(types).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|autorNome|autorId|registroProfissional|assinadoPor/);
+    expect(types).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|endereco|numero|complemento|cep|autorNome|autorId|registroProfissional|assinadoPor/);
     expect(projection).toContain("import 'server-only';");
-    expect(projection).not.toMatch(/\busers\b|valorPago|valorTotal|autorId|autorNome|resolvidoPorId/);
+    expect(projection).not.toMatch(/\busers\b|valorPago|valorTotal|endereco|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
 
     // Mídias nunca ficam permanentemente públicas: somente arquivos ainda
     // existentes, ligados à galeria da obra e aprovados para o cliente recebem
     // capability temporária após a validação do token.
     expect(projection).toContain('isNull(userFiles.deletedAt)');
     expect(projection).toContain("eq(obraFotos.enviadaAoContratante, true)");
+    expect(projection).toContain("eq(userFiles.kind, 'obra_capa')");
+    expect(projection).toContain('eq(obraFotos.fileId, userFiles.id)');
     expect(projection).toContain('createSignedReadUrl');
     expect(projection).toContain('PUBLIC_LINK_MEDIA_TTL_SECONDS');
   });

@@ -6,6 +6,7 @@ import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card
 import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
 import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
 import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
+import { ObraPublicaShell } from '@features/xgestao/obra-publica/components/ObraPublicaShell';
 
 const client = new QueryClient();
 const calls: string[] = [];
@@ -64,6 +65,76 @@ try {
   assert.match(markup, /Aguardar liberação/);
   assert.match(markup, /https:\/\/cdn\.example\.com\/foto-publica\.jpg/);
   assert.doesNotMatch(markup, /Nova etapa|Publicar|Nova ocorrência|Enviar foto|Resolver|Excluir/);
+
+  const shellMarkup = renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(ObraPublicaShell, {
+        view: {
+          obra: {
+            id: 'obra-publica-fixture',
+            titulo: 'Residência Alameda',
+            tipo: 'Reforma residencial',
+            descricao: 'Modernização dos ambientes.',
+            areaM2: '84.50',
+            status: 'em_andamento',
+            progresso: 35,
+            cidade: 'São Paulo',
+            uf: 'SP',
+            dataInicio: '2026-09-10',
+            dataPrevisao: '2027-02-20',
+            imagemUrl: null,
+            ultimaAtualizacao: null,
+          },
+          etapas: [],
+          diario: [],
+          ocorrencias: [],
+          fotos: [],
+          checklists: [],
+        },
+      }),
+    ),
+  );
+  assert.match(shellMarkup, /Detalhes da obra/);
+  assert.match(shellMarkup, /Reforma residencial/);
+  assert.match(shellMarkup, /Modernização dos ambientes/);
+  assert.match(shellMarkup, /84,5 m²/);
+  assert.match(shellMarkup, /10\/09\/2026/);
+  assert.match(shellMarkup, /20\/02\/2027/);
+  assert.doesNotMatch(shellMarkup, /Orçamento|Endereço|Equipe|Documento/);
+
+  const minimalShellMarkup = renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(ObraPublicaShell, {
+        view: {
+          obra: {
+            id: 'obra-publica-minimal',
+            titulo: 'Obra sem opcionais',
+            tipo: null,
+            descricao: null,
+            areaM2: null,
+            status: 'planejamento',
+            progresso: 0,
+            cidade: null,
+            uf: null,
+            dataInicio: null,
+            dataPrevisao: null,
+            imagemUrl: null,
+            ultimaAtualizacao: null,
+          },
+          etapas: [],
+          diario: [],
+          ocorrencias: [],
+          fotos: [],
+          checklists: [],
+        },
+      }),
+    ),
+  );
+  assert.doesNotMatch(minimalShellMarkup, /Detalhes da obra|Tipo de obra|Área|Início|Previsão de término/);
 } finally {
   global.fetch = originalFetch;
   client.clear();

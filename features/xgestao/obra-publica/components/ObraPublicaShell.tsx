@@ -34,12 +34,28 @@ const tabs: Array<{
 
 function formatDate(value: string | null): string {
   if (!value) return 'Sem previsão';
-  return value;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('pt-BR');
+}
+
+function formatArea(value: string): string {
+  const area = Number(value);
+  if (!Number.isFinite(area)) return `${value} m²`;
+  return `${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m²`;
 }
 
 export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
   const [activeTab, setActiveTab] = useState<PublicTab>('etapas');
   const local = [view.obra.cidade, view.obra.uf].filter(Boolean).join(' · ');
+  const hasDetails = Boolean(
+    view.obra.tipo ||
+    view.obra.descricao ||
+    view.obra.areaM2 ||
+    view.obra.dataInicio ||
+    view.obra.dataPrevisao,
+  );
 
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-6 sm:py-10">
@@ -65,6 +81,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
                 {STATUS_LABELS[view.obra.status] ?? view.obra.status}
               </span>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{view.obra.titulo}</h1>
+              {view.obra.tipo && <p className="text-sm font-medium text-white/90">{view.obra.tipo}</p>}
               <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/85">
                 {local && <span>{local}</span>}
                 <span className="flex items-center gap-1.5">
@@ -89,6 +106,54 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             )}
           </div>
         </section>
+
+        {hasDetails && (
+          <section
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 dark:border-gray-800 dark:bg-gray-900"
+            aria-labelledby="detalhes-obra-publica"
+          >
+            <h2 id="detalhes-obra-publica" className="text-lg font-extrabold text-gray-900 dark:text-white">
+              Detalhes da obra
+            </h2>
+            {view.obra.descricao && (
+              <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+                {view.obra.descricao}
+              </p>
+            )}
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {view.obra.tipo && (
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Tipo de obra</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{view.obra.tipo}</dd>
+                </div>
+              )}
+              {view.obra.areaM2 && (
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Área</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatArea(view.obra.areaM2)}
+                  </dd>
+                </div>
+              )}
+              {view.obra.dataInicio && (
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Início</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatDate(view.obra.dataInicio)}
+                  </dd>
+                </div>
+              )}
+              {view.obra.dataPrevisao && (
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Previsão de término</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {formatDate(view.obra.dataPrevisao)}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </section>
+        )}
 
         <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="flex overflow-x-auto border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">

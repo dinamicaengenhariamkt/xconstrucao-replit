@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, inArray, isNull, like } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNull, like, or } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import {
   obraChecklistItens,
@@ -42,12 +42,16 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
     .select({
       id: obras.id,
       titulo: obras.nome,
+      tipo: obras.tipo,
+      descricao: obras.descricao,
+      areaM2: obras.areaM2,
       status: obras.status,
       progresso: obras.progresso,
       cidade: obras.cidade,
       uf: obras.uf,
+      dataInicio: obras.dataInicio,
       dataPrevisao: obras.dataPrevisao,
-       imagemBucketKey: userFiles.bucketKey,
+      imagemBucketKey: userFiles.bucketKey,
     })
     .from(obras)
     .leftJoin(
@@ -56,6 +60,22 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         eq(userFiles.id, obras.fotoCapaFileId),
         isNull(userFiles.deletedAt),
         like(userFiles.mime, 'image/%'),
+        or(
+          // Uma capa enviada especificamente pelo editor é uma mídia pública
+          // deliberada. Fotos comuns só podem virar capa pública depois de
+          // aprovadas para compartilhamento na galeria desta mesma obra.
+          eq(userFiles.kind, 'obra_capa'),
+          exists(
+            db
+              .select({ id: obraFotos.id })
+              .from(obraFotos)
+              .where(and(
+                eq(obraFotos.obraId, obras.id),
+                eq(obraFotos.fileId, userFiles.id),
+                eq(obraFotos.enviadaAoContratante, true),
+              )),
+          ),
+        ),
       ),
     )
     .where(eq(obras.id, obraId));
@@ -152,12 +172,16 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
     obra: {
       id: obra.id,
       titulo: obra.titulo,
+      tipo: obra.tipo,
+      descricao: obra.descricao,
+      areaM2: obra.areaM2,
       status: obra.status,
       progresso: obra.progresso ?? 0,
       cidade: obra.cidade,
       uf: obra.uf,
+      dataInicio: obra.dataInicio,
       dataPrevisao: obra.dataPrevisao,
-       imagemUrl: obra.imagemBucketKey ? await signedPublicMediaUrl(obra.imagemBucketKey) : null,
+      imagemUrl: obra.imagemBucketKey ? await signedPublicMediaUrl(obra.imagemBucketKey) : null,
       ultimaAtualizacao: mostRecent(
         diarioRows[0]?.createdAt,
         ocorrenciaRows[0]?.createdAt,

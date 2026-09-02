@@ -80,6 +80,37 @@ test.describe('xgestão — link público de obra', () => {
     });
     expect(obraResponse.status(), await obraResponse.text()).toBe(201);
     const obra = (await obraResponse.json()) as { id: string };
+    const detalhes = await request.patch(`/api/obras/${obra.id}`, {
+      data: {
+        tipo: 'Reforma residencial',
+        descricao: 'Modernização dos ambientes e instalações.',
+        areaM2: '84.5',
+        valorTotal: '987654.32',
+        dataInicio: '2026-09-10',
+        dataPrevisao: '2027-02-20',
+        progresso: 35,
+      },
+    });
+    expect(detalhes.status(), await detalhes.text()).toBe(200);
+
+    const privateFileResponse = await request.post('/api/test/file-setup', {
+      data: {
+        email: ownerEmail,
+        kind: 'obra_foto',
+        originalName: 'capa-privada-e2e.jpg',
+        mime: 'image/jpeg',
+      },
+    });
+    expect(privateFileResponse.status(), await privateFileResponse.text()).toBe(200);
+    const privateFile = (await privateFileResponse.json()) as { fileId: string; key: string };
+    const privatePhoto = await request.post(`/api/obras/${obra.id}/fotos`, {
+      data: { fileId: privateFile.fileId, enviadaAoContratante: false },
+    });
+    expect(privatePhoto.status(), await privatePhoto.text()).toBe(201);
+    const privateCover = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: privateFile.fileId },
+    });
+    expect(privateCover.status(), await privateCover.text()).toBe(200);
 
     const etapa = await request.post(`/api/obras/${obra.id}/etapas`, {
       data: { nome: 'Fundação E2E', descricao: 'Preparação controlada' },
@@ -107,15 +138,47 @@ test.describe('xgestão — link público de obra', () => {
     expect(html).toContain('Obra pública E2E');
     expect(html).toContain('Fundação E2E');
     expect(html).toContain('Vistoria E2E');
+    expect(html).toContain('Reforma residencial');
+    expect(html).toContain('Modernização dos ambientes e instalações.');
+    expect(html).toContain('84,5 m²');
+    expect(html).toContain('10/09/2026');
+    expect(html).toContain('20/02/2027');
+    expect(html).toContain('35%');
+    expect(html).not.toContain(privateFile.key);
     expect(html).toMatch(/noindex/i);
     expect(publica.headers()['cache-control'] ?? '').toMatch(/no-store|no-cache/i);
     for (const proibido of [
       // Valores reais são a asserção útil aqui: o HTML de desenvolvimento do
       // Next inclui código de runtime com palavras genéricas como "email".
-      'Rua que não deve aparecer', 'clienteId', 'empreiteiraId',
+      'Rua que não deve aparecer', '987654.32', 'clienteId', 'empreiteiraId',
     ]) {
       expect(html).not.toContain(proibido);
     }
+
+    await loginAs(request, ownerEmail);
+    const publicFileResponse = await request.post('/api/test/file-setup', {
+      data: {
+        email: ownerEmail,
+        kind: 'obra_foto',
+        originalName: 'capa-aprovada-e2e.jpg',
+        mime: 'image/jpeg',
+      },
+    });
+    expect(publicFileResponse.status(), await publicFileResponse.text()).toBe(200);
+    const publicFile = (await publicFileResponse.json()) as { fileId: string; key: string };
+    const publicPhoto = await request.post(`/api/obras/${obra.id}/fotos`, {
+      data: { fileId: publicFile.fileId, enviadaAoContratante: true },
+    });
+    expect(publicPhoto.status(), await publicPhoto.text()).toBe(201);
+    const publicCover = await request.patch(`/api/obras/${obra.id}`, {
+      data: { fotoCapaFileId: publicFile.fileId },
+    });
+    expect(publicCover.status(), await publicCover.text()).toBe(200);
+    await logout(request);
+    const publicaComCapaAprovada = await request.get(first.share.path);
+    expect(publicaComCapaAprovada.status(), await publicaComCapaAprovada.text()).toBe(200);
+    expect(await publicaComCapaAprovada.text()).toContain(publicFile.key);
+
     const invalido = await request.get('/publico/obra/token-invalido');
     expect(invalido.status()).toBe(404);
 

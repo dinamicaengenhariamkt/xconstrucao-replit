@@ -52,10 +52,14 @@ export interface ObraPublicaView {
   obra: {
     id: string;
     titulo: string;
+    tipo: string | null;
+    descricao: string | null;
+    areaM2: string | null;
     status: string;
     progresso: number;
     cidade: string | null;
     uf: string | null;
+    dataInicio: string | null;
     dataPrevisao: string | null;
     imagemUrl: string | null;
     ultimaAtualizacao: string | null;
