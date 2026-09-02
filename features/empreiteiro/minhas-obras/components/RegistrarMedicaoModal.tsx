@@ -197,7 +197,9 @@ export function RegistrarMedicaoModal({
               </DialogTitle>
               <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                 {obraTitulo
-                  ? `Obra: ${obraTitulo}`
+                  ? isOwnWork
+                    ? `Obra: ${obraTitulo} · registre aqui o andamento executado`
+                    : `Obra: ${obraTitulo}`
                   : isOwnWork
                     ? 'Registre o avanço executado nesta obra.'
                     : 'Envie uma medição para aprovação do contratante.'}
@@ -228,7 +230,7 @@ export function RegistrarMedicaoModal({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-semibold text-gray-500">
-                  Percentual concluído <span className="text-red-500">*</span>
+                  Avanço desta atualização <span className="text-red-500">*</span>
                 </label>
                 <span className="text-2xl font-extrabold text-primary tabular-nums">{percentual}%</span>
               </div>
@@ -284,7 +286,7 @@ export function RegistrarMedicaoModal({
               <Textarea
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Detalhes do que foi executado nesta medição..."
+                placeholder="O que foi executado desde a última atualização..."
                 className="text-sm resize-none"
                 rows={3}
                 maxLength={2000}

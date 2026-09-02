@@ -289,6 +289,7 @@ export async function buildMinhaObraDetalheReal(
     id: t.id,
     titulo: t.titulo,
     etapa: t.etapa || "Sem etapa",
+    etapaId: t.etapaId,
     responsavel: t.responsavel || (empreiteiraRow?.responsavel ?? "—"),
     prazo: t.prazo || "—",
     status: t.status,

@@ -8,7 +8,7 @@ import { Label } from '@shared/components/ui/label';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@shared/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@shared/components/ui/dialog';
-import { RiAddLine, RiDeleteBinLine, RiLoader4Line } from 'react-icons/ri';
+import { RiAddLine, RiDeleteBinLine, RiEditLine, RiLoader4Line } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
 import {
   useObraEtapas,
@@ -49,21 +49,39 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
   const deleteMut = useDeleteEtapa(obraId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [nome, setNome] = useState('');
   const [desc, setDesc] = useState('');
   const [responsavel, setResponsavel] = useState('');
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setNome('');
+    setDesc('');
+    setResponsavel('');
+    setEditingId(null);
+  };
+
+  const handleSave = async () => {
     if (!canWrite) return;
     if (nome.trim().length < 2) return;
     try {
-      await createMut.mutateAsync({
-        nome: nome.trim(),
-        descricao: desc.trim() || null,
-        responsavel: responsavel.trim() || null,
-      });
-      setNome(''); setDesc(''); setResponsavel(''); setOpen(false);
-      toast({ title: 'Etapa criada' });
+      if (editingId) {
+        await updateMut.mutateAsync({
+          etapaId: editingId,
+          nome: nome.trim(),
+          descricao: desc.trim() || null,
+          responsavel: responsavel.trim() || null,
+        });
+      } else {
+        await createMut.mutateAsync({
+          nome: nome.trim(),
+          descricao: desc.trim() || null,
+          responsavel: responsavel.trim() || null,
+        });
+      }
+      resetForm();
+      setOpen(false);
+      toast({ title: editingId ? 'Etapa atualizada' : 'Etapa criada' });
     } catch (e) {
       toast({ title: 'Erro ao criar etapa', description: e instanceof Error ? e.message : '', variant: 'destructive' });
     }
@@ -104,12 +122,12 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold">Etapas da obra</h3>
           {canEditScope && (
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (!next) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button size="sm" data-testid="button-nova-etapa"><RiAddLine className="w-4 h-4 mr-1" />Nova etapa</Button>
+                <Button size="sm" data-testid="button-nova-etapa" onClick={resetForm}><RiAddLine className="w-4 h-4 mr-1" />Nova etapa</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Nova etapa</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{editingId ? 'Editar etapa' : 'Nova etapa'}</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div><Label>Nome*</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} data-testid="input-etapa-nome" /></div>
                   <div><Label>Descrição</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} data-testid="input-etapa-desc" /></div>
@@ -117,8 +135,9 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                 </div>
                 <DialogFooter>
                   <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleCreate} disabled={createMut.isPending || nome.trim().length < 2} data-testid="button-criar-etapa">
-                    {createMut.isPending && <RiLoader4Line className="w-4 h-4 mr-1 animate-spin" />}Criar
+                  <Button onClick={handleSave} disabled={createMut.isPending || updateMut.isPending || nome.trim().length < 2} data-testid="button-criar-etapa">
+                    {(createMut.isPending || updateMut.isPending) && <RiLoader4Line className="w-4 h-4 mr-1 animate-spin" />}
+                    {editingId ? 'Salvar alterações' : 'Criar'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -175,9 +194,25 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                       </SelectContent>
                     </Select>
                     {canEditScope && (
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(e.id)} data-testid={`button-delete-etapa-${e.id}`}>
-                        <RiDeleteBinLine className="w-4 h-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingId(e.id);
+                            setNome(e.nome);
+                            setDesc(e.descricao ?? '');
+                            setResponsavel(e.responsavel ?? '');
+                            setOpen(true);
+                          }}
+                          data-testid={`button-edit-etapa-${e.id}`}
+                        >
+                          <RiEditLine className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(e.id)} data-testid={`button-delete-etapa-${e.id}`}>
+                          <RiDeleteBinLine className="w-4 h-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 )}

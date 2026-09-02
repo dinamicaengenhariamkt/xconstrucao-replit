@@ -26,6 +26,7 @@ function invalidateDetalhe(qc: ReturnType<typeof useQueryClient>, obraId: string
   qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras'] });
   qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });
   qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
+  qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });
 }
 
 // ─── Tarefas ─────────────────────────────────────────────────────────────────
@@ -42,6 +43,7 @@ export function useCreateTarefa(obraId: string) {
         body: JSON.stringify({
           titulo: input.titulo,
           etapa: input.etapa,
+          etapaId: input.etapaId ?? null,
           responsavel: input.responsavel,
           prazo: input.prazo,
           status: input.status,
@@ -70,6 +72,7 @@ export function useUpdateTarefa(obraId: string) {
         body: JSON.stringify({
           titulo: patch.titulo,
           etapa: patch.etapa,
+          etapaId: patch.etapaId,
           responsavel: patch.responsavel,
           prazo: patch.prazo,
           status: patch.status,

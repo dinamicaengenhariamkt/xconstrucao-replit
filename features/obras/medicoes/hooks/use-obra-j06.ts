@@ -100,7 +100,12 @@ export function useCreateEtapa(obraId: string) {
   return useMutation({
     mutationFn: (body: { nome: string; descricao?: string | null; ordem?: number; responsavel?: string | null; prazo?: string | null }) =>
       sendJSON<ObraEtapaApi>('POST', `/api/obras/${obraId}/etapas`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
+    },
   });
 }
 
@@ -109,7 +114,12 @@ export function useUpdateEtapa(obraId: string) {
   return useMutation({
     mutationFn: ({ etapaId, ...body }: { etapaId: string; nome?: string; progresso?: number; status?: EtapaStatus; descricao?: string | null; responsavel?: string | null; prazo?: string | null; ordem?: number }) =>
       sendJSON<ObraEtapaApi>('PATCH', `/api/obras/${obraId}/etapas/${etapaId}`, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
+    },
   });
 }
 
@@ -117,7 +127,12 @@ export function useDeleteEtapa(obraId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (etapaId: string) => sendJSON<{ ok: true }>('DELETE', `/api/obras/${obraId}/etapas/${etapaId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
+    },
   });
 }
 

@@ -286,9 +286,130 @@ test.describe('xgestão — obras próprias', () => {
     const etapaBody = (await etapa.json()) as { id: string };
 
     const tarefa = await request.post(`/api/obras/${obra.id}/tarefas`, {
-      data: { titulo: 'Comprar materiais', etapaId: etapaBody.id, status: 'pendente', prioridade: 'media' },
+      data: {
+        titulo: 'Comprar materiais',
+        etapaId: etapaBody.id,
+        etapa: 'Nome enviado pelo navegador não deve prevalecer',
+        responsavel: 'Equipe de suprimentos',
+        prazo: '05/09/2026',
+        status: 'em_andamento',
+        prioridade: 'alta',
+        progresso: 30,
+        descricao: 'Comprar cimento e aço para a próxima frente.',
+      },
     });
     expect(tarefa.status(), await tarefa.text()).toBe(201);
+    const tarefaBody = await tarefa.json() as Record<string, unknown>;
+    expect(tarefaBody).toMatchObject({
+      etapaId: etapaBody.id,
+      etapa: 'Preparação',
+      responsavel: 'Equipe de suprimentos',
+      prazo: '05/09/2026',
+      status: 'em_andamento',
+      prioridade: 'alta',
+      progresso: 30,
+      descricao: 'Comprar cimento e aço para a próxima frente.',
+    });
+
+    const etapaDeOutraObra = await request.post(`/api/obras/${obra.id}/tarefas`, {
+      data: { titulo: 'Vínculo inválido', etapaId: '00000000-0000-4000-8000-000000000001' },
+    });
+    expect(etapaDeOutraObra.status()).toBe(400);
+    expect(await etapaDeOutraObra.json()).toMatchObject({
+      message: 'Selecione uma etapa válida desta obra.',
+    });
+
+    const detalheComTarefa = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect(detalheComTarefa.status()).toBe(200);
+    const detalheComTarefaBody = await detalheComTarefa.json() as {
+      tarefas: Array<Record<string, unknown>>;
+      etapas: Array<{ id: string; tarefas: Array<{ id: string }> }>;
+    };
+    expect(detalheComTarefaBody.tarefas).toContainEqual(expect.objectContaining({
+      id: tarefaBody.id,
+      etapaId: etapaBody.id,
+      etapa: 'Preparação',
+      progresso: 30,
+    }));
+    expect(detalheComTarefaBody.etapas.find((item) => item.id === etapaBody.id)?.tarefas)
+      .toContainEqual(expect.objectContaining({ id: tarefaBody.id }));
+
+    const etapaEditada = await request.patch(`/api/obras/${obra.id}/etapas/${etapaBody.id}`, {
+      data: {
+        nome: 'Preparação final',
+        descricao: 'Escopo atualizado e persistido',
+        responsavel: 'Equipe de suprimentos',
+        progresso: 30,
+        status: 'em_andamento',
+      },
+    });
+    expect(etapaEditada.status(), await etapaEditada.text()).toBe(200);
+    expect(await etapaEditada.json()).toMatchObject({
+      nome: 'Preparação final',
+      descricao: 'Escopo atualizado e persistido',
+      responsavel: 'Equipe de suprimentos',
+      progresso: 30,
+      status: 'em_andamento',
+    });
+    const detalheAposRenomearEtapa = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect((await detalheAposRenomearEtapa.json()).tarefas).toContainEqual(expect.objectContaining({
+      id: tarefaBody.id,
+      etapaId: etapaBody.id,
+      etapa: 'Preparação final',
+    }));
+
+    const segundaEtapa = await request.post(`/api/obras/${obra.id}/etapas`, {
+      data: { nome: 'Execução', descricao: 'Segunda frente' },
+    });
+    expect(segundaEtapa.status(), await segundaEtapa.text()).toBe(201);
+    const segundaEtapaBody = await segundaEtapa.json() as { id: string };
+    const tarefaMovida = await request.patch(`/api/obras/${obra.id}/tarefas/${String(tarefaBody.id)}`, {
+      data: { etapaId: segundaEtapaBody.id, progresso: 60, status: 'em_andamento' },
+    });
+    expect(tarefaMovida.status(), await tarefaMovida.text()).toBe(200);
+    expect(await tarefaMovida.json()).toMatchObject({
+      etapaId: segundaEtapaBody.id,
+      etapa: 'Execução',
+      progresso: 60,
+    });
+    const etapasDepoisDaMudanca = await request.get(`/api/obras/${obra.id}/etapas`);
+    const etapasDepoisDaMudancaBody = await etapasDepoisDaMudanca.json() as {
+      rows: Array<{ id: string; progresso: number }>;
+    };
+    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === etapaBody.id)?.progresso).toBe(0);
+    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === segundaEtapaBody.id)?.progresso).toBe(60);
+
+    const etapaRemovida = await request.delete(`/api/obras/${obra.id}/etapas/${segundaEtapaBody.id}`);
+    expect(etapaRemovida.status(), await etapaRemovida.text()).toBe(200);
+    const detalheAposRemoverEtapa = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect((await detalheAposRemoverEtapa.json()).tarefas).toContainEqual(expect.objectContaining({
+      id: tarefaBody.id,
+      etapaId: null,
+      etapa: 'Geral',
+    }));
+
+    const tarefaSemEtapa = await request.post(`/api/obras/${obra.id}/tarefas`, {
+      data: { titulo: 'Tarefa geral', etapa: 'Grupo falso', progresso: 20 },
+    });
+    expect(tarefaSemEtapa.status(), await tarefaSemEtapa.text()).toBe(201);
+    expect(await tarefaSemEtapa.json()).toMatchObject({ etapaId: null, etapa: 'Geral' });
+
+    const etapaComTarefa = await request.post(`/api/obras/${obra.id}/etapas`, {
+      data: { nome: 'Etapa para exclusão' },
+    });
+    const etapaComTarefaBody = await etapaComTarefa.json() as { id: string };
+    const tarefaParaExcluir = await request.post(`/api/obras/${obra.id}/tarefas`, {
+      data: { titulo: 'Excluir depois', etapaId: etapaComTarefaBody.id, progresso: 80 },
+    });
+    const tarefaParaExcluirBody = await tarefaParaExcluir.json() as { id: string };
+    const exclusaoTarefa = await request.delete(`/api/obras/${obra.id}/tarefas/${tarefaParaExcluirBody.id}`);
+    expect(exclusaoTarefa.status(), await exclusaoTarefa.text()).toBe(200);
+    const etapasDepoisDeExcluirTarefa = await request.get(`/api/obras/${obra.id}/etapas`);
+    expect((await etapasDepoisDeExcluirTarefa.json()).rows).toContainEqual(expect.objectContaining({
+      id: etapaComTarefaBody.id,
+      progresso: 0,
+      status: 'pendente',
+    }));
 
     const ocorrencia = await request.post(`/api/obras/${obra.id}/ocorrencias`, {
       data: { titulo: 'Acesso ao canteiro', descricao: 'Confirmar chave de acesso com a equipe.', gravidade: 'baixo' },

@@ -10,7 +10,6 @@ import { TaskManagerSection } from '@features/empreiteiro/minhas-obras/component
 import { ChecklistsSection } from '@features/empreiteiro/minhas-obras/components/ChecklistsSection';
 import { TimelineSection } from '@features/empreiteiro/minhas-obras/components/TimelineSection';
 import { DocumentosSection } from '@features/empreiteiro/minhas-obras/components/DocumentosSection';
-import { CronogramaSection } from '@features/empreiteiro/minhas-obras/components/CronogramaSection';
 import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/components/OcorrenciasSection';
 import { FinanceiroSection } from '@features/empreiteiro/minhas-obras/components/FinanceiroSection';
 import { EquipeSection } from '@features/empreiteiro/minhas-obras/components/EquipeSection';
@@ -63,6 +62,51 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'lucro', label: 'Lucro', Icon: IconPayments },
 ];
 
+function OperationGuide({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <aside
+      className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5"
+      aria-label="Guia rápido para atualizar a obra"
+      data-testid="operation-guide"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold text-gray-900 dark:text-white">Como manter esta obra atualizada</p>
+          <p className="mt-1 text-xs text-gray-500">Use cada área para um tipo diferente de informação:</p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-xs font-semibold text-gray-500 underline underline-offset-2 hover:text-primary"
+          aria-label="Dispensar guia"
+        >
+          Entendi
+        </button>
+      </div>
+      <ol className="mt-4 grid gap-3 md:grid-cols-3">
+        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
+          <strong className="block text-xs text-primary">1. Progresso geral</strong>
+          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
+            Mostra o avanço consolidado da obra. Ele muda quando você salva uma atualização.
+          </span>
+        </li>
+        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
+          <strong className="block text-xs text-primary">2. Atualização</strong>
+          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
+            Registre o que foi feito, o percentual avançado, o valor informativo e as fotos.
+          </span>
+        </li>
+        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
+          <strong className="block text-xs text-primary">3. Organização</strong>
+          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
+            Tarefas detalham ações; etapas, checklists e diário guardam o acompanhamento operacional.
+          </span>
+        </li>
+      </ol>
+    </aside>
+  );
+}
+
 export function ObraConsoleView({
   basePath,
   showMarketplaceContact = true,
@@ -80,6 +124,7 @@ export function ObraConsoleView({
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showOperationGuide, setShowOperationGuide] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +137,12 @@ export function ObraConsoleView({
       return () => clearTimeout(timer);
     }
   }, [searchParams, obra]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage.getItem('xgestao-operation-guide-dismissed') !== '1') {
+      setShowOperationGuide(true);
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -240,7 +291,10 @@ export function ObraConsoleView({
         {/* Progress bar section */}
         <div className="p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
+            <div>
+              <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
+              <p className="mt-1 text-xs text-gray-400">Avanço consolidado da execução da obra</p>
+            </div>
             <div className="flex items-baseline gap-0.5">
               <span className="text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
               <span className="text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
@@ -256,6 +310,15 @@ export function ObraConsoleView({
           </div>
         </div>
       </motion.div>
+
+      {showOperationGuide && obra.isObraPropria && (
+        <OperationGuide
+          onDismiss={() => {
+            window.localStorage.setItem('xgestao-operation-guide-dismissed', '1');
+            setShowOperationGuide(false);
+          }}
+        />
+      )}
 
       {/* BLOCO 3: KPIs Operacionais */}
       <motion.div
@@ -406,7 +469,13 @@ export function ObraConsoleView({
                 />
               )}
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
-              {activeTab === 'cronograma' && <CronogramaSection obra={obra} />}
+              {activeTab === 'cronograma' && (
+                <EtapasJ06Card
+                  obraId={obra.id}
+                  canWrite
+                  canEditScope={obra.isObraPropria}
+                />
+              )}
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
               {activeTab === 'disputas' && (
                 <TabDisputas
@@ -504,7 +573,6 @@ function ObraJ06Section({ obraId }: { obraId: string }) {
         <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Medições e diário da obra</h2>
         <span className="text-xs text-muted-foreground">(dados ao vivo)</span>
       </div>
-      <EtapasJ06Card obraId={obraId} canWrite canEditScope={false} />
       <DiarioJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} />
       <OcorrenciasJ06Card obraId={obraId} canWrite />
       <FotosJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} currentUserRole={user?.role} />

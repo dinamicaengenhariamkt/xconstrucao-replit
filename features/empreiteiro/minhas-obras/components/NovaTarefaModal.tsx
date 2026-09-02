@@ -34,7 +34,7 @@ interface NovaTarefaModalProps {
   onOpenChange: (open: boolean) => void;
   obra: MinhaObraDetalhe;
   tarefaParaEditar?: MinhaObraTarefa | null;
-  onSalvar: (tarefa: MinhaObraTarefa) => void;
+  onSalvar: (tarefa: MinhaObraTarefa) => Promise<void>;
 }
 
 function gerarId() {
@@ -53,13 +53,16 @@ export function NovaTarefaModal({
   const isEdicao = Boolean(tarefaParaEditar);
   const titulo = isEdicao ? 'Editar Tarefa' : 'Nova Tarefa';
 
-  // Etapas disponíveis: deduzidas das tarefas existentes + etapas da obra
-  const etapasDisponiveis = Array.from(
-    new Set([
-      ...obra.etapas.map((e) => e.nome),
-      ...obra.tarefas.map((t) => t.etapa),
-    ])
-  );
+  // A tarefa deve apontar para uma etapa real. Quando a obra ainda não tem
+  // etapas, "Geral" permite registrar a tarefa sem fingir que "+ Nova etapa"
+  // é uma ação implementada neste modal.
+  const etapasDisponiveis = obra.etapas.length > 0
+    ? obra.etapas.map((e) => ({ id: e.id, nome: e.nome }))
+    : [{ id: null, nome: 'Geral' }];
+  const etapasLegadas = obra.tarefas
+    .filter((t) => t.etapa && !etapasDisponiveis.some((e) => e.nome === t.etapa))
+    .map((t) => ({ id: t.etapaId ?? null, nome: t.etapa }));
+  const etapasDoSelect = [...etapasDisponiveis, ...etapasLegadas];
 
   // Membros da equipe disponíveis
   const responsaveisDisponiveis = obra.equipe.map((m) => m.nome);
@@ -68,7 +71,7 @@ export function NovaTarefaModal({
     resolver: zodResolver(novaTarefaSchema),
     defaultValues: {
       titulo: '',
-      etapa: etapasDisponiveis[0] ?? '',
+      etapa: etapasDoSelect[0]?.nome ?? '',
       responsavel: '',
       prazo: '',
       prioridade: 'media',
@@ -98,7 +101,7 @@ export function NovaTarefaModal({
     } else if (open && !tarefaParaEditar) {
       form.reset({
         titulo: '',
-        etapa: etapasDisponiveis[0] ?? '',
+         etapa: etapasDoSelect[0]?.nome ?? '',
         responsavel: '',
         prazo: '',
         prioridade: 'media',
@@ -120,11 +123,12 @@ export function NovaTarefaModal({
     onOpenChange(false);
   };
 
-  const onSubmit = (data: NovaTarefaFormData) => {
+  const onSubmit = async (data: NovaTarefaFormData) => {
     const tarefa: MinhaObraTarefa = {
       id: tarefaParaEditar?.id ?? gerarId(),
       titulo: data.titulo,
       etapa: data.etapa,
+      etapaId: etapasDoSelect.find((e) => e.nome === data.etapa)?.id ?? null,
       responsavel: data.responsavel,
       prazo: data.prazo,
       prioridade: data.prioridade,
@@ -135,8 +139,13 @@ export function NovaTarefaModal({
       anexos: tarefaParaEditar?.anexos,
       descricao: data.descricao || undefined,
     };
-    onSalvar(tarefa);
-    handleClose();
+    try {
+      await onSalvar(tarefa);
+      handleClose();
+    } catch {
+      // O mutation hook já mostra a mensagem retornada pelo servidor. O modal
+      // permanece aberto para o usuário corrigir os campos sem perder o que digitou.
+    }
   };
 
   return (
@@ -200,14 +209,18 @@ export function NovaTarefaModal({
                             {...field}
                             className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           >
-                            {etapasDisponiveis.map((e) => (
-                              <option key={e} value={e}>
-                                {e}
+                             {etapasDoSelect.map((e) => (
+                               <option key={`${e.id ?? 'sem-id'}-${e.nome}`} value={e.nome}>
+                                 {e.nome}
                               </option>
                             ))}
-                            <option value="_nova">+ Nova etapa</option>
                           </select>
                         </FormControl>
+                         <p className="text-[11px] text-gray-400 mt-1">
+                           {obra.etapas.length > 0
+                             ? 'A tarefa ficará vinculada à etapa selecionada.'
+                             : 'Nenhuma etapa foi criada ainda. A tarefa será registrada em Geral; crie etapas pelo Cronograma quando quiser organizar a obra.'}
+                         </p>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -418,9 +431,9 @@ export function NovaTarefaModal({
           <Button type="button" variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button type="submit" form="form-nova-tarefa">
+          <Button type="submit" form="form-nova-tarefa" disabled={form.formState.isSubmitting}>
             {isEdicao ? <IconSave className="text-sm mr-1" /> : <IconAddTask className="text-sm mr-1" />}
-            {isEdicao ? 'Salvar alterações' : 'Criar tarefa'}
+            {form.formState.isSubmitting ? 'Salvando...' : isEdicao ? 'Salvar alterações' : 'Criar tarefa'}
           </Button>
         </DialogFooter>
       </DialogContent>

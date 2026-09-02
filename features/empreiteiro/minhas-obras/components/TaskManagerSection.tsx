@@ -339,12 +339,12 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
 
   // ── Handlers de CRUD e transições ─────────────────────────────────────────
 
-  const handleSalvarTarefa = (tarefa: MinhaObraTarefa) => {
+  const handleSalvarTarefa = async (tarefa: MinhaObraTarefa) => {
     const existing = tarefas.find((t) => t.id === tarefa.id);
     if (existing) {
-      updateMut.mutate({ id: tarefa.id, patch: tarefa });
+      await updateMut.mutateAsync({ id: tarefa.id, patch: tarefa });
     } else {
-      createMut.mutate(tarefa);
+      await createMut.mutateAsync(tarefa);
     }
   };
 
@@ -406,12 +406,14 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+      <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm" data-testid="task-manager-section">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Gerenciamento de Tarefas</h3>
-            <p className="text-sm text-gray-500">Organize e acompanhe as atividades da obra</p>
+            <p className="text-sm text-gray-500">
+              Tarefas são ações específicas; o progresso geral é consolidado pelas atualizações da obra.
+            </p>
           </div>
           <button
             onClick={() => !obraFinalizada && openModal('nova')}

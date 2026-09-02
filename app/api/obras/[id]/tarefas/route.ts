@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { obraTarefas } from "@shared/db/schema";
+import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
@@ -67,23 +67,54 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
   const data = parsed.data;
-  const [created] = await db
-    .insert(obraTarefas)
-    .values({
-      obraId: id,
-      etapaId: data.etapaId ?? null,
-      etapa: data.etapa ?? "",
-      titulo: data.titulo,
-      descricao: data.descricao ?? null,
-      responsavel: data.responsavel ?? "",
-      prazo: data.prazo ?? "",
-      status: data.status ?? "pendente",
-      prioridade: data.prioridade ?? "media",
-      progresso: data.progresso ?? null,
-      bloqueioMotivo: data.bloqueioMotivo ?? null,
-      bloqueioInfo: data.bloqueioInfo ?? null,
-    })
-    .returning();
+  let etapaId = data.etapaId ?? null;
+  let etapa = "Geral";
+  if (etapaId) {
+    const [etapaDaObra] = await db
+      .select({ id: obraEtapas.id, nome: obraEtapas.nome })
+      .from(obraEtapas)
+      .where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)))
+      .limit(1);
+    if (!etapaDaObra) {
+      const r = NextResponse.json({ message: "Selecione uma etapa válida desta obra." }, { status: 400 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    etapaId = etapaDaObra.id;
+    etapa = etapaDaObra.nome;
+  }
+  const [created] = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    const rows = await tx
+      .insert(obraTarefas)
+      .values({
+        obraId: id,
+        etapaId,
+        etapa,
+        titulo: data.titulo,
+        descricao: data.descricao ?? null,
+        responsavel: data.responsavel ?? "",
+        prazo: data.prazo ?? "",
+        status: data.status ?? "pendente",
+        prioridade: data.prioridade ?? "media",
+        progresso: data.progresso ?? null,
+        bloqueioMotivo: data.bloqueioMotivo ?? null,
+        bloqueioInfo: data.bloqueioInfo ?? null,
+      })
+      .returning();
+    if (etapaId) {
+      const [avg] = await tx.select({
+        progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
+      }).from(obraTarefas).where(eq(obraTarefas.etapaId, etapaId));
+      const progresso = Number(avg?.progresso ?? 0);
+      await tx.update(obraEtapas).set({
+        progresso,
+        status: progresso === 100 ? "concluido" : progresso > 0 ? "em_andamento" : "pendente",
+        updatedAt: new Date(),
+      }).where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)));
+    }
+    return rows;
+  });
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.tarefa.create",

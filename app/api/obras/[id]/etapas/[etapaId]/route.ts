@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { obraEtapas } from "@shared/db/schema";
+import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
@@ -46,8 +46,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return r;
   }
   const data = parsed.data;
-  // Empreiteiro: só pode mexer em progresso e status (não no escopo)
-  if (access.role === "empreiteiro") {
+  // No marketplace o escopo continua sendo do contratante. Na obra própria do
+  // xgestão, o empreiteiro é o dono operacional e pode manter o cronograma.
+  if (access.role === "empreiteiro" && access.obra.clienteId !== null) {
     const allowed = ["progresso", "status"] as const;
     for (const k of Object.keys(data)) {
       if (!allowed.includes(k as typeof allowed[number])) {
@@ -69,8 +70,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (data.progresso === 100 && data.status === undefined) updateData.status = "concluido";
   const [updated] = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
-    return tx.update(obraEtapas).set(updateData)
+    const rows = await tx.update(obraEtapas).set(updateData)
       .where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id))).returning();
+    if (data.nome !== undefined) {
+      await tx.update(obraTarefas)
+        .set({ etapa: data.nome, updatedAt: new Date() })
+        .where(and(eq(obraTarefas.etapaId, etapaId), eq(obraTarefas.obraId, id)));
+    }
+    return rows;
   });
   await recordAudit({ actorId: guard.user.id, action: "obras.etapa.update", payload: { obraId: id, etapaId, changes: Object.keys(data) }, request });
   const r = NextResponse.json(updated);
@@ -88,12 +95,18 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
-  if (access.role === "empreiteiro") {
+  if (access.role === "empreiteiro" && access.obra.clienteId !== null) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
-  await db.delete(obraEtapas).where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)));
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    await tx.update(obraTarefas)
+      .set({ etapaId: null, etapa: "Geral", updatedAt: new Date() })
+      .where(and(eq(obraTarefas.etapaId, etapaId), eq(obraTarefas.obraId, id)));
+    await tx.delete(obraEtapas).where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)));
+  });
   await recordAudit({ actorId: guard.user.id, action: "obras.etapa.delete", payload: { obraId: id, etapaId }, request });
   const r = NextResponse.json({ ok: true });
   setNoCacheHeaders(r);

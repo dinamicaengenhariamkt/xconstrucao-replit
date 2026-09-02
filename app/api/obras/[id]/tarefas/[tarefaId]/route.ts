@@ -53,6 +53,23 @@ export async function PATCH(
   for (const k of Object.keys(data) as (keyof typeof data)[]) {
     if (data[k] !== undefined) updateData[k] = data[k];
   }
+  if (data.etapaId) {
+    const [etapaDaObra] = await db
+      .select({ id: obraEtapas.id, nome: obraEtapas.nome })
+      .from(obraEtapas)
+      .where(and(eq(obraEtapas.id, data.etapaId), eq(obraEtapas.obraId, id)))
+      .limit(1);
+    if (!etapaDaObra) {
+      const r = NextResponse.json({ message: "Selecione uma etapa válida desta obra." }, { status: 400 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    updateData.etapaId = etapaDaObra.id;
+    updateData.etapa = etapaDaObra.nome;
+  } else if (data.etapaId === null) {
+    updateData.etapaId = null;
+    updateData.etapa = "Geral";
+  }
   if (data.status === "concluido" && data.progresso === undefined) updateData.progresso = 100;
   const updated = await db.transaction(async (tx) => {
     // Serializa com a atualização de progresso/medição, que usa o mesmo lock.
@@ -66,16 +83,20 @@ export async function PATCH(
       .set(updateData)
       .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)))
       .returning();
-    if (data.progresso !== undefined && existing.etapaId) {
-      const [avg] = await tx.select({
-        progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
-      }).from(obraTarefas).where(eq(obraTarefas.etapaId, existing.etapaId));
-      const progressoEtapa = Number(avg?.progresso ?? 0);
-      await tx.update(obraEtapas).set({
-        progresso: progressoEtapa,
-        status: progressoEtapa === 100 ? "concluido" : progressoEtapa > 0 ? "em_andamento" : "pendente",
-        updatedAt: new Date(),
-      }).where(and(eq(obraEtapas.id, existing.etapaId), eq(obraEtapas.obraId, id)));
+    const shouldRecalculate = data.etapaId !== undefined || data.progresso !== undefined || data.status !== undefined;
+    if (shouldRecalculate) {
+      const affectedStageIds = new Set([existing.etapaId, row.etapaId].filter((stageId): stageId is string => Boolean(stageId)));
+      for (const stageId of affectedStageIds) {
+        const [avg] = await tx.select({
+          progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
+        }).from(obraTarefas).where(eq(obraTarefas.etapaId, stageId));
+        const progressoEtapa = Number(avg?.progresso ?? 0);
+        await tx.update(obraEtapas).set({
+          progresso: progressoEtapa,
+          status: progressoEtapa === 100 ? "concluido" : progressoEtapa > 0 ? "em_andamento" : "pendente",
+          updatedAt: new Date(),
+        }).where(and(eq(obraEtapas.id, stageId), eq(obraEtapas.obraId, id)));
+      }
     }
     return row;
   });
@@ -113,7 +134,33 @@ export async function DELETE(
     setNoCacheHeaders(r);
     return r;
   }
-  await db.delete(obraTarefas).where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)));
+  const deleted = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    const [existing] = await tx.select({ id: obraTarefas.id, etapaId: obraTarefas.etapaId })
+      .from(obraTarefas)
+      .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)))
+      .limit(1);
+    if (!existing) return false;
+    await tx.delete(obraTarefas)
+      .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)));
+    if (existing.etapaId) {
+      const [avg] = await tx.select({
+        progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
+      }).from(obraTarefas).where(eq(obraTarefas.etapaId, existing.etapaId));
+      const progressoEtapa = Number(avg?.progresso ?? 0);
+      await tx.update(obraEtapas).set({
+        progresso: progressoEtapa,
+        status: progressoEtapa === 100 ? "concluido" : progressoEtapa > 0 ? "em_andamento" : "pendente",
+        updatedAt: new Date(),
+      }).where(and(eq(obraEtapas.id, existing.etapaId), eq(obraEtapas.obraId, id)));
+    }
+    return true;
+  });
+  if (!deleted) {
+    const r = NextResponse.json({ message: "Tarefa não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.tarefa.delete",

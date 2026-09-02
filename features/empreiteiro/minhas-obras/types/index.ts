@@ -64,6 +64,7 @@ export interface MinhaObraTarefa {
   id: string;
   titulo: string;
   etapa: string;
+  etapaId?: string | null;
   responsavel: string;
   prazo: string;
   status: 'pendente' | 'em_andamento' | 'bloqueado' | 'concluido';
