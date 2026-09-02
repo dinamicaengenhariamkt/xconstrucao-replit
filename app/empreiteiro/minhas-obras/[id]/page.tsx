@@ -5,7 +5,13 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMinhaObraDetalhe } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
-import { STATUS_LABELS, PROGRESS_COLORS } from '@shared/constants/status';
+import type { MinhaObraDetalhe } from '@features/empreiteiro/minhas-obras/types';
+import {
+  STATUS_LABELS,
+  PROGRESS_COLORS,
+  OBRA_STATUS_DB_BADGE_CLASSES,
+  obraStatusDbLabel,
+} from '@shared/constants/status';
 import { TaskManagerSection } from '@features/empreiteiro/minhas-obras/components/TaskManagerSection';
 import { ChecklistsSection } from '@features/empreiteiro/minhas-obras/components/ChecklistsSection';
 import { TimelineSection } from '@features/empreiteiro/minhas-obras/components/TimelineSection';
@@ -26,10 +32,12 @@ import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/compon
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
-import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety } from '@shared/components/icons';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
+import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
+import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -62,48 +70,141 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'lucro', label: 'Lucro', Icon: IconPayments },
 ];
 
-function OperationGuide({ onDismiss }: { onDismiss: () => void }) {
+/** Roteiro do console: o ciclo de manter a obra atualizada, na ordem de uso. */
+const TOUR_CONSOLE: TourStep[] = [
+  {
+    target: '[data-tour="progresso-geral"]',
+    title: 'Progresso geral',
+    description:
+      'O avanço consolidado da obra. Ele sobe sozinho a cada atualização registrada — não precisa digitar.',
+  },
+  {
+    target: '[data-tour="adicionar-atualizacao"]',
+    title: 'Adicionar atualização',
+    description:
+      'Aqui você registra o que foi feito: o percentual avançado, a descrição e as fotos. É o que move o progresso e aparece para o cliente.',
+  },
+  {
+    target: '[data-tour="detalhes-obra"]',
+    title: 'Detalhes da obra',
+    description:
+      'Descrição, tipo, área e prazos. É o mesmo conteúdo que aparece no link público — use "Editar informações" para completar.',
+  },
+  {
+    target: '[data-tour="abas-obra"]',
+    title: 'Organização do dia a dia',
+    description:
+      'Tarefas, checklists, fotos, documentos e ocorrências. Cada aba guarda um tipo de registro da obra.',
+  },
+  {
+    target: '[data-tour="compartilhar-link"]',
+    title: 'Compartilhar com o cliente',
+    description:
+      'Gere um link para o cliente acompanhar sem criar conta. Valores, equipe e endereço exato nunca são compartilhados. Você pode revogar quando quiser.',
+  },
+];
+
+function BotaoAjuda({ onClick }: { onClick: () => void }) {
   return (
-    <aside
-      className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-5"
-      aria-label="Guia rápido para atualizar a obra"
-      data-testid="operation-guide"
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300"
+      data-testid="botao-ajuda"
     >
-      <div className="flex items-start justify-between gap-4">
+      <IconHelpOutline className="text-base" />
+      Ajuda
+    </button>
+  );
+}
+
+function formatAreaM2(value: string): string {
+  const area = Number(value);
+  if (!Number.isFinite(area)) return `${value} m²`;
+  return `${area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} m²`;
+}
+
+/**
+ * Espelha a seção "Detalhes da obra" do link público. O que o dono preenche na
+ * edição precisa reaparecer aqui — antes `descricao` e `areaM2` eram salvos e
+ * só existiam na página pública, o que lia como "a edição não salvou".
+ */
+function DetalhesObraCard({
+  obra,
+  basePath,
+}: {
+  obra: MinhaObraDetalhe;
+  basePath: string;
+}) {
+  // O adapter devolve "—" para data ausente; tratar como vazio evita um card
+  // que anuncia um travessão como se fosse informação.
+  const preenchido = (valor: string | undefined) =>
+    valor && valor !== '—' ? valor : null;
+
+  const itens = [
+    { label: 'Tipo de obra', value: obra.tipo && obra.tipo !== 'Obra' ? obra.tipo : null },
+    { label: 'Área', value: obra.areaM2 ? formatAreaM2(obra.areaM2) : null },
+    { label: 'Início', value: preenchido(obra.dataInicio) },
+    { label: 'Previsão de término', value: preenchido(obra.dataPrevisaoFim) },
+  ].filter((item) => Boolean(item.value));
+
+  const vazio = itens.length === 0 && !obra.descricao;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.12 }}
+      className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6"
+      aria-labelledby="detalhes-obra-console"
+      data-testid="detalhes-obra-card"
+      data-tour="detalhes-obra"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-white">Como manter esta obra atualizada</p>
-          <p className="mt-1 text-xs text-gray-500">Use cada área para um tipo diferente de informação:</p>
+          <h2 id="detalhes-obra-console" className="text-lg font-extrabold text-gray-900 dark:text-white">
+            Detalhes da obra
+          </h2>
+          <p className="mt-1 text-xs text-gray-500">
+            Estas informações também aparecem para quem abrir o link público.
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-xs font-semibold text-gray-500 underline underline-offset-2 hover:text-primary"
-          aria-label="Dispensar guia"
+        <Link
+          href={`${basePath}/${obra.id}/editar`}
+          className="text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
         >
-          Entendi
-        </button>
+          Editar informações
+        </Link>
       </div>
-      <ol className="mt-4 grid gap-3 md:grid-cols-3">
-        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
-          <strong className="block text-xs text-primary">1. Progresso geral</strong>
-          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
-            Mostra o avanço consolidado da obra. Ele muda quando você salva uma atualização.
-          </span>
-        </li>
-        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
-          <strong className="block text-xs text-primary">2. Atualização</strong>
-          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
-            Registre o que foi feito, o percentual avançado, o valor informativo e as fotos.
-          </span>
-        </li>
-        <li className="rounded-xl bg-white/80 p-3 dark:bg-gray-900/50">
-          <strong className="block text-xs text-primary">3. Organização</strong>
-          <span className="mt-1 block text-xs leading-5 text-gray-600 dark:text-gray-300">
-            Tarefas detalham ações; etapas, checklists e diário guardam o acompanhamento operacional.
-          </span>
-        </li>
-      </ol>
-    </aside>
+
+      {vazio ? (
+        <p className="mt-4 text-sm text-gray-500" data-testid="detalhes-obra-vazio">
+          Nenhum detalhe preenchido ainda. Adicione descrição, tipo, área e prazos para que o
+          acompanhamento fique mais completo.
+        </p>
+      ) : (
+        <>
+          {obra.descricao && (
+            <p
+              className="mt-3 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300"
+              data-testid="detalhes-obra-descricao"
+            >
+              {obra.descricao}
+            </p>
+          )}
+          {itens.length > 0 && (
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {itens.map((item) => (
+                <div key={item.label} className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">{item.label}</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </>
+      )}
+    </motion.section>
   );
 }
 
@@ -124,9 +225,11 @@ export function ObraConsoleView({
   const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  const [showOperationGuide, setShowOperationGuide] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
+  // O tour só faz sentido na obra própria do xgestão; a de marketplace tem
+  // outro fluxo e outra contraparte.
+  const tour = useGuidedTour('console', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
 
   useEffect(() => {
     if (searchParams?.get('tab') === 'medicoes' && medicoesSectionRef.current) {
@@ -137,12 +240,6 @@ export function ObraConsoleView({
       return () => clearTimeout(timer);
     }
   }, [searchParams, obra]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage.getItem('xgestao-operation-guide-dismissed') !== '1') {
-      setShowOperationGuide(true);
-    }
-  }, []);
 
   if (isLoading) {
     return (
@@ -171,7 +268,15 @@ export function ObraConsoleView({
 
   const progressColor = PROGRESS_COLORS[obra.status] || 'primary';
   const progressBarColor = PROGRESS_BAR_COLORS[progressColor] || 'bg-primary';
-  const statusBg = STATUS_BG[obra.status] || 'bg-gray-500/20 text-gray-200';
+  // Obra própria do xgestão mostra o status que o dono escolheu; obra de
+  // marketplace segue com o status derivado (que sinaliza atraso e pendências).
+  const mostrarStatusProprio = Boolean(obra.isObraPropria && obra.statusObra);
+  const statusBg = mostrarStatusProprio
+    ? OBRA_STATUS_DB_BADGE_CLASSES[obra.statusObra!]
+    : STATUS_BG[obra.status] || 'bg-gray-500/20 text-gray-200';
+  const statusLabel = mostrarStatusProprio
+    ? obraStatusDbLabel(obra.statusObra!)
+    : STATUS_LABELS[obra.status];
 
   return (
     <div className="p-10 flex flex-col gap-8">
@@ -186,13 +291,16 @@ export function ObraConsoleView({
           <IconArrowBack className="text-lg" />
           Voltar
         </Link>
-        <nav className="flex items-center gap-2 text-sm flex-wrap">
-          <Link href={basePath} className="text-gray-400 hover:text-primary transition-colors">
-            Minhas Obras
-          </Link>
-          <IconChevronRight className="text-gray-300 text-base" />
-          <span className="text-primary font-semibold" data-testid="text-breadcrumb-title">{obra.titulo}</span>
-        </nav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <nav className="flex items-center gap-2 text-sm flex-wrap">
+            <Link href={basePath} className="text-gray-400 hover:text-primary transition-colors">
+              Minhas Obras
+            </Link>
+            <IconChevronRight className="text-gray-300 text-base" />
+            <span className="text-primary font-semibold" data-testid="text-breadcrumb-title">{obra.titulo}</span>
+          </nav>
+          {allowOwnWorkEdit && obra.isObraPropria && <BotaoAjuda onClick={tour.abrir} />}
+        </div>
       </motion.div>
 
       {/* BLOCO 1: Hero da Obra */}
@@ -222,12 +330,24 @@ export function ObraConsoleView({
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
-                <span
-                  className={cn('text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block backdrop-blur-sm', statusBg)}
-                  data-testid="badge-status"
-                >
-                  {STATUS_LABELS[obra.status]}
-                </span>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn('text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider inline-block backdrop-blur-sm', statusBg)}
+                    data-testid="badge-status"
+                  >
+                    {statusLabel}
+                  </span>
+                  {/* Na obra própria o badge acima mostra o status escolhido pelo
+                      dono; o atraso vira sinal adicional em vez de substituí-lo. */}
+                  {mostrarStatusProprio && obra.diasAtraso > 0 && (
+                    <span
+                      className="inline-block rounded-full bg-red-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm"
+                      data-testid="badge-atraso"
+                    >
+                      {obra.diasAtraso} {obra.diasAtraso === 1 ? 'dia' : 'dias'} de atraso
+                    </span>
+                  )}
+                </div>
                 <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3" data-testid="text-titulo">
                   {obra.titulo}
                 </h1>
@@ -264,6 +384,7 @@ export function ObraConsoleView({
                       href={`${basePath}/${obra.id}/editar`}
                       className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all"
                       data-testid="xgestao-editar-obra"
+                      data-tour="editar-obra"
                     >
                       Editar obra
                     </Link>
@@ -271,6 +392,7 @@ export function ObraConsoleView({
                       type="button"
                       onClick={() => setShowShare(true)}
                       className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all cursor-pointer"
+                      data-tour="compartilhar-link"
                     >
                       Compartilhar link
                     </button>
@@ -279,6 +401,7 @@ export function ObraConsoleView({
                 <button
                   onClick={() => setShowAtualizacao(true)}
                   className="px-5 py-2 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                  data-tour="adicionar-atualizacao"
                 >
                   <IconAddTask className="text-lg" />
                   Adicionar Atualização
@@ -289,7 +412,7 @@ export function ObraConsoleView({
         </div>
 
         {/* Progress bar section */}
-        <div className="p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section">
+        <div className="p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
           <div className="flex items-center justify-between mb-3">
             <div>
               <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
@@ -311,13 +434,14 @@ export function ObraConsoleView({
         </div>
       </motion.div>
 
-      {showOperationGuide && obra.isObraPropria && (
-        <OperationGuide
-          onDismiss={() => {
-            window.localStorage.setItem('xgestao-operation-guide-dismissed', '1');
-            setShowOperationGuide(false);
-          }}
-        />
+      {allowOwnWorkEdit && obra.isObraPropria && (
+        <GuidedTour steps={TOUR_CONSOLE} open={tour.open} onClose={tour.fechar} />
+      )}
+
+      {/* BLOCO 2.5: Detalhes da obra — espelha a seção do link público, para
+          que o dono veja aqui exatamente o que preencheu na edição. */}
+      {obra.isObraPropria && (
+        <DetalhesObraCard obra={obra} basePath={basePath} />
       )}
 
       {/* BLOCO 3: KPIs Operacionais */}
@@ -429,7 +553,10 @@ export function ObraConsoleView({
         className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
       >
         {/* Tab bar */}
-        <div className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+        <div
+          className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
+          data-tour="abas-obra"
+        >
           {TABS.map((tab) => (
             <button
               key={tab.key}

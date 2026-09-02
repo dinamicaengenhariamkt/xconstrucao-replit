@@ -251,32 +251,71 @@ test.describe('xgestão — obras próprias', () => {
     const rotaDeEdicao = await request.get(`/xgestao/obras/${obra.id}/editar`, { maxRedirects: 0 });
     expect(rotaDeEdicao.status()).toBe(200);
 
-    const editada = await request.patch(`/api/obras/${obra.id}`, {
-      data: {
-        nome: 'Reforma da sede xgestão — atualizada',
-        tipo: 'Reforma comercial',
-        descricao: 'Modernização progressiva da sede própria.',
-        endereco: 'Rua das Obras',
-        numero: '321',
-        complemento: 'Galpão B',
-        cep: '01310-100',
-        cidade: 'São Paulo',
-        uf: 'SP',
-        areaM2: '420.5',
-        valorTotal: '350000',
-        dataInicio: '2026-09-01',
-        dataPrevisao: '2027-03-31',
-        status: 'em_andamento',
-        progresso: 18,
-      },
-    });
-    expect(editada.status(), await editada.text()).toBe(200);
-    expect(await editada.json()).toMatchObject({
+    const camposEditados = {
       nome: 'Reforma da sede xgestão — atualizada',
+      tipo: 'Reforma comercial',
+      descricao: 'Modernização progressiva da sede própria.',
+      endereco: 'Rua das Obras',
+      numero: '321',
+      complemento: 'Galpão B',
+      cep: '01310-100',
       cidade: 'São Paulo',
       uf: 'SP',
+      areaM2: '420.5',
+      valorTotal: '350000',
+      dataInicio: '2026-09-01',
+      dataPrevisao: '2027-03-31',
       status: 'em_andamento',
-      progresso: 18,
+    };
+    const editada = await request.patch(`/api/obras/${obra.id}`, { data: camposEditados });
+    expect(editada.status(), await editada.text()).toBe(200);
+    // Todos os campos enviados, não só um punhado: a falha relatada era
+    // justamente campo salvo que não reaparecia. As colunas `numeric` voltam
+    // normalizadas pelo Postgres (420.5 → 420.50), daí a escala explícita.
+    const camposPersistidos = {
+      ...camposEditados,
+      areaM2: '420.50',
+      valorTotal: '350000.00',
+    };
+    expect(await editada.json()).toMatchObject(camposPersistidos);
+
+    // E precisam sobreviver a uma releitura, não só ao retorno do PATCH.
+    const relida = await request.get(`/api/obras/${obra.id}`);
+    expect(relida.status(), await relida.text()).toBe(200);
+    expect(await relida.json()).toMatchObject(camposPersistidos);
+
+    // O detalhe do console é a tela onde o usuário volta depois de editar:
+    // precisa expor descrição, área, endereço detalhado e o status escolhido.
+    const detalheConsole = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect(detalheConsole.status(), await detalheConsole.text()).toBe(200);
+    expect(await detalheConsole.json()).toMatchObject({
+      descricao: 'Modernização progressiva da sede própria.',
+      areaM2: '420.50',
+      statusObra: 'em_andamento',
+      localizacao: { cidade: 'São Paulo', estado: 'SP', numero: '321', cep: '01310-100' },
+    });
+
+    // Progresso é grandeza medida: a edição não escreve nesse campo.
+    const progressoPeloPatch = await request.patch(`/api/obras/${obra.id}`, {
+      data: { progresso: 42 },
+    });
+    expect(progressoPeloPatch.status(), await progressoPeloPatch.text()).toBe(409);
+
+    // Formato inválido é recusado antes de chegar ao Postgres (evita o 500).
+    for (const invalido of [{ cep: '123' }, { uf: 'SPX' }, { areaM2: 'abc' }]) {
+      const recusado = await request.patch(`/api/obras/${obra.id}`, { data: invalido });
+      expect(recusado.status(), await recusado.text()).toBe(400);
+    }
+
+    // Campos de outro domínio são descartados em silêncio, não aplicados.
+    const forjado = await request.patch(`/api/obras/${obra.id}`, {
+      data: { valorPago: '999999', destaque: true, contratoStatus: 'assinado' },
+    });
+    expect(forjado.status(), await forjado.text()).toBe(200);
+    expect(await forjado.json()).toMatchObject({
+      valorPago: '0.00',
+      destaque: false,
+      contratoStatus: null,
     });
 
     const etapa = await request.post(`/api/obras/${obra.id}/etapas`, {

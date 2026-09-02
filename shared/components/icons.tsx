@@ -45,6 +45,7 @@ export {
   RiHomeLine as IconHome,
   RiHomeOfficeLine as IconHomeWork,
   RiInformationLine as IconInfo,
+  RiQuestionLine as IconHelpOutline,
   RiKeyLine as IconKey,
   RiLinksLine as IconLink,
   RiLockLine as IconLock,

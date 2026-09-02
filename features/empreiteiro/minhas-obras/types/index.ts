@@ -25,6 +25,15 @@ export interface MinhaObra {
 }
 
 export interface MinhaObraDetalhe extends MinhaObra {
+  /**
+   * Status cru do enum `obra_status`. Convive com `status` (derivado da UI do
+   * marketplace): a obra própria do xgestão exibe o que o dono escolheu, o
+   * marketplace segue exibindo o derivado.
+   */
+  statusObra?: 'planejamento' | 'em_andamento' | 'pausada' | 'concluida';
+  /** Editáveis no xgestão e visíveis no link público; o marketplace não usa. */
+  descricao?: string;
+  areaM2?: string;
   valorPago: number;
   aReceber: number;
   diasAtraso: number;

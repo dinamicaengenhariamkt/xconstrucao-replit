@@ -88,10 +88,23 @@ test.describe('xgestão — link público de obra', () => {
         valorTotal: '987654.32',
         dataInicio: '2026-09-10',
         dataPrevisao: '2027-02-20',
-        progresso: 35,
+        status: 'em_andamento',
       },
     });
     expect(detalhes.status(), await detalhes.text()).toBe(200);
+
+    // O progresso da obra própria vem da medição, não da edição — por isso o
+    // avanço é registrado aqui em vez de ir no PATCH acima.
+    const avanco = await request.post('/api/empreiteiro/medicoes', {
+      data: {
+        obraId: obra.id,
+        etapa: 'Avanço E2E',
+        descricao: 'Registro de avanço para o link público.',
+        percentual: 35,
+        valor: 0,
+      },
+    });
+    expect(avanco.status(), await avanco.text()).toBe(201);
 
     const privateFileResponse = await request.post('/api/test/file-setup', {
       data: {
@@ -145,6 +158,10 @@ test.describe('xgestão — link público de obra', () => {
     expect(html).toContain('20/02/2027');
     expect(html).toContain('35%');
     expect(html).not.toContain(privateFile.key);
+    // O badge de status precisa sair traduzido. Antes o dicionário aplicado era
+    // o do status derivado da UI, e o valor do banco vazava cru para o cliente.
+    expect(html).toContain('Em andamento');
+    expect(html).not.toContain('>em_andamento<');
     expect(html).toMatch(/noindex/i);
     expect(publica.headers()['cache-control'] ?? '').toMatch(/no-store|no-cache/i);
     for (const proibido of [

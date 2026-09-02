@@ -12,7 +12,6 @@ import {
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { useToast } from '@shared/hooks/use-toast';
-import type { MinhaObraDetalhe } from '../types';
 import { IconShare, IconCheck, IconContentCopy, IconMail, IconLink } from '@shared/components/icons';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -20,7 +19,11 @@ import { IconShare, IconCheck, IconContentCopy, IconMail, IconLink } from '@shar
 interface CompartilharModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  obra: MinhaObraDetalhe;
+  /**
+   * Só id e título são usados. Tipar o mínimo deixa o modal servir tanto o
+   * console (que passa o detalhe completo) quanto a tela de edição, sem cópia.
+   */
+  obra: { id: string; titulo: string };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

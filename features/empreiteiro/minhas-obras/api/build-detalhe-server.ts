@@ -653,6 +653,12 @@ export async function buildMinhaObraDetalheReal(
     endereco: enderecoFull || obra.endereco,
     imagemUrl: capaUrl,
     status,
+    // Status cru do banco. `status` acima é o derivado da UI do marketplace,
+    // que colapsa `pausada` em `com_pendencias` e sobrepõe atraso ao valor
+    // escolhido — na obra própria do xgestão isso lê como "não salvou".
+    statusObra: obra.status,
+    descricao: obra.descricao ?? undefined,
+    areaM2: obra.areaM2 ?? undefined,
     progresso,
     orcamento: valorTotal,
     dataInicio: fmtBrDate(obra.dataInicio),
@@ -684,8 +690,11 @@ export async function buildMinhaObraDetalheReal(
     ocorrencias,
     financeiro: financeiroOut,
     equipe,
+    // Qualquer campo de endereço preenchido já justifica o card. Antes exigia
+    // cidade ou UF, então quem preenchesse só número/complemento/CEP salvava o
+    // dado e não o via em lugar nenhum.
     localizacao:
-      obra.cidade || obra.uf
+      obra.cidade || obra.uf || obra.endereco || obra.numero || obra.complemento || obra.cep
         ? {
             cidade: obra.cidade ?? "",
             estado: obra.uf ?? "",

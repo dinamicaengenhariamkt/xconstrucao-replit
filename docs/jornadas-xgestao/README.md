@@ -20,6 +20,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG06](06-admin-xgestao.md) | Visão administrativa do xgestão | 6 | pronto (escopo mínimo) | média | baixo |
 | [XG07](07-integracao-sinapi.md) | Integração SINAPI (preços de referência) | — | ❄️ **congelada** | — | — |
 | [XG08](08-visao-obra-read-only.md) | Visão da obra em modo leitura | 4 | pronto | alta | **médio-alto** |
+| [XG09](09-administracao-obra-ponta-a-ponta.md) | Administração da obra ponta a ponta | 9 | pronto | alta | baixo |
 
 ## Contexto
 
@@ -68,7 +69,8 @@ XG01  fundações e shell
      ├─ XG05  ocultar marketplace   (independente, barato)
      └─ XG08  extração read-only
          └─ XG04  link público
-              └─ XG06  admin          (escopo mínimo entregue)
+              ├─ XG06  admin          (escopo mínimo entregue)
+              └─ XG09  administração ponta a ponta
 
 ❄️ congeladas: XG07 (SINAPI) · jornada do anunciante (J12/J16/J23/J31)
 ```

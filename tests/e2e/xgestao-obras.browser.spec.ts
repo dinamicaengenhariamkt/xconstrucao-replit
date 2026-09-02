@@ -93,9 +93,16 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await page.goto(`/xgestao/obras/${obra.id}`);
     await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
 
-    await expect(page.getByTestId("operation-guide")).toBeVisible();
-    await page.getByRole("button", { name: "Dispensar guia" }).click();
-    await expect(page.getByTestId("operation-guide")).toHaveCount(0);
+    // Tour guiado: abre sozinho na primeira visita, some ao pular e volta pelo
+    // botão de ajuda — o guia antigo não tinha caminho de volta.
+    await expect(page.getByTestId("guided-tour")).toBeVisible();
+    await page.getByRole("button", { name: "Pular" }).click();
+    await expect(page.getByTestId("guided-tour")).toHaveCount(0);
+
+    await page.getByTestId("botao-ajuda").click();
+    await expect(page.getByTestId("guided-tour")).toBeVisible();
+    await page.getByRole("button", { name: "Pular" }).click();
+    await expect(page.getByTestId("guided-tour")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Cronograma", exact: true }).click();
     await expect(page.getByTestId("card-etapas-j06")).toBeVisible();
@@ -257,5 +264,69 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(tarefaComFalha.getByTestId("input-tarefa-progresso")).toHaveValue("42");
     await expect(tarefaComFalha.getByTestId("input-tarefa-descricao")).toHaveValue(descricaoPreservada);
     await page.unroute(`**/api/obras/${obra.id}/tarefas`);
+  });
+
+  test("edição reflete nos detalhes da obra e no link público", async ({ page, request }) => {
+    const email = await registrarEmpreiteiro(request);
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const obraResponse = await request.post("/api/xgestao/obras", {
+      data: { nome: `Obra detalhes ${Date.now()}`, endereco: "Rua dos Detalhes, 45" },
+    });
+    expect(obraResponse.status(), await obraResponse.text()).toBe(201);
+    const obra = (await obraResponse.json()) as { id: string };
+    await logout(request);
+
+    const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(pageLogin.status(), await pageLogin.text()).toBe(200);
+
+    // Preenche pela própria tela de edição — é o caminho que o usuário faz.
+    await page.goto(`/xgestao/obras/${obra.id}/editar`);
+    await expect(page.getByTestId("xgestao-editar-obra-page")).toBeVisible();
+    await page.getByRole("button", { name: "Pular" }).click();
+
+    await page.locator("#obra-tipo").fill("Reforma comercial");
+    await page.locator("#obra-descricao").fill("Escopo detalhado da execução.");
+    await page.locator("#obra-area").fill("250");
+    await page.locator("#obra-cidade").fill("Campinas");
+    await page.locator("#obra-uf").fill("SP");
+    await page.locator("#obra-numero").fill("45");
+    await page.locator("#obra-status").selectOption("pausada");
+
+    const salvo = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/obras/${obra.id}`) &&
+        response.request().method() === "PATCH",
+    );
+    await page.getByTestId("xgestao-salvar-obra").click();
+    expect((await salvo).status()).toBe(200);
+
+    // O que foi editado precisa reaparecer no console — era exatamente o que
+    // sumia: descrição e área não voltavam, e "Pausada" virava "Com pendências".
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    const detalhes = page.getByTestId("detalhes-obra-card");
+    await expect(detalhes).toBeVisible();
+    await expect(detalhes).toContainText("Escopo detalhado da execução.");
+    await expect(detalhes).toContainText("250 m²");
+    await expect(detalhes).toContainText("Reforma comercial");
+    await expect(page.getByTestId("badge-status")).toHaveText("Pausada");
+
+    // E o mesmo conteúdo precisa chegar ao cliente pelo link público.
+    const link = await page.request.post(`/api/xgestao/obras/${obra.id}/share`);
+    expect(link.status(), await link.text()).toBe(201);
+    const { share } = (await link.json()) as { share: { path: string } };
+
+    const anonima = await page.context().browser()!.newContext();
+    const publica = await anonima.newPage();
+    await publica.goto(share.path);
+    await expect(publica.getByTestId("obra-publica-status")).toHaveText("Pausada");
+    // A seção de detalhes fica fora do `obra-publica-shell`, que marca só o hero.
+    await expect(publica.locator("body")).toContainText("Escopo detalhado da execução.");
+    await expect(publica.locator("body")).toContainText("250 m²");
+    await expect(publica.locator("body")).toContainText("Reforma comercial");
+    await anonima.close();
   });
 });

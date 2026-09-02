@@ -234,6 +234,46 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   return r;
 }
 
+const CEP_REGEX = /^\d{5}-?\d{3}$/;
+const UF_REGEX = /^[A-Za-z]{2}$/;
+
+/**
+ * Valida formato dos campos que o editor do xgestão preenche. Espelha as regras
+ * de `insertObraSchemaStrict`, que nesse produto nunca chega a rodar porque a
+ * obra própria não transita para `publicada`.
+ *
+ * Retorna `null` quando está tudo certo, ou o mapa de erros por campo.
+ */
+function validarCamposObraPropria(
+  body: Record<string, unknown>,
+): Record<string, string[]> | null {
+  const erros: Record<string, string[]> = {};
+
+  const texto = (valor: unknown) => (typeof valor === "string" ? valor.trim() : "");
+
+  if ("cep" in body && body.cep != null && texto(body.cep) && !CEP_REGEX.test(texto(body.cep))) {
+    erros.cep = ["CEP inválido (use 00000-000)"];
+  }
+  if ("uf" in body && body.uf != null && texto(body.uf) && !UF_REGEX.test(texto(body.uf))) {
+    erros.uf = ["UF inválida (2 letras)"];
+  }
+  for (const campo of ["areaM2", "valorTotal"] as const) {
+    if (!(campo in body) || body[campo] == null) continue;
+    const bruto = texto(body[campo]);
+    if (!bruto) continue;
+    const numero = Number(bruto);
+    if (!Number.isFinite(numero) || numero < 0) {
+      erros[campo] = [
+        campo === "areaM2"
+          ? "Área inválida (informe um número, ex.: 120.5)"
+          : "Orçamento inválido (informe um número)",
+      ];
+    }
+  }
+
+  return Object.keys(erros).length > 0 ? erros : null;
+}
+
 /**
  * PATCH /api/obras/[id]
  *  - Ownership (contratante dono) OU isAdminLike.
@@ -278,6 +318,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     motivoModeracao: _modM,
     moderadoEm: _modE,
     moderadoPor: _modP,
+    // Estado financeiro: só o fluxo de pagamentos/webhook escreve (J08/J48).
+    valorPago: _vp,
+    // Contrato entre as partes: só a rota de assinatura efetiva (J58). Sem o
+    // strip, este PATCH genérico contornaria o gate de `em_andamento` abaixo.
+    contratoStatus: _cs,
+    // Curadoria da home é do admin via /api/admin/obras/destaque (J25).
+    destaque: _dst,
+    destaqueOrdem: _dstO,
     ...safeBody
   } = body ?? {};
 
@@ -291,6 +339,38 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     );
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // Na obra própria do xgestão o avanço é grandeza medida: quem escreve
+  // `obras.progresso` é o fluxo de medições (POST /api/empreiteiro/medicoes),
+  // que registra autor, data e fotos. Aceitar o campo aqui criaria uma segunda
+  // fonte de verdade e faria a próxima medição partir do valor sobrescrito.
+  if (isObraPropriaXGestao && "progresso" in safeBody) {
+    const r = NextResponse.json(
+      {
+        error: "PROGRESSO_SOMENTE_POR_MEDICAO",
+        message: "O progresso da obra é atualizado ao registrar uma atualização, não pela edição.",
+      },
+      { status: 409 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // O schema estrito (CEP, UF, numéricos) só roda na transição para
+  // 'publicada', caminho impossível no xgestão. Sem esta checagem, um CEP
+  // malformado é salvo e uma área não-numérica chega à coluna `numeric` e
+  // derruba o update com 500.
+  if (isObraPropriaXGestao) {
+    const invalido = validarCamposObraPropria(safeBody);
+    if (invalido) {
+      const r = NextResponse.json(
+        { message: "Dados inválidos", errors: { fieldErrors: invalido } },
+        { status: 400 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   // Obras próprias permanecem operacionais e privadas; publicação/moderação
@@ -421,7 +501,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     updateData.moderadoPor = null;
   }
 
-  const [updated] = await db.update(obras).set(updateData).where(eq(obras.id, id)).returning();
+  // Um valor que passa pelo Zod mas o Postgres recusa (numeric malformado, por
+  // exemplo) deve virar 400 com mensagem útil, não 500 sem contexto. Só erro de
+  // dado é convertido: falha de infraestrutura continua subindo como 500, senão
+  // um banco fora do ar apareceria como "confira os valores informados".
+  let updated: typeof obras.$inferSelect;
+  try {
+    [updated] = await db.update(obras).set(updateData).where(eq(obras.id, id)).returning();
+  } catch (error) {
+    // Classe 22 = data exception, 23 = integrity constraint violation.
+    const code = (error as { code?: string })?.code ?? "";
+    if (!/^(22|23)/.test(code)) throw error;
+    const r = NextResponse.json(
+      { message: "Não foi possível salvar: verifique os valores informados." },
+      { status: 400 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
 
   await recordAudit({
     actorId: guard.user.id,

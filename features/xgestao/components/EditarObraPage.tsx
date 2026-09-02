@@ -10,7 +10,12 @@ import {
   RiCheckLine,
   RiImageLine,
   RiMapPinLine,
+  RiShareLine,
 } from 'react-icons/ri';
+import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
+import { IconHelpOutline } from '@shared/components/icons';
+import { GuidedTour, type TourStep } from './GuidedTour';
+import { useGuidedTour } from '../hooks/use-guided-tour';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { FileUploader } from '@features/shared/components/FileUploader';
@@ -62,7 +67,6 @@ type FormState = {
   dataInicio: string;
   dataPrevisao: string;
   status: ObraStatus;
-  progresso: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -80,7 +84,6 @@ const EMPTY_FORM: FormState = {
   dataInicio: '',
   dataPrevisao: '',
   status: 'planejamento',
-  progresso: '0',
 };
 
 async function getJson<T>(url: string): Promise<T> {
@@ -131,7 +134,6 @@ function formFromObra(obra: ObraEditavel): FormState {
     dataInicio: obra.dataInicio ?? '',
     dataPrevisao: obra.dataPrevisao ?? '',
     status: obra.status ?? 'planejamento',
-    progresso: String(obra.progresso ?? 0),
   };
 }
 
@@ -186,11 +188,52 @@ function Field({
   );
 }
 
+/**
+ * Roteiro da edição: cada passo diz o que a seção controla e, quando é o caso,
+ * o que ela faz aparecer no link público — a dúvida mais comum de quem edita.
+ */
+const TOUR_EDICAO: TourStep[] = [
+  {
+    target: '#informacoes',
+    title: 'Informações gerais',
+    description:
+      'Nome, tipo, descrição, área e orçamento. Descrição, tipo e área aparecem para o cliente no link público; o orçamento nunca é compartilhado.',
+  },
+  {
+    target: '#localizacao',
+    title: 'Localização',
+    description:
+      'Endereço completo para uso interno. No link público o cliente vê apenas cidade e UF — o endereço exato fica protegido.',
+  },
+  {
+    target: '#planejamento',
+    title: 'Prazos e status',
+    description:
+      'Datas e situação da obra. O progresso não fica aqui: ele vem das atualizações que você registra na obra, com data e fotos.',
+  },
+  {
+    target: '#capa',
+    title: 'Imagem de capa',
+    description:
+      'A foto que abre a obra, também no link público. Você pode enviar uma nova ou reaproveitar uma foto já registrada.',
+  },
+  {
+    target: '#link-publico',
+    title: 'Link público',
+    description:
+      'Gere o link para o cliente acompanhar sem criar conta. Dá para revogar quando quiser — quem tiver o link perde o acesso na hora.',
+  },
+];
+
 export function EditarObraPage({ obraId }: { obraId: string }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [initialized, setInitialized] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  // Só habilita depois que o formulário renderizou: antes disso os alvos das
+  // seções ainda não existem no DOM e o spotlight não teria o que destacar.
+  const tour = useGuidedTour('edicao', initialized);
   const [cover, setCover] = useState<{ fileId: string | null; url: string | null }>({
     fileId: null,
     url: null,
@@ -239,14 +282,22 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      const progresso = Number(form.progresso);
       if (form.nome.trim().length < 3) throw new Error('Informe um nome com pelo menos 3 caracteres.');
       if (form.endereco.trim().length < 3) throw new Error('Informe o endereço da obra.');
-      if (!Number.isInteger(progresso) || progresso < 0 || progresso > 100) {
-        throw new Error('O progresso deve ser um número inteiro entre 0 e 100.');
-      }
       if (form.dataInicio && form.dataPrevisao && form.dataPrevisao < form.dataInicio) {
         throw new Error('A previsão de término não pode ser anterior ao início.');
+      }
+      if (form.cep.trim() && !/^\d{5}-?\d{3}$/.test(form.cep.trim())) {
+        throw new Error('CEP inválido. Use o formato 00000-000.');
+      }
+      if (form.uf.trim() && !/^[A-Za-z]{2}$/.test(form.uf.trim())) {
+        throw new Error('UF inválida. Use a sigla de 2 letras, como SP.');
+      }
+      if (form.areaM2.trim() && !Number.isFinite(Number(form.areaM2.trim()))) {
+        throw new Error('Informe a área como número, por exemplo 120.5.');
+      }
+      if (form.valorTotal.trim() && !Number.isFinite(Number(form.valorTotal.trim()))) {
+        throw new Error('Informe o orçamento como número.');
       }
       return patchObra(obraId, {
         nome: form.nome.trim(),
@@ -263,7 +314,7 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
         dataInicio: form.dataInicio || null,
         dataPrevisao: form.dataPrevisao || null,
         status: form.status,
-        progresso,
+        // `progresso` não é enviado: a fonte de verdade são as atualizações.
       });
     },
     onSuccess: async () => {
@@ -316,6 +367,7 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     { id: 'localizacao', label: 'Localização' },
     { id: 'planejamento', label: 'Prazos e status' },
     { id: 'capa', label: 'Imagem de capa' },
+    { id: 'link-publico', label: 'Link público' },
   ];
 
   return (
@@ -327,14 +379,25 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
         <RiArrowLeftLine /> Voltar para a obra
       </Link>
 
-      <div className="mb-8">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">xgestão</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-3xl">
-          Complete os dados da obra
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-gray-500 sm:text-base">
-          Atualize aos poucos. As informações básicas, o planejamento e a capa aparecem no acompanhamento da obra.
-        </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">xgestão</p>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-gray-950 dark:text-white sm:text-3xl">
+            Complete os dados da obra
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-gray-500 sm:text-base">
+            Atualize aos poucos. As informações básicas, o planejamento e a capa aparecem no acompanhamento da obra.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={tour.abrir}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300"
+          data-testid="xgestao-edicao-ajuda"
+        >
+          <IconHelpOutline className="text-base" />
+          Ajuda
+        </button>
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -342,10 +405,15 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold">Progresso do cadastro</span>
-              <span className="font-bold text-primary">{completion.total}/4</span>
+              <span className="font-bold text-primary">
+                {completion.total}/{completion.sections.length}
+              </span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-              <div className="h-full bg-primary transition-all" style={{ width: `${completion.total * 25}%` }} />
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(completion.total / completion.sections.length) * 100}%` }}
+              />
             </div>
           </div>
           <nav className="grid grid-cols-2 gap-2 lg:grid-cols-1">
@@ -437,9 +505,29 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
                   <option value="concluida">Concluída</option>
                 </select>
               </Field>
-              <Field label="Progresso (%)" htmlFor="obra-progresso">
-                <Input id="obra-progresso" type="number" min="0" max="100" step="1" value={form.progresso} onChange={(e) => update('progresso', e.target.value)} />
-              </Field>
+            </div>
+
+            {/* O avanço é medido, não digitado: cada atualização registra o
+                percentual com autor, data e fotos. Um campo editável aqui
+                competiria com esse histórico e sobrescreveria o acumulado. */}
+            <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Progresso da obra: {obraQuery.data?.progresso ?? 0}%
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    O avanço vem das atualizações registradas na obra, com data, responsável e fotos.
+                  </p>
+                </div>
+                <Link
+                  href={`/xgestao/obras/${obraId}`}
+                  className="rounded-lg border border-primary/30 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+                  data-testid="xgestao-ir-para-atualizacoes"
+                >
+                  Registrar atualização
+                </Link>
+              </div>
             </div>
           </Section>
 
@@ -508,6 +596,33 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
             )}
           </Section>
 
+          <Section
+            id="link-publico"
+            title="Link público"
+            description="Gere um link para o cliente acompanhar a obra sem precisar criar conta."
+            icon={RiShareLine}
+          >
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Quem abrir o link vê progresso, etapas, atualizações, fotos, diário e ocorrências —
+                somente leitura.
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                Valores, equipe e endereço exato nunca são compartilhados. As fotos aparecem apenas
+                quando marcadas para envio ao cliente.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4"
+                onClick={() => setShowShare(true)}
+                data-testid="xgestao-editar-compartilhar"
+              >
+                Gerenciar link público
+              </Button>
+            </div>
+          </Section>
+
           <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 sm:flex-row sm:items-center sm:justify-end">
             <Button asChild type="button" variant="outline"><Link href={`/xgestao/obras/${obraId}`}>Cancelar</Link></Button>
             <Button type="submit" disabled={saveMutation.isPending} data-testid="xgestao-salvar-obra">
@@ -516,6 +631,14 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
           </div>
         </form>
       </div>
+
+      <CompartilharModal
+        open={showShare}
+        onOpenChange={setShowShare}
+        obra={{ id: obraId, titulo: obraQuery.data?.nome ?? 'Obra' }}
+      />
+
+      <GuidedTour steps={TOUR_EDICAO} open={tour.open} onClose={tour.fechar} />
     </div>
   );
 }

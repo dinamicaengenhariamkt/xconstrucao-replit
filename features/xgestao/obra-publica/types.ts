@@ -1,3 +1,5 @@
+import type { ObraStatusDb } from '@shared/constants/status';
+
 export interface ObraPublicaEtapa {
   id: string;
   nome: string;
@@ -64,7 +66,11 @@ export interface ObraPublicaView {
     tipo: string | null;
     descricao: string | null;
     areaM2: string | null;
-    status: string;
+    /**
+     * Enum `obra_status` do banco, não o status derivado da UI do marketplace.
+     * Tipar estreito é o que impede aplicar o dicionário errado na renderização.
+     */
+    status: ObraStatusDb;
     progresso: number;
     cidade: string | null;
     uf: string | null;

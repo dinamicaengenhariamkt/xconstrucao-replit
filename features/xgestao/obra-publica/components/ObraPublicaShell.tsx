@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@shared/lib/utils';
-import { STATUS_LABELS } from '@shared/constants/status';
+import { OBRA_STATUS_DB_BADGE_CLASSES, obraStatusDbLabel } from '@shared/constants/status';
 import { TabChecklists } from '@features/contratante/minhas-obras/components/TabChecklists';
 import {
   IconCalendarMonth,
@@ -80,8 +80,14 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-6 text-white sm:p-8">
-              <span className="w-fit rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
-                {STATUS_LABELS[view.obra.status] ?? view.obra.status}
+              <span
+                className={cn(
+                  'w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm',
+                  OBRA_STATUS_DB_BADGE_CLASSES[view.obra.status] ?? 'bg-white/20',
+                )}
+                data-testid="obra-publica-status"
+              >
+                {obraStatusDbLabel(view.obra.status)}
               </span>
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{view.obra.titulo}</h1>
               {view.obra.tipo && <p className="text-sm font-medium text-white/90">{view.obra.tipo}</p>}

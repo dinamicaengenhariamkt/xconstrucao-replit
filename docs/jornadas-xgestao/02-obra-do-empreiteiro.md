@@ -33,8 +33,8 @@ flowchart LR
 ## 4. Telas envolvidas
 
 - [app/xgestao/obras/page.tsx](../../app/xgestao/obras/page.tsx) — ganha o botão "Nova obra".
-- `features/xgestao/components/NovaObraModal.tsx` — **a criar**. Formulário mínimo.
-- `features/xgestao/components/EditarObraModal.tsx` — **a criar**.
+- [features/xgestao/components/NovaObraModal.tsx](../../features/xgestao/components/NovaObraModal.tsx) — Formulário mínimo (nome e endereço).
+- [features/xgestao/components/EditarObraPage.tsx](../../features/xgestao/components/EditarObraPage.tsx) — a edição nasceu como modal e virou **página** (`/xgestao/obras/[id]/editar`) quando o formulário cresceu além do que um modal comporta. Ver [XG09](09-administracao-obra-ponta-a-ponta.md).
 
 ## 5. Componentes-chave
 
@@ -82,7 +82,7 @@ A rota atual mantém seus guards e chama a função. A rota nova chama com o out
 - [x] Fazer `app/api/obras/route.ts` consumir a função extraída, sem mudança de comportamento
 - [x] Criar `POST /api/xgestao/obras`: `assertXgestaoUser` → `empreiteiroPodeOperar` → cria com `clienteId: null`, `visibilidade: "rascunho"`
 - [x] [app/api/obras/[id]/route.ts](../../app/api/obras/[id]/route.ts) libera só obra própria sem contratante e preserva o strip de ownership
-- [x] Criar os modais de nova obra e edição
+- [x] Criar o modal de nova obra e a tela de edição
 - [x] Esconder contratante e contato quando `clienteId === null`; o DTO sinaliza explicitamente `temContratante`
 - [x] Spec `tests/e2e/integration/xgestao-obras.integration.spec.ts`
 
@@ -112,3 +112,5 @@ A rota atual mantém seus guards e chama a função. A rota nova chama com o out
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- **2026-09-02 — a edição virou página:** o formulário cresceu para 5 seções (informações, localização, prazos, capa, link público) e o modal deixou de comportar. O que a edição escreve e o que as telas de leitura mostram foi reconciliado em [XG09](09-administracao-obra-ponta-a-ponta.md).
