@@ -80,7 +80,17 @@ function decodeMustChangePassword(token: string | undefined): boolean {
 function loginRedirect(request: NextRequest): NextResponse {
   const url = new URL("/login", request.url);
   const next = request.nextUrl.pathname + request.nextUrl.search;
-  url.search = `?next=${encodeURIComponent(next)}`;
+  const params = new URLSearchParams();
+  if (
+    request.nextUrl.pathname === "/xgestao" ||
+    request.nextUrl.pathname.startsWith("/xgestao/") ||
+    request.nextUrl.pathname === "/admin/xgestao" ||
+    request.nextUrl.pathname.startsWith("/admin/xgestao/")
+  ) {
+    params.set("perfil", "xgestao");
+  }
+  params.set("next", next);
+  url.search = `?${params.toString()}`;
   return NextResponse.redirect(url);
 }
 

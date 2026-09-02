@@ -21,4 +21,12 @@ test.describe('logout pelos menus do xgestão', () => {
 
     await expect(page).toHaveURL(/\/login\?perfil=xgestao(?:&|$)/);
   });
+
+  test('sessão ausente em rota xgestão retorna ao login contextual com destino seguro', async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto('/xgestao/obras');
+
+    await expect(page).toHaveURL(/\/login\?.*perfil=xgestao.*next=%2Fxgestao%2Fobras/);
+    await expect(page.getByTestId('text-perfil-badge')).toHaveText('xgestão');
+  });
 });

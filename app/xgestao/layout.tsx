@@ -6,7 +6,7 @@ import { getCurrentXGestaoEntitlement } from '@features/xgestao/lib/entitlement'
 export default async function XGestaoRouteLayout({ children }: { children: ReactNode }) {
   const entitlement = await getCurrentXGestaoEntitlement();
   if (!entitlement) {
-    redirect('/login?next=%2Fxgestao%2Fobras');
+    redirect('/login?perfil=xgestao&next=%2Fxgestao%2Fobras');
   }
 
   return <XGestaoLayout>{children}</XGestaoLayout>;
