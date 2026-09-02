@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.chromium
     pkgs.libgbm
     pkgs.at-spi2-core
     pkgs.xorg.libXScrnSaver

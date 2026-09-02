@@ -187,7 +187,7 @@ export function NovaTarefaModal({
                         Título <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Concretagem laje 3º pavimento" {...field} />
+                        <Input placeholder="Ex: Concretagem laje 3º pavimento" {...field} data-testid="input-tarefa-titulo" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -207,6 +207,7 @@ export function NovaTarefaModal({
                         <FormControl>
                           <select
                             {...field}
+                             data-testid="select-tarefa-etapa"
                             className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           >
                              {etapasDoSelect.map((e) => (
@@ -237,6 +238,7 @@ export function NovaTarefaModal({
                         <FormControl>
                           <select
                             {...field}
+                             data-testid="select-tarefa-responsavel"
                             className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           >
                             <option value="">Selecione...</option>
@@ -265,7 +267,7 @@ export function NovaTarefaModal({
                           Prazo <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                        <Input type="date" {...field} data-testid="input-tarefa-prazo" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -281,6 +283,7 @@ export function NovaTarefaModal({
                         <FormControl>
                           <select
                             {...field}
+                             data-testid="select-tarefa-status"
                             className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                           >
                             {TAREFA_STATUS_OPTIONS.map((s) => (
@@ -310,6 +313,7 @@ export function NovaTarefaModal({
                           {PRIORIDADE_OPTIONS.map((opt) => (
                             <label
                               key={opt.value}
+                               data-testid={`radio-tarefa-prioridade-${opt.value}`}
                               className={cn(
                                 'flex items-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border-2 transition-all flex-1 justify-center text-sm font-semibold',
                                 field.value === opt.value
@@ -351,6 +355,7 @@ export function NovaTarefaModal({
                               value={field.value ?? 0}
                               onChange={(e) => field.onChange(Number(e.target.value))}
                               className="flex-1 h-2 rounded-full accent-primary"
+                               data-testid="input-tarefa-progresso"
                             />
                             <span className="text-sm font-bold text-primary w-10 text-right">
                               {field.value ?? 0}%
@@ -414,6 +419,7 @@ export function NovaTarefaModal({
                           {...field}
                           placeholder="Detalhes, instruções ou observações sobre a tarefa..."
                           rows={3}
+                           data-testid="input-tarefa-descricao"
                           className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                         />
                       </FormControl>

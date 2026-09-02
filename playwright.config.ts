@@ -20,6 +20,10 @@ const PORT = Number(process.env.E2E_PORT ?? 3010);
 // Usa 127.0.0.1 (IPv4 explícito) para evitar EAFNOSUPPORT em ambientes onde
 // "localhost" resolve para ::1 (IPv6) mas o servidor escuta apenas em IPv4.
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
+// O workspace fornece um Chromium com a mesma glibc do runtime Replit. Usá-lo
+// evita depender de `playwright install` manual (e do binário empacotado pelo
+// npm, que pode não iniciar sob o loader do workspace).
+const BROWSER_EXECUTABLE = process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -37,6 +41,9 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     ignoreHTTPSErrors: true,
+    launchOptions: {
+      executablePath: BROWSER_EXECUTABLE,
+    },
   },
   projects: [
     // ── api ──────────────────────────────────────────────────────────────
@@ -76,6 +83,7 @@ export default defineConfig({
         "**/j03-nova-obra-aparece-imediato.spec.ts",
         "**/planos-redirect.spec.ts",
         "**/logout-xgestao.spec.ts",
+        "**/xgestao-obras.browser.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
