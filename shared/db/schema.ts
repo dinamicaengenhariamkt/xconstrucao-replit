@@ -446,6 +446,9 @@ export const medicoes = pgTable("medicoes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   decidedAt: timestamp("decided_at"),
   decidedBy: varchar("decided_by").references(() => users.id, { onDelete: "set null" }),
+  requestId: varchar("request_id"),
+  tarefaId: varchar("tarefa_id").references(() => obraTarefas.id, { onDelete: "set null" }),
+  tarefaProgresso: integer("tarefa_progresso"),
 });
 
 export const insertMedicaoSchema = createInsertSchema(medicoes).omit({

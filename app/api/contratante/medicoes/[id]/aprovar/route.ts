@@ -1,7 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, medicoes, obras } from "@shared/db/schema";
+import { clientes, medicoes, obras, obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
@@ -11,6 +11,7 @@ import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoMedicaoAprovada } from "@features/notificacoes/medicao-dispatcher";
 
 const VENCIMENTO_DIAS_PADRAO = 15;
+class ApprovalLimitError extends Error {}
 
 function addDaysIso(base: Date, dias: number): string {
   const d = new Date(base);
@@ -41,23 +42,6 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     const r = NextResponse.json(
       { message: `Esta medição já foi ${check.medicao.status === "aprovada" ? "aprovada" : "contestada"}.` },
       { status: 409 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
-
-  // Garante que aprovar não estoure 100% (soma das aprovadas já existentes + esta).
-  const [agg] = await db
-    .select({ soma: sql<string>`COALESCE(SUM(percentual), 0)` })
-    .from(medicoes)
-    .where(and(eq(medicoes.obraId, check.medicao.obraId), eq(medicoes.status, "aprovada")));
-
-  const somaAprovada = Number(agg?.soma ?? 0);
-  const novo = somaAprovada + Number(check.medicao.percentual);
-  if (novo > 100.01) {
-    const r = NextResponse.json(
-      { message: `Aprovação ultrapassaria 100% concluído (atual aprovado: ${somaAprovada}%, esta medição: ${check.medicao.percentual}%).` },
-      { status: 422 },
     );
     setNoCacheHeaders(r);
     return r;
@@ -121,11 +105,23 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   let progresso: number;
   try {
     const txResult = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM obras WHERE id = ${check.medicao.obraId} FOR UPDATE`);
+      const [agg] = await tx
+        .select({ soma: sql<string>`COALESCE(SUM(percentual), 0)` })
+        .from(medicoes)
+        .where(and(eq(medicoes.obraId, check.medicao.obraId), eq(medicoes.status, "aprovada")));
+      const somaAprovada = Number(agg?.soma ?? 0);
+      if (somaAprovada + Number(check.medicao.percentual) > 100.01) {
+        throw new ApprovalLimitError(
+          `Aprovação ultrapassaria 100% concluído (atual aprovado: ${somaAprovada}%, esta medição: ${check.medicao.percentual}%).`,
+        );
+      }
       const [updated] = await tx
         .update(medicoes)
         .set({ status: "aprovada", decidedAt: new Date(), decidedBy: guard.user.id, motivoContestacao: null })
-        .where(eq(medicoes.id, id))
+        .where(and(eq(medicoes.id, id), eq(medicoes.status, "pendente")))
         .returning();
+      if (!updated) throw new Error("Medição já processada.");
 
       const created = await criarLancamentoFromMedicao({
         medicaoId: id,
@@ -142,6 +138,31 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       // Recalculo do progresso DENTRO da transação — atomicidade total
       // (medição aprovada ↔ fatura ↔ progresso atualizado).
       const novoProgresso = await recomputeObraProgresso(check.medicao.obraId, tx as unknown as typeof db);
+
+      if (updated.tarefaId && updated.tarefaProgresso !== null) {
+        const [tarefa] = await tx.select().from(obraTarefas)
+          .where(and(eq(obraTarefas.id, updated.tarefaId), eq(obraTarefas.obraId, check.medicao.obraId)))
+          .limit(1);
+        if (tarefa) {
+          const progressoTarefa = Math.max(tarefa.progresso ?? 0, updated.tarefaProgresso);
+          await tx.update(obraTarefas).set({
+            progresso: progressoTarefa,
+            status: progressoTarefa === 100 ? "concluido" : tarefa.status,
+            updatedAt: new Date(),
+          }).where(eq(obraTarefas.id, tarefa.id));
+          if (tarefa.etapaId) {
+            const [avg] = await tx.select({
+              progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
+            }).from(obraTarefas).where(eq(obraTarefas.etapaId, tarefa.etapaId));
+            const progressoEtapa = Number(avg?.progresso ?? 0);
+            await tx.update(obraEtapas).set({
+              progresso: progressoEtapa,
+              status: progressoEtapa === 100 ? "concluido" : progressoEtapa > 0 ? "em_andamento" : "pendente",
+              updatedAt: new Date(),
+            }).where(and(eq(obraEtapas.id, tarefa.etapaId), eq(obraEtapas.obraId, check.medicao.obraId)));
+          }
+        }
+      }
 
       // J07: ambas atividades dentro da tx → garante invariante
       // "se medição aprovada existe, atividade existe; idem para fatura".
@@ -181,6 +202,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     lancamentoValor = txResult.lanc.valor;
     progresso = txResult.progresso;
   } catch (err) {
+    if (err instanceof ApprovalLimitError) {
+      const r = NextResponse.json({ message: err.message }, { status: 422 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     console.error("[medicoes.aprovar] falha na transação:", err);
     const r = NextResponse.json(
       { message: "Não foi possível aprovar a medição. Tente novamente." },

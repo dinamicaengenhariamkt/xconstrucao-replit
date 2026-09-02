@@ -473,6 +473,7 @@ export function ObraConsoleView({
         onOpenChange={setShowAtualizacao}
         obraId={obra.id}
         obraTitulo={obra.titulo}
+        isOwnWork={obra.isObraPropria}
       />
       {allowOwnWorkEdit && obra.isObraPropria && (
         <CompartilharModal

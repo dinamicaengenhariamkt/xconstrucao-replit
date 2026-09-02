@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { obraTarefas } from "@shared/db/schema";
+import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
@@ -39,15 +39,6 @@ export async function PATCH(
     setNoCacheHeaders(r);
     return r;
   }
-  const [existing] = await db
-    .select()
-    .from(obraTarefas)
-    .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)));
-  if (!existing) {
-    const r = NextResponse.json({ message: "Tarefa não encontrada" }, { status: 404 });
-    setNoCacheHeaders(r);
-    return r;
-  }
   const parsed = patchSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     const r = NextResponse.json(
@@ -63,11 +54,36 @@ export async function PATCH(
     if (data[k] !== undefined) updateData[k] = data[k];
   }
   if (data.status === "concluido" && data.progresso === undefined) updateData.progresso = 100;
-  const [updated] = await db
-    .update(obraTarefas)
-    .set(updateData)
-    .where(eq(obraTarefas.id, tarefaId))
-    .returning();
+  const updated = await db.transaction(async (tx) => {
+    // Serializa com a atualização de progresso/medição, que usa o mesmo lock.
+    await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    const [existing] = await tx.select().from(obraTarefas)
+      .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)))
+      .limit(1);
+    if (!existing) return null;
+    const [row] = await tx
+      .update(obraTarefas)
+      .set(updateData)
+      .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)))
+      .returning();
+    if (data.progresso !== undefined && existing.etapaId) {
+      const [avg] = await tx.select({
+        progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
+      }).from(obraTarefas).where(eq(obraTarefas.etapaId, existing.etapaId));
+      const progressoEtapa = Number(avg?.progresso ?? 0);
+      await tx.update(obraEtapas).set({
+        progresso: progressoEtapa,
+        status: progressoEtapa === 100 ? "concluido" : progressoEtapa > 0 ? "em_andamento" : "pendente",
+        updatedAt: new Date(),
+      }).where(and(eq(obraEtapas.id, existing.etapaId), eq(obraEtapas.obraId, id)));
+    }
+    return row;
+  });
+  if (!updated) {
+    const r = NextResponse.json({ message: "Tarefa não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.tarefa.update",

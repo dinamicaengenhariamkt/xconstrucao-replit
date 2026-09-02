@@ -62,6 +62,53 @@ async function concederXGestao(request: APIRequestContext, email: string) {
 }
 
 test.describe('xgestão — obras próprias', () => {
+  test('aplica progresso imediatamente, evita reenvio e respeita o limite de 100%', async ({ request }) => {
+    const email = await registrar(request, 'empreiteiro', 'xgestao-progresso-imediato');
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, 'empreiteiro');
+    await logout(request);
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const criada = await request.post('/api/xgestao/obras', {
+      data: { nome: 'Obra com avanço imediato', endereco: 'Rua do Progresso, 10' },
+    });
+    expect(criada.status(), await criada.text()).toBe(201);
+    const obra = (await criada.json()) as { id: string };
+    const requestId = crypto.randomUUID();
+    const payload = {
+      obraId: obra.id,
+      etapa: 'Execução',
+      descricao: 'Primeiro avanço',
+      percentual: 10,
+      valor: 0,
+      requestId,
+    };
+
+    const medicao = await request.post('/api/empreiteiro/medicoes', { data: payload });
+    expect(medicao.status(), await medicao.text()).toBe(201);
+    expect(await medicao.json()).toMatchObject({
+      status: 'aprovada',
+      approvalRequired: false,
+      obraProgresso: 10,
+      duplicate: false,
+    });
+
+    const repetida = await request.post('/api/empreiteiro/medicoes', { data: payload });
+    expect(repetida.status(), await repetida.text()).toBe(200);
+    expect(await repetida.json()).toMatchObject({ obraProgresso: 10, duplicate: true });
+
+    const detalhe = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
+    expect(detalhe.status(), await detalhe.text()).toBe(200);
+    expect(await detalhe.json()).toMatchObject({ progresso: 10 });
+
+    const excesso = await request.post('/api/empreiteiro/medicoes', {
+      data: { ...payload, percentual: 91, requestId: crypto.randomUUID() },
+    });
+    expect(excesso.status(), await excesso.text()).toBe(422);
+    await logout(request);
+  });
+
   test('permite completar pela UI todas as pendências e então criar a primeira obra', async ({ page, request }) => {
     const email = await registrar(request, 'empreiteiro', 'xgestao-ui-perfil-operacional');
     await concederXGestao(request, email);

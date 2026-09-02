@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
@@ -29,6 +29,7 @@ interface RegistrarMedicaoModalProps {
   onOpenChange: (open: boolean) => void;
   obraId: string;
   obraTitulo?: string;
+  isOwnWork: boolean;
 }
 
 interface FotoUpload {
@@ -66,6 +67,7 @@ export function RegistrarMedicaoModal({
   onOpenChange,
   obraId,
   obraTitulo,
+  isOwnWork,
 }: RegistrarMedicaoModalProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -74,6 +76,7 @@ export function RegistrarMedicaoModal({
   const [percentual, setPercentual] = useState(10);
   const [valor, setValor] = useState('');
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
+  const requestIdRef = useRef<string | null>(null);
 
   const resetForm = () => {
     setEtapa('');
@@ -81,6 +84,7 @@ export function RegistrarMedicaoModal({
     setPercentual(10);
     setValor('');
     setFotos([]);
+    requestIdRef.current = null;
   };
 
   const handleClose = () => {
@@ -92,23 +96,30 @@ export function RegistrarMedicaoModal({
   const mutation = useMutation({
     mutationFn: async () => {
       const valorNum = valor.trim() ? Number(valor.replace(',', '.')) : 0;
-      return postJSON('/api/empreiteiro/medicoes', {
+      return postJSON<{ approvalRequired: boolean }>('/api/empreiteiro/medicoes', {
         obraId,
         etapa: etapa.trim(),
         descricao: descricao.trim() || undefined,
         percentual,
         valor: Number.isFinite(valorNum) && valorNum >= 0 ? valorNum : 0,
         fotos: fotos.map((f) => f.url).filter(Boolean),
+        fotoFileIds: fotos.map((f) => f.fileId),
+        requestId: requestIdRef.current ?? (requestIdRef.current = crypto.randomUUID()),
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast({
-        title: 'Medição enviada',
-        description: 'O contratante já pode aprovar ou contestar a medição.',
+        title: result.approvalRequired ? 'Medição enviada' : 'Atualização salva',
+        description: result.approvalRequired
+          ? 'O contratante já pode aprovar ou contestar a medição.'
+          : 'O progresso da obra foi atualizado imediatamente.',
       });
       qc.invalidateQueries({ queryKey: ['empreiteiro', 'medicoes'] });
       qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
       qc.invalidateQueries({ queryKey: ['obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+      qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'xgestao'] });
       handleClose();
     },
     onError: (err) => {
@@ -185,7 +196,11 @@ export function RegistrarMedicaoModal({
                 Registrar medição
               </DialogTitle>
               <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                {obraTitulo ? `Obra: ${obraTitulo}` : 'Envie uma medição para aprovação do contratante.'}
+                {obraTitulo
+                  ? `Obra: ${obraTitulo}`
+                  : isOwnWork
+                    ? 'Registre o avanço executado nesta obra.'
+                    : 'Envie uma medição para aprovação do contratante.'}
               </DialogDescription>
             </div>
           </div>
@@ -338,7 +353,7 @@ export function RegistrarMedicaoModal({
               data-testid="button-submit-medicao"
             >
               <IconAdd className="text-sm mr-1" />
-              {mutation.isPending ? 'Enviando...' : 'Enviar medição'}
+              {mutation.isPending ? 'Salvando...' : isOwnWork ? 'Salvar atualização' : 'Enviar medição'}
             </Button>
           </DialogFooter>
         </form>

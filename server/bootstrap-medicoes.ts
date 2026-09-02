@@ -39,6 +39,8 @@ export async function bootstrapMedicoesSchema(): Promise<void> {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_medicoes_empreiteiro ON medicoes(empreiteiro_id)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_medicoes_status ON medicoes(status)`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_medicoes_obra_numero ON medicoes(obra_id, numero)`);
+    await db.execute(sql`ALTER TABLE medicoes ADD COLUMN IF NOT EXISTS request_id VARCHAR`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS uq_medicoes_empreiteiro_request ON medicoes(empreiteiro_id, request_id) WHERE request_id IS NOT NULL`);
 
     console.info("[bootstrap-medicoes] schema ready (medicoes + índices)");
   } catch (err) {

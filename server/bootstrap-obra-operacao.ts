@@ -50,6 +50,8 @@ export async function bootstrapObraOperacaoSchema(): Promise<void> {
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_obra_tarefas_obra_id ON obra_tarefas(obra_id, created_at)`);
+    await db.execute(sql`ALTER TABLE medicoes ADD COLUMN IF NOT EXISTS tarefa_id VARCHAR REFERENCES obra_tarefas(id) ON DELETE SET NULL`);
+    await db.execute(sql`ALTER TABLE medicoes ADD COLUMN IF NOT EXISTS tarefa_progresso INTEGER`);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS obra_checklists (

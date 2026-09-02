@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
@@ -22,7 +22,7 @@ interface AtualizarProgressoModalProps {
   onOpenChange: (open: boolean) => void;
   tarefa: MinhaObraTarefa | null;
   obraId: string;
-  onConfirmar: (progresso: number) => void;
+  isOwnWork: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,7 +32,10 @@ async function postMedicao(body: {
   etapa: string;
   descricao?: string;
   percentual: number;
-}): Promise<{ id: string }> {
+  tarefaId: string;
+  tarefaProgresso: number;
+  requestId: string;
+}): Promise<{ id: string; approvalRequired: boolean }> {
   const res = await fetch('/api/empreiteiro/medicoes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,7 +56,7 @@ async function postMedicao(body: {
         : `${res.status}: ${text || 'erro'}`;
     throw new Error(message);
   }
-  return parsed as { id: string };
+  return parsed as { id: string; approvalRequired: boolean };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -63,18 +66,22 @@ export function AtualizarProgressoModal({
   onOpenChange,
   tarefa,
   obraId,
-  onConfirmar,
+  isOwnWork,
 }: AtualizarProgressoModalProps) {
   const progressoAtual = tarefa?.progresso ?? 0;
   const [valor, setValor] = useState(progressoAtual);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const requestIdRef = useRef<string | null>(null);
 
   // Sincroniza o slider quando o modal abre ou a tarefa alvo muda.
   // Não depende de onOpenChange(true) — em diálogos controlados,
   // o parent altera `open` direto e o callback nem sempre dispara.
   useEffect(() => {
-    if (open) setValor(progressoAtual);
+    if (open) {
+      setValor(progressoAtual);
+      requestIdRef.current = null;
+    }
   }, [open, tarefa?.id, progressoAtual]);
 
   const handleClose = () => onOpenChange(false);
@@ -91,12 +98,13 @@ export function AtualizarProgressoModal({
         etapa,
         descricao: `Atualização de progresso da tarefa "${tarefa.titulo}" (${progressoAtual}% → ${valor}%).`,
         percentual: delta,
+        tarefaId: tarefa.id,
+        tarefaProgresso: valor,
+        requestId: requestIdRef.current ?? (requestIdRef.current = crypto.randomUUID()),
       });
       return { skipped: false as const };
     },
     onSuccess: (result) => {
-      // Atualiza a tarefa (parent dispara useUpdateTarefa) em paralelo à medição.
-      onConfirmar(valor);
       qc.invalidateQueries({ queryKey: ['empreiteiro', 'medicoes'] });
       qc.invalidateQueries({ queryKey: ['contratante', 'medicoes'] });
       qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
@@ -110,8 +118,10 @@ export function AtualizarProgressoModal({
         });
       } else {
         toast({
-          title: 'Medição enviada para aprovação',
-          description: 'O contratante já pode aprovar ou contestar.',
+          title: isOwnWork ? 'Progresso atualizado' : 'Medição enviada para aprovação',
+          description: isOwnWork
+            ? 'A tarefa e o progresso geral da obra foram atualizados.'
+            : 'O contratante já pode aprovar ou contestar.',
         });
       }
       handleClose();
@@ -171,8 +181,9 @@ export function AtualizarProgressoModal({
               {valor > progressoAtual && (
                 <>
                   {' · '}
-                  envia medição de{' '}
-                  <span className="font-semibold text-primary">+{valor - progressoAtual}%</span> para aprovação
+                  {isOwnWork ? 'adiciona ' : 'envia medição de '}
+                  <span className="font-semibold text-primary">+{valor - progressoAtual}%</span>
+                  {!isOwnWork && ' para aprovação'}
                 </>
               )}
             </p>

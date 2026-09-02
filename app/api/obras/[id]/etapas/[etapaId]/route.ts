@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { obraEtapas } from "@shared/db/schema";
@@ -67,7 +67,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (data.prazo !== undefined) updateData.prazo = data.prazo ? new Date(data.prazo) : null;
   // Auto-coerência: progresso=100 ⇒ status=concluido
   if (data.progresso === 100 && data.status === undefined) updateData.status = "concluido";
-  const [updated] = await db.update(obraEtapas).set(updateData).where(eq(obraEtapas.id, etapaId)).returning();
+  const [updated] = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    return tx.update(obraEtapas).set(updateData)
+      .where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id))).returning();
+  });
   await recordAudit({ actorId: guard.user.id, action: "obras.etapa.update", payload: { obraId: id, etapaId, changes: Object.keys(data) }, request });
   const r = NextResponse.json(updated);
   setNoCacheHeaders(r);

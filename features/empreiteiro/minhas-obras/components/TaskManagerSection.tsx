@@ -369,11 +369,6 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
     updateStatus(modalState.tarefa, { status: 'bloqueado', bloqueioMotivo: motivo, bloqueioInfo: info, progresso: null as unknown as undefined });
   };
 
-  const handleConfirmarProgresso = (progresso: number) => {
-    if (!modalState.tarefa) return;
-    updateStatus(modalState.tarefa, { progresso });
-  };
-
   const handleDuplicar = (tarefa: MinhaObraTarefa) => {
     createMut.mutate({
       ...tarefa,
@@ -514,7 +509,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
         onOpenChange={(open) => { if (!open) closeModal(); }}
         tarefa={modalState.tarefa}
         obraId={obra.id}
-        onConfirmar={handleConfirmarProgresso}
+        isOwnWork={obra.isObraPropria}
       />
 
       {/* AlertDialog de exclusão */}

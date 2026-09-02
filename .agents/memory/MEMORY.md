@@ -12,3 +12,4 @@
 - [Asaas recurring checkout contract](asaas-recurring-checkout.md) — recurring checkout uses plural arrays and must not send an incomplete saved customer.
 - [xgestão navigation context](xgestao-navigation-context.md) — navigation cannot infer xgestão from the primary empreiteiro role; product entry points must carry explicit context.
 - [Playwright secure cookie on HTTP](playwright-secure-cookie-http.md) — protected browser navigation is unreliable in the API project because Secure auth cookies are not sent over HTTP.
+- [Progress semantics by work type](progress-semantics.md) — xgestão-owned work advances immediately; marketplace task/work changes remain deferred until customer approval.
