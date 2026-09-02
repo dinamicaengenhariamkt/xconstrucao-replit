@@ -12,6 +12,40 @@ export function isCepValid(cep: string): boolean {
   return unformatCep(cep).length === 8;
 }
 
+/* ── Data brasileira ── */
+export function unformatDateBr(value: string): string {
+  return (value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+/**
+ * Formata uma data para o formato de digitação brasileiro `DD/MM/AAAA`.
+ * Também aceita o formato ISO usado por alguns dados já persistidos.
+ */
+export function formatDateBr(value: string): string {
+  const raw = (value || "").trim();
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  const digits = isoMatch
+    ? `${isoMatch[3]}${isoMatch[2]}${isoMatch[1]}`
+    : unformatDateBr(raw);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+export function isDateBrValid(value: string): boolean {
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return false;
+  const [day, month, year] = value.split("/").map(Number);
+  if (!day || !month || !year || month > 12) return false;
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 export interface ViaCepResponse {
   cep: string;
   logradouro: string;

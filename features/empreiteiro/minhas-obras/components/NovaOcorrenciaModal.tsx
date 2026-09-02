@@ -30,6 +30,8 @@ import {
 import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
+import { BrDateInput } from '@features/shared/components/BrDateInput';
+import { isDateBrValid } from '@shared/lib/masks';
 import type { ObraOcorrencia } from '../types';
 import { IconEdit, IconWarning } from '@shared/components/icons';
 
@@ -48,8 +50,12 @@ const schema = z.object({
   descricao: z.string().min(1, 'Descrição obrigatória').max(500, 'Máximo 500 caracteres'),
   severidade: z.enum(['critico', 'medio', 'baixo']),
   responsavel: z.string().min(1, 'Responsável obrigatório').max(80, 'Máximo 80 caracteres'),
-  dataAbertura: z.string().min(1, 'Data de abertura obrigatória'),
-  prazo: z.string().optional(),
+  dataAbertura: z.string()
+    .min(1, 'Data de abertura obrigatória')
+    .refine(isDateBrValid, 'Informe uma data válida (DD/MM/AAAA)'),
+  prazo: z.string()
+    .refine((value) => !value || isDateBrValid(value), 'Informe uma data válida (DD/MM/AAAA)')
+    .optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -238,7 +244,16 @@ export function NovaOcorrenciaModal({
                     <FormItem>
                       <FormLabel>Data de abertura</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: 10/06/2025" {...field} />
+                        <BrDateInput
+                          name={field.name}
+                          ref={field.ref}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="DD/MM/AAAA"
+                          aria-label="Data de abertura"
+                          data-testid="input-data-abertura-ocorrencia"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -254,7 +269,16 @@ export function NovaOcorrenciaModal({
                         <span className="text-gray-400 font-normal">(opcional)</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: 25/06/2025" {...field} />
+                        <BrDateInput
+                          name={field.name}
+                          ref={field.ref}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="DD/MM/AAAA"
+                          aria-label="Prazo"
+                          data-testid="input-prazo-ocorrencia"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

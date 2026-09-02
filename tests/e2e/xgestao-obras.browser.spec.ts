@@ -266,6 +266,70 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await page.unroute(`**/api/obras/${obra.id}/tarefas`);
   });
 
+  test("mascara datas de ocorrência, valida datas inválidas e preserva edição", async ({
+    page,
+    request,
+  }) => {
+    const email = await registrarEmpreiteiro(request);
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const obraResponse = await request.post("/api/xgestao/obras", {
+      data: {
+        nome: `Obra datas ${Date.now()}`,
+        endereco: "Rua das Datas, 305",
+      },
+    });
+    expect(obraResponse.status(), await obraResponse.text()).toBe(201);
+    const obra = (await obraResponse.json()) as { id: string };
+    await logout(request);
+
+    const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(pageLogin.status(), await pageLogin.text()).toBe(200);
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
+    const tour = page.getByTestId("guided-tour");
+    if (await tour.count()) await page.getByRole("button", { name: "Pular" }).click();
+
+    await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
+    await page.getByRole("button", { name: "Reportar Problema", exact: true }).click();
+    const dialog = await abrirDialog(page, "Reportar problema");
+    await dialog.getByRole("textbox", { name: /Título/ }).fill("Atraso no fornecedor");
+    await dialog.getByRole("textbox", { name: /Descrição/ }).fill("O material da etapa ainda não foi entregue.");
+    await dialog.getByRole("textbox", { name: /Responsável/ }).fill("Equipe de compras");
+
+    const dataAbertura = dialog.getByTestId("input-data-abertura-ocorrencia");
+    const prazo = dialog.getByTestId("input-prazo-ocorrencia");
+    await dataAbertura.fill("10062025");
+    await expect(dataAbertura).toHaveValue("10/06/2025");
+    await dataAbertura.fill("10/06/2025");
+    await expect(dataAbertura).toHaveValue("10/06/2025");
+
+    // Uma data impossível aparece formatada, mas bloqueia o envio.
+    await prazo.fill("31022025");
+    await expect(prazo).toHaveValue("31/02/2025");
+    await dialog.getByRole("button", { name: "Reportar problema" }).click();
+    await expect(dialog.getByText("Informe uma data válida (DD/MM/AAAA)")).toBeVisible();
+    await expect(dialog).toBeVisible();
+
+    // O prazo opcional pode ficar vazio; a máscara continua ativa na edição.
+    await prazo.fill("");
+    await dialog.getByRole("button", { name: "Reportar problema" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText("Atraso no fornecedor", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Atualizar status", exact: true }).click();
+    const editDialog = await abrirDialog(page, "Editar ocorrência");
+    await expect(editDialog.getByTestId("input-data-abertura-ocorrencia")).toHaveValue("10/06/2025");
+    await expect(editDialog.getByTestId("input-prazo-ocorrencia")).toHaveValue("");
+    await editDialog.getByTestId("input-prazo-ocorrencia").fill("15062025");
+    await expect(editDialog.getByTestId("input-prazo-ocorrencia")).toHaveValue("15/06/2025");
+    await editDialog.getByRole("button", { name: "Salvar alterações" }).click();
+    await expect(page.getByText("Prazo: 15/06/2025", { exact: true })).toBeVisible();
+  });
+
   test("edição reflete nos detalhes da obra e no link público", async ({ page, request }) => {
     const email = await registrarEmpreiteiro(request);
     await loginAs(request, email);
