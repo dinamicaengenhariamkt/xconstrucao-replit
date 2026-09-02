@@ -126,6 +126,16 @@ const TIPO_META: Record<
 
 function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, obraNome: string | null): string {
   const obra = obraNome ?? 'obra';
+  const medicaoDetalhes = (includeEtapa = true) => {
+    const etapa = includeEtapa && typeof payload.etapa === 'string' && payload.etapa ? ` · ${payload.etapa}` : '';
+    const percentual = Number(payload.percentual);
+    const percentualLabel = Number.isFinite(percentual) ? ` · +${percentual}%` : '';
+    const valor = Number(payload.valor);
+    const valorLabel = Number.isFinite(valor) && valor > 0
+      ? ` · ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
+      : '';
+    return `${etapa}${percentualLabel}${valorLabel}`;
+  };
   switch (tipo) {
     case 'obra_publicada':
       return `Obra "${obra}" foi publicada e está aberta a propostas.`;
@@ -142,12 +152,12 @@ function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, 
     case 'medicao_criada': {
       const numero = payload.numero ?? '?';
       const etapa = payload.etapa ?? '';
-      return `Medição #${numero}${etapa ? ` (${etapa})` : ''} enviada em "${obra}".`;
+      return `Medição #${numero}${etapa ? ` (${etapa})` : ''} enviada em "${obra}"${medicaoDetalhes(false)}.`;
     }
     case 'medicao_aprovada': {
       const numero = payload.numero ?? '?';
       const lanc = payload.lancamentoId ? ' Fatura gerada automaticamente.' : '';
-      return `Medição #${numero} aprovada em "${obra}".${lanc}`;
+      return `Medição #${numero} aprovada em "${obra}"${medicaoDetalhes()}.${lanc}`;
     }
     case 'medicao_contestada': {
       const motivo = typeof payload.motivo === 'string' ? payload.motivo : null;

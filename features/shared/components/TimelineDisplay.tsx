@@ -16,6 +16,18 @@ export interface TimelineItem {
   data: string;
 }
 
+function formatTimelineDate(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(parsed).replace('.', '');
+}
+
 interface TimelineDisplayProps {
   events: TimelineItem[];
   title?: string;
@@ -161,7 +173,9 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
                           {event.titulo}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400 whitespace-nowrap">{event.data}</span>
+                      <time dateTime={event.data} className="text-xs text-gray-400 whitespace-nowrap">
+                        {formatTimelineDate(event.data)}
+                      </time>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.descricao}</p>
                     <p className="text-xs text-gray-400 flex items-center gap-1">

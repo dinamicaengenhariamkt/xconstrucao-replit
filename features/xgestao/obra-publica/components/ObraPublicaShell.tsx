@@ -10,6 +10,7 @@ import {
   IconPhotoLibrary,
   IconTaskAlt,
   IconTimeline,
+  IconTrendingUp,
   IconWarning,
 } from '@shared/components/icons';
 import type { ObraPublicaView } from '../types';
@@ -17,14 +18,16 @@ import { TabDiarioPublica } from './TabDiarioPublica';
 import { TabEtapasPublica } from './TabEtapasPublica';
 import { TabFotosPublica } from './TabFotosPublica';
 import { TabOcorrenciasPublica } from './TabOcorrenciasPublica';
+import { TabAtualizacoesPublica } from './TabAtualizacoesPublica';
 
-type PublicTab = 'etapas' | 'diario' | 'ocorrencias' | 'fotos' | 'checklists';
+type PublicTab = 'atualizacoes' | 'etapas' | 'diario' | 'ocorrencias' | 'fotos' | 'checklists';
 
 const tabs: Array<{
   key: PublicTab;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
 }> = [
+  { key: 'atualizacoes', label: 'Atualizações', Icon: IconTrendingUp },
   { key: 'etapas', label: 'Etapas', Icon: IconTaskAlt },
   { key: 'diario', label: 'Diário', Icon: IconTimeline },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
@@ -47,7 +50,7 @@ function formatArea(value: string): string {
 }
 
 export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
-  const [activeTab, setActiveTab] = useState<PublicTab>('etapas');
+  const [activeTab, setActiveTab] = useState<PublicTab>('atualizacoes');
   const local = [view.obra.cidade, view.obra.uf].filter(Boolean).join(' · ');
   const hasDetails = Boolean(
     view.obra.tipo ||
@@ -175,6 +178,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             ))}
           </div>
           <div className="p-4 sm:p-6">
+            {activeTab === 'atualizacoes' && <TabAtualizacoesPublica atualizacoes={view.atualizacoes} />}
             {activeTab === 'etapas' && <TabEtapasPublica obraId={view.obra.id} etapas={view.etapas} />}
             {activeTab === 'diario' && <TabDiarioPublica obraId={view.obra.id} diario={view.diario} />}
             {activeTab === 'ocorrencias' && <TabOcorrenciasPublica obraId={view.obra.id} ocorrencias={view.ocorrencias} />}

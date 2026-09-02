@@ -252,6 +252,14 @@ export async function POST(request: NextRequest) {
         .where(and(eq(obraFotos.obraId, obraId), inArray(obraFotos.fileId, fotoFileIds)));
       const linkedIds = new Set(linked.map((item) => item.fileId));
       const missing = fotoFileIds.filter((id) => !linkedIds.has(id));
+      if (ownWork && linked.length) {
+        await tx.update(obraFotos)
+          .set({ enviadaAoContratante: true })
+          .where(and(
+            eq(obraFotos.obraId, obraId),
+            inArray(obraFotos.fileId, linked.map((item) => item.fileId)),
+          ));
+      }
       if (missing.length) {
         await tx.insert(obraFotos).values(missing.map((fileId) => ({
           obraId,
@@ -259,7 +267,10 @@ export async function POST(request: NextRequest) {
           fileId,
           fase: "durante" as const,
           tag: etapa.slice(0, 40),
-          enviadaAoContratante: !ownWork,
+          // Em obra própria, o link público é o equivalente ao acompanhamento
+          // do contratante. Foto anexada deliberadamente à atualização deve
+          // aparecer nesse acompanhamento.
+          enviadaAoContratante: true,
         })));
       }
     }

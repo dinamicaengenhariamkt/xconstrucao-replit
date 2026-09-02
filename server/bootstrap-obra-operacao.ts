@@ -52,6 +52,28 @@ export async function bootstrapObraOperacaoSchema(): Promise<void> {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_obra_tarefas_obra_id ON obra_tarefas(obra_id, created_at)`);
     await db.execute(sql`ALTER TABLE medicoes ADD COLUMN IF NOT EXISTS tarefa_id VARCHAR REFERENCES obra_tarefas(id) ON DELETE SET NULL`);
     await db.execute(sql`ALTER TABLE medicoes ADD COLUMN IF NOT EXISTS tarefa_progresso INTEGER`);
+    // Recupera fotos de atualizações próprias gravadas antes da correção que
+    // passou a marcá-las como compartilháveis no momento do vínculo.
+    await db.execute(sql`
+      UPDATE obra_fotos AS of
+      SET enviada_ao_contratante = TRUE
+      FROM user_files AS uf
+      WHERE of.file_id = uf.id
+        AND of.enviada_ao_contratante = FALSE
+        AND EXISTS (
+          SELECT 1
+          FROM obras o
+          JOIN medicoes m ON m.obra_id = o.id AND m.status = 'aprovada'
+          WHERE o.id = of.obra_id
+            AND o.cliente_id IS NULL
+            AND EXISTS (
+              SELECT 1
+              FROM unnest(m.fotos) AS foto_url
+              WHERE foto_url = uf.public_url
+                 OR foto_url LIKE ('%/' || uf.bucket_key)
+            )
+        )
+    `);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS obra_checklists (

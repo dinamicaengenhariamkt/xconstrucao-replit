@@ -9,6 +9,7 @@ import {
   obraEtapas,
   obraFotos,
   obraOcorrencias,
+  medicoes,
   obras,
   userFiles,
 } from '@shared/db/schema';
@@ -82,7 +83,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
 
   if (!obra) return null;
 
-  const [etapas, diarioRows, ocorrenciaRows, fotoRows, checklistRows] = await Promise.all([
+  const [etapas, diarioRows, ocorrenciaRows, fotoRows, checklistRows, atualizacaoRows] = await Promise.all([
     db
       .select({
         id: obraEtapas.id,
@@ -147,6 +148,18 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(obraChecklists)
       .where(eq(obraChecklists.obraId, obraId))
       .orderBy(asc(obraChecklists.createdAt)),
+    db
+      .select({
+        id: medicoes.id,
+        etapa: medicoes.etapa,
+        descricao: medicoes.descricao,
+        percentual: medicoes.percentual,
+        fotos: medicoes.fotos,
+        createdAt: medicoes.createdAt,
+      })
+      .from(medicoes)
+      .where(and(eq(medicoes.obraId, obraId), eq(medicoes.status, 'aprovada')))
+      .orderBy(desc(medicoes.createdAt)),
   ]);
 
   const fotoRowsWithUrls = await Promise.all(fotoRows.map(async (foto) => ({
@@ -186,6 +199,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         diarioRows[0]?.createdAt,
         ocorrenciaRows[0]?.createdAt,
        fotoRowsWithUrls[0]?.createdAt,
+        atualizacaoRows[0]?.createdAt,
       ),
     },
     etapas: etapas.map((etapa) => ({
@@ -218,6 +232,14 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         tag: foto.tag,
         createdAt: toIso(foto.createdAt) ?? '',
       })),
+    atualizacoes: atualizacaoRows.map((item) => ({
+      id: item.id,
+      etapa: item.etapa,
+      descricao: item.descricao,
+      percentual: Number(item.percentual ?? 0),
+      createdAt: toIso(item.createdAt) ?? '',
+      fotosCount: item.fotos?.length ?? 0,
+    })),
     checklists: checklistRows.map((checklist) => ({
       id: checklist.id,
       nome: checklist.nome,

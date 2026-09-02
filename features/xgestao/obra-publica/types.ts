@@ -32,6 +32,15 @@ export interface ObraPublicaFoto {
   createdAt: string;
 }
 
+export interface ObraPublicaAtualizacao {
+  id: string;
+  etapa: string;
+  descricao: string | null;
+  percentual: number;
+  createdAt: string;
+  fotosCount: number;
+}
+
 export interface ObraPublicaChecklist {
   id: string;
   nome: string;
@@ -68,5 +77,6 @@ export interface ObraPublicaView {
   diario: ObraPublicaDiario[];
   ocorrencias: ObraPublicaOcorrencia[];
   fotos: ObraPublicaFoto[];
+  atualizacoes: ObraPublicaAtualizacao[];
   checklists: ObraPublicaChecklist[];
 }
