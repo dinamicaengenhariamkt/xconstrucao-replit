@@ -9,28 +9,50 @@ import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { getSenhaMinima, isPerfilHabilitado } from "@features/admin/platform-settings/server/settings-reader";
 import { sendVerificationEmail } from "@shared/lib/email";
 import { getBaseUrl, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { getClientIp } from "@features/auth/api/rate-limit";
 import { validateAntiBot } from "@features/auth/api/anti-bot";
+import {
+  checkRegisterCreationLimit,
+  checkRegisterRequestLimit,
+  checkRegisterTargetLimit,
+  formatRetryWait,
+  getRegisterClientKey,
+  type RegisterRateLimitDecision,
+} from "@features/auth/api/register-rate-limit";
 
 const VERSAO_TERMOS = "1.0";
 const VERSAO_PRIVACIDADE = "1.0";
 
 const GENERIC_BAD = "Não foi possível processar a solicitação. Tente novamente.";
 
-function jsonNoStore(payload: unknown, status: number) {
+function jsonNoStore(payload: unknown, status: number, headers?: HeadersInit) {
   const response = NextResponse.json(payload, { status });
+  if (headers) {
+    const values = new Headers(headers);
+    values.forEach((value, key) => response.headers.set(key, value));
+  }
   setNoCacheHeaders(response);
   return response;
 }
 
+function rateLimitResponse(decision: RegisterRateLimitDecision) {
+  const wait = formatRetryWait(decision.retryAfterSeconds);
+  return jsonNoStore(
+    {
+      message: `Muitas tentativas. Tente novamente em ${wait}.`,
+      retryAfterSeconds: decision.retryAfterSeconds,
+      retryAt: new Date(decision.resetAt).toISOString(),
+    },
+    429,
+    { "Retry-After": String(decision.retryAfterSeconds) },
+  );
+}
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  if (isRateLimited(`register:${ip}`, 5, 60 * 60 * 1000)) {
-    return jsonNoStore(
-      { message: "Muitas tentativas. Tente novamente em alguns minutos." },
-      429
-    );
-  }
+  const clientKey = getRegisterClientKey(ip);
+  const requestLimit = checkRegisterRequestLimit(clientKey);
+  if (requestLimit.limited) return rateLimitResponse(requestLimit);
 
   try {
     const body = await request.json();
@@ -80,6 +102,9 @@ export async function POST(request: NextRequest) {
       return jsonNoStore({ message: minPolicy.message ?? "Senha inválida." }, 400);
     }
 
+    const targetLimit = checkRegisterTargetLimit(email);
+    if (targetLimit.limited) return rateLimitResponse(targetLimit);
+
     const existingEmail = await getUserByEmail(email);
     if (existingEmail) {
       return jsonNoStore({ message: "Email já cadastrado" }, 409);
@@ -89,6 +114,9 @@ export async function POST(request: NextRequest) {
     if (existingUsername) {
       return jsonNoStore({ message: "Nome de usuário já cadastrado" }, 409);
     }
+
+    const creationLimit = checkRegisterCreationLimit(clientKey);
+    if (creationLimit.limited) return rateLimitResponse(creationLimit);
 
     const hashed = await hashPassword(password);
 

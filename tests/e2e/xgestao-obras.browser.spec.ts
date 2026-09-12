@@ -68,6 +68,50 @@ async function abrirDialog(page: Page, titulo: string) {
 }
 
 test.describe("xgestão — tarefas e etapas no navegador", () => {
+  test("cadastro evita envio duplicado e preserva dados durante o bloqueio", async ({
+    page,
+  }) => {
+    let registerRequests = 0;
+    await page.route("**/api/auth/register", async (route) => {
+      registerRequests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await route.fulfill({
+        status: 429,
+        contentType: "application/json",
+        headers: { "Retry-After": "120" },
+        body: JSON.stringify({
+          message: "Muitas tentativas. Tente novamente em 2 minutos.",
+          retryAfterSeconds: 120,
+          retryAt: new Date(Date.now() + 120_000).toISOString(),
+        }),
+      });
+    });
+
+    await page.goto("/cadastro?perfil=xgestao");
+    await page.getByTestId("input-name").fill("Pessoa Cadastro");
+    await page.getByTestId("input-email").fill("pessoa.cadastro@example.com");
+    await page.getByTestId("input-username").fill("pessoa_cadastro");
+    await page.getByTestId("input-phone").fill("11999990000");
+    await page.getByTestId("input-password").fill("SenhaForte#2026");
+    await page.getByTestId("checkbox-terms").check();
+
+    // requestSubmit duas vezes no mesmo tick reproduz clique/Enter concorrentes
+    // antes que o estado visual consiga desabilitar o botão.
+    await page.locator("form").evaluate((form) => {
+      (form as HTMLFormElement).requestSubmit();
+      (form as HTMLFormElement).requestSubmit();
+    });
+
+    await expect(
+      page.getByText("Muitas tentativas. Tente novamente em 2 minutos.", { exact: true }),
+    ).toBeVisible();
+    expect(registerRequests).toBe(1);
+    await expect(page.getByTestId("button-register")).toBeDisabled();
+    await expect(page.getByTestId("button-register")).toHaveText("Tente novamente em 2 minutos");
+    await expect(page.getByTestId("input-email")).toHaveValue("pessoa.cadastro@example.com");
+    await expect(page.getByTestId("input-password")).toHaveValue("SenhaForte#2026");
+  });
+
   test("preserva etapas e tarefas após recarregar e quando a API falha", async ({
     page,
     request,

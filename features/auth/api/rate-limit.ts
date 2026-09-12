@@ -5,6 +5,53 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>();
 
+export interface RateLimitResult {
+  limited: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: number;
+  retryAfterSeconds: number;
+}
+
+/**
+ * Registra uma tentativa e devolve metadados para respostas 429 precisas.
+ * O parâmetro `now` existe para permitir testes determinísticos.
+ */
+export function checkRateLimit(
+  key: string,
+  max: number,
+  windowMs: number,
+  now = Date.now(),
+): RateLimitResult {
+  if (process.env.EMAIL_TEST_MODE === "1") {
+    return {
+      limited: false,
+      limit: max,
+      remaining: max,
+      resetAt: now + windowMs,
+      retryAfterSeconds: 0,
+    };
+  }
+
+  const current = store.get(key);
+  const entry =
+    !current || now >= current.resetAt
+      ? { count: 1, resetAt: now + windowMs }
+      : { count: current.count + 1, resetAt: current.resetAt };
+
+  store.set(key, entry);
+  const limited = entry.count > max;
+  return {
+    limited,
+    limit: max,
+    remaining: Math.max(0, max - entry.count),
+    resetAt: entry.resetAt,
+    retryAfterSeconds: limited
+      ? Math.max(1, Math.ceil((entry.resetAt - now) / 1000))
+      : 0,
+  };
+}
+
 /**
  * Verifica e registra uma tentativa. Retorna true se deve bloquear.
  * @param key     chave única (ex: "login:1.2.3.4")
@@ -12,20 +59,11 @@ const store = new Map<string, RateLimitEntry>();
  * @param windowMs tamanho da janela em ms
  */
 export function isRateLimited(key: string, max: number, windowMs: number): boolean {
-  // Bypass total quando em modo de teste E2E — evita falsos positivos quando
-  // a suíte registra/loga várias vezes do mesmo IP (127.0.0.1).
-  if (process.env.EMAIL_TEST_MODE === "1") return false;
+  return checkRateLimit(key, max, windowMs).limited;
+}
 
-  const now = Date.now();
-  const entry = store.get(key);
-
-  if (!entry || now > entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > max;
+export function resetRateLimitStoreForTests(): void {
+  store.clear();
 }
 
 /**

@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import React from 'react';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -20,6 +20,7 @@ import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
 import { HoneypotField } from "@features/auth/components/HoneypotField";
 import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
 import { PasswordInput } from "@features/auth/components/PasswordInput";
+import { RegistrationRateLimitError } from "@features/auth/utils/register-error";
 import {
   IconPerson,
   IconMail,
@@ -53,6 +54,9 @@ function perfilParaRole(perfil: string): "contratante" | "empreiteiro" | "anunci
 
 export default function CadastroPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [retryAt, setRetryAt] = useState<number | null>(null);
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  const submissionLockRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const perfil = searchParams.get("perfil") || "contratante";
@@ -69,6 +73,15 @@ export default function CadastroPage() {
       router.push("/login?perfil=administrador");
     }
   }, [perfil, router]);
+
+  useEffect(() => {
+    if (!retryAt || retryAt <= clockNow) return;
+    const timer = window.setTimeout(
+      () => setClockNow(Date.now()),
+      1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [retryAt, clockNow]);
 
   const form = useForm<RegisterFormInput>({
     resolver: zodResolver(registerSchema) as never,
@@ -92,9 +105,14 @@ export default function CadastroPage() {
   const nameValue = form.watch("name");
   const emailValue = form.watch("email");
   const usernameValue = form.watch("username");
+  const retryAfterSeconds = retryAt
+    ? Math.max(0, Math.ceil((retryAt - clockNow) / 1000))
+    : 0;
 
   const onSubmit = form.handleSubmit(
     async (values) => {
+      if (submissionLockRef.current || retryAfterSeconds > 0) return;
+      submissionLockRef.current = true;
       setIsLoading(true);
       try {
         await registerUser({
@@ -110,10 +128,15 @@ export default function CadastroPage() {
         });
         router.push(`/verificar-email?email=${encodeURIComponent(values.email)}`);
       } catch (error: unknown) {
+        if (error instanceof RegistrationRateLimitError) {
+          setRetryAt(error.retryAt);
+          setClockNow(Date.now());
+        }
         const message =
           error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente.";
         toast({ title: "Erro no cadastro", description: message, variant: "destructive" });
       } finally {
+        submissionLockRef.current = false;
         setIsLoading(false);
       }
     },
@@ -140,6 +163,11 @@ export default function CadastroPage() {
   const usernameError = errs.username?.message;
   const phoneError = errs.phone?.message;
   const termsError = errs.acceptTerms?.message;
+  const retryMinutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  const retryLabel = retryAfterSeconds < 60
+    ? "Tente novamente em menos de 1 minuto"
+    : `Tente novamente em ${retryMinutes} ${retryMinutes === 1 ? "minuto" : "minutos"}`;
+  const registerDisabled = isLoading || retryAfterSeconds > 0;
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
@@ -317,11 +345,15 @@ export default function CadastroPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={registerDisabled}
                 className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm"
                 data-testid="button-register"
               >
-                {isLoading ? "Cadastrando..." : "Criar conta"}
+                {isLoading
+                  ? "Cadastrando..."
+                  : retryAfterSeconds > 0
+                    ? retryLabel
+                    : "Criar conta"}
               </button>
             </form>
 

@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { queryClient } from '@shared/lib/queryClient';
 import { buildLogoutRedirect, type LogoutPersona } from '@features/auth/utils/logout-redirect';
+import { RegistrationRateLimitError } from '@features/auth/utils/register-error';
 
 // Tipos
 interface User {
@@ -296,7 +297,24 @@ export const useAuthStore = create<AuthState>()(
             });
 
             if (!res.ok) {
-              const error = await res.json();
+              const error = await res.json().catch(() => ({})) as {
+                message?: string;
+                retryAfterSeconds?: number;
+                retryAt?: string;
+              };
+              if (res.status === 429) {
+                const retryAfterHeader = Number(res.headers.get('retry-after'));
+                const retryAfterSeconds = Number.isFinite(error.retryAfterSeconds)
+                  ? Math.max(1, Math.ceil(error.retryAfterSeconds!))
+                  : Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+                    ? Math.ceil(retryAfterHeader)
+                    : 60;
+                throw new RegistrationRateLimitError(
+                  error.message || 'Muitas tentativas. Aguarde antes de tentar novamente.',
+                  retryAfterSeconds,
+                  error.retryAt ? Date.parse(error.retryAt) : undefined,
+                );
+              }
               throw new Error(error.message || 'Erro ao criar conta');
             }
           } catch (error) {
