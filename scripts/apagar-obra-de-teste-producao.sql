@@ -25,7 +25,7 @@
 DO $$
 DECLARE
   -- PREENCHA SOMENTE O E-MAIL:
-  v_email_dono text := 'COLE_O_EMAIL_AQUI';
+  v_email_dono text := 'ramon_gds@hotmail.com';
   v_modo text := 'PREVIEW'; -- depois troque para: APAGAR_TODAS
 
   v_total integer;
