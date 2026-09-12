@@ -61,16 +61,21 @@ Para executar o fluxo no sandbox ASAS quando as credenciais estiverem disponíve
 - `PAYMENT_GATEWAY=asaas`
 - URL pública acessível para receber webhooks (usar ngrok ou túnel Replit)
 - Webhook configurado no painel ASAS para apontar ao `POST /api/webhooks/gateway`
+- **`ASAAS_WEBHOOK_TOKEN` definido**, com o mesmo valor no painel ASAS. Em produção o
+  webhook é *fail-closed*: sem token (ou sem `ASAAS_WEBHOOK_IPS`) **todo evento é
+  recusado** e a assinatura nunca ativa. Ver [XG03 §8-A](jornadas-xgestao/03-planos-limites-trial.md).
 
 ### Passo a passo
 
 1. **Criar checkout** — autenticar como `contratante`, acessar `/contratante/planos`,
    selecionar um plano pago e clicar em "Assinar". O sistema chama
-   `POST /api/planos/checkout`, que invoca `AsaasGateway.createCheckout`. A resposta
+   `POST /api/assinaturas/checkout`, que invoca `AsaasGateway.createCheckout`. A resposta
    é um redirect para o checkout hospedado ASAS.
 
-2. **Simular PIX no sandbox** — no checkout ASAS, escolher PIX e usar a opção
-   "Simular pagamento" disponível no ambiente sandbox.
+2. **Pagar com cartão de teste** — o checkout de assinatura é criado com
+   `billingTypes: ["CREDIT_CARD"]`, então **só o cartão é oferecido**; não há PIX para
+   simular nesta tela. Use os [cartões de teste do sandbox](https://docs.asaas.com/docs/testando-pagamento-com-cart%C3%A3o-de-cr%C3%A9dito)
+   — há números que aprovam e números que recusam, e é assim que se exercita cada caminho.
 
 3. **Verificar webhook recebido** — nos logs do servidor, confirmar a linha:
    ```
@@ -84,7 +89,7 @@ Para executar o fluxo no sandbox ASAS quando as credenciais estiverem disponíve
 5. **Simular inadimplência e reativação** (opcional):
    - No painel ASAS sandbox, marcar o próximo pagamento como vencido → confirmar
      webhook `PAYMENT_OVERDUE` → assinatura muda para `inadimplente`.
-   - Simular pagamento do boleto em atraso → confirmar webhook `PAYMENT_CONFIRMED`
+   - Simular a quitação da cobrança em atraso → confirmar webhook `PAYMENT_CONFIRMED`
      com o mesmo `payment.id` → assinatura volta para `ativa`.
 
 ### Validação automatizada do parsing

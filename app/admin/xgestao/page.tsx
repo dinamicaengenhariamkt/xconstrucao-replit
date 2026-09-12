@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { StatsCard } from '@features/shared/components/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -88,9 +89,26 @@ export default function AdminXgestaoPage() {
 
   return (
     <div className="p-6 md:p-10 space-y-8" data-testid="admin-xgestao-page">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">xgestão</h1>
-        <p className="text-sm text-muted-foreground mt-1">Visão operacional e financeira das obras próprias gerenciadas.</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white">xgestão</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão operacional e financeira das obras próprias gerenciadas.</p>
+        </div>
+        <nav className="flex flex-wrap gap-2">
+          {[
+            { href: '/admin/xgestao/obras', label: 'Obras' },
+            { href: '/admin/xgestao/assinantes', label: 'Assinantes' },
+            { href: '/admin/xgestao/financeiro', label: 'Financeiro' },
+          ].map((atalho) => (
+            <Link
+              key={atalho.href}
+              href={atalho.href}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300"
+            >
+              {atalho.label}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -167,7 +185,12 @@ export default function AdminXgestaoPage() {
               <CardTitle className="text-lg">Obras recentes</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">Somente obras próprias de assinantes com acesso xgestão.</p>
             </div>
-            <span className="text-sm font-bold text-muted-foreground">{indicadores?.obrasGerenciadas ?? 0} no total</span>
+            <Link
+              href="/admin/xgestao/obras"
+              className="text-sm font-bold text-muted-foreground transition-colors hover:text-primary"
+            >
+              ver todas ({indicadores?.obrasGerenciadas ?? 0})
+            </Link>
           </CardHeader>
           <CardContent>
             {data?.obras.length ? (
@@ -176,7 +199,13 @@ export default function AdminXgestaoPage() {
                   <div key={obra.id} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_110px_130px] sm:items-center" data-testid={`xgestao-obra-${obra.id}`}>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-bold">{obra.nome}</p>
+                        <Link
+                          href={`/admin/xgestao/obras/${obra.id}`}
+                          className="truncate text-sm font-bold hover:text-primary"
+                          data-testid={`xgestao-obra-detalhe-${obra.id}`}
+                        >
+                          {obra.nome}
+                        </Link>
                         {obra.linkPublicoAtivo && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                             <RiLinkM /> Link ativo
@@ -226,7 +255,13 @@ export default function AdminXgestaoPage() {
             {data?.alertas.itens.length ? (
               <div className="space-y-3">
                 {data.alertas.itens.map((alerta) => (
-                  <div key={alerta.id} className={cn('rounded-xl border p-3', ALERT_STYLE[alerta.severidade])}>
+                  // O alerta leva à obra que o originou: sem isso, saber que há
+                  // uma ocorrência aberta não ajuda a chegar até ela.
+                  <Link
+                    key={alerta.id}
+                    href={`/admin/xgestao/obras/${alerta.obraId}`}
+                    className={cn('block rounded-xl border p-3 transition-opacity hover:opacity-80', ALERT_STYLE[alerta.severidade])}
+                  >
                     <div className="flex items-start gap-2">
                       {alerta.tipo === 'obra_pausada' ? <RiPauseCircleLine className="mt-0.5 shrink-0" /> : <RiAlarmWarningLine className="mt-0.5 shrink-0" />}
                       <div className="min-w-0">
@@ -235,7 +270,7 @@ export default function AdminXgestaoPage() {
                         <p className="mt-1 truncate text-[11px] opacity-70">{alerta.obra}</p>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -261,24 +296,29 @@ export default function AdminXgestaoPage() {
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                     <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Empreiteira</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">E-mail</th>
+                    <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">E-mail</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Plano</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Distribuição</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Entrada</th>
+                    <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Plano</th>
+                    <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Distribuição</th>
+                    <th className="hidden sm:table-cell text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Entrada</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                   {data.assinantes.map((assinante) => (
                     <tr key={assinante.id} data-testid={`xgestao-assinante-${assinante.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                      <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">{assinante.empreiteira}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{assinante.email}</td>
+                      <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">
+                        {assinante.empreiteira}
+                        {/* Reinjeta no mobile o conteúdo das colunas escondidas. */}
+                        <p className="mt-0.5 text-xs font-normal text-gray-400 lg:hidden">{assinante.email}</p>
+                        <p className="mt-0.5 text-xs font-normal text-gray-400 md:hidden">{tierLabel(assinante.plano.tier)}</p>
+                      </td>
+                      <td className="hidden lg:table-cell px-4 py-3 text-gray-600 dark:text-gray-300">{assinante.email}</td>
                       <td className="px-4 py-3 text-right font-semibold">{assinante.obrasGerenciadas}</td>
-                      <td className="px-4 py-3"><span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{tierLabel(assinante.plano.tier)}</span></td>
-                      <td className="px-4 py-3 text-gray-500">
+                      <td className="hidden md:table-cell px-4 py-3"><span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{tierLabel(assinante.plano.tier)}</span></td>
+                      <td className="hidden xl:table-cell px-4 py-3 text-gray-500">
                         {assinante.plano.nome || tierLabel(assinante.plano.tier)}
                       </td>
-                      <td className="px-5 py-3 text-gray-500">{dateFormatter.format(new Date(assinante.entradaEm))}</td>
+                      <td className="hidden sm:table-cell px-5 py-3 text-gray-500">{dateFormatter.format(new Date(assinante.entradaEm))}</td>
                     </tr>
                   ))}
                 </tbody>

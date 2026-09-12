@@ -17,6 +17,10 @@ export async function bootstrapObraShareLinksSchema(): Promise<void> {
         criado_em TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    // Seções visíveis por link (XG04 §8). Nullable de propósito: link emitido
+    // antes desta coluna segue válido e adota os padrões da aplicação — que são
+    // mais restritivos que o comportamento anterior. Sem backfill, por decisão.
+    await db.execute(sql`ALTER TABLE obra_share_links ADD COLUMN IF NOT EXISTS secoes JSONB`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS obra_share_links_token_uniq ON obra_share_links(token)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS obra_share_links_obra_ativo_idx ON obra_share_links(obra_id, ativo)`);
     await db.execute(sql`

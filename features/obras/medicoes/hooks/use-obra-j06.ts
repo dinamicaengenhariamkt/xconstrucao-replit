@@ -210,6 +210,20 @@ export function useCreateFoto(obraId: string) {
   });
 }
 
+/** Liga/desliga o envio da foto ao cliente (link público e visão do contratante). */
+export function useFotoVisibilidade(obraId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fotoId, enviadaAoContratante }: { fotoId: string; enviadaAoContratante: boolean }) =>
+      sendJSON<{ id: string; enviadaAoContratante: boolean }>(
+        'PATCH',
+        `/api/obras/${obraId}/fotos/${fotoId}`,
+        { enviadaAoContratante },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'fotos'] }),
+  });
+}
+
 export function useDeleteFoto(obraId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -20,6 +20,12 @@ export interface XgestaoAdminAssinante {
   email: string;
   obrasGerenciadas: number;
   plano: { tier: XgestaoTier; nome: string };
+  /**
+   * Sempre `null`: não existe período de teste no modelo atual. A mecânica do
+   * trial segue bloqueada por definição comercial (XG03 §8), então o campo é
+   * um espaço reservado, não um dado ausente por falha. A UI não o exibe — ver
+   * o critério de aceite 1 em XG06, corrigido em 2026-09-02.
+   */
   fimTeste: string | null;
   entradaEm: string;
 }

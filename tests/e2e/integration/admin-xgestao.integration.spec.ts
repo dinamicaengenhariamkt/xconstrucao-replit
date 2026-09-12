@@ -229,4 +229,112 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     expect((await request.get('/api/admin/xgestao')).status()).toBe(403);
     await logout(request);
   });
+
+  test('as páginas do produto listam, filtram e detalham somente obras do xgestão', async ({ request }) => {
+    const tag = `XG06 lista ${Date.now()}`;
+
+    // Assinante xgestão com obra própria.
+    const empreiteiroEmail = await registrar(request, 'empreiteiro', 'admin-xgestao-lista');
+    await loginAs(request, empreiteiroEmail);
+    await completarPerfilOperacional(request, 'empreiteiro');
+    await logout(request);
+    await concederXGestao(request, empreiteiroEmail);
+
+    await loginAs(request, empreiteiroEmail);
+    const criada = await request.post('/api/xgestao/obras', {
+      data: { nome: `${tag} própria`, endereco: 'Rua da listagem, 100' },
+    });
+    expect(criada.status(), await criada.text()).toBe(201);
+    const obraXgestao = (await criada.json()) as { id: string };
+    await logout(request);
+
+    // Obra de marketplace, que serve de controle: tem contratante e por isso
+    // não pode aparecer em nenhuma rota do produto.
+    const contratanteEmail = await registrar(request, 'contratante', 'admin-xgestao-mkt');
+    await loginAs(request, contratanteEmail);
+    await completarPerfilOperacional(request, 'contratante');
+    const obraMarketplace = await request.post('/api/obras', {
+      data: { nome: `${tag} marketplace`, endereco: 'Rua do marketplace, 200', tipo: 'Reforma' },
+    });
+    expect(obraMarketplace.status(), await obraMarketplace.text()).toBe(201);
+    const obraMarketplaceBody = (await obraMarketplace.json()) as { id: string };
+    await logout(request);
+
+    await loginAs(request, SEED_ADMIN_EMAIL);
+
+    const lista = await request.get('/api/admin/xgestao/obras?q=' + encodeURIComponent(tag));
+    expect(lista.status(), await lista.text()).toBe(200);
+    const listaBody = (await lista.json()) as {
+      rows: Array<{ id: string; nome: string }>;
+      total: number;
+      empreiteiras: Array<{ id: string; nome: string }>;
+    };
+    const ids = listaBody.rows.map((linha) => linha.id);
+    expect(ids).toContain(obraXgestao.id);
+    expect(ids).not.toContain(obraMarketplaceBody.id);
+
+    // A busca é o que substitui o corte fixo de 12 obras do painel.
+    const semResultado = await request.get('/api/admin/xgestao/obras?q=inexistente-' + Date.now());
+    expect(((await semResultado.json()) as { rows: unknown[] }).rows).toHaveLength(0);
+
+    const detalhe = await request.get(`/api/admin/xgestao/obras/${obraXgestao.id}`);
+    expect(detalhe.status(), await detalhe.text()).toBe(200);
+    const detalheBody = (await detalhe.json()) as {
+      obra: { id: string };
+      assinante: { empreiteiraId: string };
+      lucro: { metrics: { margem: number } };
+      linkPublico: { ativo: boolean };
+    };
+    expect(detalheBody.obra.id).toBe(obraXgestao.id);
+    expect(detalheBody.assinante.empreiteiraId).toBeTruthy();
+    expect(detalheBody.lucro.metrics).toHaveProperty('margem');
+    expect(detalheBody.linkPublico.ativo).toBe(false);
+
+    // O detalhe do produto não pode virar porta lateral para o marketplace.
+    expect((await request.get(`/api/admin/xgestao/obras/${obraMarketplaceBody.id}`)).status()).toBe(404);
+
+    const assinantes = await request.get('/api/admin/xgestao/assinantes');
+    expect(assinantes.status()).toBe(200);
+    const assinantesBody = (await assinantes.json()) as {
+      rows: Array<{ email: string; plano: { tier: string; valorMensal: number } }>;
+    };
+    const assinante = assinantesBody.rows.find((linha) => linha.email === empreiteiroEmail);
+    expect(assinante).toBeTruthy();
+    // Sem assinatura paga, o assinante aparece no free — e o painel mostra o
+    // valor do plano, que a versão anterior nunca exibia.
+    expect(assinante!.plano.tier).toBe('free');
+    expect(assinante!.plano).toHaveProperty('valorMensal');
+
+    const financeiro = await request.get('/api/admin/xgestao/financeiro');
+    expect(financeiro.status()).toBe(200);
+    const financeiroBody = (await financeiro.json()) as {
+      lucro: { metrics: { receitaTotal: number } };
+      faturamento: { receitaAcumulada: number; receitaRecorrenteMensal: number };
+    };
+    expect(financeiroBody.lucro.metrics).toHaveProperty('receitaTotal');
+    expect(financeiroBody.faturamento).toHaveProperty('receitaRecorrenteMensal');
+    await logout(request);
+  });
+
+  test('as rotas novas do produto exigem administrador', async ({ request }) => {
+    await logout(request);
+    for (const rota of [
+      '/api/admin/xgestao/obras',
+      '/api/admin/xgestao/assinantes',
+      '/api/admin/xgestao/financeiro',
+    ]) {
+      expect((await request.get(rota)).status(), rota).toBe(401);
+    }
+
+    const email = await registrar(request, 'empreiteiro', 'admin-xgestao-rotas-negadas');
+    await loginAs(request, email);
+    for (const rota of [
+      '/api/admin/xgestao/obras',
+      '/api/admin/xgestao/assinantes',
+      '/api/admin/xgestao/financeiro',
+    ]) {
+      expect((await request.get(rota)).status(), rota).toBe(403);
+    }
+    await logout(request);
+  });
 });

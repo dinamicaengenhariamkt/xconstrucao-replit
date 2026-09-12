@@ -7,7 +7,8 @@ import { Button } from '@shared/components/ui/button';
 import { FileUploader } from '@features/shared/components/FileUploader';
 import { RiDeleteBinLine } from 'react-icons/ri';
 import { useToast } from '@shared/hooks/use-toast';
-import { useObraFotos, useCreateFoto, useDeleteFoto } from '../hooks/use-obra-j06';
+import { Switch } from '@shared/components/ui/switch';
+import { useObraFotos, useCreateFoto, useDeleteFoto, useFotoVisibilidade } from '../hooks/use-obra-j06';
 import type { FotoJ06Data, J06DataSource } from './types';
 
 interface Props extends J06DataSource<FotoJ06Data> {
@@ -24,7 +25,29 @@ export function FotosJ06Card({ obraId, canWrite, currentUserId, currentUserRole,
   const isLoading = injected ? (isLoadingProp ?? false) : query.isLoading;
   const createMut = useCreateFoto(obraId);
   const deleteMut = useDeleteFoto(obraId);
+  const visibilidadeMut = useFotoVisibilidade(obraId);
   const { toast } = useToast();
+
+  // Espelha o guard de `PATCH /api/obras/[id]/fotos/[fotoId]`: quem executa a
+  // obra cura o que vai ao cliente. `canWrite` sozinho incluiria o contratante,
+  // que veria — e poderia reverter — a curadoria do empreiteiro.
+  const podeCurar =
+    canWrite &&
+    (currentUserRole === 'empreiteiro' ||
+      currentUserRole === 'admin' ||
+      currentUserRole === 'superadmin');
+
+  const handleVisibilidade = async (fotoId: string, enviadaAoContratante: boolean) => {
+    if (!podeCurar) return;
+    try {
+      await visibilidadeMut.mutateAsync({ fotoId, enviadaAoContratante });
+      toast({
+        title: enviadaAoContratante ? 'Foto visível ao cliente' : 'Foto marcada como interna',
+      });
+    } catch (e) {
+      toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' });
+    }
+  };
 
   const handleUpload = async (fileId: string) => {
     if (!canWrite) return;
@@ -74,6 +97,26 @@ export function FotosJ06Card({ obraId, canWrite, currentUserId, currentUserRole,
                   <div className="p-2 text-xs">
                      <p className="font-medium truncate">{f.autorNome ?? 'Equipe da obra'}</p>
                     <p className="text-muted-foreground">{formatDistanceToNow(new Date(f.createdAt), { addSuffix: true, locale: ptBR })}</p>
+                    {/* Só quem executa a obra cura o que vai ao cliente — o
+                        mesmo predicado do PATCH. O contratante enxerga as fotos
+                        mas não decide quais lhe são mostradas. A checagem de
+                        `undefined` mantém chamadores antigos sem o controle. */}
+                    {podeCurar && f.enviadaAoContratante !== undefined && (
+                      <label className="mt-2 flex cursor-pointer items-center gap-2 border-t pt-2">
+                        <Switch
+                          checked={f.enviadaAoContratante}
+                          // Só o switch em voo trava: desabilitar por
+                          // `isPending` global congelaria a grade inteira a
+                          // cada clique numa obra com dezenas de fotos.
+                          disabled={visibilidadeMut.isPending && visibilidadeMut.variables?.fotoId === f.id}
+                          onCheckedChange={(marcado) => handleVisibilidade(f.id, marcado)}
+                          data-testid={`foto-visivel-${f.id}`}
+                        />
+                        <span className="text-muted-foreground">
+                          {f.enviadaAoContratante ? 'Visível ao cliente' : 'Só interna'}
+                        </span>
+                      </label>
+                    )}
                   </div>
                   {canDelete && (
                     <Button

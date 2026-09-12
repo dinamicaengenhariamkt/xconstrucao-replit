@@ -286,6 +286,10 @@ export const obraShareLinks = pgTable(
     criadoPor: varchar("criado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
     ativo: boolean("ativo").notNull().default(true),
     expiraEm: timestamp("expira_em"),
+    // Seções que este link expõe. NULL = padrões de `SECOES_PADRAO` — que são
+    // mais restritivos que o comportamento anterior à coluna: link antigo passa
+    // a esconder diário e ocorrências até o dono ligá-los (ver `secoes.ts`).
+    secoes: jsonb("secoes").$type<Record<string, boolean>>(),
     visualizacoes: integer("visualizacoes").notNull().default(0),
     ultimoAcessoEm: timestamp("ultimo_acesso_em"),
     criadoEm: timestamp("criado_em").notNull().defaultNow(),

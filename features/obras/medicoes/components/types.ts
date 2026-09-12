@@ -33,4 +33,4 @@ export type OcorrenciaJ06Data = Pick<
 export type FotoJ06Data = Pick<
   ObraFotoApi,
   'id' | 'fileId' | 'url' | 'fase' | 'tag' | 'createdAt'
-> & Partial<Pick<ObraFotoApi, 'autorId' | 'autorNome'>>;
+> & Partial<Pick<ObraFotoApi, 'autorId' | 'autorNome' | 'enviadaAoContratante'>>;

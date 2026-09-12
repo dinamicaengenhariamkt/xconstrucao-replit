@@ -21,6 +21,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG07](07-integracao-sinapi.md) | Integração SINAPI (preços de referência) | — | ❄️ **congelada** | — | — |
 | [XG08](08-visao-obra-read-only.md) | Visão da obra em modo leitura | 4 | pronto | alta | **médio-alto** |
 | [XG09](09-administracao-obra-ponta-a-ponta.md) | Administração da obra ponta a ponta | 9 | pronto | alta | baixo |
+| [XG11](11-offline-pwa.md) | Uso offline e instalação no celular | — | planejada | baixa | — |
 
 ## Contexto
 
@@ -94,6 +95,14 @@ Sobraram **2**. Nenhuma bloqueia o desenvolvimento já entregue.
 
 1. **Preços finais e composição funcional dos 3 planos** — bloqueia apenas [XG03 §8](03-planos-limites-trial.md) (a mecânica do teste) e o seed de preços. O cliente ficou de enviar o documento (18:44). **Atenção:** a reunião 002 (*"ele vai ter o acesso ao plano dele"*, 14:41) **contradiz** o PDF de monetização (*"3 meses 100% grátis irrestrito"*). São implementações diferentes — a segunda exige um job de downgrade inteiro. Resolver antes de codificar §8.
 2. **Fim do teste com obras acima do limite** — o que acontece quando o período acaba e o usuário tem mais obras que o plano permite. Depende da resposta 1. A recomendação da jornada continua valendo: **nunca retirar acesso de leitura**, bloquear apenas a criação de novas.
+
+### Pendência de configuração (não bloqueia desenvolvimento)
+
+**`ASAAS_WEBHOOK_TOKEN` não está definido no ambiente publicado.** O gateway já roda em
+sandbox e o cartão de teste chega a aprovar, mas a ativação do plano depende do webhook, que
+é *fail-closed* em produção — sem o token, todo evento é recusado e **a assinatura não
+ativa**. É uma variável e um apontamento no painel Asaas, sem código.
+Checklist em [XG03 §8-A](03-planos-limites-trial.md).
 ### Respondidas em 2026-08-19
 
 | Pergunta original | Resposta |
@@ -103,7 +112,7 @@ Sobraram **2**. Nenhuma bloqueia o desenvolvimento já entregue.
 | ~~Custo do plano PRO do Orçamentador (R$ 79,90/mês) entra no orçamento?~~ | Prejudicada — SINAPI congelado |
 | ~~Quota de consultas SINAPI por plano~~ | Prejudicada — SINAPI congelado |
 | ~~Jornada do anunciante neste MVP?~~ | **Congelada** (16:04) |
-| ~~O que a visão admin precisa mostrar?~~ | Não respondida, mas **despriorizada** — XG06 é a última da ordem e não bloqueia o MVP |
+| ~~O que a visão admin precisa mostrar?~~ | **Respondida em 2026-09-02**, na revisão do produto: obras com filtro, detalhe de cada obra, lucro do assinante, receita da plataforma e saúde — "enxuto, mas navegável". Ver [XG06 §8](06-admin-xgestao.md). O escopo mínimo anterior era um chute para destravar o MVP, e não se sustentou no uso |
 | ~~Domínio xconstrução~~ | **Resolvido em 2026-08-28** — `dinamicareforma.com.br` está apontado e serve a publicação ativa. |
 
 > Ao receber respostas às 2 pendências restantes, atualizar **os dois** — este índice e o script [`gerar-pdf-xgestao.py`](../../scripts/gerar-pdf-xgestao.py), que é a fonte do PDF entregue ao cliente.

@@ -7,6 +7,7 @@ import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card
 import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
 import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
 import { ObraPublicaShell } from '@features/xgestao/obra-publica/components/ObraPublicaShell';
+import { SECOES_PADRAO } from '@features/xgestao/obra-publica/secoes';
 
 const client = new QueryClient();
 const calls: string[] = [];
@@ -82,6 +83,7 @@ try {
             progresso: 35,
             cidade: 'São Paulo',
             uf: 'SP',
+            logradouro: null,
             dataInicio: '2026-09-10',
             dataPrevisao: '2027-02-20',
             imagemUrl: null,
@@ -93,6 +95,8 @@ try {
           fotos: [],
           atualizacoes: [],
           checklists: [],
+          tarefas: [],
+          secoes: SECOES_PADRAO,
         },
       }),
     ),
@@ -121,6 +125,7 @@ try {
             progresso: 0,
             cidade: null,
             uf: null,
+            logradouro: null,
             dataInicio: null,
             dataPrevisao: null,
             imagemUrl: null,
@@ -132,6 +137,8 @@ try {
           fotos: [],
           atualizacoes: [],
           checklists: [],
+          tarefas: [],
+          secoes: SECOES_PADRAO,
         },
       }),
     ),

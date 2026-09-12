@@ -144,6 +144,32 @@ test.describe('xgestão — link público de obra', () => {
     expect(reexibida.status()).toBe(200);
     expect(await reexibida.json()).toMatchObject({ share: { path: first.share.path } });
 
+    // Ocorrências não saem por padrão: o link nasce sem o conteúdo operacional
+    // interno, e é o dono quem decide publicá-lo.
+    await logout(request);
+    const semOcorrencias = await request.get(first.share.path);
+    expect(semOcorrencias.status()).toBe(200);
+    expect(await semOcorrencias.text()).not.toContain('Vistoria E2E');
+
+    await loginAs(request, ownerEmail);
+    const liberada = await request.patch(`/api/xgestao/obras/${obra.id}/share`, {
+      data: {
+        secoes: {
+          etapas: true,
+          atualizacoes: true,
+          fotos: true,
+          checklists: true,
+          diario: true,
+          ocorrencias: true,
+          tarefas: true,
+          localizacao: false,
+        },
+      },
+    });
+    expect(liberada.status(), await liberada.text()).toBe(200);
+    // Alterar o que o link mostra não pode trocar o endereço já enviado.
+    expect(await liberada.json()).toMatchObject({ share: { path: first.share.path } });
+
     await logout(request);
     const publica = await request.get(first.share.path);
     expect(publica.status(), await publica.text()).toBe(200);
@@ -268,5 +294,58 @@ test.describe('xgestão — link público de obra', () => {
     expect(excluida.status(), await excluida.text()).toBe(200);
     await logout(request);
     expect((await request.get(deletedPath)).status()).toBe(404);
+  });
+
+  test('somente quem executa a obra decide quais fotos vão ao cliente', async ({ request }) => {
+    const ownerEmail = await registrarEmpreiteiro(request, 'xgestao-curadoria');
+    await loginAs(request, ownerEmail);
+    await completarPerfilOperacional(request, 'empreiteiro');
+    await logout(request);
+    await concederXGestao(request, ownerEmail);
+
+    await loginAs(request, ownerEmail);
+    const criada = await request.post('/api/xgestao/obras', {
+      data: { nome: 'Obra curadoria E2E', endereco: 'Rua da curadoria, 1' },
+    });
+    expect(criada.status(), await criada.text()).toBe(201);
+    const obra = (await criada.json()) as { id: string };
+
+    const arquivo = await request.post('/api/test/file-setup', {
+      data: { email: ownerEmail, kind: 'obra_foto', originalName: 'curadoria-e2e.jpg', mime: 'image/jpeg' },
+    });
+    expect(arquivo.status(), await arquivo.text()).toBe(200);
+    const { fileId } = (await arquivo.json()) as { fileId: string };
+    const foto = await request.post(`/api/obras/${obra.id}/fotos`, { data: { fileId } });
+    expect(foto.status(), await foto.text()).toBe(201);
+    const fotoId = ((await foto.json()) as { id: string }).id;
+
+    // O dono da obra alterna a visibilidade — o controle que a tela prometia.
+    const desmarcar = await request.patch(`/api/obras/${obra.id}/fotos/${fotoId}`, {
+      data: { enviadaAoContratante: false },
+    });
+    expect(desmarcar.status(), await desmarcar.text()).toBe(200);
+    expect((await desmarcar.json()).enviadaAoContratante).toBe(false);
+
+    const remarcar = await request.patch(`/api/obras/${obra.id}/fotos/${fotoId}`, {
+      data: { enviadaAoContratante: true },
+    });
+    expect(remarcar.status()).toBe(200);
+    expect((await remarcar.json()).enviadaAoContratante).toBe(true);
+
+    // Valor não-booleano é recusado, e não interpretado como falso.
+    expect((await request.patch(`/api/obras/${obra.id}/fotos/${fotoId}`, {
+      data: { enviadaAoContratante: 'nao' },
+    })).status()).toBe(400);
+    await logout(request);
+
+    // Empreiteiro de outra empresa não enxerga nem cura a obra alheia.
+    const outroEmail = await registrarEmpreiteiro(request, 'xgestao-curadoria-outro');
+    await loginAs(request, outroEmail);
+    await completarPerfilOperacional(request, 'empreiteiro');
+    const alheio = await request.patch(`/api/obras/${obra.id}/fotos/${fotoId}`, {
+      data: { enviadaAoContratante: false },
+    });
+    expect([403, 404]).toContain(alheio.status());
+    await logout(request);
   });
 });

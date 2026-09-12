@@ -13,6 +13,13 @@ import {
   RiShareLine,
 } from 'react-icons/ri';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
+import {
+  toAbsoluteShareUrl,
+  useAtualizarSecoes,
+  useObraShare,
+} from '@features/xgestao/obra-publica/hooks/use-obra-share';
+import { SECAO_LABELS, SECOES_PUBLICAS } from '@features/xgestao/obra-publica/secoes';
+import { Switch } from '@shared/components/ui/switch';
 import { IconHelpOutline } from '@shared/components/icons';
 import { GuidedTour, type TourStep } from './GuidedTour';
 import { useGuidedTour } from '../hooks/use-guided-tour';
@@ -118,6 +125,12 @@ async function patchObra(obraId: string, payload: Record<string, unknown>): Prom
   return body as ObraEditavel;
 }
 
+const dataFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
+
+function formatarData(iso: string): string {
+  return dataFormatter.format(new Date(iso));
+}
+
 function formFromObra(obra: ObraEditavel): FormState {
   return {
     nome: obra.nome ?? '',
@@ -189,6 +202,22 @@ function Field({
 }
 
 /**
+ * Passos do cadastro, na ordem em que aparecem na navegação lateral.
+ *
+ * A ordem é contrato: `completion.sections` produz um booleano por entrada
+ * desta lista, e o índice é o que casa as duas. Ao acrescentar um passo aqui,
+ * acrescente a marcação correspondente — foi a dessincronia entre as duas
+ * listas que fazia o passo "Link público" nunca completar.
+ */
+const SECTIONS = [
+  { id: 'informacoes', label: 'Informações gerais' },
+  { id: 'localizacao', label: 'Localização' },
+  { id: 'planejamento', label: 'Prazos e status' },
+  { id: 'capa', label: 'Imagem de capa' },
+  { id: 'link-publico', label: 'Link público' },
+] as const;
+
+/**
  * Roteiro da edição: cada passo diz o que a seção controla e, quando é o caso,
  * o que ela faz aparecer no link público — a dúvida mais comum de quem edita.
  */
@@ -203,7 +232,7 @@ const TOUR_EDICAO: TourStep[] = [
     target: '#localizacao',
     title: 'Localização',
     description:
-      'Endereço completo para uso interno. No link público o cliente vê apenas cidade e UF — o endereço exato fica protegido.',
+      'Endereço completo para uso interno. No link público o cliente vê cidade e UF; a rua só aparece se você liberar. Número e CEP nunca são compartilhados.',
   },
   {
     target: '#planejamento',
@@ -221,7 +250,7 @@ const TOUR_EDICAO: TourStep[] = [
     target: '#link-publico',
     title: 'Link público',
     description:
-      'Gere o link para o cliente acompanhar sem criar conta. Dá para revogar quando quiser — quem tiver o link perde o acesso na hora.',
+      'Gere o link para o cliente acompanhar sem criar conta e escolha o que ele vê. Dá para revogar quando quiser — quem tiver o link perde o acesso na hora.',
   },
 ];
 
@@ -247,6 +276,10 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     queryKey: ['obras', obraId, 'fotos'],
     queryFn: () => getJson<{ rows: FotoDaObra[] }>(`/api/obras/${obraId}/fotos`).then((data) => data.rows),
   });
+  // Mesma query que o CompartilharModal consome: gerar ou revogar lá reflete
+  // aqui, no checklist e no painel de status, sem sincronização manual.
+  const shareQuery = useObraShare(obraId);
+  const secoesMutation = useAtualizarSecoes(obraId);
 
   useEffect(() => {
     if (!obraQuery.data || initialized) return;
@@ -258,15 +291,19 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     setInitialized(true);
   }, [initialized, obraQuery.data]);
 
+  // Uma entrada por seção da navegação, na mesma ordem de `SECTIONS`. O link
+  // público é o único passo que não vem do formulário: seu estado é a
+  // existência da capability, por isso entra pela query e não pelo `form`.
   const completion = useMemo(() => {
     const sections = [
       Boolean(form.nome.trim() && form.tipo.trim()),
       Boolean(form.endereco.trim() && form.cidade.trim() && form.uf.trim()),
       Boolean(form.dataInicio && form.dataPrevisao),
       Boolean(cover.fileId),
+      Boolean(shareQuery.data),
     ];
     return { sections, total: sections.filter(Boolean).length };
-  }, [cover.fileId, form]);
+  }, [cover.fileId, form, shareQuery.data]);
 
   const update = (key: keyof FormState, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -362,13 +399,8 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     );
   }
 
-  const sections = [
-    { id: 'informacoes', label: 'Informações gerais' },
-    { id: 'localizacao', label: 'Localização' },
-    { id: 'planejamento', label: 'Prazos e status' },
-    { id: 'capa', label: 'Imagem de capa' },
-    { id: 'link-publico', label: 'Link público' },
-  ];
+  const shareLink = shareQuery.data ?? null;
+  const shareUrl = toAbsoluteShareUrl(shareLink);
 
   return (
     <div className="mx-auto max-w-7xl p-4 pb-28 sm:p-6 md:p-10" data-testid="xgestao-editar-obra-page">
@@ -405,19 +437,19 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
           <div className="mb-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold">Progresso do cadastro</span>
-              <span className="font-bold text-primary">
-                {completion.total}/{completion.sections.length}
+              <span className="font-bold text-primary" data-testid="xgestao-progresso-cadastro">
+                {completion.total}/{SECTIONS.length}
               </span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
               <div
                 className="h-full bg-primary transition-all"
-                style={{ width: `${(completion.total / completion.sections.length) * 100}%` }}
+                style={{ width: `${(completion.total / SECTIONS.length) * 100}%` }}
               />
             </div>
           </div>
           <nav className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-            {sections.map((section, index) => (
+            {SECTIONS.map((section, index) => (
               <a
                 key={section.id}
                 href={`#${section.id}`}
@@ -603,13 +635,41 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
             icon={RiShareLine}
           >
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Quem abrir o link vê progresso, etapas, atualizações, fotos, diário e ocorrências —
-                somente leitura.
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
+                    shareLink
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+                  )}
+                  data-testid="xgestao-link-status"
+                >
+                  {shareLink ? <RiCheckLine /> : <RiShareLine />}
+                  {shareQuery.isLoading ? 'Consultando…' : shareLink ? 'Link ativo' : 'Nenhum link gerado'}
+                </span>
+                {shareLink && (
+                  <span className="text-xs text-gray-500" data-testid="xgestao-link-metricas">
+                    {shareLink.visualizacoes === 0
+                      ? 'Ainda não foi aberto'
+                      : `${shareLink.visualizacoes} ${shareLink.visualizacoes === 1 ? 'visualização' : 'visualizações'}`}
+                    {shareLink.ultimoAcessoEm && ` · último acesso em ${formatarData(shareLink.ultimoAcessoEm)}`}
+                  </span>
+                )}
+              </div>
+
+              {shareLink && (
+                <p className="mt-3 break-all rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                  {shareUrl}
+                </p>
+              )}
+
+              <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                O cliente acompanha a obra somente leitura, sem criar conta.
               </p>
               <p className="mt-2 text-xs text-gray-500">
-                Valores, equipe e endereço exato nunca são compartilhados. As fotos aparecem apenas
-                quando marcadas para envio ao cliente.
+                Valores, lucro, equipe e o endereço exato nunca são compartilhados.
+                {shareLink?.expiraEm && ` Este link expira em ${formatarData(shareLink.expiraEm)}.`}
               </p>
               <Button
                 type="button"
@@ -621,6 +681,54 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
                 Gerenciar link público
               </Button>
             </div>
+
+            {/* Só faz sentido escolher o conteúdo quando há um link ativo; sem
+                ele não existe nada publicado para restringir. */}
+            {shareLink && (
+              <div className="mt-5">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">O que o cliente vê</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Vale só para este link. Desmarcar esconde a seção na hora, sem trocar o endereço.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {SECOES_PUBLICAS.map((secao) => (
+                    <label
+                      key={secao}
+                      htmlFor={`secao-${secao}`}
+                      className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                          {SECAO_LABELS[secao].titulo}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-gray-500">
+                          {SECAO_LABELS[secao].descricao}
+                        </span>
+                      </span>
+                      <Switch
+                        id={`secao-${secao}`}
+                        checked={shareLink.secoes[secao]}
+                        disabled={secoesMutation.isPending}
+                        onCheckedChange={(marcado) =>
+                          secoesMutation.mutate(
+                            { ...shareLink.secoes, [secao]: marcado },
+                            {
+                              onError: () =>
+                                toast({
+                                  title: 'Não foi possível atualizar o link',
+                                  description: 'A alteração foi desfeita. Tente novamente.',
+                                  variant: 'destructive',
+                                }),
+                            },
+                          )
+                        }
+                        data-testid={`xgestao-secao-${secao}`}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </Section>
 
           <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 sm:flex-row sm:items-center sm:justify-end">

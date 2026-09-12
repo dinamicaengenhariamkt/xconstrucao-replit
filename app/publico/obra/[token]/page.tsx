@@ -34,7 +34,7 @@ export default async function ObraPublicaPage({
   const shared = await resolveActiveObraShareToken(token);
   if (!shared) notFound();
 
-  const view = await buildObraPublicaView(shared.obraId);
+  const view = await buildObraPublicaView(shared.obraId, shared.secoes);
   // Obra excluída, ou qualquer falha em montar a visão, não deve revelar se o
   // token já existiu.
   if (!view) notFound();

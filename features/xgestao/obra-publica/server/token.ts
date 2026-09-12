@@ -4,6 +4,7 @@ import { randomBytes } from 'crypto';
 import { and, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { empreiteiras, obraShareLinks, obras, userRoles } from '@shared/db/schema';
+import { normalizarSecoes, type SecoesPublicas } from '../secoes';
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -13,6 +14,9 @@ export type ObraShareLink = {
   token: string;
   expiraEm: Date | null;
   criadoEm: Date;
+  visualizacoes: number;
+  ultimoAcessoEm: Date | null;
+  secoes: SecoesPublicas;
 };
 
 function activeLinkWhere(obraId: string) {
@@ -30,6 +34,9 @@ function toShareLink(row: typeof obraShareLinks.$inferSelect): ObraShareLink {
     token: row.token,
     expiraEm: row.expiraEm,
     criadoEm: row.criadoEm,
+    visualizacoes: row.visualizacoes,
+    ultimoAcessoEm: row.ultimoAcessoEm,
+    secoes: normalizarSecoes(row.secoes),
   };
 }
 
@@ -51,6 +58,7 @@ export async function createOrRotateObraShareLink(
   obraId: string,
   criadoPor: string,
   expiraEm: Date | null = null,
+  secoes: SecoesPublicas | null = null,
 ): Promise<ObraShareLink> {
   const token = randomBytes(32).toString('base64url');
 
@@ -58,6 +66,14 @@ export async function createOrRotateObraShareLink(
     // Serializa emissões concorrentes por obra e preserva a regra de uma
     // capability ativa sem expor o token em logs.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${obraId}))`);
+
+    // Rotacionar preserva a escolha de visibilidade do link anterior: trocar o
+    // endereço não deveria, sozinho, republicar seções que o dono desligou.
+    const [anterior] = await tx
+      .select({ secoes: obraShareLinks.secoes })
+      .from(obraShareLinks)
+      .where(and(eq(obraShareLinks.obraId, obraId), eq(obraShareLinks.ativo, true)));
+
     await tx
       .update(obraShareLinks)
       .set({ ativo: false })
@@ -65,11 +81,27 @@ export async function createOrRotateObraShareLink(
 
     const [created] = await tx
       .insert(obraShareLinks)
-      .values({ obraId, token, criadoPor, expiraEm })
+      .values({ obraId, token, criadoPor, expiraEm, secoes: secoes ?? anterior?.secoes ?? null })
       .returning();
 
     return toShareLink(created);
   });
+}
+
+/**
+ * Altera o que o link expõe sem trocar o token. Ajustar visibilidade não pode
+ * invalidar o endereço que o cliente já tem salvo.
+ */
+export async function updateObraShareSecoes(
+  obraId: string,
+  secoes: SecoesPublicas,
+): Promise<ObraShareLink | null> {
+  const [updated] = await db
+    .update(obraShareLinks)
+    .set({ secoes })
+    .where(activeLinkWhere(obraId))
+    .returning();
+  return updated ? toShareLink(updated) : null;
 }
 
 /** Revoga a capability atual, mantendo toda a linha como histórico. */
@@ -86,10 +118,12 @@ export async function revokeObraShareLink(obraId: string): Promise<boolean> {
  * Resolve o token para a página pública. Retornar null intencionalmente une
  * token malformado, inexistente, expirado e revogado no mesmo estado externo.
  */
-export async function resolveActiveObraShareToken(token: string): Promise<{ linkId: string; obraId: string } | null> {
+export async function resolveActiveObraShareToken(
+  token: string,
+): Promise<{ linkId: string; obraId: string; secoes: SecoesPublicas } | null> {
   if (!TOKEN_PATTERN.test(token)) return null;
   const [link] = await db
-    .select({ linkId: obraShareLinks.id, obraId: obraShareLinks.obraId })
+    .select({ linkId: obraShareLinks.id, obraId: obraShareLinks.obraId, secoes: obraShareLinks.secoes })
     .from(obraShareLinks)
     .innerJoin(obras, eq(obras.id, obraShareLinks.obraId))
     .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
@@ -103,7 +137,8 @@ export async function resolveActiveObraShareToken(token: string): Promise<{ link
       eq(userRoles.role, 'xgestao'),
       or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
     ));
-  return link ?? null;
+  if (!link) return null;
+  return { linkId: link.linkId, obraId: link.obraId, secoes: normalizarSecoes(link.secoes) };
 }
 
 /** Contador best-effort: não deve atrasar nem impedir a página pública. */

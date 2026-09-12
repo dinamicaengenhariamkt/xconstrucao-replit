@@ -8,12 +8,29 @@ import {
   createOrRotateObraShareLink,
   getActiveObraShareLink,
   revokeObraShareLink,
+  updateObraShareSecoes,
   type ObraShareLink,
 } from '@features/xgestao/obra-publica/server/token';
+import { SECOES_PUBLICAS, type SecaoPublica } from '@features/xgestao/obra-publica/secoes';
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+// Só as chaves conhecidas entram; `strict` rejeita seção inventada em vez de
+// ignorá-la em silêncio, para que um erro de digitação apareça no cliente.
+const secoesSchema = z
+  .object(Object.fromEntries(SECOES_PUBLICAS.map((secao) => [secao, z.boolean()])) as Record<
+    SecaoPublica,
+    z.ZodBoolean
+  >)
+  .strict();
+
 const createShareSchema = z.object({
   expiraEm: z.string().datetime().optional().nullable(),
+  secoes: secoesSchema.optional(),
+});
+
+const patchShareSchema = z.object({
+  secoes: secoesSchema,
 });
 
 function response(data: unknown, status = 200) {
@@ -29,6 +46,11 @@ function sharePayload(link: ObraShareLink) {
       path,
       expiraEm: link.expiraEm?.toISOString() ?? null,
       criadoEm: link.criadoEm.toISOString(),
+      // Métricas de uso da capability: já eram gravadas por recordObraShareView,
+      // faltava devolvê-las para o dono acompanhar se o cliente abriu o link.
+      visualizacoes: link.visualizacoes,
+      ultimoAcessoEm: link.ultimoAcessoEm?.toISOString() ?? null,
+      secoes: link.secoes,
     },
   };
 }
@@ -79,10 +101,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const parsed = createShareSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    return response({ message: 'Data de expiração inválida.' }, 400);
+    return response({ message: 'Dados do link inválidos.' }, 400);
   }
   const expiraEm = parsed.data.expiraEm ? new Date(parsed.data.expiraEm) : null;
-  const link = await createOrRotateObraShareLink(id, access.user.id, expiraEm);
+  const link = await createOrRotateObraShareLink(id, access.user.id, expiraEm, parsed.data.secoes ?? null);
   void recordAudit({
     actorId: access.user.id,
     action: 'xgestao.obra_share.emitido',
@@ -90,6 +112,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
     request,
   });
   return response(sharePayload(link), 201);
+}
+
+/**
+ * PATCH altera o que o link mostra, preservando o token: ajustar visibilidade
+ * não pode invalidar o endereço que o cliente já tem salvo.
+ */
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const { id } = await context.params;
+  const access = await requireXgestaoObraAccess(request, id);
+  if (access.error || !access.user) return access.error!;
+
+  const parsed = patchShareSchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) {
+    return response({ message: 'Seções inválidas.' }, 400);
+  }
+
+  const link = await updateObraShareSecoes(id, parsed.data.secoes);
+  if (!link) return response({ message: 'Nenhum link ativo para esta obra.' }, 404);
+
+  void recordAudit({
+    actorId: access.user.id,
+    action: 'xgestao.obra_share.secoes_alteradas',
+    payload: { obraId: id, secoes: parsed.data.secoes },
+    request,
+  });
+  return response(sharePayload(link));
 }
 
 /** DELETE revoga a capability ativa e preserva a linha para histórico. */

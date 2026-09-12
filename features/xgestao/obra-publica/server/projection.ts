@@ -9,11 +9,13 @@ import {
   obraEtapas,
   obraFotos,
   obraOcorrencias,
+  obraTarefas,
   medicoes,
   obras,
   userFiles,
 } from '@shared/db/schema';
 import type { ObraPublicaView } from '../types';
+import { SECOES_PADRAO, type SecoesPublicas } from '../secoes';
 import { createSignedReadUrl } from '@shared/lib/storage/r2';
 
 const PUBLIC_LINK_MEDIA_TTL_SECONDS = 12 * 60 * 60;
@@ -38,7 +40,10 @@ function mostRecent(...dates: Array<Date | string | null | undefined>): string |
  * lê campos financeiros, contatos ou identificadores de pessoas. URLs de mídia
  * só são assinadas depois de a página pública validar o token.
  */
-export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaView | null> {
+export async function buildObraPublicaView(
+  obraId: string,
+  secoes: SecoesPublicas = SECOES_PADRAO,
+): Promise<ObraPublicaView | null> {
   const [obra] = await db
     .select({
       id: obras.id,
@@ -50,6 +55,10 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       progresso: obras.progresso,
       cidade: obras.cidade,
       uf: obras.uf,
+      // Só a rua, e apenas com a seção ligada. Basta para situar a obra, sem
+      // entregar a porta exata de um canteiro com material estocado a quem
+      // recebeu um link sem login (XG04 §8).
+      endereco: obras.endereco,
       dataInicio: obras.dataInicio,
       dataPrevisao: obras.dataPrevisao,
       imagemBucketKey: userFiles.bucketKey,
@@ -83,8 +92,11 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
 
   if (!obra) return null;
 
-  const [etapas, diarioRows, ocorrenciaRows, fotoRows, checklistRows, atualizacaoRows] = await Promise.all([
-    db
+  // Seção desligada não é escondida na renderização: a query nem roda, então o
+  // conteúdo não chega a sair do banco. Esconder no cliente deixaria o dado no
+  // HTML servido; aqui ele simplesmente não é lido.
+  const [etapas, diarioRows, ocorrenciaRows, fotoRows, checklistRows, atualizacaoRows, tarefaRows] = await Promise.all([
+    !secoes.etapas ? [] : db
       .select({
         id: obraEtapas.id,
         nome: obraEtapas.nome,
@@ -95,7 +107,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(obraEtapas)
       .where(eq(obraEtapas.obraId, obraId))
       .orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt)),
-    db
+    !secoes.diario ? [] : db
       .select({
         id: obraDiario.id,
         texto: obraDiario.texto,
@@ -104,7 +116,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(obraDiario)
       .where(eq(obraDiario.obraId, obraId))
       .orderBy(desc(obraDiario.createdAt)),
-    db
+    !secoes.ocorrencias ? [] : db
       .select({
         id: obraOcorrencias.id,
         titulo: obraOcorrencias.titulo,
@@ -117,7 +129,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(obraOcorrencias)
       .where(eq(obraOcorrencias.obraId, obraId))
       .orderBy(desc(obraOcorrencias.createdAt)),
-    db
+    !secoes.fotos ? [] : db
       .select({
         id: obraFotos.id,
          bucketKey: userFiles.bucketKey,
@@ -136,7 +148,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       )
       .where(and(eq(obraFotos.obraId, obraId), eq(obraFotos.enviadaAoContratante, true)))
       .orderBy(desc(obraFotos.createdAt)),
-    db
+    !secoes.checklists ? [] : db
       .select({
         id: obraChecklists.id,
         nome: obraChecklists.nome,
@@ -148,7 +160,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(obraChecklists)
       .where(eq(obraChecklists.obraId, obraId))
       .orderBy(asc(obraChecklists.createdAt)),
-    db
+    !secoes.atualizacoes ? [] : db
       .select({
         id: medicoes.id,
         etapa: medicoes.etapa,
@@ -160,6 +172,21 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       .from(medicoes)
       .where(and(eq(medicoes.obraId, obraId), eq(medicoes.status, 'aprovada')))
       .orderBy(desc(medicoes.createdAt)),
+    // `responsavel` é nome de pessoa da equipe e fica fora por LGPD, como já
+    // acontece com a autoria no diário e nas ocorrências (XG04 §8).
+    !secoes.tarefas ? [] : db
+      .select({
+        id: obraTarefas.id,
+        titulo: obraTarefas.titulo,
+        descricao: obraTarefas.descricao,
+        etapa: obraTarefas.etapa,
+        status: obraTarefas.status,
+        prazo: obraTarefas.prazo,
+        progresso: obraTarefas.progresso,
+      })
+      .from(obraTarefas)
+      .where(eq(obraTarefas.obraId, obraId))
+      .orderBy(asc(obraTarefas.createdAt)),
   ]);
 
   const fotoRowsWithUrls = await Promise.all(fotoRows.map(async (foto) => ({
@@ -192,6 +219,7 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
       progresso: obra.progresso ?? 0,
       cidade: obra.cidade,
       uf: obra.uf,
+      logradouro: secoes.localizacao ? obra.endereco : null,
       dataInicio: obra.dataInicio,
       dataPrevisao: obra.dataPrevisao,
       imagemUrl: obra.imagemBucketKey ? await signedPublicMediaUrl(obra.imagemBucketKey) : null,
@@ -251,5 +279,15 @@ export async function buildObraPublicaView(obraId: string): Promise<ObraPublicaV
         .filter((item) => item.checklistId === checklist.id)
         .map((item) => ({ id: item.id, titulo: item.titulo, concluida: item.concluida })),
     })),
+    tarefas: tarefaRows.map((tarefa) => ({
+      id: tarefa.id,
+      titulo: tarefa.titulo,
+      descricao: tarefa.descricao,
+      etapa: tarefa.etapa,
+      status: tarefa.status,
+      prazo: tarefa.prazo || null,
+      progresso: tarefa.progresso ?? null,
+    })),
+    secoes,
   };
 }

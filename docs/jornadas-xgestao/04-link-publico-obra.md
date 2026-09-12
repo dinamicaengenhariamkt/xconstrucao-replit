@@ -117,6 +117,47 @@ E as fotos já vêm resolvidas: `obra_fotos.enviadaAoContratante` ([schema.ts:81
 
 **Implementar como allowlist explícita, nunca `delete` sobre o objeto completo.** Assim, campo novo em `obras` **não** entra na página por omissão. Essa tabela é a especificação.
 
+### Controle por seção — revisão de 2026-09-02
+
+A tabela acima define o **teto** do que pode sair. Dentro dele, o empreiteiro agora escolhe
+obra a obra o que publicar, via toggles em "Gerenciar link público".
+
+**O que motivou:** fotos tinham opt-in por registro (`enviadaAoContratante`), mas **diário,
+ocorrências e checklists não tinham nenhum** — iam integralmente, sempre. Uma anotação
+interna do diário ou uma ocorrência crítica em aberto chegava ao cliente sem que ninguém
+tivesse decidido isso. Pior: a tela de edição afirmava *"as fotos aparecem apenas quando
+marcadas para envio ao cliente"* e **não existia UI alguma** para marcar ou desmarcar uma
+foto, com o default da API em `true`. A tela prometia um controle que não existia.
+
+Contrato em [features/xgestao/obra-publica/secoes.ts](../../features/xgestao/obra-publica/secoes.ts):
+
+| Seção | Padrão | Por quê |
+|---|---|---|
+| Etapas, atualizações, fotos, checklists | **ligado** | Evidenciam andamento; é o motivo do link |
+| Diário, ocorrências | **desligado** | Registro operacional interno: publicar é decisão, não herança |
+| Tarefas | **desligado** | Nunca esteve no link; entra como novidade, sem responsável (LGPD) |
+| Localização | **desligado** | Ver abaixo |
+
+Três garantias, e a primeira é a que importa:
+
+1. **Seção desligada não roda a query.** O conteúdo não sai do banco — esconder na
+   renderização deixaria o dado no HTML servido.
+2. **`normalizarSecoes` cai no padrão** diante de valor ausente, malformado ou com chave
+   desconhecida. Nunca em "tudo ligado": dado corrompido não vira exposição. É também o que
+   preserva o comportamento dos links emitidos antes da coluna existir.
+3. **Alterar seções não rotaciona o token** (`PATCH .../share`): ajustar visibilidade não
+   pode invalidar o endereço que o cliente já tem salvo.
+
+**Localização, opt-in.** Sai **apenas o logradouro**, e só com a seção ligada. Número,
+complemento, CEP e `lat`/`lng` continuam fora do contrato — nem como campo opcional, para
+que não haja onde preenchê-los por engano. A ressalva de segurança física do canteiro
+segue valendo; o que muda é existir uma escolha, em vez de a rua ser sempre omitida.
+
+**O que não mudou:** valores, lucro, health score e equipe seguem fora, sem toggle. Não há
+como ligá-los. O health score em particular tem fator `financeiro` com peso 0.35 em
+[calculate.ts](../../features/shared/health/calculate.ts) — a nota é vetor indireto de
+vazamento da margem, exatamente como esta seção já registrava.
+
 ### As três camadas da allowlist
 
 Não basta escrever "allowlist" e confiar. São três garantias independentes:
@@ -205,3 +246,12 @@ A projeção mora em `features/xgestao/obra-publica/server/projection.ts`, com `
 ## 13. Gaps descobertos durante execução
 
 > Doc viva. Registrar aqui o que apareceu no caminho e não estava no roteiro original. Uma linha por item, com data.
+
+- **2026-09-02 — o passo "Link público" nunca completava no checklist do cadastro.** `completion.sections` produzia 4 booleanos para 5 itens de navegação, casados por índice: o quinto lia `undefined` e ficava permanentemente cinza, enquanto a barra mostrava 100% por usar o comprimento do array errado como denominador. As duas listas passaram a ser `SECTIONS` (módulo) e o booleano do link vem da query, não do formulário.
+- **2026-09-02 — o estado do link não chegava à tela de edição.** Vivia num `useState` dentro do `CompartilharModal`, descartado ao fechar. Centralizado em `use-obra-share.ts` (TanStack), consumido pelas duas telas.
+- **2026-09-02 — diário, ocorrências e checklists iam ao link sem nenhum opt-in**, e a UI prometia um controle de fotos que não existia. Ver §8, "Controle por seção".
+- **2026-09-02 — `visualizacoes` e `ultimoAcessoEm` eram gravados e nunca devolvidos.** O dono não tinha como saber se o cliente abriu o link. Agora aparecem no painel de edição.
+- **2026-09-02 — revogar e rotacionar disparavam sem confirmação**, apesar de invalidarem o link já entregue. Ambos passaram a pedir `AlertDialog`.
+- **2026-09-02 — o PATCH de visibilidade de foto liberava o contratante.** O guard usava `canWriteObraContent`, que concede escrita ao contratante dono — ele poderia reverter a curadoria do empreiteiro e, como a flag alimenta galeria e capa do link, mudar o que terceiros veem numa obra que não executa. Trocado por predicado próprio (empreiteiro atribuído ou admin), espelhado na UI.
+- **2026-09-02 — os padrões de seção quebram links já emitidos, deliberadamente.** Diário e ocorrências eram públicos e passam a nascer desligados, sem backfill. Aceito porque os links existentes eram de teste; registrado em `secoes.ts`, na migration e no bootstrap para não ser lido como retrocompatível.
+- **2026-09-02 — a guarda de vazamento reprovava comentários.** O teste procurava nomes de campo no arquivo inteiro, então explicar *por que* um campo é retido quebrava a suíte — incentivo invertido. Passou a ignorar comentários (`apenasCodigo`).

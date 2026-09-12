@@ -1,4 +1,15 @@
 import type { ObraStatusDb } from '@shared/constants/status';
+import type { SecoesPublicas } from './secoes';
+
+export interface ObraPublicaTarefa {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  etapa: string;
+  status: 'pendente' | 'em_andamento' | 'bloqueado' | 'concluido';
+  prazo: string | null;
+  progresso: number | null;
+}
 
 export interface ObraPublicaEtapa {
   id: string;
@@ -74,6 +85,12 @@ export interface ObraPublicaView {
     progresso: number;
     cidade: string | null;
     uf: string | null;
+    /**
+     * Rua, apenas quando o dono liga a seção de localização. Os demais campos
+     * de endereço e as coordenadas não existem neste contrato — nem como campo
+     * opcional, para que não haja onde preenchê-los por engano.
+     */
+    logradouro: string | null;
     dataInicio: string | null;
     dataPrevisao: string | null;
     imagemUrl: string | null;
@@ -85,4 +102,7 @@ export interface ObraPublicaView {
   fotos: ObraPublicaFoto[];
   atualizacoes: ObraPublicaAtualizacao[];
   checklists: ObraPublicaChecklist[];
+  tarefas: ObraPublicaTarefa[];
+  /** O que este link expõe; o shell usa para montar só as abas liberadas. */
+  secoes: SecoesPublicas;
 }

@@ -92,6 +92,51 @@ Duas mecânicas possíveis, e elas **não são a mesma implementação**:
 
 O prazo em si (2 ou 3 meses) é parâmetro comercial e ficou explicitamente em aberto: *"a parte dos três meses aí é indiferente"* (14:16). Não modelar o número como constante de código — ele muda sem deploy.
 
+## 8-A. Go-live do pagamento — pendência de configuração
+
+> Registrado em 2026-09-02. **Não há código a escrever**: o adapter Asaas está pronto e a
+> configuração publicada já aponta para o sandbox. Falta uma variável para o ciclo fechar.
+
+### O que já está ligado
+
+```
+PAYMENT_GATEWAY  = "asaas"     # .replit:70
+ASAAS_ENVIRONMENT = "sandbox"  # cobrança simulada, nenhum valor real
+ASAAS_API_KEY     = aact_hmlg_…  # chave de homologação
+NEXT_PUBLIC_BASE_URL = https://dinamicareforma.com.br
+```
+
+O checkout é **hospedado pelo Asaas** (`billingTypes: ["CREDIT_CARD"]` em
+[asaas-gateway.ts:129](../../features/planos/gateway/asaas-gateway.ts)); a aplicação nunca
+recebe dados de cartão. Os [cartões de teste do sandbox](https://docs.asaas.com/docs/testando-pagamento-com-cartão-de-crédito)
+são digitados na página do Asaas.
+
+### O que falta, e por que o plano não troca sem isso
+
+**`ASAAS_WEBHOOK_TOKEN` não está definido.** Em `NODE_ENV=production` — que é como a
+aplicação publicada roda —, sem token e sem `ASAAS_WEBHOOK_IPS` o
+[parseWebhook](../../features/planos/gateway/asaas-gateway.ts) **recusa todo webhook**
+(fail-closed, deliberado). E a ativação do plano acontece **somente** no webhook
+`PAYMENT_CONFIRMED`/`PAYMENT_RECEIVED`, nunca no retorno do checkout.
+
+Consequência prática no teste: o cartão aprova no Asaas, o usuário volta para a tela de
+sucesso e **a assinatura não é ativada**. Não é bug — é a configuração incompleta.
+
+### Checklist para reativar
+
+1. Definir `ASAAS_WEBHOOK_TOKEN` (secret do Replit) e o **mesmo valor** no painel Asaas,
+   em Integrações → Webhooks.
+2. Apontar o webhook para `POST /api/webhooks/gateway`.
+3. `TRUST_PROXY_HEADERS=1` — sem isso o rate limit por IP fica neutralizado (J19).
+4. Para cobrar de verdade: `ASAAS_ENVIRONMENT=production` e conferir que a faixa
+   "Ambiente de testes" **sumiu** das telas de pagamento.
+
+**Use token, não whitelist de IP.** O deploy é `autoscale`, com IP variável — uma lista de
+IPs quebraria a cada novo contêiner.
+
+> Enquanto o token não existe, a troca de plano **não pode ser testada ponta a ponta** no
+> ambiente publicado. O restante da jornada (limites, 402, upsell) não depende disso.
+
 ## 9. Checklist de implementação
 
 - [x] Adicionar persona `xgestao` em `plans-catalog.ts` + `XGESTAO_USAGE_LABELS`

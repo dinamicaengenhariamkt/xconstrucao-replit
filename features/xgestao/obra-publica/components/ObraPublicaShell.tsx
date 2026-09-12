@@ -6,6 +6,7 @@ import { OBRA_STATUS_DB_BADGE_CLASSES, obraStatusDbLabel } from '@shared/constan
 import { TabChecklists } from '@features/contratante/minhas-obras/components/TabChecklists';
 import {
   IconCalendarMonth,
+  IconChecklist,
   IconFactCheck,
   IconPhotoLibrary,
   IconTaskAlt,
@@ -19,16 +20,19 @@ import { TabEtapasPublica } from './TabEtapasPublica';
 import { TabFotosPublica } from './TabFotosPublica';
 import { TabOcorrenciasPublica } from './TabOcorrenciasPublica';
 import { TabAtualizacoesPublica } from './TabAtualizacoesPublica';
+import { TabTarefasPublica } from './TabTarefasPublica';
 
-type PublicTab = 'atualizacoes' | 'etapas' | 'diario' | 'ocorrencias' | 'fotos' | 'checklists';
+type PublicTab = 'atualizacoes' | 'etapas' | 'diario' | 'ocorrencias' | 'fotos' | 'checklists' | 'tarefas';
 
-const tabs: Array<{
+/** `key` casa com a seção correspondente em `SecoesPublicas`. */
+const TABS: Array<{
   key: PublicTab;
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
 }> = [
   { key: 'atualizacoes', label: 'Atualizações', Icon: IconTrendingUp },
   { key: 'etapas', label: 'Etapas', Icon: IconTaskAlt },
+  { key: 'tarefas', label: 'Tarefas', Icon: IconChecklist },
   { key: 'diario', label: 'Diário', Icon: IconTimeline },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
   { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
@@ -50,8 +54,11 @@ function formatArea(value: string): string {
 }
 
 export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
-  const [activeTab, setActiveTab] = useState<PublicTab>('atualizacoes');
-  const local = [view.obra.cidade, view.obra.uf].filter(Boolean).join(' · ');
+  // Só as seções que o dono liberou viram aba. A projeção já não trouxe o
+  // conteúdo das demais; filtrar aqui evita abas que abririam vazias.
+  const tabs = TABS.filter((tab) => view.secoes[tab.key]);
+  const [activeTab, setActiveTab] = useState<PublicTab | null>(tabs[0]?.key ?? null);
+  const local = [view.obra.logradouro, view.obra.cidade, view.obra.uf].filter(Boolean).join(' · ');
   const hasDetails = Boolean(
     view.obra.tipo ||
     view.obra.descricao ||
@@ -164,6 +171,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
           </section>
         )}
 
+        {tabs.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="flex overflow-x-auto border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
             {tabs.map((tab) => (
@@ -190,8 +198,10 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             {activeTab === 'ocorrencias' && <TabOcorrenciasPublica obraId={view.obra.id} ocorrencias={view.ocorrencias} />}
             {activeTab === 'fotos' && <TabFotosPublica obraId={view.obra.id} fotos={view.fotos} />}
             {activeTab === 'checklists' && <TabChecklists checklists={view.checklists} />}
+            {activeTab === 'tarefas' && <TabTarefasPublica tarefas={view.tarefas} />}
           </div>
         </section>
+        )}
 
         <p className="pb-4 text-center text-xs text-gray-400">
           Esta página é somente para acompanhamento. Não é possível alterar dados da obra por aqui.

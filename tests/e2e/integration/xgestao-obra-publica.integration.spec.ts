@@ -11,6 +11,17 @@ async function source(relativePath: string) {
   return readFile(path.join(root, relativePath), 'utf8');
 }
 
+/**
+ * Remove comentários antes das asserções de vazamento.
+ *
+ * A guarda procura nomes de campo no arquivo inteiro, então um comentário que
+ * *explica* por que um campo é retido reprovava o teste — o que empurra na
+ * direção errada: apagar a explicação em vez de manter a proteção.
+ */
+function apenasCodigo(conteudo: string): string {
+  return conteudo.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
 test.describe('xgestão — conteúdo público de obra em leitura', () => {
   test('mantém um contrato público restrito e uma projeção somente server-side', async () => {
     const [types, projection] = await Promise.all([
@@ -19,9 +30,32 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     ]);
 
     expect(types).toContain('export interface ObraPublicaView');
-    expect(types).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|endereco|numero|complemento|cep|autorNome|autorId|registroProfissional|assinadoPor/);
+    expect(apenasCodigo(types)).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|numero|complemento|cep|autorNome|autorId|registroProfissional|assinadoPor/);
     expect(projection).toContain("import 'server-only';");
-    expect(projection).not.toMatch(/\busers\b|valorPago|valorTotal|endereco|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
+    expect(apenasCodigo(projection)).not.toMatch(/\busers\b|valorPago|valorTotal|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
+
+    // O logradouro é o único componente de endereço que pode sair, e só quando
+    // o dono liga a seção. Número, complemento, CEP e coordenadas seguem
+    // ausentes do contrato — as linhas acima garantem isso.
+    expect(types).toContain('logradouro: string | null;');
+    expect(projection).toContain('logradouro: secoes.localizacao ? obra.endereco : null');
+    expect(projection).not.toMatch(/obras\.lat|obras\.lng/);
+
+    // Seção desligada não é filtrada na renderização: a query nem roda.
+    for (const guarda of [
+      '!secoes.etapas ? []',
+      '!secoes.diario ? []',
+      '!secoes.ocorrencias ? []',
+      '!secoes.fotos ? []',
+      '!secoes.checklists ? []',
+      '!secoes.atualizacoes ? []',
+      '!secoes.tarefas ? []',
+    ]) {
+      expect(projection).toContain(guarda);
+    }
+
+    // Tarefas entram sem o responsável, que é nome de pessoa da equipe.
+    expect(projection).not.toContain('obraTarefas.responsavel');
 
     // Mídias nunca ficam permanentemente públicas: somente arquivos ainda
     // existentes, ligados à galeria da obra e aprovados para o cliente recebem
@@ -32,6 +66,28 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     expect(projection).toContain('eq(obraFotos.fileId, userFiles.id)');
     expect(projection).toContain('createSignedReadUrl');
     expect(projection).toContain('PUBLIC_LINK_MEDIA_TTL_SECONDS');
+  });
+
+  test('conteúdo operacional interno só é publicado por escolha explícita', async () => {
+    const { SECOES_PADRAO, normalizarSecoes } = await import(
+      '../../../features/xgestao/obra-publica/secoes'
+    );
+
+    // Diário e ocorrências carregam anotação de rotina e problema em aberto;
+    // tarefas e endereço nunca estiveram no link. Ligar qualquer um deles é
+    // decisão do empreiteiro, não padrão herdado.
+    expect(SECOES_PADRAO.diario).toBe(false);
+    expect(SECOES_PADRAO.ocorrencias).toBe(false);
+    expect(SECOES_PADRAO.tarefas).toBe(false);
+    expect(SECOES_PADRAO.localizacao).toBe(false);
+
+    // Dado corrompido ou ausente cai no padrão, nunca em "tudo ligado" — links
+    // emitidos antes da coluna existir seguem esta mesma regra.
+    expect(normalizarSecoes(null)).toEqual(SECOES_PADRAO);
+    expect(normalizarSecoes('lixo')).toEqual(SECOES_PADRAO);
+    expect(normalizarSecoes({ diario: 'sim' })).toEqual(SECOES_PADRAO);
+    expect(normalizarSecoes({ inexistente: true })).toEqual(SECOES_PADRAO);
+    expect(normalizarSecoes({ diario: true }).diario).toBe(true);
   });
 
   test('wrappers públicos injetam dados e nunca habilitam escrita ou fetch autenticado', async () => {
