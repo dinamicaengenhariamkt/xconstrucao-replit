@@ -12,6 +12,8 @@ const createSchema = z.object({
   descricao: z.string().trim().max(500).optional().nullable(),
   ordem: z.number().int().min(0).max(999).optional(),
   responsavel: z.string().trim().max(120).optional().nullable(),
+  // XG10 — par de datas do Gantt (início e fim previstos da etapa).
+  dataInicio: z.string().datetime().optional().nullable(),
   prazo: z.string().datetime().optional().nullable(),
 });
 
@@ -60,13 +62,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  const { nome, descricao, ordem, responsavel, prazo } = parsed.data;
+  const { nome, descricao, ordem, responsavel, dataInicio, prazo } = parsed.data;
   const [created] = await db.insert(obraEtapas).values({
     obraId: id,
     nome,
     descricao: descricao ?? null,
     ordem: ordem ?? 0,
     responsavel: responsavel ?? null,
+    dataInicio: dataInicio ? new Date(dataInicio) : null,
     prazo: prazo ? new Date(prazo) : null,
   }).returning();
   await recordAudit({ actorId: guard.user.id, action: "obras.etapa.create", payload: { obraId: id, etapaId: created.id, nome }, request });

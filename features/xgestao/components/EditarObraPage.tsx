@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,6 +14,7 @@ import {
   RiShareLine,
 } from 'react-icons/ri';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
+import { ExcluirObraDialog } from './ExcluirObraDialog';
 import {
   toAbsoluteShareUrl,
   useAtualizarSecoes,
@@ -259,7 +261,9 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [initialized, setInitialized] = useState(false);
+  const router = useRouter();
   const [showShare, setShowShare] = useState(false);
+  const [showExcluir, setShowExcluir] = useState(false);
   // Só habilita depois que o formulário renderizou: antes disso os alvos das
   // seções ainda não existem no DOM e o spotlight não teria o que destacar.
   const tour = useGuidedTour('edicao', initialized);
@@ -357,6 +361,10 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     onSuccess: async () => {
       await invalidateObra();
       toast({ title: 'Obra atualizada', description: 'As informações foram salvas com sucesso.' });
+      // XG10 — voltar ao detalhe depois de salvar. Antes a tela permanecia na
+      // edição, e o usuário não sabia se o salvamento tinha surtido efeito:
+      // "quando eu salvar, ele tem que voltar para a principal de novo" (11:12).
+      router.push(`/xgestao/obras/${obraId}`);
     },
     onError: (error) => {
       toast({
@@ -732,6 +740,17 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
           </Section>
 
           <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 sm:flex-row sm:items-center sm:justify-end">
+            {/* XG10 — excluir obra. Fica à esquerda e separado das ações de
+                salvar, para não ser clicado por engano. */}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowExcluir(true)}
+              className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20 sm:mr-auto"
+              data-testid="xgestao-excluir-obra"
+            >
+              Excluir obra
+            </Button>
             <Button asChild type="button" variant="outline"><Link href={`/xgestao/obras/${obraId}`}>Cancelar</Link></Button>
             <Button type="submit" disabled={saveMutation.isPending} data-testid="xgestao-salvar-obra">
               {saveMutation.isPending ? 'Salvando…' : 'Salvar alterações'}
@@ -744,6 +763,14 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
         open={showShare}
         onOpenChange={setShowShare}
         obra={{ id: obraId, titulo: obraQuery.data?.nome ?? 'Obra' }}
+      />
+
+      <ExcluirObraDialog
+        obraId={obraId}
+        obraNome={obraQuery.data?.nome ?? 'Obra'}
+        open={showExcluir}
+        onOpenChange={setShowExcluir}
+        redirectTo="/xgestao/obras"
       />
 
       <GuidedTour steps={TOUR_EDICAO} open={tour.open} onClose={tour.fechar} />

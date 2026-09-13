@@ -32,9 +32,11 @@ import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/compon
 import { cn } from '@shared/lib/utils';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
-import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline } from '@shared/components/icons';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconChecklist, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
-import { ProfitCard, computeProfitFromObra } from '@features/shared/profit';
+import { computeProfitFromObra } from '@features/shared/profit';
+import { FinanceiroTab } from '@features/empreiteiro/minhas-obras/components/FinanceiroTab';
+import { CronogramaGanttCard } from '@features/empreiteiro/minhas-obras/components/CronogramaGanttCard';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
 import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
 import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
@@ -55,7 +57,7 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   success: 'bg-green-500',
 };
 
-type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'cronograma' | 'ocorrencias' | 'disputas' | 'saude' | 'lucro';
+type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'etapas' | 'cronograma' | 'ocorrencias' | 'disputas' | 'saude' | 'financeiro';
 
 const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'saude', label: 'Saúde', Icon: IconHealthAndSafety },
@@ -64,11 +66,28 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
   { key: 'timeline', label: 'Timeline', Icon: IconTimeline },
   { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
   { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
+  // XG10 — o que se chamava "Cronograma" sempre foi cadastro de etapas
+  // ("o nome cronograma está errado, isso aqui não é um cronograma, é uma
+  // etapa", 08:11). O cronograma de verdade, com datas, é a aba ao lado.
+  { key: 'etapas', label: 'Etapas', Icon: IconChecklist },
   { key: 'cronograma', label: 'Cronograma', Icon: IconCalendarMonth },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
   { key: 'disputas', label: 'Disputas', Icon: IconWarning },
-  { key: 'lucro', label: 'Lucro', Icon: IconPayments },
+  { key: 'financeiro', label: 'Financeiro', Icon: IconPayments },
 ];
+
+/**
+ * XG10 — a aba Disputas sai do xgestão: "a gente não vai decidir nada para
+ * ninguém aqui como plataforma... a única interação que tem aqui é do
+ * prestador, não tem por que a gente se envolver" (13:24–13:34).
+ *
+ * Ocultada, não apagada: `features/disputas/` e as rotas seguem servindo o
+ * marketplace, onde a mediação entre contratante e empreiteiro faz sentido
+ * (princípio do README §3 — reversibilidade é entregável).
+ */
+function tabsVisiveis(isObraPropria: boolean) {
+  return isObraPropria ? TABS.filter((t) => t.key !== 'disputas') : TABS;
+}
 
 /** Roteiro do console: o ciclo de manter a obra atualizada, na ordem de uso. */
 const TOUR_CONSOLE: TourStep[] = [
@@ -460,7 +479,8 @@ export function ObraConsoleView({
             <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Atual</span>
           </div>
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso Real</p>
+            {/* XG10 — "Real" não distinguia de nada: só existe um progresso. */}
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso</p>
             <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
           </div>
           <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
@@ -481,13 +501,33 @@ export function ObraConsoleView({
               <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">Alerta</span>
             )}
           </div>
+          {/* XG10 — antes mostrava "Dias em Atraso: 0" em obra no prazo, dando
+              ênfase a um problema inexistente ("tá dando ênfase em atraso...
+              não, tipo, tá no prazo", 25:00). O número de dias só aparece
+              quando há atraso de fato. */}
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Dias em Atraso</p>
-            <p className={cn('text-3xl font-extrabold mt-1', obra.diasAtraso > 0 ? 'text-amber-600' : 'text-gray-900 dark:text-white')}>
-              {obra.diasAtraso}
-            </p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Prazo da obra</p>
+            {obra.diasAtraso > 0 ? (
+              <p className="text-3xl font-extrabold mt-1 text-amber-600">
+                {obra.diasAtraso}
+                <span className="text-base font-bold ml-1">
+                  {obra.diasAtraso === 1 ? 'dia' : 'dias'}
+                </span>
+              </p>
+            ) : (
+              <p className="text-2xl font-extrabold mt-1 text-success flex items-center gap-1.5">
+                <IconCheckCircle className="text-2xl" />
+                No prazo
+              </p>
+            )}
           </div>
-          <p className="text-xs text-gray-500">{obra.diasAtraso > 0 ? '~7% do cronograma' : 'No prazo'}</p>
+          <p className="text-xs text-gray-500">
+            {obra.diasAtraso > 0
+              ? `Em atraso desde ${obra.dataPrevisaoFim || 'a data prevista'}`
+              : obra.dataPrevisaoFim
+                ? `Previsão: ${obra.dataPrevisaoFim}`
+                : 'Sem data de previsão definida'}
+          </p>
         </div>
 
         {/* Tarefas Pendentes */}
@@ -500,11 +540,19 @@ export function ObraConsoleView({
               {obra.tarefasTotal} total
             </span>
           </div>
+          {/* XG10 — o card contava tudo que não estava concluído e chamava de
+              "pendente", então tarefa em execução entrava no número ("eu tô
+              executando, ele coloca como tarefa pendente", 25:39). Agora mostra
+              o que está em andamento. */}
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Tarefas Pendentes</p>
-            <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.tarefasPendentes}</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Em andamento</p>
+            <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+              {obra.tarefasEmAndamento ?? 0}
+            </p>
           </div>
-          <p className="text-xs text-gray-500">{obra.tarefasTotal - obra.tarefasPendentes} concluídas</p>
+          <p className="text-xs text-gray-500">
+            {obra.tarefasTotal - obra.tarefasPendentes} concluídas de {obra.tarefasTotal}
+          </p>
         </div>
 
         {/* Problemas Abertos */}
@@ -523,7 +571,24 @@ export function ObraConsoleView({
               {obra.problemasAbertos}
             </p>
           </div>
-          <p className="text-xs text-gray-500">{obra.problemasAbertos > 0 ? '1 crítico, 2 médios' : 'Nenhum problema'}</p>
+          {/* XG10 — o subtítulo era "1 crítico, 2 médios" fixo no código. */}
+          <p className="text-xs text-gray-500">
+            {obra.problemasAbertos > 0
+              ? [
+                  obra.problemasPorGravidade?.critico
+                    ? `${obra.problemasPorGravidade.critico} crítico${obra.problemasPorGravidade.critico > 1 ? 's' : ''}`
+                    : null,
+                  obra.problemasPorGravidade?.medio
+                    ? `${obra.problemasPorGravidade.medio} médio${obra.problemasPorGravidade.medio > 1 ? 's' : ''}`
+                    : null,
+                  obra.problemasPorGravidade?.baixo
+                    ? `${obra.problemasPorGravidade.baixo} baixo${obra.problemasPorGravidade.baixo > 1 ? 's' : ''}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(', ') || 'Em aberto'
+              : 'Nenhum problema'}
+          </p>
         </div>
 
         {/* Equipe no Canteiro */}
@@ -532,13 +597,19 @@ export function ObraConsoleView({
             <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
               <IconGroups />
             </div>
-            <span className="text-blue-600 text-xs font-bold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">Hoje</span>
+            {/* XG10 — o badge dizia "Hoje", mas o número é de cadastros na
+                equipe, não de presença no dia. Rótulo agora diz o que mede. */}
+            <span className="text-blue-600 text-xs font-bold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+              Cadastrados
+            </span>
           </div>
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Equipe no Canteiro</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Equipe da obra</p>
             <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.equipeAtiva}</p>
           </div>
-          <p className="text-xs text-gray-500">pessoas na obra</p>
+          <p className="text-xs text-gray-500">
+            {obra.equipeAtiva === 1 ? 'pessoa registrada' : 'pessoas registradas'}
+          </p>
         </div>
       </motion.div>
 
@@ -557,7 +628,7 @@ export function ObraConsoleView({
           className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
           data-tour="abas-obra"
         >
-          {TABS.map((tab) => (
+          {tabsVisiveis(obra.isObraPropria).map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -596,12 +667,16 @@ export function ObraConsoleView({
                 />
               )}
               {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
-              {activeTab === 'cronograma' && (
+              {activeTab === 'etapas' && (
                 <EtapasJ06Card
                   obraId={obra.id}
                   canWrite
                   canEditScope={obra.isObraPropria}
+                  progressoDerivado={obra.isObraPropria}
                 />
+              )}
+              {activeTab === 'cronograma' && (
+                <CronogramaGanttCard obraId={obra.id} />
               )}
               {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
               {activeTab === 'disputas' && (
@@ -619,12 +694,20 @@ export function ObraConsoleView({
                   health={computeHealthFromObra(obra)}
                   actionsByFactor={{
                     atraso: { label: 'Ver cronograma', onClick: () => setActiveTab('cronograma') },
-                    financeiro: { label: 'Ver lucro', onClick: () => setActiveTab('lucro') },
+                    financeiro: { label: 'Ver financeiro', onClick: () => setActiveTab('financeiro') },
                     tarefas: { label: 'Ver tarefas', onClick: () => setActiveTab('tarefas') },
                   }}
                 />
               )}
-              {activeTab === 'lucro' && <ProfitCard metrics={computeProfitFromObra(obra)} />}
+              {activeTab === 'financeiro' && (
+                <FinanceiroTab
+                  obraId={obra.id}
+                  metrics={computeProfitFromObra(obra)}
+                  // Marketplace: o dinheiro da obra é do contratante, então o
+                  // empreiteiro atribuído lê mas não lança.
+                  podeLancar={obra.isObraPropria}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -642,7 +725,12 @@ export function ObraConsoleView({
 
       {/* BLOCO 12: Equipe e Colaboradores */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <EquipeSection obra={obra} xgestaoReadOnly={allowOwnWorkEdit && obra.isObraPropria} />
+        {/* XG10 — equipe deixa de ser somente leitura na obra própria. O
+            backend sempre aceitou membro sem conta na plataforma
+            (`obra_equipe.user_id` é nullable), e era só a UI que travava:
+            "os empreiteiros na obra... eu coloco o Jefferson, o telefone do
+            cara. Eu não preciso cadastrar ele na plataforma" (27:25–27:33). */}
+        <EquipeSection obra={obra} />
       </motion.div>
 
       {/* J58 — Contrato entre as partes (auto-oculta se a obra não tem contrato). */}

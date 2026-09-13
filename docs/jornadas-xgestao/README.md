@@ -21,6 +21,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG07](07-integracao-sinapi.md) | Integração SINAPI (preços de referência) | — | ❄️ **congelada** | — | — |
 | [XG08](08-visao-obra-read-only.md) | Visão da obra em modo leitura | 4 | pronto | alta | **médio-alto** |
 | [XG09](09-administracao-obra-ponta-a-ponta.md) | Administração da obra ponta a ponta | 9 | pronto | alta | baixo |
+| [XG10](10-ajustes-teste-obra-real.md) | Ajustes do teste em obra real | 10 | pronto | alta | médio |
 | [XG11](11-offline-pwa.md) | Uso offline e instalação no celular | — | planejada | baixa | — |
 
 ## Contexto

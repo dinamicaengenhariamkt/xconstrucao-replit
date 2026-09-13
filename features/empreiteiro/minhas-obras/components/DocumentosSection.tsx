@@ -22,9 +22,12 @@ import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraDetalhe, ObraDocumento } from '../types';
 import { EnviarDocumentoModal } from './EnviarDocumentoModal';
-import { EditarDocumentoModal } from './EditarDocumentoModal';
+import { DocumentoPreviewModal } from './DocumentoPreviewModal';
+import { StorageBar } from './StorageBar';
+import { useExcluirAnexo } from '../hooks/use-obra-anexos';
+import { useToast } from '@shared/hooks/use-toast';
 import type { ComponentType } from 'react';
-import { IconAutorenew, IconMoreVert, IconDownload, IconEdit, IconDelete, IconUploadFile, IconWarning, IconAdd, IconFolderOpen, IconDescription, IconEngineering, IconAnalytics, IconFactCheck, IconDomain, IconTaskAlt } from '@shared/components/icons';
+import { IconAutorenew, IconMoreVert, IconDownload, IconDelete, IconUploadFile, IconWarning, IconAdd, IconFolderOpen, IconDescription, IconEngineering, IconAnalytics, IconFactCheck, IconDomain, IconTaskAlt, IconOpenInNew, IconVisibility, IconLink } from '@shared/components/icons';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -53,15 +56,14 @@ const STATUS_BADGE: Record<NonNullable<ObraDocumento['status']>, { label: string
   novo:     { label: 'Novo',     classes: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400' },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function gerarId() {
-  return `d${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ModalType = 'enviar' | 'editar' | 'renovar_confirm' | 'excluir' | null;
+/**
+ * XG10 — 'editar' e 'renovar' saíram: mexiam em `status`/`venceEmDias`, campos
+ * que a tabela `obra_anexos` não tem. A UI prometia uma gestão de validade que
+ * não existia no banco; o que persiste é enviar, abrir e excluir.
+ */
+type ModalType = 'enviar' | 'abrir' | 'excluir' | null;
 
 interface ModalState {
   type: ModalType;
@@ -121,14 +123,39 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
           </span>
         )}
 
-        {isVencendo && !obraFinalizada && (
+        {doc.isLink && (
+          <span
+            className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center gap-1"
+            title="Link externo"
+          >
+            <IconLink className="text-[12px]" />
+            Link
+          </span>
+        )}
+
+        {/* XG10 — abrir o documento. O botão era `window.open('#')`: um stub
+            que nunca abriu nada, enquanto a URL assinada já vinha do servidor
+            e era descartada. Link externo vai direto para a origem. */}
+        {doc.isLink ? (
+          <a
+            href={doc.url ?? '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            aria-label={`Abrir ${doc.nome} em nova aba`}
+            data-testid={`abrir-link-${doc.id}`}
+          >
+            <IconOpenInNew className="text-[18px]" />
+          </a>
+        ) : (
           <button
             type="button"
-            onClick={() => onAcao('renovar_confirm', doc)}
-            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+            onClick={() => onAcao('abrir', doc)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            aria-label={`Abrir ${doc.nome}`}
+            data-testid={`abrir-doc-${doc.id}`}
           >
-            <IconAutorenew className="text-sm" />
-            Renovar
+            <IconVisibility className="text-[18px]" />
           </button>
         )}
 
@@ -144,36 +171,18 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem
-              onClick={() => window.open('#', '_blank')}
-              className="gap-2 cursor-pointer"
-            >
-              <IconDownload className="text-[16px]" />
-              Download
-            </DropdownMenuItem>
+            {doc.url && !doc.isLink && (
+              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                <a href={doc.url} download={doc.nome}>
+                  <IconDownload className="text-[16px]" />
+                  Baixar
+                </a>
+              </DropdownMenuItem>
+            )}
 
             {!obraFinalizada && (
               <>
-                <DropdownMenuItem
-                  onClick={() => onAcao('editar', doc)}
-                  className="gap-2 cursor-pointer"
-                >
-                  <IconEdit className="text-[16px]" />
-                  Editar
-                </DropdownMenuItem>
-
-                {isVencendo && (
-                  <DropdownMenuItem
-                    onClick={() => onAcao('renovar_confirm', doc)}
-                    className="gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
-                  >
-                    <IconAutorenew className="text-[16px]" />
-                    Renovar
-                  </DropdownMenuItem>
-                )}
-
                 <DropdownMenuSeparator />
-
                 <DropdownMenuItem
                   onClick={() => onAcao('excluir', doc)}
                   className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
@@ -193,46 +202,42 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function DocumentosSection({ obra }: DocumentosSectionProps) {
-  const [documentos, setDocumentos] = useState<ObraDocumento[]>(obra.documentos);
+  // XG10 — a lista vem do servidor. Antes era `useState(obra.documentos)`, e
+  // enviar/excluir mexiam só no estado do React: sumia no refresh.
+  const documentos = obra.documentos;
   const [modalState, setModalState] = useState<ModalState>({ type: null, doc: null });
+  const [preview, setPreview] = useState<ObraDocumento | null>(null);
+  const { toast } = useToast();
+  const excluirAnexo = useExcluirAnexo(obra.id);
 
   const obraFinalizada = obra.status === 'finalizada';
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const abrirModal = (type: ModalType, doc: ObraDocumento | null, categoria?: ObraDocumento['categoria']) => {
+    if (type === 'abrir') {
+      setPreview(doc);
+      return;
+    }
     setModalState({ type, doc, categoriaParaEnvio: categoria });
   };
 
   const fecharModal = () => setModalState({ type: null, doc: null });
 
-  const handleEnviar = (novoDoc: Omit<ObraDocumento, 'id'>) => {
-    setDocumentos((prev) => [{ ...novoDoc, id: gerarId() }, ...prev]);
-  };
-
-  const handleEditar = (updates: Partial<ObraDocumento>) => {
+  const handleExcluir = async () => {
     if (!modalState.doc) return;
-    setDocumentos((prev) =>
-      prev.map((d) => (d.id === modalState.doc!.id ? { ...d, ...updates } : d))
-    );
-  };
-
-  const handleRenovar = () => {
-    if (!modalState.doc) return;
-    setDocumentos((prev) =>
-      prev.map((d) =>
-        d.id === modalState.doc!.id
-          ? { ...d, status: 'valido', venceEmDias: undefined, data: 'Renovado hoje' }
-          : d
-      )
-    );
+    const alvo = modalState.doc;
     fecharModal();
-  };
-
-  const handleExcluir = () => {
-    if (!modalState.doc) return;
-    setDocumentos((prev) => prev.filter((d) => d.id !== modalState.doc!.id));
-    fecharModal();
+    try {
+      await excluirAnexo.mutateAsync(alvo.id);
+      toast({ title: 'Documento excluído' });
+    } catch (error) {
+      toast({
+        title: 'Não foi possível excluir',
+        description: error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // ── Grouped data ──────────────────────────────────────────────────────────
@@ -266,6 +271,9 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
           </Button>
         )}
       </div>
+
+      {/* XG10 — consumo do armazenamento da obra (200 MB). */}
+      <StorageBar obraId={obra.id} />
 
       {/* Alerta de vencimento */}
       {docsVencendo.length > 0 && (
@@ -356,40 +364,10 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
         open={modalState.type === 'enviar'}
         onOpenChange={(v) => { if (!v) fecharModal(); }}
         categoriaInicial={modalState.categoriaParaEnvio}
-        onConfirmar={handleEnviar}
+        obraId={obra.id}
       />
 
-      <EditarDocumentoModal
-        open={modalState.type === 'editar'}
-        onOpenChange={(v) => { if (!v) fecharModal(); }}
-        doc={modalState.doc}
-        onSalvar={handleEditar}
-      />
-
-      {/* Renovar AlertDialog */}
-      <AlertDialog
-        open={modalState.type === 'renovar_confirm'}
-        onOpenChange={(v) => { if (!v) fecharModal(); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar renovação</AlertDialogTitle>
-            <AlertDialogDescription>
-              O documento <strong className="text-gray-900 dark:text-white">{modalState.doc?.nome}</strong> será
-              marcado como <strong>Válido</strong> e a data atualizada para hoje.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={fecharModal}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRenovar}
-              className="bg-amber-500 hover:bg-amber-600 text-white"
-            >
-              Confirmar Renovação
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DocumentoPreviewModal doc={preview} onOpenChange={(v) => { if (!v) setPreview(null); }} />
 
       {/* Excluir AlertDialog */}
       <AlertDialog

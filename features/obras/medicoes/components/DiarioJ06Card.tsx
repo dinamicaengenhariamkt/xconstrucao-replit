@@ -75,6 +75,7 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId, data, isLoading
               <FileUploader
                 kind="obra_foto"
                 accept="image/jpeg,image/png,image/webp"
+                obraId={obraId}
                 label="Adicionar foto"
                 buttonVariant="outline"
                 disabled={fotoIds.length >= 8}

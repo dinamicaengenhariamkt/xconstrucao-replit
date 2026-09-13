@@ -1,7 +1,7 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { formatDate } from '@shared/lib/formatters';
-import { clientes, empreiteiras, financeiro, medicoes, obras } from '@shared/db/schema';
+import { clientes, empreiteiras, financeiro, medicoes, obraAditivos, obras } from '@shared/db/schema';
 import type {
   AdminHistoricoItem,
   AdminMedicao,
@@ -117,8 +117,17 @@ export async function getAdminObraDetalhe(
     data: fmtBr(f.data),
   }));
 
-  const valorTotal = Number(row.valorTotal ?? 0);
+  const valorContratado = Number(row.valorTotal ?? 0);
   const valorPago = Number(row.valorPago ?? 0);
+
+  // XG10 — aditivos deixaram de ser `0` fixo. `valorTotal` é o contratado mais
+  // o que foi aditivado, e é sobre ele que a UI calcula o saldo.
+  const [aditivosAgg] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${obraAditivos.valor}), 0)` })
+    .from(obraAditivos)
+    .where(eq(obraAditivos.obraId, row.id));
+  const aditivos = Number(aditivosAgg?.total ?? 0);
+  const valorTotal = valorContratado + aditivos;
 
   let situacao: SituacaoKey;
   if (row.status === 'pausada') situacao = 'obra_suspensa';
@@ -131,7 +140,7 @@ export async function getAdminObraDetalhe(
     codigo: `OBR-${row.id.slice(0, 6).toUpperCase()}`,
     cliente: row.clienteNome ?? '—',
     empreiteira: row.empreiteiraNome ?? '—',
-    valorContratado: valorTotal,
+    valorContratado,
     valorPago,
     percentConcluido: row.progresso ?? 0,
     situacao,
@@ -139,7 +148,7 @@ export async function getAdminObraDetalhe(
     tipo: row.tipo ?? '—',
     dataInicio: fmtBr(row.dataInicio),
     dataPrevisaoFim: fmtBr(row.dataPrevisao),
-    aditivos: 0, // não há tabela de aditivos — gap documentado (§13)
+    aditivos,
     valorTotal,
     medicoes: medicoesUi,
     historico,

@@ -4,6 +4,7 @@ import {
   clientes,
   empreiteiras,
   financeiro,
+  obraAditivos,
   obraAnexos,
   obraChecklistItens,
   obraChecklists,
@@ -316,7 +317,12 @@ export async function buildMinhaObraDetalheReal(
   }));
 
   const tarefasTotal = tarefas.length;
+  // Tudo que ainda não fechou. É o número que o score de saúde usa.
   const tarefasPendentes = tarefas.filter((t) => t.status !== "concluido").length;
+  // XG10 — o card dizia "Tarefas Pendentes" mostrando este total, então tarefa
+  // em execução aparecia como pendência ("eu tô executando, ele coloca como
+  // tarefa pendente", 25:39). Separar dá ao card o número que ele promete.
+  const tarefasEmAndamento = tarefas.filter((t) => t.status === "em_andamento").length;
 
   const atividades: ObraAtividade[] = etapasRows.map((e) => {
     const statusMap: Record<string, ObraAtividade["status"]> = {
@@ -359,7 +365,15 @@ export async function buildMinhaObraDetalheReal(
     resolvidoEm: row.o.resolvidoEm ? fmtBrDate(row.o.resolvidoEm) : undefined,
   }));
 
-  const problemasAbertos = ocorrencias.filter((o) => o.status === "aberto").length;
+  const abertas = ocorrencias.filter((o) => o.status === "aberto");
+  const problemasAbertos = abertas.length;
+  // XG10 — o card exibia "1 crítico, 2 médios" fixo no JSX, independente do
+  // que havia na obra. Aqui vai a contagem real.
+  const problemasPorGravidade = {
+    critico: abertas.filter((o) => o.severidade === "critico").length,
+    medio: abertas.filter((o) => o.severidade === "medio").length,
+    baixo: abertas.filter((o) => o.severidade === "baixo").length,
+  };
 
   // Diário → timeline.
   const diarioRows = await db
@@ -433,19 +447,24 @@ export async function buildMinhaObraDetalheReal(
   }
 
   // Documentos (anexos).
-  const anexosRows = await db
-    .select({
-      a: obraAnexos,
-      bucketKey: userFiles.bucketKey,
-      visibility: userFiles.visibility,
-      publicUrl: userFiles.publicUrl,
-      originalName: userFiles.originalName,
-      sizeBytes: userFiles.sizeBytes,
-    })
-    .from(obraAnexos)
-    .innerJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
-    .where(and(eq(obraAnexos.obraId, obraId), isNull(userFiles.deletedAt)))
-    .orderBy(desc(obraAnexos.createdAt));
+  // XG10 — LEFT join: o anexo pode ser um link externo, sem arquivo no bucket.
+  const anexosRows = (
+    await db
+      .select({
+        a: obraAnexos,
+        bucketKey: userFiles.bucketKey,
+        visibility: userFiles.visibility,
+        publicUrl: userFiles.publicUrl,
+        originalName: userFiles.originalName,
+        sizeBytes: userFiles.sizeBytes,
+        mime: userFiles.mime,
+        deletedAt: userFiles.deletedAt,
+      })
+      .from(obraAnexos)
+      .leftJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
+      .where(eq(obraAnexos.obraId, obraId))
+      .orderBy(desc(obraAnexos.createdAt))
+  ).filter((row) => row.a.linkUrl !== null || (row.bucketKey !== null && row.deletedAt === null));
 
   const tipoToCategoria: Record<string, ObraDocumento["categoria"]> = {
     projeto_arquitetonico: "planta",
@@ -460,17 +479,23 @@ export async function buildMinhaObraDetalheReal(
   const documentos: ObraDocumento[] = await Promise.all(
     anexosRows.map(async (row) => ({
       id: row.a.id,
-      nome: row.originalName ?? "Documento",
+      nome: row.a.titulo ?? row.originalName ?? "Documento",
       categoria: tipoToCategoria[row.a.tipo] ?? "outros",
       tamanho: row.sizeBytes ? `${(Number(row.sizeBytes) / 1024 / 1024).toFixed(1)} MB` : undefined,
       data: fmtBrDate(row.a.createdAt),
       observacoes: row.a.observacao ?? undefined,
-      url: await resolveSignedFotoUrl({
-        bucketKey: row.bucketKey,
-        visibility: row.visibility,
-        publicUrl: row.publicUrl,
-        originalName: row.originalName,
-      }),
+      // XG10 — `mime` e `isLink` alimentam o preview: PDF e imagem abrem
+      // embutidos, link vai direto para a origem (Drive, etc).
+      mime: row.mime ?? undefined,
+      isLink: row.a.linkUrl !== null,
+      url: row.a.linkUrl
+        ? row.a.linkUrl
+        : await resolveSignedFotoUrl({
+            bucketKey: row.bucketKey!,
+            visibility: row.visibility!,
+            publicUrl: row.publicUrl,
+            originalName: row.originalName,
+          }),
     })),
   );
 
@@ -483,7 +508,12 @@ export async function buildMinhaObraDetalheReal(
 
   const valorContratado = Number(obra.valorTotal ?? 0);
   const valorPagoNum = Number(obra.valorPago ?? 0);
-  const aditivos = 0;
+  // XG10 — soma real dos aditivos (antes era `0` fixo, com o card já na tela).
+  const [aditivosAgg] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${obraAditivos.valor}), 0)` })
+    .from(obraAditivos)
+    .where(eq(obraAditivos.obraId, obraId));
+  const aditivos = Number(aditivosAgg?.total ?? 0);
   const valorTotal = valorContratado + aditivos;
   const saldoReceber = Math.max(0, valorTotal - valorPagoNum);
   const percentualRecebido = valorTotal > 0 ? Math.round((valorPagoNum / valorTotal) * 100) : 0;
@@ -677,8 +707,10 @@ export async function buildMinhaObraDetalheReal(
     aReceber: saldoReceber,
     diasAtraso: dias,
     tarefasPendentes,
+    tarefasEmAndamento,
     tarefasTotal,
     problemasAbertos,
+    problemasPorGravidade,
     equipeAtiva: equipe.length,
     etapas,
     tarefas,

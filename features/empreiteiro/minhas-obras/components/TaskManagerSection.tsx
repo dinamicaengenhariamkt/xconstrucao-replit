@@ -79,6 +79,8 @@ interface TaskRowProps {
   onAtualizarProgresso: (t: MinhaObraTarefa) => void;
   onDuplicar: (t: MinhaObraTarefa) => void;
   onExcluir: (t: MinhaObraTarefa) => void;
+  /** XG10 — marcar/desmarcar direto na lista. Ausente ⇒ checkbox desabilitado. */
+  onToggleConcluida?: (t: MinhaObraTarefa) => void;
 }
 
 function TaskRow({
@@ -92,6 +94,7 @@ function TaskRow({
   onAtualizarProgresso,
   onDuplicar,
   onExcluir,
+  onToggleConcluida,
 }: TaskRowProps) {
   const badge = STATUS_BADGE[tarefa.status];
   const isConcluido = tarefa.status === 'concluido';
@@ -109,15 +112,21 @@ function TaskRow({
         isPendente && 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
       )}
     >
-      {/* Checkbox */}
+      {/* XG10 — o checkbox era `readOnly`, sem `onChange`: puramente decorativo.
+          Concluir só dava pelo menu de edição, e desmarcar não dava de jeito
+          nenhum ("eu não consigo ticar aqui a tarefa... ele vai ficar um
+          ticzinho azul e eu não consigo tirar também", 26:06–26:45).
+          Tarefa bloqueada segue travada: desbloquear é ação própria. */}
       <input
         type="checkbox"
-        readOnly
         checked={isConcluido}
-        disabled={isBloqueado}
+        disabled={isBloqueado || !onToggleConcluida}
+        onChange={() => onToggleConcluida?.(tarefa)}
+        aria-label={isConcluido ? `Reabrir ${tarefa.titulo}` : `Concluir ${tarefa.titulo}`}
+        data-testid={`checkbox-tarefa-${tarefa.id}`}
         className={cn(
           'w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0',
-          isBloqueado && 'cursor-not-allowed opacity-50'
+          isBloqueado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
         )}
       />
 
@@ -398,6 +407,8 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
     onAtualizarProgresso: (t) => openModal('progresso', t),
     onDuplicar: handleDuplicar,
     onExcluir: (t) => openModal('excluir', t),
+    // XG10 — o mesmo clique conclui e reabre, usando os handlers existentes.
+    onToggleConcluida: (t) => (t.status === 'concluido' ? handleReabrir(t) : handleConcluir(t)),
   };
 
   const filters: TaskFilter[] = ['todos', 'pendente', 'em_andamento', 'bloqueado', 'concluido'];

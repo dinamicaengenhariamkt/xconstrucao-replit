@@ -18,7 +18,9 @@ export interface J06DataSource<TRow> {
 export type EtapaJ06Data = Pick<
   ObraEtapaApi,
   'id' | 'nome' | 'descricao' | 'progresso' | 'status'
-> & Partial<Pick<ObraEtapaApi, 'responsavel'>>;
+  // XG10 — `dataInicio`/`prazo` entram como opcionais: quem injeta dados
+  // (link público, admin) nem sempre projeta as datas do Gantt.
+> & Partial<Pick<ObraEtapaApi, 'responsavel' | 'dataInicio' | 'prazo'>>;
 
 export type DiarioJ06Data = Pick<
   ObraDiarioApi,

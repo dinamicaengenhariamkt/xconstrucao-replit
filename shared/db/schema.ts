@@ -308,7 +308,14 @@ export const obraShareLinks = pgTable(
 export const obraAnexos = pgTable("obra_anexos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
-  fileId: varchar("file_id").notNull().references(() => userFiles.id, { onDelete: "cascade" }),
+  // XG10 — nullable: o anexo passou a poder ser um LINK externo em vez de um
+  // arquivo no bucket ("a maioria dos projetos vem em Drive... tem que poder
+  // colocar um link de fácil acesso", 16:21–16:32). Exatamente um dos dois
+  // (`fileId` ou `linkUrl`) é exigido pela API.
+  fileId: varchar("file_id").references(() => userFiles.id, { onDelete: "cascade" }),
+  linkUrl: text("link_url"),
+  /** Rótulo do link (o arquivo usa `userFiles.originalName`). */
+  titulo: text("titulo"),
   tipo: obraAnexoTipoEnum("tipo").notNull(),
   observacao: text("observacao"),
   createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -316,6 +323,28 @@ export const obraAnexos = pgTable("obra_anexos", {
 });
 
 export type ObraAnexo = typeof obraAnexos.$inferSelect;
+
+/**
+ * XG10 — aditivos de contrato da obra.
+ *
+ * Até aqui `aditivos` era `0` hardcoded em quatro serviços, com o card já
+ * renderizado no resumo financeiro — o cliente procurou onde lançar porque a
+ * tela prometia o recurso ("aqui tem aditivo, só que eu não vi local para
+ * colocar", 12:15). O valor entra em `valorTotal = valorContratado + aditivos`,
+ * que é a base do saldo a receber e do percentual recebido.
+ */
+export const obraAditivos = pgTable("obra_aditivos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+  descricao: text("descricao").notNull(),
+  // Assinado para acomodar aditivo de supressão (redução de escopo).
+  valor: numeric("valor", { precision: 15, scale: 2 }).notNull(),
+  data: text("data").notNull(),
+  criadoPor: varchar("criado_por").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ObraAditivo = typeof obraAditivos.$inferSelect;
 
 // J58 — assinatura eletrônica do contrato por parte (molde `user_consents`:
 // registro com IP/UA). Cada parte assina uma vez por obra (unique obra+papel).
@@ -832,6 +861,10 @@ export const obraEtapas = pgTable("obra_etapas", {
   progresso: integer("progresso").notNull().default(0),
   status: obraEtapaStatusEnum("status").notNull().default("pendente"),
   responsavel: text("responsavel"),
+  // XG10 — `prazo` sempre foi o fim previsto da etapa. `dataInicio` fecha o par
+  // que o gráfico de Gantt precisa para desenhar a barra ("se conseguisse um
+  // gráfico Gantt aí ficaria legal", 12:52).
+  dataInicio: timestamp("data_inicio"),
   prazo: timestamp("prazo"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -13,6 +13,8 @@ export interface ObraEtapaApi {
   progresso: number;
   status: EtapaStatus;
   responsavel: string | null;
+  /** XG10 — par de datas do Gantt. Nulo em etapas criadas antes do campo. */
+  dataInicio: string | null;
   prazo: string | null;
   createdAt: string;
   updatedAt: string;
@@ -98,7 +100,7 @@ export function useObraEtapas(obraId: string, enabled = true) {
 export function useCreateEtapa(obraId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { nome: string; descricao?: string | null; ordem?: number; responsavel?: string | null; prazo?: string | null }) =>
+    mutationFn: (body: { nome: string; descricao?: string | null; ordem?: number; responsavel?: string | null; dataInicio?: string | null; prazo?: string | null }) =>
       sendJSON<ObraEtapaApi>('POST', `/api/obras/${obraId}/etapas`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });
@@ -112,7 +114,7 @@ export function useCreateEtapa(obraId: string) {
 export function useUpdateEtapa(obraId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ etapaId, ...body }: { etapaId: string; nome?: string; progresso?: number; status?: EtapaStatus; descricao?: string | null; responsavel?: string | null; prazo?: string | null; ordem?: number }) =>
+    mutationFn: ({ etapaId, ...body }: { etapaId: string; nome?: string; progresso?: number; status?: EtapaStatus; descricao?: string | null; responsavel?: string | null; dataInicio?: string | null; prazo?: string | null; ordem?: number }) =>
       sendJSON<ObraEtapaApi>('PATCH', `/api/obras/${obraId}/etapas/${etapaId}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['obras', obraId, 'etapas'] });

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, obras, obraAnexos, userFiles } from "@shared/db/schema";
-import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { obraAnexos, userFiles } from "@shared/db/schema";
+import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { deleteObject } from "@shared/lib/storage";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 
 /**
  * DELETE /api/obras/[id]/anexos/[anexoId]
@@ -19,29 +20,25 @@ export async function DELETE(
 
   const { id: obraId, anexoId } = await ctx.params;
 
-  const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
-  if (!obra) {
+  // XG10 — guard padrão: o anterior exigia role `contratante`, deixando o dono
+  // da obra no xgestão sem poder remover o próprio anexo.
+  const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
+  if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
     return r;
   }
-
-  // Ownership check (admin OU contratante dono)
-  let allowed = isAdminLike(guard.user.role);
-  if (!allowed && guard.user.role === "contratante") {
-    const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
-    allowed = !!cli && obra.clienteId === cli.id;
-  }
-  if (!allowed) {
+  if (!canWriteObraContent(access)) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
 
+  // LEFT join: anexo-link não tem arquivo associado.
   const [anexo] = await db
     .select({ id: obraAnexos.id, fileId: obraAnexos.fileId, bucketKey: userFiles.bucketKey })
     .from(obraAnexos)
-    .innerJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
+    .leftJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
     .where(and(eq(obraAnexos.id, anexoId), eq(obraAnexos.obraId, obraId)));
   if (!anexo) {
     const r = NextResponse.json({ message: "Anexo não encontrado" }, { status: 404 });
@@ -50,12 +47,17 @@ export async function DELETE(
   }
 
   await db.delete(obraAnexos).where(eq(obraAnexos.id, anexoId));
-  await db.update(userFiles).set({ deletedAt: new Date() }).where(eq(userFiles.id, anexo.fileId));
 
-  try {
-    await deleteObject(anexo.bucketKey);
-  } catch {
-    // best-effort: arquivo já pode ter sido removido no R2 — DB é fonte de verdade.
+  // Só há arquivo a apagar quando o anexo não é um link.
+  if (anexo.fileId) {
+    await db.update(userFiles).set({ deletedAt: new Date() }).where(eq(userFiles.id, anexo.fileId));
+    if (anexo.bucketKey) {
+      try {
+        await deleteObject(anexo.bucketKey);
+      } catch {
+        // best-effort: arquivo já pode ter sido removido no R2 — DB é fonte de verdade.
+      }
+    }
   }
 
   await recordAudit({

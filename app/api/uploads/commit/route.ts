@@ -15,13 +15,19 @@ import {
   visibilityForKind,
   type UploadKind,
 } from "@shared/lib/storage";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { verificarQuotaObra } from "@features/obras/api/storage-quota";
 
 const bodySchema = z.object({
   kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "obra_capa", "comprovante_pagamento", "candidatura_anexo", "obra_foto", "anuncio_criativo", "cliente_documento"]),
   key: z.string().min(8).max(500),
   mime: z.string().min(3).max(120),
-  size: z.number().int().min(1).max(20_000_000),
+  // XG10 — ver nota em presign/route.ts: teto de sanidade, não o limite real.
+  size: z.number().int().min(1).max(50_000_000),
   originalName: z.string().min(1).max(240),
+  // XG10 — ver presign: a quota é reconfirmada aqui porque o espaço pode ter
+  // sido consumido por outro upload entre o presign e este commit.
+  obraId: z.string().min(8).max(64).optional(),
   extras: z
     .object({
       tipoDocumento: z.string().max(60).optional(),
@@ -108,6 +114,33 @@ export async function POST(request: NextRequest) {
     const r = NextResponse.json({ message: "Formato real do arquivo divergente." }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // XG10 — reconfirma a quota da obra com o tamanho REAL já verificado no R2.
+  // Só aqui a decisão é definitiva: entre o presign e este ponto, outro upload
+  // pode ter ocupado o espaço. Estourou, apaga o objeto e devolve 413 — não
+  // vale gravar em `user_files` um arquivo que a obra não comporta.
+  if (parsed.data.obraId) {
+    const acesso = await findObraAccess(parsed.data.obraId, {
+      id: guard.user.id,
+      role: guard.user.role,
+    });
+    if (!acesso || !canWriteObraContent(acesso)) {
+      await deleteObject(key).catch(() => null);
+      const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    const quota = await verificarQuotaObra(parsed.data.obraId, size);
+    if (!quota.ok) {
+      await deleteObject(key).catch(() => null);
+      const r = NextResponse.json(
+        { error: "QUOTA_EXCEDIDA", message: quota.message, uso: quota.uso },
+        { status: 413 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   const visibility = visibilityForKind(kind as UploadKind);

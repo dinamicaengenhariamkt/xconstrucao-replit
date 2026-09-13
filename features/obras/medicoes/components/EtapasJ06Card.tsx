@@ -23,6 +23,13 @@ interface Props extends J06DataSource<EtapaJ06Data> {
   obraId: string;
   canWrite: boolean;
   canEditScope: boolean; // contratante/admin
+  /**
+   * XG10 — obra própria do xgestão. O progresso da etapa é derivado da média
+   * das tarefas medidas, então o campo editável some: ele era uma segunda
+   * fonte de verdade brigando com o cálculo (mesmo defeito da XG09/D6). A
+   * barra continua, agora só como leitura. No marketplace nada muda.
+   */
+  progressoDerivado?: boolean;
 }
 
 const STATUS_LABEL: Record<EtapaStatus, string> = {
@@ -39,7 +46,7 @@ const STATUS_BADGE: Record<EtapaStatus, string> = {
   concluido: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
-export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading: isLoadingProp }: Props) {
+export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivado = false, data, isLoading: isLoadingProp }: Props) {
   const injected = data !== undefined;
   const query = useObraEtapas(obraId, !injected);
   const etapas = injected ? data : query.data;
@@ -53,13 +60,23 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
   const [nome, setNome] = useState('');
   const [desc, setDesc] = useState('');
   const [responsavel, setResponsavel] = useState('');
+  // XG10 — datas do Gantt, no formato do <input type="date"> (AAAA-MM-DD).
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
 
   const resetForm = () => {
     setNome('');
     setDesc('');
     setResponsavel('');
+    setDataInicio('');
+    setDataFim('');
     setEditingId(null);
   };
+
+  /** "AAAA-MM-DD" → ISO que a API espera; vazio vira null. */
+  const toIso = (v: string) => (v ? new Date(`${v}T12:00:00`).toISOString() : null);
+  /** ISO do banco → "AAAA-MM-DD" para o input. */
+  const toInputDate = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 
   const handleSave = async () => {
     if (!canWrite) return;
@@ -71,12 +88,16 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
           nome: nome.trim(),
           descricao: desc.trim() || null,
           responsavel: responsavel.trim() || null,
+          dataInicio: toIso(dataInicio),
+          prazo: toIso(dataFim),
         });
       } else {
         await createMut.mutateAsync({
           nome: nome.trim(),
           descricao: desc.trim() || null,
           responsavel: responsavel.trim() || null,
+          dataInicio: toIso(dataInicio),
+          prazo: toIso(dataFim),
         });
       }
       resetForm();
@@ -132,6 +153,19 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                   <div><Label>Nome*</Label><Input value={nome} onChange={(e) => setNome(e.target.value)} data-testid="input-etapa-nome" /></div>
                   <div><Label>Descrição</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} data-testid="input-etapa-desc" /></div>
                   <div><Label>Responsável</Label><Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} data-testid="input-etapa-responsavel" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Início previsto</Label>
+                      <Input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)} data-testid="input-etapa-data-inicio" />
+                    </div>
+                    <div>
+                      <Label>Fim previsto</Label>
+                      <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} data-testid="input-etapa-prazo" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    As datas alimentam o gráfico do cronograma.
+                  </p>
                 </div>
                 <DialogFooter>
                   <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -171,20 +205,22 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                 </div>
                 {canWrite && (
                   <div className="flex flex-wrap items-center gap-2 pt-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      defaultValue={e.progresso}
-                      className="w-20 h-8"
-                      onBlur={(ev) => {
-                        const v = Number(ev.target.value);
-                        if (!Number.isNaN(v) && v !== e.progresso && v >= 0 && v <= 100) {
-                          handleProgresso(e.id, v);
-                        }
-                      }}
-                      data-testid={`input-progresso-${e.id}`}
-                    />
+                    {!progressoDerivado && (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        defaultValue={e.progresso}
+                        className="w-20 h-8"
+                        onBlur={(ev) => {
+                          const v = Number(ev.target.value);
+                          if (!Number.isNaN(v) && v !== e.progresso && v >= 0 && v <= 100) {
+                            handleProgresso(e.id, v);
+                          }
+                        }}
+                        data-testid={`input-progresso-${e.id}`}
+                      />
+                    )}
                     <Select value={e.status} onValueChange={(v) => handleStatus(e.id, v as EtapaStatus)}>
                       <SelectTrigger className="w-44 h-8" data-testid={`select-status-${e.id}`}><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -203,6 +239,8 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                             setNome(e.nome);
                             setDesc(e.descricao ?? '');
                             setResponsavel(e.responsavel ?? '');
+                            setDataInicio(toInputDate(e.dataInicio));
+                            setDataFim(toInputDate(e.prazo));
                             setOpen(true);
                           }}
                           data-testid={`button-edit-etapa-${e.id}`}

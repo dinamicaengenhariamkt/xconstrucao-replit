@@ -75,6 +75,7 @@ export function FotosJ06Card({ obraId, canWrite, currentUserId, currentUserRole,
             <FileUploader
               kind="obra_foto"
               accept="image/jpeg,image/png,image/webp"
+              obraId={obraId}
               label="Enviar foto"
               testId="upload-foto-obra"
               onUploaded={(r) => handleUpload(r.id)}

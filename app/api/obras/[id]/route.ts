@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
+  candidaturaAnexos,
   empreiteiras,
+  financeiro,
   medicoes,
   obras,
+  obrasSalvas,
   obraAnexos,
+  obraChecklistItens,
+  obraChecklists,
+  obraDiario,
+  obraEquipe,
   obraEtapas,
   obraFotos,
+  obraOcorrencias,
+  obraTarefas,
+  pagamentosSplit,
   users,
   userFiles,
 } from "@shared/db/schema";
@@ -568,10 +578,16 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
+  // XG10 — o empreiteiro pode excluir a PRÓPRIA obra do xgestão (sem
+  // contratante), mas segue barrado em obra de marketplace: lá a obra é do
+  // contratante, e apagá-la destruiria o histórico da outra parte.
   if (guard.user.role === "empreiteiro") {
-    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
-    setNoCacheHeaders(r);
-    return r;
+    const obraPropria = access.obra.clienteId === null && access.empreiteiraId !== null;
+    if (!obraPropria || access.isDiscoveryOnly) {
+      const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   // Transação + SELECT ... FOR UPDATE na row da obra para fechar a janela de
@@ -596,6 +612,53 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     if (pendentes.length > 0) {
       return { kind: "conflict" as const, count: pendentes.length };
     }
+
+    // XG10 — limpeza explícita dos filhos da obra.
+    //
+    // O schema Drizzle declara `onDelete: cascade` na maioria destas tabelas,
+    // mas a auditoria do banco real mostrou que **11 delas não têm FK alguma**
+    // para `obras` (criadas por bootstrap em runtime, antes de `obras` existir
+    // ou sem a constraint chegar a ser registrada). Ou seja: o cascade era uma
+    // promessa do código que o Postgres nunca cumpriu — apagar a obra deixaria
+    // etapas, tarefas, fotos e diário órfãos, invisíveis e ocupando espaço.
+    // Outras três (`financeiro`, `candidaturas`, `pagamentos_split`) têm FK com
+    // NO ACTION, que faria o DELETE falhar.
+    //
+    // Apagar explicitamente cobre os dois casos e não depende de qual ambiente
+    // recebeu quais constraints. A ordem respeita as dependências entre filhos.
+    const checklistsDaObra = await tx
+      .select({ id: obraChecklists.id })
+      .from(obraChecklists)
+      .where(eq(obraChecklists.obraId, id));
+    if (checklistsDaObra.length > 0) {
+      await tx.delete(obraChecklistItens).where(
+        inArray(obraChecklistItens.checklistId, checklistsDaObra.map((c) => c.id)),
+      );
+    }
+
+    const candidaturasDaObra = await tx
+      .select({ id: candidaturas.id })
+      .from(candidaturas)
+      .where(eq(candidaturas.obraId, id));
+    if (candidaturasDaObra.length > 0) {
+      await tx.delete(candidaturaAnexos).where(
+        inArray(candidaturaAnexos.candidaturaId, candidaturasDaObra.map((c) => c.id)),
+      );
+    }
+
+    await tx.delete(obraChecklists).where(eq(obraChecklists.obraId, id));
+    await tx.delete(obraTarefas).where(eq(obraTarefas.obraId, id));
+    await tx.delete(obraEtapas).where(eq(obraEtapas.obraId, id));
+    await tx.delete(obraDiario).where(eq(obraDiario.obraId, id));
+    await tx.delete(obraOcorrencias).where(eq(obraOcorrencias.obraId, id));
+    await tx.delete(obraFotos).where(eq(obraFotos.obraId, id));
+    await tx.delete(obraAnexos).where(eq(obraAnexos.obraId, id));
+    await tx.delete(obraEquipe).where(eq(obraEquipe.obraId, id));
+    await tx.delete(medicoes).where(eq(medicoes.obraId, id));
+    await tx.delete(obrasSalvas).where(eq(obrasSalvas.obraId, id));
+    await tx.delete(candidaturas).where(eq(candidaturas.obraId, id));
+    await tx.delete(pagamentosSplit).where(eq(pagamentosSplit.obraId, id));
+    await tx.delete(financeiro).where(eq(financeiro.obraId, id));
 
     await tx.delete(obras).where(eq(obras.id, id));
     return { kind: "deleted" as const };

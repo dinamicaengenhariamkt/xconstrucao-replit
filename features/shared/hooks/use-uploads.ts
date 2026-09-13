@@ -20,6 +20,11 @@ export interface CommitResponse {
 interface UploadOptions {
   file: File;
   kind: UploadKind;
+  /**
+   * XG10 — obra de destino. Quando informado, presign e commit verificam a
+   * quota de armazenamento da obra (200 MB) e devolvem 413 se não couber.
+   */
+  obraId?: string;
   extras?: { tipoDocumento?: string; observacao?: string };
   onProgress?: (p: number) => void;
 }
@@ -106,6 +111,7 @@ export function useUpload() {
           mime,
           size: opts.file.size,
           filename: opts.file.name,
+          obraId: opts.obraId,
           extras: opts.extras,
         });
       } catch (error) {
@@ -126,6 +132,7 @@ export function useUpload() {
           mime,
           size: opts.file.size,
           originalName: opts.file.name,
+          obraId: opts.obraId,
           extras: opts.extras,
         });
       } catch (error) {

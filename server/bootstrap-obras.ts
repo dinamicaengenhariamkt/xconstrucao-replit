@@ -151,6 +151,17 @@ END$$;`),
     console.error("[bootstrap-obras] create obra_anexos:", err);
   }
 
+  // XG10 — anexo pode ser um LINK externo (projeto no Drive) em vez de arquivo
+  // no bucket. Três mudanças idempotentes: as duas colunas novas e a remoção do
+  // NOT NULL de `file_id`, que impedia a linha só-link.
+  try {
+    await db.execute(sql`ALTER TABLE obra_anexos ADD COLUMN IF NOT EXISTS link_url TEXT`);
+    await db.execute(sql`ALTER TABLE obra_anexos ADD COLUMN IF NOT EXISTS titulo TEXT`);
+    await db.execute(sql`ALTER TABLE obra_anexos ALTER COLUMN file_id DROP NOT NULL`);
+  } catch (err) {
+    console.error("[bootstrap-obras] alter obra_anexos (link):", err);
+  }
+
   // FK obra_anexos.file_id -> user_files(id) (criada à parte para não falhar caso
   // user_files ainda não exista no momento desta chamada; bootstrap-storage roda antes).
   try {

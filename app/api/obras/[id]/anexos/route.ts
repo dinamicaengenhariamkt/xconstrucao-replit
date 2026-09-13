@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, obras, obraAnexos, userFiles } from "@shared/db/schema";
+import { obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 
 const TIPOS = [
   "projeto_arquitetonico",
@@ -18,30 +19,47 @@ const TIPOS = [
   "outros",
 ] as const;
 
-const bodySchema = z.object({
-  fileId: z.string().min(8).max(64),
-  tipo: z.enum(TIPOS),
-  observacao: z.string().trim().max(500).optional().nullable(),
-});
-
-/** Verifica ownership de uma obra para o usuário autenticado. */
-async function assertObraWritable(
-  obraId: string,
-  user: { id: string; role: string },
-): Promise<{ ok: true; obra: typeof obras.$inferSelect } | { ok: false; status: number; message: string }> {
-  const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
-  if (!obra) return { ok: false, status: 404, message: "Obra não encontrada" };
-
-  if (isAdminLike(user.role)) return { ok: true, obra };
-  if (user.role !== "contratante") {
-    return { ok: false, status: 403, message: "Sem permissão." };
-  }
-  const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, user.id));
-  if (!cli || obra.clienteId !== cli.id) {
-    return { ok: false, status: 404, message: "Obra não encontrada" };
-  }
-  return { ok: true, obra };
-}
+/**
+ * XG10 — o anexo é um arquivo do bucket OU um link externo, nunca os dois nem
+ * nenhum. O `superRefine` garante isso; sem ele, uma linha sem origem passaria
+ * e a lista mostraria um item que não abre nada.
+ */
+const bodySchema = z
+  .object({
+    fileId: z.string().min(8).max(64).optional().nullable(),
+    linkUrl: z.string().trim().url().max(2000).optional().nullable(),
+    titulo: z.string().trim().min(2).max(160).optional().nullable(),
+    tipo: z.enum(TIPOS),
+    observacao: z.string().trim().max(500).optional().nullable(),
+  })
+  .superRefine((v, ctx) => {
+    const temArquivo = Boolean(v.fileId);
+    const temLink = Boolean(v.linkUrl);
+    if (temArquivo === temLink) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Envie um arquivo OU informe um link, não os dois.",
+      });
+      return;
+    }
+    if (temLink) {
+      // http(s) apenas: `javascript:` e `data:` viram XSS ao clicar no link.
+      if (!/^https?:\/\//i.test(v.linkUrl!)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["linkUrl"],
+          message: "O link precisa começar com http:// ou https://.",
+        });
+      }
+      if (!v.titulo) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["titulo"],
+          message: "Dê um nome ao link.",
+        });
+      }
+    }
+  });
 
 /** GET — lista anexos da obra (qualquer um com acesso leitura pode ver). */
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -49,27 +67,18 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   if (guard.error) return guard.error;
 
   const { id: obraId } = await ctx.params;
-  const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
-  if (!obra) {
+  // XG10 — passa a usar o guard padrão dos recursos da obra. O check anterior
+  // só liberava o empreiteiro em obra PUBLICADA E SEM VÍNCULO (descoberta do
+  // marketplace), então o dono da obra do xgestão não via os próprios anexos.
+  const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role }, { allowDiscovery: true });
+  if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
     return r;
   }
 
-  // Reaproveita check de leitura: admin + dono + empreiteiro com obra pública visível.
-  let allowed = isAdminLike(guard.user.role);
-  if (!allowed && guard.user.role === "contratante") {
-    const [cli] = await db.select({ id: clientes.id }).from(clientes).where(eq(clientes.userId, guard.user.id));
-    allowed = !!cli && obra.clienteId === cli.id;
-  } else if (!allowed && guard.user.role === "empreiteiro") {
-    allowed = obra.visibilidade === "publicada" && obra.empreiteiraId === null;
-  }
-  if (!allowed) {
-    const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
-    setNoCacheHeaders(r);
-    return r;
-  }
-
+  // LEFT join: anexo-link não tem linha em `user_files`. O filtro de
+  // `deletedAt` vai para o WHERE como "não é arquivo apagado".
   const rows = await db
     .select({
       id: obraAnexos.id,
@@ -77,32 +86,40 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       observacao: obraAnexos.observacao,
       createdAt: obraAnexos.createdAt,
       fileId: obraAnexos.fileId,
+      linkUrl: obraAnexos.linkUrl,
+      titulo: obraAnexos.titulo,
       bucketKey: userFiles.bucketKey,
       originalName: userFiles.originalName,
       mime: userFiles.mime,
       sizeBytes: userFiles.sizeBytes,
       visibility: userFiles.visibility,
       publicUrl: userFiles.publicUrl,
+      deletedAt: userFiles.deletedAt,
     })
     .from(obraAnexos)
-    .innerJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
-    .where(and(eq(obraAnexos.obraId, obraId), isNull(userFiles.deletedAt)))
+    .leftJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
+    .where(eq(obraAnexos.obraId, obraId))
     .orderBy(desc(obraAnexos.createdAt));
 
   const out = await Promise.all(
-    rows.map(async (a) => ({
-      id: a.id,
-      tipo: a.tipo,
-      observacao: a.observacao,
-      createdAt: a.createdAt,
-      fileId: a.fileId,
-      originalName: a.originalName,
-      mime: a.mime,
-      sizeBytes: a.sizeBytes,
-      url: a.visibility === "public"
-        ? (a.publicUrl ?? publicUrlForKey(a.bucketKey))
-        : await createSignedReadUrl({ key: a.bucketKey, filename: a.originalName }).catch(() => null),
-    })),
+    rows
+      .filter((a) => a.linkUrl !== null || (a.bucketKey !== null && a.deletedAt === null))
+      .map(async (a) => ({
+        id: a.id,
+        tipo: a.tipo,
+        observacao: a.observacao,
+        createdAt: a.createdAt,
+        fileId: a.fileId,
+        linkUrl: a.linkUrl,
+        originalName: a.originalName ?? a.titulo,
+        mime: a.mime,
+        sizeBytes: a.sizeBytes,
+        url: a.linkUrl
+          ? a.linkUrl
+          : a.visibility === "public"
+            ? (a.publicUrl ?? publicUrlForKey(a.bucketKey!))
+            : await createSignedReadUrl({ key: a.bucketKey!, filename: a.originalName ?? undefined }).catch(() => null),
+      })),
   );
 
   const r = NextResponse.json(out);
@@ -121,9 +138,17 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   if (guard.error) return guard.error;
 
   const { id: obraId } = await ctx.params;
-  const check = await assertObraWritable(obraId, { id: guard.user.id, role: guard.user.role });
-  if (!check.ok) {
-    const r = NextResponse.json({ message: check.message }, { status: check.status });
+  // XG10 — o guard anterior exigia role `contratante`, então o dono da obra no
+  // xgestão não conseguia anexar nada à própria obra. `canWriteObraContent`
+  // cobre admin, contratante dono e empreiteiro vinculado (não descoberta).
+  const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
+  if (!access) {
+    const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canWriteObraContent(access)) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
@@ -166,28 +191,33 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
 
-  const [file] = await db.select().from(userFiles).where(eq(userFiles.id, parsed.data.fileId));
-  if (!file || file.deletedAt) {
-    const r = NextResponse.json({ message: "Arquivo não encontrado" }, { status: 404 });
-    setNoCacheHeaders(r);
-    return r;
-  }
-  if (file.kind !== "obra_anexo") {
-    const r = NextResponse.json({ message: "Arquivo não é do tipo obra_anexo" }, { status: 400 });
-    setNoCacheHeaders(r);
-    return r;
-  }
-  if (!isAdminLike(guard.user.role) && file.ownerUserId !== guard.user.id) {
-    const r = NextResponse.json({ message: "Arquivo não pertence ao usuário" }, { status: 403 });
-    setNoCacheHeaders(r);
-    return r;
+  // Anexo por arquivo: valida o upload. Anexo por link não toca o bucket.
+  if (parsed.data.fileId) {
+    const [file] = await db.select().from(userFiles).where(eq(userFiles.id, parsed.data.fileId));
+    if (!file || file.deletedAt) {
+      const r = NextResponse.json({ message: "Arquivo não encontrado" }, { status: 404 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    if (file.kind !== "obra_anexo") {
+      const r = NextResponse.json({ message: "Arquivo não é do tipo obra_anexo" }, { status: 400 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    if (!isAdminLike(guard.user.role) && file.ownerUserId !== guard.user.id) {
+      const r = NextResponse.json({ message: "Arquivo não pertence ao usuário" }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   const [created] = await db
     .insert(obraAnexos)
     .values({
       obraId,
-      fileId: parsed.data.fileId,
+      fileId: parsed.data.fileId ?? null,
+      linkUrl: parsed.data.linkUrl ?? null,
+      titulo: parsed.data.titulo ?? null,
       tipo: parsed.data.tipo,
       observacao: parsed.data.observacao ?? null,
       createdBy: guard.user.id,

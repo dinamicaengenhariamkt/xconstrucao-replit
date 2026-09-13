@@ -19,6 +19,13 @@ interface ProfitCardProps {
   title?: string;
   description?: string;
   luminous?: boolean;
+  /**
+   * XG10 — exibe o card "Lucro estimado". Desligado na obra do xgestão a
+   * pedido do cliente: "lucro estimado é besteira, não tem como estimar lucro,
+   * tem que esperar acabar" (05:28–05:41). A margem, essa ele quis manter.
+   * Segue ligado por padrão para não mudar as telas de admin/portfólio.
+   */
+  mostrarLucroEstimado?: boolean;
 }
 
 function marginVariant(margem: number): MarginVariant {
@@ -38,6 +45,7 @@ export function ProfitCard({
   title = 'Visão de Lucro',
   description = 'Estimativa baseada no orçamento, entradas e saídas registradas.',
   luminous = false,
+  mostrarLucroEstimado = true,
 }: ProfitCardProps) {
   const variant = marginVariant(metrics.margem);
 
@@ -52,7 +60,12 @@ export function ProfitCard({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className={cn(
+              'grid gap-3 sm:grid-cols-2',
+              mostrarLucroEstimado ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
+            )}
+          >
             <StatsCard
               label="Receita total"
               value={formatCurrencyRounded(metrics.receitaTotal)}
@@ -69,15 +82,17 @@ export function ProfitCard({
               luminous={luminous}
               compact
             />
-            <StatsCard
-              label="Lucro estimado"
-              value={formatCurrencyRounded(metrics.lucroEstimado)}
-              icon={IconTrendingUp}
-              iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
-              badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
-              luminous={luminous}
-              compact
-            />
+            {mostrarLucroEstimado && (
+              <StatsCard
+                label="Lucro estimado"
+                value={formatCurrencyRounded(metrics.lucroEstimado)}
+                icon={IconTrendingUp}
+                iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
+                badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
+                luminous={luminous}
+                compact
+              />
+            )}
             <StatsCard
               label="Margem"
               value={`${metrics.margem.toFixed(1).replace('.', ',')}%`}

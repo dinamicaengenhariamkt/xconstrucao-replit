@@ -34,12 +34,18 @@ export async function bootstrapMedicoesExtrasSchema(): Promise<void> {
         progresso INTEGER NOT NULL DEFAULT 0,
         status obra_etapa_status NOT NULL DEFAULT 'pendente',
         responsavel TEXT,
+        data_inicio TIMESTAMP,
         prazo TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_obra_etapas_obra_id ON obra_etapas(obra_id, ordem)`);
+
+    // XG10 — data de início da etapa, par de `prazo` para o gráfico de Gantt.
+    // ALTER separado do CREATE: a tabela já existe nos ambientes publicados, e
+    // `CREATE TABLE IF NOT EXISTS` não acrescenta coluna a tabela existente.
+    await db.execute(sql`ALTER TABLE obra_etapas ADD COLUMN IF NOT EXISTS data_inicio TIMESTAMP`);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS obra_diario (

@@ -9,6 +9,8 @@ import { useUpload, type UploadKind, type CommitResponse } from '@features/share
 interface FileUploaderProps {
   kind: UploadKind;
   accept: string;
+  /** XG10 — quando o arquivo pertence a uma obra, ativa a quota de 200 MB. */
+  obraId?: string;
   label?: string;
   helper?: string;
   buttonVariant?: 'default' | 'outline' | 'secondary' | 'ghost';
@@ -22,6 +24,7 @@ interface FileUploaderProps {
 export function FileUploader({
   kind,
   accept,
+  obraId,
   label = 'Enviar arquivo',
   helper,
   buttonVariant = 'outline',
@@ -43,7 +46,7 @@ export function FileUploader({
     if (!file) return;
     setBusy(true);
     try {
-      const result = await upload({ file, kind, extras });
+      const result = await upload({ file, kind, obraId, extras });
       try {
         await onUploaded(result);
       } catch (error) {

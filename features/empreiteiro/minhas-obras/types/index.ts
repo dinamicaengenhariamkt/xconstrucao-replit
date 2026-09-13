@@ -38,8 +38,12 @@ export interface MinhaObraDetalhe extends MinhaObra {
   aReceber: number;
   diasAtraso: number;
   tarefasPendentes: number;
+  /** XG10 — só as `em_andamento`; `tarefasPendentes` conta tudo que não fechou. */
+  tarefasEmAndamento?: number;
   tarefasTotal: number;
   problemasAbertos: number;
+  /** XG10 — contagem real por gravidade (o subtítulo do card era fixo). */
+  problemasPorGravidade?: { critico: number; medio: number; baixo: number };
   equipeAtiva: number;
   etapas: MinhaObraEtapa[];
   tarefas: MinhaObraTarefa[];
@@ -134,6 +138,10 @@ export interface ObraDocumento {
   venceEmDias?: number;
   observacoes?: string;
   url?: string;
+  /** XG10 — tipo do arquivo; decide se o preview abre embutido. */
+  mime?: string;
+  /** XG10 — anexo que é link externo (Drive, etc), não arquivo do bucket. */
+  isLink?: boolean;
 }
 
 export interface ObraAtividade {

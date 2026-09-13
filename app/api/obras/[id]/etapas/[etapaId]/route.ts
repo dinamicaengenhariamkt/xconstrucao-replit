@@ -14,6 +14,8 @@ const patchSchema = z.object({
   progresso: z.number().int().min(0).max(100).optional(),
   status: z.enum(["pendente", "em_andamento", "bloqueado", "concluido"]).optional(),
   responsavel: z.string().trim().max(120).nullable().optional(),
+  // XG10 — par de datas do Gantt.
+  dataInicio: z.string().datetime().nullable().optional(),
   prazo: z.string().datetime().nullable().optional(),
 });
 
@@ -46,6 +48,31 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return r;
   }
   const data = parsed.data;
+
+  // XG10 — na obra do xgestão, o progresso da etapa é GRANDEZA DERIVADA: a
+  // medição recalcula `obra_etapas.progresso` como média do progresso das
+  // tarefas (app/api/empreiteiro/medicoes/route.ts). Aceitar um valor digitado
+  // aqui criava segunda fonte de verdade — o mesmo defeito que a XG09 (D6)
+  // corrigiu no progresso da obra: a medição seguinte partia do valor
+  // sobrescrito. O campo saiu da UI e o servidor recusa, para o caminho não
+  // voltar por outra porta.
+  //
+  // O marketplace segue inalterado: lá o empreiteiro atualiza progresso/status
+  // da etapa como sempre (ver o gate logo abaixo).
+  const obraPropriaXgestao = access.obra.clienteId === null;
+  if (obraPropriaXgestao && data.progresso !== undefined) {
+    const r = NextResponse.json(
+      {
+        error: "PROGRESSO_DERIVADO",
+        message:
+          "O avanço da etapa vem das tarefas medidas. Registre uma atualização em vez de digitar a porcentagem.",
+      },
+      { status: 409 },
+    );
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   // No marketplace o escopo continua sendo do contratante. Na obra própria do
   // xgestão, o empreiteiro é o dono operacional e pode manter o cronograma.
   if (access.role === "empreiteiro" && access.obra.clienteId !== null) {
@@ -65,6 +92,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (data.progresso !== undefined) updateData.progresso = data.progresso;
   if (data.status !== undefined) updateData.status = data.status;
   if (data.responsavel !== undefined) updateData.responsavel = data.responsavel;
+  if (data.dataInicio !== undefined) updateData.dataInicio = data.dataInicio ? new Date(data.dataInicio) : null;
   if (data.prazo !== undefined) updateData.prazo = data.prazo ? new Date(data.prazo) : null;
   // Auto-coerência: progresso=100 ⇒ status=concluido
   if (data.progresso === 100 && data.status === undefined) updateData.status = "concluido";

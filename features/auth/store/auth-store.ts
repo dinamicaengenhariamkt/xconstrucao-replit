@@ -48,6 +48,8 @@ interface AuthState {
   _abortController: AbortController | null;
   _hasCheckedAuth: boolean;
   _skipInitialCheck: boolean;
+  // XG10 — refresh em voo, compartilhado por todos os chamadores concorrentes.
+  _refreshPromise: Promise<boolean> | null;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -87,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
         _abortController: null,
         _hasCheckedAuth: false,
         _skipInitialCheck: false,
+        _refreshPromise: null,
 
         // Setters simples
         setUser: (user) => set({ user }),
@@ -158,33 +161,55 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
-        // Renovar token
+        // Renovar token.
+        //
+        // XG10 — a chamada é SERIALIZADA. `/api/auth/refresh` rotaciona o
+        // `sessionToken` (app/api/auth/refresh/route.ts), então dois refreshes
+        // concorrentes fazem o segundo falhar com "Sessão revogada" e deslogar
+        // o usuário. Concorrência é o caso normal, não a exceção: o timer, o
+        // retorno da aba ao foco e um 401 em duas queries paralelas podem
+        // coincidir. Quem chega durante um refresh em voo espera o mesmo.
+        //
+        // O `signal` do chamador controla apenas a ESPERA dele, nunca o fetch
+        // compartilhado — abortar o request derrubaria a renovação dos outros.
         refreshToken: async (signal?: AbortSignal): Promise<boolean> => {
-          const { setUser } = get();
+          const { setUser, _refreshPromise } = get();
 
-          try {
-            const res = await fetch('/api/auth/refresh', {
-              method: 'POST',
-              credentials: 'include',
-              cache: 'no-store',
-              signal,
-            });
+          const inFlight =
+            _refreshPromise ??
+            (async () => {
+              try {
+                const res = await fetch('/api/auth/refresh', {
+                  method: 'POST',
+                  credentials: 'include',
+                  cache: 'no-store',
+                });
 
-            if (!res.ok) {
-              return false;
-            }
+                if (!res.ok) return false;
 
-            const data = await res.json();
-            setUser(data.user);
-            return true;
-          } catch (error) {
-            // Não logar erros de abort (são intencionais)
-            if (error instanceof Error && error.name === 'AbortError') {
-              return false;
-            }
-            console.error('Erro ao renovar token:', error);
-            return false;
-          }
+                const data = await res.json();
+                setUser(data.user);
+                return true;
+              } catch (error) {
+                console.error('Erro ao renovar token:', error);
+                return false;
+              } finally {
+                set({ _refreshPromise: null });
+              }
+            })();
+
+          if (!_refreshPromise) set({ _refreshPromise: inFlight });
+
+          if (!signal) return inFlight;
+
+          // Abort do chamador: desiste de esperar sem cancelar o refresh.
+          if (signal.aborted) return false;
+          return Promise.race([
+            inFlight,
+            new Promise<boolean>((resolve) => {
+              signal.addEventListener('abort', () => resolve(false), { once: true });
+            }),
+          ]);
         },
 
         // Login

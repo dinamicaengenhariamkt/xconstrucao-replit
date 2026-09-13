@@ -110,6 +110,10 @@ async function initializeNodeRuntime() {
     const { bootstrapObraOperacaoSchema } = await import("./server/bootstrap-obra-operacao");
     await runBootstrap("obra-operacao", bootstrapObraOperacaoSchema);
 
+    // XG10 — aditivos de contrato. Depende de `obras` e `users`, ambos já criados acima.
+    const { bootstrapObraAditivosSchema } = await import("./server/bootstrap-obra-aditivos");
+    await runBootstrap("obra-aditivos", bootstrapObraAditivosSchema);
+
     const { bootstrapObraShareLinksSchema } = await import("./server/bootstrap-obra-share-links");
     await runBootstrap("obra-share-links", bootstrapObraShareLinksSchema);
 

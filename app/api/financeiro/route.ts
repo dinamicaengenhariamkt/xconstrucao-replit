@@ -3,6 +3,7 @@ import { getFinanceiros, createFinanceiro } from "@features/financeiro/api/finan
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { insertFinanceiroSchema } from "@features/financeiro/schemas";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +36,20 @@ export async function POST(request: NextRequest) {
     const parsed = insertFinanceiroSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+    }
+
+    // XG10 (segurança) — até aqui a rota só exigia estar autenticado e repassava
+    // o payload ao insert: qualquer usuário logado podia lançar despesa ou
+    // receita em QUALQUER obra, informando um `obraId` alheio. Lançamento de
+    // obra agora exige o mesmo acesso de escrita dos demais conteúdos.
+    const obraIdAlvo = (parsed.data as { obraId?: string | null }).obraId ?? null;
+    if (obraIdAlvo) {
+      const access = await findObraAccess(obraIdAlvo, { id: userId, role: payload.role });
+      if (!access || !canWriteObraContent(access)) {
+        // 404 em vez de 403: quem não tem acesso à obra não deve nem confirmar
+        // que ela existe.
+        return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+      }
     }
 
     const financeiro = await createFinanceiro(parsed.data);
