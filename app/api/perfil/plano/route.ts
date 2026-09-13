@@ -152,7 +152,10 @@ export async function GET(request: NextRequest) {
     ? {
         nome: catalogoPersistido.nome,
         precoMensal: Number(catalogoPersistido.precoMensal),
-        features: catalogoPersistido.features,
+        features:
+          persona === "xgestao" && tier === "free"
+            ? catalogoFallback.features
+            : catalogoPersistido.features,
         limites: catalogoFallback.limites,
       }
     : catalogoFallback;

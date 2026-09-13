@@ -1,4 +1,11 @@
 export type PlanoTier = 'free' | 'pro' | 'enterprise';
+
+/**
+ * Exceção temporária para os testes do xgestão.
+ * Para restaurar a regra comercial original, volte este valor para 1 e ajuste
+ * o texto da feature Freemium abaixo.
+ */
+export const XGESTAO_FREEMIUM_OBRAS_ATIVAS_TEMP_LIMIT = 9999;
 export type PlanoPersona = 'empreiteiro' | 'contratante' | 'xgestao';
 
 export interface PlanCatalogEntry {
@@ -118,8 +125,8 @@ export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEn
     free: {
       nome: 'Freemium',
       precoMensal: 0,
-      features: ['1 obra ativa', 'Gestão operacional da obra'],
-      limites: { obrasAtivas: 1 },
+      features: ['Obras ativas ilimitadas durante os testes', 'Gestão operacional da obra'],
+      limites: { obrasAtivas: XGESTAO_FREEMIUM_OBRAS_ATIVAS_TEMP_LIMIT },
     },
     pro: {
       nome: 'Basic',

@@ -92,7 +92,16 @@ export async function getAssinaturaAtiva(
 export async function listarPlanos(persona?: PlanoPersona): Promise<typeof planos.$inferSelect[]> {
   const conds = [eq(planos.ativo, true)];
   if (persona) conds.push(sql`(${planos.persona} = ${persona} OR ${planos.persona} = 'ambos')`);
-  return db.select().from(planos).where(and(...conds)).orderBy(planos.valorMensal);
+  const rows = await db.select().from(planos).where(and(...conds)).orderBy(planos.valorMensal);
+  if (persona !== "xgestao") return rows;
+
+  // O conteúdo comercial fica persistido, mas a exceção temporária do
+  // Freemium precisa aparecer imediatamente sem alterar o catálogo no banco.
+  return rows.map((row) =>
+    row.persona === "xgestao" && row.tier === "free"
+      ? { ...row, features: getPlanCatalog("xgestao", "free").features }
+      : row,
+  );
 }
 
 // ─── Checkout / ativação ────────────────────────────────────────────────────

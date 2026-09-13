@@ -70,6 +70,8 @@ test.describe('xgestão — planos e limites', () => {
     await expect(page).toHaveURL(/\/xgestao\/configuracoes\?tab=plano$/);
     await expect(page.getByTestId('xgestao-planos-section')).toBeVisible();
     await expect(page.getByText('Compare os planos')).toBeVisible();
+    await expect(page.getByTestId('xgestao-plano-free')).toContainText('Obras ativas ilimitadas durante os testes');
+    await expect(page.getByTestId('xgestao-planos-section')).toContainText('de ilimitado');
     await expect(page.getByTestId('xgestao-sidebar-upgrade')).toContainText('Faça upgrade do seu plano');
     await expect(page.getByRole('link', { name: 'Planos', exact: true })).toHaveCount(0);
 
@@ -78,7 +80,7 @@ test.describe('xgestão — planos e limites', () => {
     await expect(page.getByText('Compare os planos')).toBeVisible();
   });
 
-  test('Freemium limita uma obra, conclusão libera vaga e Basic limita três', async ({ request }) => {
+  test('Freemium permite obras ilimitadas temporariamente e Basic continua limitando três', async ({ request }) => {
     const empreiteiroEmail = await registrar(request, 'empreiteiro', 'xgestao-planos-emp');
     await loginAs(request, empreiteiroEmail);
     await completarPerfilOperacional(request, 'empreiteiro');
@@ -95,24 +97,31 @@ test.describe('xgestão — planos e limites', () => {
 
     const primeira = await request.post('/api/xgestao/obras', { data: obra('Obra Freemium') });
     expect(primeira.status(), await primeira.text()).toBe(201);
-    const primeiraBody = (await primeira.json()) as { id: string };
 
-    const bloqueadaFree = await request.post('/api/xgestao/obras', { data: obra('Obra bloqueada Freemium') });
-    expect(bloqueadaFree.status(), await bloqueadaFree.text()).toBe(402);
-    expect((await bloqueadaFree.json()) as { code: string }).toMatchObject({ code: 'LIMITE_PLANO' });
-
-    const concluida = await request.patch(`/api/obras/${primeiraBody.id}`, { data: { status: 'concluida' } });
-    expect(concluida.status(), await concluida.text()).toBe(200);
     const concorrentes = await Promise.all([
       request.post('/api/xgestao/obras', { data: obra('Obra concorrente A') }),
       request.post('/api/xgestao/obras', { data: obra('Obra concorrente B') }),
     ]);
     const statusesConcorrentes = concorrentes.map((response) => response.status()).sort();
-    expect(statusesConcorrentes).toEqual([201, 402]);
+    expect(statusesConcorrentes).toEqual([201, 201]);
+
+    const perfilFreeComUso = await request.get('/api/perfil/plano?persona=xgestao');
+    expect(perfilFreeComUso.status(), await perfilFreeComUso.text()).toBe(200);
+    const perfilFreeComUsoBody = (await perfilFreeComUso.json()) as {
+      catalogo: { features: string[] };
+      uso: Array<{ current: number; max: number }>;
+    };
+    expect(perfilFreeComUsoBody.catalogo.features).toContain('Obras ativas ilimitadas durante os testes');
+    expect(perfilFreeComUsoBody.uso).toEqual(
+      expect.arrayContaining([expect.objectContaining({ current: 3, max: 9999 })]),
+    );
 
     const planos = await request.get('/api/planos?persona=xgestao');
     expect(planos.status(), await planos.text()).toBe(200);
-    const basic = ((await planos.json()) as Array<{ id: string; tier: string }>).find((plano) => plano.tier === 'pro');
+    const catalogoPlanos = (await planos.json()) as Array<{ id: string; tier: string; features: string[] }>;
+    const freemium = catalogoPlanos.find((plano) => plano.tier === 'free');
+    expect(freemium?.features).toContain('Obras ativas ilimitadas durante os testes');
+    const basic = catalogoPlanos.find((plano) => plano.tier === 'pro');
     expect(basic).toBeTruthy();
 
     // O ID de um plano xgestão não basta: fora do contexto do produto, a rota
@@ -144,7 +153,7 @@ test.describe('xgestão — planos e limites', () => {
     expect(perfilBasic.status()).toBe(200);
     expect((await perfilBasic.json()) as { plano: string; uso: Array<{ current: number; max: number }> }).toMatchObject({
       plano: 'pro',
-      uso: [expect.objectContaining({ current: 1, max: 3 })],
+      uso: [expect.objectContaining({ current: 3, max: 3 })],
     });
 
     const planosMarketplace = await request.get('/api/planos');
@@ -157,8 +166,6 @@ test.describe('xgestão — planos e limites', () => {
     });
     expect(checkoutComPersonaForjada.status(), await checkoutComPersonaForjada.text()).toBe(404);
 
-    expect((await request.post('/api/xgestao/obras', { data: obra('Basic dois') })).status()).toBe(201);
-    expect((await request.post('/api/xgestao/obras', { data: obra('Basic três') })).status()).toBe(201);
     const bloqueadaBasic = await request.post('/api/xgestao/obras', { data: obra('Basic quatro') });
     expect(bloqueadaBasic.status(), await bloqueadaBasic.text()).toBe(402);
     expect((await bloqueadaBasic.json()) as { code: string }).toMatchObject({ code: 'LIMITE_PLANO' });
