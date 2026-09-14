@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useObraMedicoes, type ObraMedicaoApi } from '../hooks/use-obra-medicoes';
 import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
@@ -9,6 +10,24 @@ import {
   IconPhotoLibrary,
   IconTrendingUp,
 } from '@shared/components/icons';
+
+/**
+ * XG17 — a lista renderizava tudo de uma vez.
+ *
+ * Cada item com fotos mede ~340px; numa obra com 20 atualizações a aba virava
+ * uma página de ~7000px de rolagem. Mostra 5 e cresce de 5 em 5, o mesmo
+ * padrão de `ClienteHistoricoTab`. A ordem já vem certa do servidor
+ * (`orderBy desc(createdAt)`), então a mais recente é sempre a primeira.
+ */
+const INITIAL_VISIBLE = 5;
+const LOAD_INCREMENT = 5;
+
+/**
+ * Teto de miniaturas por atualização. Sem isso, um lançamento com 15 fotos
+ * ocupa três linhas de grid sozinho e empurra as atualizações seguintes para
+ * fora da tela — a lista é do histórico, não da galeria (que tem aba própria).
+ */
+const MAX_THUMBS = 6;
 
 /**
  * XG12 — o histórico de atualizações da obra.
@@ -88,6 +107,7 @@ export function AtualizacoesTab({
   onRegistrar: () => void;
 }) {
   const { data, isLoading, isError, refetch } = useObraMedicoes(obraId);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   const cabecalho = (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -134,7 +154,12 @@ export function AtualizacoesTab({
     );
   }
 
+  // A API já devolve da mais recente para a mais antiga
+  // (`orderBy desc(medicoes.createdAt)`), então nada é reordenado aqui.
   const atualizacoes = data ?? [];
+  const visiveis = atualizacoes.slice(0, visibleCount);
+  const restantes = atualizacoes.length - visibleCount;
+  const proximoLote = Math.min(LOAD_INCREMENT, restantes);
 
   if (atualizacoes.length === 0) {
     return (
@@ -165,7 +190,7 @@ export function AtualizacoesTab({
     <div>
       {cabecalho}
       <div className="space-y-4" data-testid="lista-atualizacoes">
-        {atualizacoes.map((item) => {
+        {visiveis.map((item) => {
           const badge = STATUS_BADGE[item.status];
           return (
             <article
@@ -222,8 +247,10 @@ export function AtualizacoesTab({
                     <IconPhotoLibrary />
                     {item.fotos.length} {item.fotos.length === 1 ? 'foto' : 'fotos'}
                   </p>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                    {item.fotos.map((url, index) => (
+                  {/* XG17 — grid mais denso: as miniaturas eram ~150px no
+                      desktop e cada linha comia meia tela. */}
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8">
+                    {item.fotos.slice(0, MAX_THUMBS).map((url, index) => (
                       <a
                         key={`${item.id}-${index}`}
                         href={url}
@@ -239,6 +266,19 @@ export function AtualizacoesTab({
                         />
                       </a>
                     ))}
+                    {/* O excedente vira um bloco que abre a próxima foto, em vez
+                        de mais uma linha de grid. */}
+                    {item.fotos.length > MAX_THUMBS && (
+                      <a
+                        href={item.fotos[MAX_THUMBS]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        data-testid={`atualizacao-fotos-extra-${item.id}`}
+                      >
+                        +{item.fotos.length - MAX_THUMBS}
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
@@ -251,6 +291,22 @@ export function AtualizacoesTab({
           );
         })}
       </div>
+
+      {restantes > 0 && (
+        <div className="mt-4 flex flex-col items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((atual) => atual + LOAD_INCREMENT)}
+            className="cursor-pointer rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            data-testid="atualizacoes-load-more"
+          >
+            Carregar mais ({proximoLote})
+          </button>
+          <p className="text-xs text-gray-500">
+            Mostrando {visiveis.length} de {atualizacoes.length}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

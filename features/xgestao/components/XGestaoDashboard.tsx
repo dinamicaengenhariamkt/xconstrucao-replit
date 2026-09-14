@@ -12,7 +12,6 @@ import {
 } from 'react-icons/ri';
 import { PageHeader } from '@features/shared/components/PageHeader';
 import { StatsCard } from '@features/shared/components/StatsCard';
-import { HealthSummary, useObrasHealthMap } from '@features/shared/health';
 import { useMinhasObras } from '@features/empreiteiro/minhas-obras/hooks/use-minhas-obras';
 import { NovaObraModal } from './NovaObraModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -29,7 +28,6 @@ function formatCurrency(value: number) {
 
 export function XGestaoDashboard() {
   const { data: obras, isLoading, isError } = useMinhasObras();
-  const { data: healthMap } = useObrasHealthMap('empreiteiro');
   const obrasProprias = useMemo(() => (obras ?? []).filter((obra) => obra.isObraPropria), [obras]);
 
   const resumo = useMemo(() => {
@@ -39,13 +37,9 @@ export function XGestaoDashboard() {
     const progresso = obrasProprias.length
       ? Math.round(obrasProprias.reduce((total, obra) => total + obra.progresso, 0) / obrasProprias.length)
       : 0;
-    const health = { saudavel: 0, atencao: 0, risco: 0, total: obrasProprias.length };
-    for (const obra of obrasProprias) {
-      const status = healthMap?.[obra.id]?.status;
-      if (status) health[status] += 1;
-    }
-    return { ativas, concluidas, orcamento, progresso, health };
-  }, [healthMap, obrasProprias]);
+    // XG17 — a contagem por status de saúde saiu junto com o `HealthSummary`.
+    return { ativas, concluidas, orcamento, progresso };
+  }, [obrasProprias]);
 
   if (isLoading) {
     return (
@@ -117,12 +111,10 @@ export function XGestaoDashboard() {
         <StatsCard luminous label="Orçamento gerenciado" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
       </div>
 
-      <HealthSummary
-        summary={resumo.health}
-        title="Saúde das suas obras"
-        hrefFor={(status) => `/xgestao/obras?saude=${status}`}
-        luminous
-      />
+      {/* XG17 — o resumo de Saúde saiu do dashboard do xgestão junto com o card
+          e a aba do console: mesma razão, mesma reversão. Ele linkava para
+          `/xgestao/obras?saude=…`, filtro que também foi retirado da lista. O
+          `HealthSummary` segue servindo o dashboard do marketplace. */}
 
       <Card className="luminous-section border-transparent shadow-none">
         <CardHeader className="flex flex-row items-center justify-between">

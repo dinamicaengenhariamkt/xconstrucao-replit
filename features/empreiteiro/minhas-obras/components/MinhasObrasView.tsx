@@ -101,7 +101,10 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
     if (!obras) return [];
     let result = xgestao ? obras.filter((obra) => obra.isObraPropria) : obras;
     if (statusSelected.length > 0) result = result.filter((o) => statusSelected.includes(o.status));
-    if (saude.value) result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
+    // XG17 — no xgestão o filtro de saúde não tem mais controle na tela, então
+    // ignorá-lo também na URL: um `?saude=risco` de link antigo ou bookmark
+    // filtraria a lista sem nada visível explicando por que ela encolheu.
+    if (!xgestao && saude.value) result = result.filter((o) => healthMap?.[o.id]?.status === saude.value);
     if (tipoSelected.length > 0) result = result.filter((o) => tipoSelected.includes(o.tipo));
     if (contratanteSelected.length > 0) {
       result = result.filter((o) => o.temContratante && contratanteSelected.includes(o.contratante.nome));
@@ -146,7 +149,9 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
   }, [healthMap, obras, xgestao]);
   const advancedActiveCount =
     (statusSelected.length > 0 ? 1 : 0) +
-    (saude.value ? 1 : 0) +
+    // XG17 — mesmo tratamento do filtro de contratante: sem controle na tela
+    // no modo xgestão, não pode contar como filtro ativo.
+    (!xgestao && saude.value ? 1 : 0) +
     (tipoSelected.length > 0 ? 1 : 0) +
     (!xgestao && contratanteSelected.length > 0 ? 1 : 0) +
     (orcMinNum !== undefined || orcMaxNum !== undefined ? 1 : 0) +
@@ -194,11 +199,17 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                 placeholder="Todos os status"
                 testIdPrefix="filter-status"
               />
-              <HealthFilterSelect
-                value={saude.value}
-                onChange={onFilterChange(saude.setValue)}
-                summary={healthSummary}
-              />
+              {/* XG17 — o filtro de Saúde sai no modo xgestão, junto com o card
+                  do console e o resumo do dashboard. No marketplace ele fica: é
+                  para onde o dashboard do empreiteiro aponta ao linkar
+                  "obras em risco" (`buildObrasHealthUrl`). */}
+              {!xgestao && (
+                <HealthFilterSelect
+                  value={saude.value}
+                  onChange={onFilterChange(saude.setValue)}
+                  summary={healthSummary}
+                />
+              )}
               <MultiSelectDropdown
                 label="Tipo de obra"
                 options={tipoOptions}

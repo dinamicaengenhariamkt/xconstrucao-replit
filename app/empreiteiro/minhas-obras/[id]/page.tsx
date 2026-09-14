@@ -30,7 +30,7 @@ import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/compon
 import { cn } from '@shared/lib/utils';
 import React from 'react';
 import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconChecklist, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline, IconTrendingUp, IconHistory, IconPhotoCamera } from '@shared/components/icons';
-import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
+import { HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { computeProfitFromObra } from '@features/shared/profit';
 import { FinanceiroTab } from '@features/empreiteiro/minhas-obras/components/FinanceiroTab';
 import { CronogramaGanttCard } from '@features/empreiteiro/minhas-obras/components/CronogramaGanttCard';
@@ -42,6 +42,8 @@ import { EditarInformacoesModal } from '@features/xgestao/components/EditarInfor
 import { EditarLocalizacaoModal } from '@features/xgestao/components/EditarLocalizacaoModal';
 import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
 import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
+import { useObraShare, toAbsoluteShareUrl } from '@features/xgestao/obra-publica/hooks/use-obra-share';
+import { useToast } from '@shared/hooks/use-toast';
 
 const STATUS_BG: Record<string, string> = {
   em_execucao: 'bg-primary text-white',
@@ -67,8 +69,8 @@ type ObraTab = 'atualizacoes' | 'tarefas' | 'checklists' | 'timeline' | 'fotos' 
  * "Atualizações" abre a lista porque é o ciclo central do produto: registrar
  * avanço e conferir o histórico. Tarefas→Etapas→Cronograma ficam juntas (a
  * tarefa pertence à etapa, o cronograma é a mesma etapa no eixo do tempo), e
- * Fotos↔Diário também. "Saúde" desce para o fim: é resumo derivado de tudo
- * acima, e o `HealthCard` já fica sempre visível antes das abas.
+ * Fotos↔Diário também. "Saúde" fica no fim: é resumo derivado de tudo acima —
+ * e, desde a XG17, só aparece em obra de marketplace (ver `tabsVisiveis`).
  */
 const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   // XG12 — a aba que faltava. O botão "Adicionar Atualização" gravava em
@@ -102,7 +104,13 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
  * (princípio do README §3 — reversibilidade é entregável).
  */
 function tabsVisiveis(isObraPropria: boolean) {
-  return isObraPropria ? TABS.filter((t) => t.key !== 'disputas') : TABS;
+  // XG17 — "Saúde" sai junto com "Disputas" na obra própria, pelo mesmo
+  // mecanismo: ocultar por filtro, não apagar a aba. Em obra de marketplace
+  // as duas continuam, e restaurar é remover a chave desta lista.
+  const ocultasNaObraPropria: ObraTab[] = ['disputas', 'saude'];
+  return isObraPropria
+    ? TABS.filter((t) => !ocultasNaObraPropria.includes(t.key))
+    : TABS;
 }
 
 /**
@@ -249,14 +257,113 @@ function kpiIconClasses(luminous: boolean, cor: string) {
  * edição precisa reaparecer aqui — antes `descricao` e `areaM2` eram salvos e
  * só existiam na página pública, o que lia como "a edição não salvou".
  */
+/**
+ * XG17 — o link público passa a viver no card de detalhes.
+ *
+ * Antes só existia como botão sobre a capa: para saber se havia link ativo,
+ * quantas visualizações tinha ou qual era a URL, era preciso abrir o modal ou
+ * ir até a tela de edição. O painel espelha o de `EditarObraPage`, com uma
+ * diferença deliberada — lá a URL é texto puro e copiar exige selecionar na
+ * mão; aqui usa o `Input readOnly` + botão "Copiar" do `CompartilharModal`.
+ *
+ * Lê a mesma query (`useObraShare`) que o modal e a edição consomem, então
+ * gerar ou revogar em qualquer um dos três reflete nos outros sem callback.
+ */
+function LinkPublicoBloco({
+  obraId,
+  onGerenciar,
+}: {
+  obraId: string;
+  onGerenciar: () => void;
+}) {
+  const { data: share, isLoading } = useObraShare(obraId);
+  const { toast } = useToast();
+  const [copiado, setCopiado] = useState(false);
+  const url = toAbsoluteShareUrl(share);
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      toast({ title: 'Link copiado!', description: 'URL copiada para a área de transferência.' });
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível copiar o link.', variant: 'destructive' });
+    }
+  };
+
+  return (
+    <div
+      className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+      data-testid="detalhes-link-publico"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
+            share
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+              : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+          )}
+          data-testid="detalhes-link-status"
+        >
+          {isLoading ? 'Consultando…' : share ? 'Link ativo' : 'Nenhum link gerado'}
+        </span>
+        {share && (
+          <span className="text-xs text-gray-500" data-testid="detalhes-link-metricas">
+            {share.visualizacoes === 0
+              ? 'Ainda não foi aberto'
+              : `${share.visualizacoes} ${share.visualizacoes === 1 ? 'visualização' : 'visualizações'}`}
+          </span>
+        )}
+      </div>
+
+      {share && url && (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            readOnly
+            value={url}
+            onClick={(e) => e.currentTarget.select()}
+            className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+            data-testid="detalhes-link-url"
+          />
+          <button
+            type="button"
+            onClick={copiar}
+            className="shrink-0 cursor-pointer rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+            data-testid="detalhes-link-copiar"
+          >
+            {copiado ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+      )}
+
+      <p className="mt-3 text-xs text-gray-500">
+        O cliente acompanha a obra somente leitura, sem criar conta. Valores, lucro, equipe e o
+        endereço exato nunca são compartilhados.
+      </p>
+      <button
+        type="button"
+        onClick={onGerenciar}
+        className="mt-3 cursor-pointer text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+        data-testid="detalhes-link-gerenciar"
+      >
+        {share ? 'Gerenciar link público' : 'Gerar link público'}
+      </button>
+    </div>
+  );
+}
+
 function DetalhesObraCard({
   obra,
   basePath,
   onEditar,
+  onGerenciarLink,
 }: {
   obra: MinhaObraDetalhe;
   basePath: string;
   onEditar: () => void;
+  onGerenciarLink: () => void;
 }) {
   // O adapter devolve "—" para data ausente; tratar como vazio evita um card
   // que anuncia um travessão como se fosse informação.
@@ -342,6 +449,10 @@ function DetalhesObraCard({
           )}
         </>
       )}
+
+      {/* Fica fora do `vazio`: o link público independe de a obra ter
+          descrição ou prazos preenchidos. */}
+      <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />
     </motion.section>
   );
 }
@@ -484,7 +595,21 @@ export function ObraConsoleView({
           de altura útil, e o texto acabava espremido contra a imagem. A partir de
           `md` nada muda — a sobreposição continua igual ao desktop de hoje.
         */}
-        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-56 md:aspect-[16/7] md:h-auto">
+        {/*
+          XG17 — altura fixa no lugar de `md:aspect-[16/7] md:h-auto`.
+
+          A proporção veio dos heros do marketplace, onde o container é estreito.
+          No console do xgestão o conteúdo ocupa a largura toda: num monitor de
+          ~1650px, 16:7 rendia ~720px de capa — quase toda a área rolável do
+          shell (`h-screen` menos a topbar `h-20`). Como o bloco de título e
+          botões é `md:absolute md:bottom-0` dentro do hero, ele reaparecia
+          colado na borda de baixo durante toda a rolagem: o usuário relatou
+          como "ficou fixo na tela", e visualmente é indistinguível disso.
+
+          Altura fixa não depende da largura do monitor — é o que fecha o
+          problema de raiz, não um paliativo de proporção.
+        */}
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-56 md:h-[340px]">
           {obra.imagemUrl && (
             <img
               src={obra.imagemUrl}
@@ -576,38 +701,27 @@ export function ObraConsoleView({
                     </div>
                   </div>
                 )}
+                {/*
+                  XG17 — o hero fica com uma ação só.
+
+                  "Editar obra" e "Adicionar Atualização" saíram daqui porque
+                  já existem no caminho natural de cada um: editar mora no card
+                  "Detalhes da obra" logo abaixo ("Editar informações" e
+                  "Cadastro completo"), e registrar avanço mora na aba
+                  Atualizações — a primeira do console, com o botão no cabeçalho
+                  e no estado vazio. Três botões sobre a capa competiam entre si
+                  e empurravam o conteúdo para fora da tela.
+                */}
                 {allowOwnWorkEdit && obra.isObraPropria && (
-                  <>
-                    {/* XG12 — abre modal em vez de navegar. A tela de edição
-                        completa continua acessível pelo card de detalhes, para
-                        o cadastro guiado e a exclusão da obra. */}
-                    <button
-                      type="button"
-                      onClick={() => setShowInfo(true)}
-                      className="order-2 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:order-none md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
-                      data-testid="xgestao-editar-obra"
-                      data-tour="editar-obra"
-                    >
-                      Editar obra
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowShare(true)}
-                      className="order-3 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:order-none md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
-                      data-tour="compartilhar-link"
-                    >
-                      Compartilhar link
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setShowShare(true)}
+                    className="w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
+                    data-tour="compartilhar-link"
+                  >
+                    Compartilhar link
+                  </button>
                 )}
-                <button
-                  onClick={() => setShowAtualizacao(true)}
-                  className="order-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl md:order-none md:w-auto md:justify-start md:py-2"
-                  data-tour="adicionar-atualizacao"
-                >
-                  <IconAddTask className="text-lg" />
-                  Adicionar Atualização
-                </button>
               </div>
             </div>
           </div>
@@ -648,7 +762,12 @@ export function ObraConsoleView({
       {/* BLOCO 2.5: Detalhes da obra — espelha a seção do link público, para
           que o dono veja aqui exatamente o que preencheu na edição. */}
       {obra.isObraPropria && (
-        <DetalhesObraCard obra={obra} basePath={basePath} onEditar={() => setShowInfo(true)} />
+        <DetalhesObraCard
+          obra={obra}
+          basePath={basePath}
+          onEditar={() => setShowInfo(true)}
+          onGerenciarLink={() => setShowShare(true)}
+        />
       )}
 
       {/* BLOCO 3: KPIs Operacionais */}
@@ -806,8 +925,18 @@ export function ObraConsoleView({
         </KpiCardShell>
       </motion.div>
 
-      {/* BLOCO 3.5: Indicador de Saúde */}
-      <HealthCard health={computeHealthFromObra(obra)} />
+      {/*
+        XG17 — o indicador de Saúde saiu do console do xgestão.
+
+        O score e os rótulos ("Requer atenção", fatores ponderados) exigem
+        entender a régua por trás para significar alguma coisa; para o dono da
+        obra viravam alarme sem ação. Sai do xgestão inteiro — card, aba,
+        resumo do dashboard e filtro da lista — e volta quando houver uma
+        leitura que o usuário final consiga interpretar sozinho.
+
+        Nada em `features/shared/health/**` foi removido: admin e contratante
+        seguem usando, e a XG15 continua coberta pelos testes.
+      */}
 
       {/* BLOCOs 4–10: Tabs */}
       <motion.div
@@ -902,6 +1031,8 @@ export function ObraConsoleView({
                   no repo (reversibilidade), fora da árvore de render. */}
               {activeTab === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite />}
               {activeTab === 'disputas' && <DisputasTab obraId={obra.id} />}
+              {/* XG17 — inalcançável na obra própria (`tabsVisiveis` filtra a
+                  aba), mas mantido para o marketplace, onde a Saúde continua. */}
               {activeTab === 'saude' && (
                 <HealthDetailPanel
                   health={computeHealthFromObra(obra)}

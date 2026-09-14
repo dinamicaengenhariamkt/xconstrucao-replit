@@ -28,6 +28,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG14](14-auditoria-console.md) | Auditoria do console antes do teste com o cliente | 2 | pronto | alta | baixo |
 | [XG15](15-coerencia-saude-e-progresso.md) | Coerência da Saúde, do progresso e da linguagem | 3 | pronto | alta | baixo |
 | [XG16](16-revalidacao-pre-teste.md) | Revalidação antes do teste em obra real | 3 | parcial (§5 — minuta legal aguarda jurídico) | alta | baixo |
+| [XG17](17-acabamento-console.md) | Acabamento do console: hero, atualizações e saída da Saúde | 4 | pronto | alta | baixo |
 
 ## Contexto
 
