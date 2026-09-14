@@ -577,7 +577,26 @@ export function ObraConsoleView({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
+        /*
+          XG17 — `relative` NÃO é decorativo: é o que ancora o bloco de título,
+          endereço e entrega, que é `md:absolute md:bottom-0` logo abaixo.
+
+          Sem ele, nenhum ancestral daquele bloco tinha `position` diferente de
+          `static` — nem este hero, nem a raiz da página. O `absolute` então
+          subia a cadeia inteira sem achar âncora e caía no bloco contenedor
+          inicial (o viewport), virando um `fixed` de fato: o título e os botões
+          grudavam na tela e desciam junto com a rolagem.
+
+          A regressão nasceu na XG13, que tirou o bloco de dentro da capa para o
+          texto sair de cima da imagem no celular. A capa é `relative` e o
+          continha; ao virar irmão dela, o bloco perdeu a âncora e ninguém
+          repôs. O `md:relative` interno não resolve — ele está DENTRO do
+          elemento absoluto, não acima dele.
+
+          Nos heros equivalentes (ObraDetalheHero, console do contratante) o
+          bloco segue dentro da capa `relative`, e por isso nunca falharam.
+        */
+        className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
         data-testid="hero-minha-obra"
       >
         {/*
@@ -636,6 +655,10 @@ export function ObraConsoleView({
           Abaixo de `md` este bloco fica em fluxo normal, logo abaixo da capa, com
           texto sobre o fundo do card. De `md` para cima ele volta a sobrepor a
           imagem, exatamente como antes (`absolute` + texto branco).
+
+          ⚠️ O `md:absolute` depende do `relative` no hero (ver o comentário lá
+          em cima). Se aquele `relative` sair, este bloco ancora no viewport e
+          passa a acompanhar a rolagem em vez de ficar preso ao rodapé da capa.
         */}
         <div className="relative bg-white p-4 text-gray-900 dark:bg-gray-900 dark:text-white sm:p-6 md:absolute md:bottom-0 md:left-0 md:right-0 md:bg-transparent md:p-8 md:text-white md:dark:bg-transparent">
           <div className="md:relative">

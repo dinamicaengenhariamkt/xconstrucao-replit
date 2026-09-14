@@ -16,28 +16,54 @@ Uso real, obra `Vestiarios Cotia`. O relato que abriu a jornada:
 E, na sequência: a capa ocupa quase 80% da tela, a aba Atualizações gera rolagem demais, e a
 Saúde da Obra *"está um pouquinho ilegível para o usuário final conseguir entender"*.
 
+O relato do "fixo" **precisou de duas rodadas**. Na primeira, foi diagnosticado como efeito
+geométrico e tratado com a redução da capa — o sintoma continuou. Na segunda, o usuário
+trouxe o HTML renderizado do bloco, e aí a causa apareceu: um `relative` faltando (§2, A1).
+
 ## 2. Os achados
 
-### A1 — o "fixo" não era `position: fixed`
+### A1 — o "fixo" era um `relative` faltando no hero
 
-**Não existe `fixed` nem `sticky` em nenhum ponto do console** — grep em `page.tsx` e
-`ObraConsoleView.tsx` retorna zero. O efeito era real, mas geométrico, e vinha da soma de
-duas coisas:
+> **Esta seção foi reescrita.** A primeira leitura da jornada concluiu que o efeito era
+> geométrico — capa alta demais numa área de rolagem curta — e a altura fixa foi tratada
+> como *a* correção. **Estava errado.** O sintoma continuou depois do ajuste, e o usuário
+> voltou com o HTML renderizado do bloco. O registro anterior fica abaixo como o que foi
+> descartado.
 
-1. A capa usava `md:aspect-[16/7]` **sem `max-width`**. No console do xgestão o conteúdo
-   ocupa a largura toda: num monitor de ~1650px, 16:7 rende **~720px de altura**.
-2. O shell (`XGestaoLayout`) é `h-screen` e quem rola é o `<main overflow-auto>`. Descontada
-   a topbar (`h-20`), a área rolável fica em torno de **800px**.
+**A causa real.** O bloco de título, endereço e entrega é `md:absolute md:bottom-0`. Um
+`position: absolute` ancora no **ancestral posicionado mais próximo** — e a cadeia inteira
+não tinha nenhum:
 
-A capa sozinha era quase do tamanho da janela de rolagem. Como o bloco de título, entrega e
-botões é `md:absolute md:bottom-0` **dentro** do hero, ele reaparecia colado na borda de
-baixo durante toda a rolagem — indistinguível de um elemento fixo.
+| Elemento | Classes relevantes |
+|---|---|
+| Raiz do console | `p-4 … flex flex-col` — sem `relative` |
+| **Hero (`hero-minha-obra`)** | `bg-white rounded-3xl overflow-hidden …` — **sem `relative`** |
+| Capa | `relative h-40 … md:h-[340px]` ✅ — mas o bloco **não** está dentro dela |
+| Bloco título/entrega/botão | `md:absolute md:bottom-0` ← sem âncora |
 
-O `aspect-[16/7]` veio dos heros do marketplace, onde o container é bem mais estreito. A
-proporção nunca foi reavaliada quando o console passou a ocupar a largura inteira.
+Sem ancestral posicionado, o navegador sobe a cadeia inteira e ancora no **bloco contenedor
+inicial** — o viewport. **É funcionalmente um `fixed`**: o bloco gruda na tela e acompanha a
+rolagem, sem que a palavra `fixed` apareça em lugar nenhum.
 
-> **Corrigir a altura da capa É corrigir o "fixo".** Não eram dois problemas — era um só,
-> lido por dois sintomas.
+**A regressão nasceu na XG13**, que tirou o bloco de dentro da capa para o texto sair de cima
+da imagem no celular. A capa é `relative` e o continha; ao virar irmão dela, o bloco perdeu a
+âncora e ninguém repôs no novo pai. O `md:relative` interno não resolve — está **dentro** do
+elemento absoluto, não acima dele.
+
+Prova pelo contraste: nos heros equivalentes
+([ObraDetalheHero](../../features/empreiteiro/novas-obras/components/ObraDetalheHero.tsx),
+console do contratante) o bloco segue **dentro** da capa `relative` — e lá o hero pai também
+não tem `relative`, porque nunca precisou.
+
+**Correção: uma palavra** — `relative` no hero.
+
+#### O que foi descartado
+
+A hipótese geométrica: capa em `md:aspect-[16/7]` sem `max-width` rendendo ~720px num monitor
+largo, contra uma área rolável de ~800px (`h-screen` menos a topbar `h-20`). O cálculo estava
+certo e a capa *era* grande demais — mas isso explicava a **aparência**, não o
+comportamento. **A altura fixa continua valendo por mérito próprio**, porque o usuário pediu
+a capa menor ("está pegando quase uns 80%"); só não era a correção do "fixo".
 
 ### A2 — três botões disputando a capa
 
@@ -76,7 +102,14 @@ oposto do que a XG15 tinha buscado ao corrigir o cálculo.
 ## 4. Checklist de execução
 
 ### Parte 1 — Hero
-- [x] Capa com altura fixa `md:h-[340px]` no lugar de `md:aspect-[16/7] md:h-auto`
+- [x] **`relative` no hero** — a correção do "fixo" (A1). Sem ele o bloco
+      `md:absolute md:bottom-0` ancorava no viewport
+- [x] Comentário nos **dois** lados (hero e bloco) registrando a dependência, para que uma
+      próxima mudança de layout não remova o `relative` sem perceber
+- [x] Verificado que os outros `absolute` do hero (degradê e "Trocar capa") estão **dentro**
+      da capa `relative` e não mudam de âncora
+- [x] Capa com altura fixa `md:h-[340px]` no lugar de `md:aspect-[16/7] md:h-auto` — pedido
+      à parte ("está pegando quase 80%"), não a correção do "fixo"
 - [x] "Editar obra" e "Adicionar Atualização" saem do hero; fica só "Compartilhar link"
 - [x] Verificado que nenhum passo do tour ficou órfão — `adicionar-atualizacao-aba` já
       apontava para o botão da aba, e `compartilhar-link` permanece
@@ -129,11 +162,21 @@ oposto do que a XG15 tinha buscado ao corrigir o cálculo.
 
 ## 6. Gaps descobertos
 
-- **2026-09-14 — "está fixo" não significa `position: fixed`:** o relato descrevia um
-  sintoma visual, e a busca literal por `fixed`/`sticky` não achava nada. A causa era a capa
-  ser quase do tamanho da área de rolagem, fazendo um elemento `absolute bottom-0` parecer
-  ancorado. **Quando o grep contradiz o relato, o relato está certo e a hipótese é que está
-  errada.**
+- **2026-09-14 — `absolute` sem ancestral posicionado É um `fixed`:** a busca por
+  `fixed`/`sticky` não achou nada e eu concluí que o efeito era só geométrico. Mas um
+  `position: absolute` cuja cadeia de ancestrais não tem nenhum elemento posicionado ancora
+  no viewport — produz exatamente o comportamento de `fixed`, **sem usar a palavra**.
+  **Grep por sintoma não encontra causa: o que faltava era uma classe ausente, e ausência
+  não aparece em busca textual.**
+- **2026-09-14 — mover um elemento pode quebrar o que o continha:** a XG13 tirou o bloco de
+  dentro da capa por um motivo legítimo (texto fora da imagem no celular) e, sem perceber,
+  levou junto a contenção `relative` que o posicionava. O sintoma só aparecia de `md` para
+  cima, e passou por duas jornadas. **Ao mudar um elemento de pai, verificar de quais
+  propriedades do pai antigo ele dependia — `position` é a mais silenciosa delas.**
+- **2026-09-14 — corrigir o sintoma parcial adia o diagnóstico:** reduzir a altura da capa
+  melhorou a aparência o bastante para eu acreditar que tinha resolvido, e o relato voltou.
+  **Quando a correção depende de uma explicação elaborada para justificar por que resolve,
+  em vez de atacar um defeito nomeável, provavelmente não resolve.**
 - **2026-09-14 — proporção não é responsiva a contexto:** `aspect-[16/7]` foi copiado dos
   heros do marketplace sem reavaliar que o console tem largura total. Proporção que funciona
   num container estreito vira um monstro num largo. **`aspect-ratio` amarra altura à largura:
