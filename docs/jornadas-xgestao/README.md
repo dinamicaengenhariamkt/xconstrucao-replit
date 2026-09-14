@@ -23,6 +23,8 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG09](09-administracao-obra-ponta-a-ponta.md) | Administração da obra ponta a ponta | 9 | pronto | alta | baixo |
 | [XG10](10-ajustes-teste-obra-real.md) | Ajustes do teste em obra real | 10 | pronto | alta | médio |
 | [XG11](11-offline-pwa.md) | Uso offline e instalação no celular | — | planejada | baixa | — |
+| [XG12](12-console-obra-tela-unica.md) | Console da obra em tela única | 9 | pronto | alta | médio |
+| [XG13](13-mobile-e-polimento.md) | O console no celular + acabamento visual | 3 | pronto | alta | baixo |
 
 ## Contexto
 

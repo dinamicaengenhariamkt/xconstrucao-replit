@@ -185,7 +185,7 @@ export function RegistrarMedicaoModal({
         else onOpenChange(true);
       }}
     >
-      <DialogContent className="w-full max-w-lg p-0 flex flex-col gap-0 overflow-hidden max-h-[90vh]">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-lg p-0 flex flex-col gap-0 overflow-hidden max-h-[90vh] sm:w-full">
         <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">

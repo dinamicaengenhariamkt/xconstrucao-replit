@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, medicoes, obras, users } from "@shared/db/schema";
 import { isAdminLike } from "@features/auth/api/auth-utils";
@@ -36,7 +36,18 @@ export type MedicaoApiShape = {
   id: string;
   obraId: string;
   obraNome: string;
+  /**
+   * Nome da empreiteira quando houver, com fallback para a pessoa. É o que o
+   * contratante e o admin querem saber: de qual empresa veio a medição.
+   */
   empreiteiroNome: string;
+  /**
+   * Quem registrou, sempre a pessoa. No xgestão toda obra é da mesma
+   * empreiteira, então `empreiteiroNome` repetiria o mesmo valor em todas as
+   * linhas — ali o útil é saber quem foi ao canteiro.
+   */
+  autorNome: string;
+  autorId: string | null;
   numero: number;
   periodo: string;
   valor: number;
@@ -66,6 +77,7 @@ export async function listMedicoesForContratante(clienteId: string): Promise<Med
       motivoContestacao: medicoes.motivoContestacao,
       createdAt: medicoes.createdAt,
       decidedAt: medicoes.decidedAt,
+      empreiteiroId: medicoes.empreiteiroId,
       empreiteiroNome: users.name,
       empreiteiraNome: empreiteiras.nome,
     })
@@ -94,6 +106,7 @@ export async function listMedicoesForObra(obraId: string): Promise<MedicaoApiSha
       motivoContestacao: medicoes.motivoContestacao,
       createdAt: medicoes.createdAt,
       decidedAt: medicoes.decidedAt,
+      empreiteiroId: medicoes.empreiteiroId,
       empreiteiroNome: users.name,
       empreiteiraNome: empreiteiras.nome,
     })
@@ -101,7 +114,9 @@ export async function listMedicoesForObra(obraId: string): Promise<MedicaoApiSha
     .innerJoin(obras, eq(obras.id, medicoes.obraId))
     .leftJoin(users, eq(users.id, medicoes.empreiteiroId))
     .leftJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
-    .where(eq(medicoes.obraId, obraId));
+    .where(eq(medicoes.obraId, obraId))
+    // Mais recente primeiro: o feed de atualizações é lido de cima para baixo.
+    .orderBy(desc(medicoes.createdAt));
 
   return rows.map((r) => mapToApiShape(r));
 }
@@ -120,6 +135,7 @@ function mapToApiShape(r: {
   motivoContestacao: string | null;
   createdAt: Date;
   decidedAt: Date | null;
+  empreiteiroId: string | null;
   empreiteiroNome: string | null;
   empreiteiraNome: string | null;
 }): MedicaoApiShape {
@@ -134,6 +150,8 @@ function mapToApiShape(r: {
     obraId: r.obraId,
     obraNome: r.obraNome,
     empreiteiroNome: r.empreiteiraNome ?? r.empreiteiroNome ?? "—",
+    autorNome: r.empreiteiroNome ?? "—",
+    autorId: r.empreiteiroId,
     numero: r.numero,
     periodo: periodoStr,
     valor: Number(r.valor ?? 0),

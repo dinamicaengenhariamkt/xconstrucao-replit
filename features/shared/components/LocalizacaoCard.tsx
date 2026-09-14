@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@shared/lib/utils';
-import { IconLocationOn, IconMap, IconOpenInNew } from '@shared/components/icons';
+import { IconEdit, IconLocationOn, IconMap, IconOpenInNew } from '@shared/components/icons';
 
 interface Localizacao {
   cidade: string;
@@ -16,9 +16,15 @@ interface Localizacao {
 interface LocalizacaoCardProps {
   localizacao: Localizacao;
   luminous?: boolean;
+  /**
+   * XG12 — editar o endereço sem sair da obra. Opcional de propósito: o
+   * contratante e o link público consomem este card em leitura pura e não
+   * passam nada, seguindo sem o botão.
+   */
+  onEditar?: () => void;
 }
 
-export function LocalizacaoCard({ localizacao, luminous = false }: LocalizacaoCardProps) {
+export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: LocalizacaoCardProps) {
   // Rua + número (ex.: "Rua X, 123") dá ao Google Maps o ponto mais preciso.
   const ruaComNumero = localizacao.numero
     ? [localizacao.rua, localizacao.numero].filter(Boolean).join(', ')
@@ -93,6 +99,17 @@ export function LocalizacaoCard({ localizacao, luminous = false }: LocalizacaoCa
               <IconOpenInNew />
               Abrir no Google Maps
             </button>
+
+            {onEditar && (
+              <button
+                onClick={onEditar}
+                className="w-full py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+                data-testid="btn-editar-localizacao"
+              >
+                <IconEdit />
+                Editar endereço
+              </button>
+            )}
           </div>
         </div>
       </div>

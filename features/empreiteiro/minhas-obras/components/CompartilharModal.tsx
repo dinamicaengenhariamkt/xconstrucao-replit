@@ -25,10 +25,13 @@ import { useToast } from '@shared/hooks/use-toast';
 import { IconShare, IconCheck, IconContentCopy, IconMail, IconLink } from '@shared/components/icons';
 import {
   toAbsoluteShareUrl,
+  useAtualizarSecoes,
   useGerarObraShare,
   useObraShare,
   useRevogarObraShare,
 } from '@features/xgestao/obra-publica/hooks/use-obra-share';
+import { SECAO_LABELS, SECOES_PUBLICAS } from '@features/xgestao/obra-publica/secoes';
+import { Switch } from '@shared/components/ui/switch';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +64,11 @@ export function CompartilharModal({
   const shareQuery = useObraShare(obra.id, open);
   const gerar = useGerarObraShare(obra.id);
   const revogar = useRevogarObraShare(obra.id);
+  // XG12 — decidir o que o cliente vê passa a acontecer aqui. Antes o toggle
+  // morava na tela de edição e o envio no modal: para escolher as seções era
+  // preciso estar numa tela, para mandar o link na outra.
+  const secoesMutation = useAtualizarSecoes(obra.id);
+  const shareLink = shareQuery.data ?? null;
 
   const url = toAbsoluteShareUrl(shareQuery.data);
   const loading = shareQuery.isLoading || gerar.isPending;
@@ -104,7 +112,7 @@ export function CompartilharModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-sm p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-md flex-col gap-0 overflow-y-auto p-0 sm:w-full">
           {/* Header */}
           <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
             <div className="flex items-center gap-3">
@@ -207,6 +215,58 @@ export function CompartilharModal({
                 </button>
               </div>
             </div>
+
+            {/* Só faz sentido escolher o conteúdo quando há link ativo: sem ele
+                não existe nada publicado para restringir. */}
+            {shareLink && (
+              <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
+                <p className="text-xs font-semibold text-gray-500">O que o cliente vê</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Vale só para este link. Desmarcar esconde a seção na hora, sem trocar o
+                  endereço.
+                </p>
+                <div className="mt-3 grid gap-2">
+                  {SECOES_PUBLICAS.map((secao) => (
+                    <label
+                      key={secao}
+                      htmlFor={`secao-${secao}`}
+                      className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 p-3 dark:border-gray-800"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                          {SECAO_LABELS[secao].titulo}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-gray-500">
+                          {SECAO_LABELS[secao].descricao}
+                        </span>
+                      </span>
+                      <Switch
+                        id={`secao-${secao}`}
+                        checked={shareLink.secoes[secao]}
+                        disabled={secoesMutation.isPending}
+                        onCheckedChange={(marcado) =>
+                          secoesMutation.mutate(
+                            { ...shareLink.secoes, [secao]: marcado },
+                            {
+                              onError: () =>
+                                toast({
+                                  title: 'Não foi possível atualizar o link',
+                                  description: 'A alteração foi desfeita. Tente novamente.',
+                                  variant: 'destructive',
+                                }),
+                            },
+                          )
+                        }
+                        data-testid={`xgestao-secao-${secao}`}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-gray-500">
+                  Valores, lucro, equipe e o endereço exato nunca são compartilhados.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

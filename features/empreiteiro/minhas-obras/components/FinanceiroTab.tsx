@@ -28,6 +28,7 @@ import { useToast } from '@shared/hooks/use-toast';
 import { cn } from '@shared/lib/utils';
 import {
   IconAdd,
+  IconAttachFile,
   IconDelete,
   IconEdit,
   IconPayments,
@@ -45,6 +46,7 @@ import {
 import { LancamentoFinanceiroModal } from './LancamentoFinanceiroModal';
 import { AditivosCard } from './AditivosCard';
 import type { ProfitMetrics } from '@features/shared/profit';
+import type { ObraFinanceiro } from '../types';
 
 /**
  * XG10 — aba Financeiro da obra (substitui a antiga "Lucro").
@@ -63,6 +65,13 @@ interface FinanceiroTabProps {
   metrics: ProfitMetrics;
   /** Obra de marketplace é read-only aqui: o dinheiro é do contratante. */
   podeLancar?: boolean;
+  /**
+   * XG12 — os valores de contrato (contratado, aditivos, total, saldo) e as
+   * barras de recebido/executado, que viviam no "Resumo Financeiro" solto no
+   * rodapé da obra. Opcional: outros consumidores da aba não passam nada e
+   * seguem renderizando só os lançamentos.
+   */
+  financeiro?: ObraFinanceiro;
 }
 
 function formatarDataBr(iso: string): string {
@@ -70,7 +79,115 @@ function formatarDataBr(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
-export function FinanceiroTab({ obraId, metrics, podeLancar = true }: FinanceiroTabProps) {
+/**
+ * XG12 — os valores de contrato, herdados do "Resumo Financeiro".
+ *
+ * A lista "Medições Realizadas" do bloco antigo **não** veio junto: ela
+ * mapeava linhas de `financeiro` com o rótulo de medição (o `numero` era o
+ * índice do array). Os lançamentos já aparecem logo abaixo, com o nome certo;
+ * as atualizações de verdade têm aba própria.
+ */
+function ValoresDoContrato({ financeiro }: { financeiro: ObraFinanceiro }) {
+  const percentualAditivo =
+    financeiro.valorContratado > 0
+      ? Math.round((financeiro.aditivos / financeiro.valorContratado) * 100)
+      : 0;
+
+  const kpis = [
+    { label: 'Valor contratado', valor: financeiro.valorContratado, accent: 'border-blue-500' },
+    {
+      label: 'Aditivos',
+      valor: financeiro.aditivos,
+      accent: 'border-purple-500',
+      nota: financeiro.aditivos > 0 ? `+${percentualAditivo}% do original` : null,
+    },
+    { label: 'Valor total', valor: financeiro.valorTotal, accent: 'border-primary' },
+    {
+      label: 'Saldo a receber',
+      valor: financeiro.saldoReceber,
+      accent: 'border-success',
+      destaque: true,
+    },
+  ];
+
+  return (
+    <Card data-testid="valores-do-contrato">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Valores do contrato</CardTitle>
+        <CardDescription>
+          O combinado com o cliente, somado aos aditivos lançados abaixo.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className={cn(
+                'rounded-xl border-l-4 bg-gray-50 p-4 dark:bg-gray-800/50',
+                kpi.accent,
+              )}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                {kpi.label}
+              </p>
+              <p
+                className={cn(
+                  'mt-2 text-2xl font-extrabold',
+                  kpi.destaque ? 'text-success' : 'text-gray-900 dark:text-white',
+                )}
+              >
+                {formatCurrency(kpi.valor)}
+              </p>
+              {kpi.nota && (
+                <p className="mt-1 text-xs font-medium text-purple-600">{kpi.nota}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {[
+            {
+              label: 'Percentual recebido',
+              valor: financeiro.percentualRecebido,
+              cor: 'bg-success',
+              texto: 'text-success',
+            },
+            {
+              label: 'Percentual executado',
+              valor: financeiro.percentualExecutado,
+              cor: 'bg-primary',
+              texto: 'text-primary',
+            },
+          ].map((barra) => (
+            <div key={barra.label}>
+              <div className="mb-2 flex items-end justify-between">
+                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {barra.label}
+                </span>
+                <span className={cn('text-lg font-extrabold', barra.texto)}>{barra.valor}%</span>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                <div
+                  className={cn('h-full rounded-full', barra.cor)}
+                  style={{ width: `${Math.min(100, Math.max(0, barra.valor))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function FinanceiroTab({
+  obraId,
+  metrics,
+  podeLancar = true,
+  financeiro,
+}: FinanceiroTabProps) {
   const { toast } = useToast();
   const { data: lancamentos = [], isLoading } = useObraLancamentos(obraId);
   const excluir = useExcluirLancamento(obraId);
@@ -100,6 +217,28 @@ export function FinanceiroTab({ obraId, metrics, podeLancar = true }: Financeiro
     [filtrados],
   );
 
+  /**
+   * O comprovante é privado no R2: a URL precisa ser assinada na hora. A rota
+   * só assina para o dono do arquivo, então o link não vaza se alguém copiar
+   * o `fileId`.
+   */
+  const abrirComprovante = async (fileId: string) => {
+    try {
+      const response = await fetch(`/api/uploads/sign?id=${encodeURIComponent(fileId)}`, {
+        credentials: 'include',
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body?.url) throw new Error(body?.message ?? 'Falhou');
+      window.open(body.url as string, '_blank', 'noopener,noreferrer');
+    } catch {
+      toast({
+        title: 'Não foi possível abrir o comprovante',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const abrirNovo = (tipo: LancamentoTipo) => {
     setEmEdicao(null);
     setModalTipo(tipo);
@@ -128,6 +267,8 @@ export function FinanceiroTab({ obraId, metrics, podeLancar = true }: Financeiro
 
   return (
     <div className="space-y-4">
+      {financeiro && <ValoresDoContrato financeiro={financeiro} />}
+
       <ProfitCard
         metrics={metrics}
         title="Resultado da obra"
@@ -234,6 +375,17 @@ export function FinanceiroTab({ obraId, metrics, podeLancar = true }: Financeiro
                               <Badge variant="outline" className="text-[10px]">
                                 Automático
                               </Badge>
+                            )}
+                            {l.comprovanteFileId && (
+                              <button
+                                type="button"
+                                onClick={() => abrirComprovante(l.comprovanteFileId!)}
+                                className="inline-flex cursor-pointer items-center gap-1 text-[10px] font-semibold text-primary hover:underline"
+                                data-testid={`comprovante-${l.id}`}
+                              >
+                                <IconAttachFile className="text-xs" />
+                                Nota fiscal
+                              </button>
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mt-0.5">{formatarDataBr(l.data)}</p>

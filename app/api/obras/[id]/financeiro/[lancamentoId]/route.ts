@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { LANCAMENTO_CATEGORIAS } from "@features/financeiro/lancamentos";
+import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
 
 /**
  * XG10 — edição e exclusão de um lançamento da obra. O cliente pediu para
@@ -106,6 +107,13 @@ export async function PATCH(
   }
   if (data.categoria === null && existing.tipo === "saida") {
     const r = NextResponse.json({ message: "Saída precisa de categoria." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  const erroComprovante = await validarComprovante(data.comprovanteFileId, auth.userId!);
+  if (erroComprovante) {
+    const r = NextResponse.json({ message: erroComprovante }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
   }

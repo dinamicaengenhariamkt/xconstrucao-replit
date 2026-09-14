@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
 import {
   LANCAMENTO_CATEGORIAS,
   LANCAMENTO_TIPOS,
@@ -118,6 +119,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const erroCategoria = validarCategoria(tipo, categoria);
   if (erroCategoria) {
     const r = NextResponse.json({ message: erroCategoria }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  const erroComprovante = await validarComprovante(comprovanteFileId, guard.user.id);
+  if (erroComprovante) {
+    const r = NextResponse.json({ message: erroComprovante }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
   }

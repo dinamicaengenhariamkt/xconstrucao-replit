@@ -185,6 +185,17 @@ export interface ObraFinanceiro {
   saldoReceber: number;
   percentualRecebido: number;
   percentualExecutado: number;
+  /**
+   * ⚠️ **Não são medições.** Apesar do nome, `build-detalhe-server.ts` monta
+   * este array a partir de linhas da tabela `financeiro` (lançamentos), com
+   * `numero` gerado pelo índice do array. Não tem etapa, percentual, descrição,
+   * fotos nem autor — e não terá, porque a origem é outra tabela.
+   *
+   * As medições de verdade vêm de `GET /api/obras/[id]/medicoes`
+   * (`useObraMedicoes`). Renomear este campo tocaria vários consumidores e
+   * ficou como dívida (XG12 §13) — até lá, **não use isto como fonte de
+   * `medicaoId`**: era assim que as disputas recebiam IDs que não casavam.
+   */
   medicoes: ObraMedicao[];
   /** Soma de entradas pagas (recebedor = empreiteiro). */
   receitaTotal: number;

@@ -310,7 +310,16 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await page.unroute(`**/api/obras/${obra.id}/tarefas`);
   });
 
-  test("mascara datas de ocorrência, valida datas inválidas e preserva edição", async ({
+  /**
+   * XG12 — o teste antigo exercitava `OcorrenciasSection`: máscara de data,
+   * validação de 31/02, preservação da edição. Tudo real na tela e nada no
+   * banco — o componente era `useState` puro, sem nenhuma mutation. Cobertura
+   * de UI não é prova de persistência; o assert que faltava era um F5.
+   *
+   * A aba agora renderiza `OcorrenciasJ06Card`, que salva de verdade, e este
+   * teste verifica o que importa: a ocorrência sobrevive ao recarregamento.
+   */
+  test("ocorrência criada na aba persiste após recarregar e pode ser resolvida", async ({
     page,
     request,
   }) => {
@@ -338,40 +347,47 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     if (await tour.count()) await page.getByRole("button", { name: "Pular" }).click();
 
     await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
-    await page.getByRole("button", { name: "Reportar Problema", exact: true }).click();
-    const dialog = await abrirDialog(page, "Reportar problema");
-    await dialog.getByRole("textbox", { name: /Título/ }).fill("Atraso no fornecedor");
-    await dialog.getByRole("textbox", { name: /Descrição/ }).fill("O material da etapa ainda não foi entregue.");
-    await dialog.getByRole("textbox", { name: /Responsável/ }).fill("Equipe de compras");
+    await expect(page.getByTestId("card-ocorrencias-j06")).toBeVisible();
 
-    const dataAbertura = dialog.getByTestId("input-data-abertura-ocorrencia");
-    const prazo = dialog.getByTestId("input-prazo-ocorrencia");
-    await dataAbertura.fill("10062025");
-    await expect(dataAbertura).toHaveValue("10/06/2025");
-    await dataAbertura.fill("10/06/2025");
-    await expect(dataAbertura).toHaveValue("10/06/2025");
+    await page.getByTestId("button-nova-ocorrencia").click();
+    await page.getByTestId("input-ocorr-titulo").fill("Atraso no fornecedor");
+    await page
+      .getByTestId("input-ocorr-desc")
+      .fill("O material da etapa ainda não foi entregue.");
 
-    // Uma data impossível aparece formatada, mas bloqueia o envio.
-    await prazo.fill("31022025");
-    await expect(prazo).toHaveValue("31/02/2025");
-    await dialog.getByRole("button", { name: "Reportar problema" }).click();
-    await expect(dialog.getByText("Informe uma data válida (DD/MM/AAAA)")).toBeVisible();
-    await expect(dialog).toBeVisible();
+    const criada = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/obras/${obra.id}/ocorrencias`) &&
+        response.request().method() === "POST",
+    );
+    await page.getByTestId("button-criar-ocorrencia").click();
+    expect((await criada).status()).toBeLessThan(300);
 
-    // O prazo opcional pode ficar vazio; a máscara continua ativa na edição.
-    await prazo.fill("");
-    await dialog.getByRole("button", { name: "Reportar problema" }).click();
-    await expect(dialog).toHaveCount(0);
     await expect(page.getByText("Atraso no fornecedor", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Atualizar status", exact: true }).click();
-    const editDialog = await abrirDialog(page, "Editar ocorrência");
-    await expect(editDialog.getByTestId("input-data-abertura-ocorrencia")).toHaveValue("10/06/2025");
-    await expect(editDialog.getByTestId("input-prazo-ocorrencia")).toHaveValue("");
-    await editDialog.getByTestId("input-prazo-ocorrencia").fill("15062025");
-    await expect(editDialog.getByTestId("input-prazo-ocorrencia")).toHaveValue("15/06/2025");
-    await editDialog.getByRole("button", { name: "Salvar alterações" }).click();
-    await expect(page.getByText("Prazo: 15/06/2025", { exact: true })).toBeVisible();
+    // O assert que o teste antigo não podia fazer: a ocorrência existe fora
+    // do estado do React.
+    await page.reload();
+    const tourDepois = page.getByTestId("guided-tour");
+    if (await tourDepois.count()) await page.getByRole("button", { name: "Pular" }).click();
+    await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
+    await expect(
+      page.getByText("Atraso no fornecedor", { exact: true }),
+      "a ocorrência sobrevive ao F5",
+    ).toBeVisible();
+
+    // Resolver também precisa persistir.
+    const resolver = page.getByTestId(/^button-resolver-/).first();
+    await expect(resolver).toBeVisible();
+    const resolvida = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/obras/${obra.id}/ocorrencias/`) &&
+        response.url().endsWith("/resolver") &&
+        response.request().method() === "POST",
+    );
+    await resolver.click();
+    expect((await resolvida).status()).toBeLessThan(300);
+    await expect(resolver).toHaveCount(0);
   });
 
   test("edição reflete nos detalhes da obra e no link público", async ({ page, request }) => {

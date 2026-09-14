@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,6 +32,8 @@ import { Input } from '@shared/components/ui/input';
 import { Textarea } from '@shared/components/ui/textarea';
 import { Button } from '@shared/components/ui/button';
 import { BrDateInput } from '@features/shared/components/BrDateInput';
+import { FileUploader } from '@features/shared/components/FileUploader';
+import { IconAttachFile } from '@shared/components/icons';
 import { isDateBrValid } from '@shared/lib/masks';
 import { useToast } from '@shared/hooks/use-toast';
 import {
@@ -115,6 +117,10 @@ export function LancamentoFinanceiroModal({
   const editando = Boolean(lancamento);
   const isSaida = tipo === 'saida';
 
+  // O anexo vive fora do `react-hook-form`: o upload já aconteceu quando o
+  // usuário escolhe o arquivo, e o que guardamos é só a referência.
+  const [comprovante, setComprovante] = useState<{ fileId: string; nome: string } | null>(null);
+
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { categoria: '', descricao: '', valor: '', data: hojeBr() },
@@ -123,6 +129,11 @@ export function LancamentoFinanceiroModal({
   // Reidrata a cada abertura: o modal é reusado para criar e para editar.
   useEffect(() => {
     if (!open) return;
+    setComprovante(
+      lancamento?.comprovanteFileId
+        ? { fileId: lancamento.comprovanteFileId, nome: 'Comprovante anexado' }
+        : null,
+    );
     form.reset(
       lancamento
         ? {
@@ -154,6 +165,7 @@ export function LancamentoFinanceiroModal({
           descricao: data.descricao,
           valor,
           data: toIsoDate(data.data),
+          comprovanteFileId: comprovante?.fileId ?? null,
         });
       } else {
         await criar.mutateAsync({
@@ -162,6 +174,7 @@ export function LancamentoFinanceiroModal({
           descricao: data.descricao,
           valor,
           data: toIsoDate(data.data),
+          comprovanteFileId: comprovante?.fileId ?? null,
         });
       }
       toast({
@@ -182,7 +195,7 @@ export function LancamentoFinanceiroModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] overflow-y-auto sm:w-full sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {editando ? 'Editar' : isSaida ? 'Lançar saída' : 'Lançar entrada'}
@@ -287,6 +300,45 @@ export function LancamentoFinanceiroModal({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* XG10/XG12 — "E poder anexar nota fiscal também, se for o caso"
+                (06:02). A API já aceitava `comprovanteFileId`; faltava o
+                upload aqui. Opcional: nem toda saída tem documento. */}
+            <div className="space-y-2">
+              <FormLabel>Nota fiscal ou comprovante <span className="font-normal text-gray-400">(opcional)</span></FormLabel>
+              {comprovante ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <span className="flex min-w-0 items-center gap-2 text-sm">
+                    <IconAttachFile className="shrink-0 text-gray-500" />
+                    <span className="truncate">{comprovante.nome}</span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setComprovante(null)}
+                    disabled={salvando}
+                    data-testid="remover-comprovante-lancamento"
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ) : (
+                <FileUploader
+                  kind="comprovante_pagamento"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  label="Anexar comprovante"
+                  helper="JPG, PNG ou PDF."
+                  buttonVariant="outline"
+                  testId="upload-comprovante-lancamento"
+                  disabled={salvando}
+                  obraId={obraId}
+                  onUploaded={(file) =>
+                    setComprovante({ fileId: file.id, nome: file.originalName })
+                  }
+                />
+              )}
             </div>
 
             <DialogFooter>

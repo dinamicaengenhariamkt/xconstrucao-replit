@@ -16,8 +16,6 @@ import { TaskManagerSection } from '@features/empreiteiro/minhas-obras/component
 import { ChecklistsSection } from '@features/empreiteiro/minhas-obras/components/ChecklistsSection';
 import { TimelineSection } from '@features/empreiteiro/minhas-obras/components/TimelineSection';
 import { DocumentosSection } from '@features/empreiteiro/minhas-obras/components/DocumentosSection';
-import { OcorrenciasSection } from '@features/empreiteiro/minhas-obras/components/OcorrenciasSection';
-import { FinanceiroSection } from '@features/empreiteiro/minhas-obras/components/FinanceiroSection';
 import { EquipeSection } from '@features/empreiteiro/minhas-obras/components/EquipeSection';
 import { ContatoContratanteCard } from '@features/empreiteiro/minhas-obras/components/ContatoContratanteCard';
 import { ContratoCard } from '@features/contratos/components/ContratoCard';
@@ -30,14 +28,18 @@ import { useAuthStore } from '@features/auth/store/auth-store';
 import { LocalizacaoCard } from '@features/shared/components/LocalizacaoCard';
 import { RegistrarMedicaoModal } from '@features/empreiteiro/minhas-obras/components/RegistrarMedicaoModal';
 import { cn } from '@shared/lib/utils';
-import { formatCurrencyRounded as formatCurrency } from '@shared/lib/formatters';
 import React from 'react';
-import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconChecklist, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline } from '@shared/components/icons';
+import { IconArrowBack, IconChevronRight, IconLocationOn, IconEvent, IconGroups, IconAddTask, IconCheckCircle, IconSchedule, IconTaskAlt, IconErrorOutline, IconFactCheck, IconTimeline, IconPhotoLibrary, IconFolderOpen, IconCalendarMonth, IconChecklist, IconWarning, IconConstruction, IconPayments, IconHealthAndSafety, IconHelpOutline, IconTrendingUp, IconHistory, IconPhotoCamera } from '@shared/components/icons';
 import { HealthCard, HealthDetailPanel, computeHealthFromObra } from '@features/shared/health';
 import { computeProfitFromObra } from '@features/shared/profit';
 import { FinanceiroTab } from '@features/empreiteiro/minhas-obras/components/FinanceiroTab';
 import { CronogramaGanttCard } from '@features/empreiteiro/minhas-obras/components/CronogramaGanttCard';
+import { AtualizacoesTab } from '@features/empreiteiro/minhas-obras/components/AtualizacoesTab';
+import { useObraMedicoes } from '@features/empreiteiro/minhas-obras/hooks/use-obra-medicoes';
 import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components/CompartilharModal';
+import { TrocarCapaModal } from '@features/xgestao/components/TrocarCapaModal';
+import { EditarInformacoesModal } from '@features/xgestao/components/EditarInformacoesModal';
+import { EditarLocalizacaoModal } from '@features/xgestao/components/EditarLocalizacaoModal';
 import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
 import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
 
@@ -57,23 +59,37 @@ const PROGRESS_BAR_COLORS: Record<string, string> = {
   success: 'bg-green-500',
 };
 
-type ObraTab = 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'documentos' | 'etapas' | 'cronograma' | 'ocorrencias' | 'disputas' | 'saude' | 'financeiro';
+type ObraTab = 'atualizacoes' | 'tarefas' | 'checklists' | 'timeline' | 'fotos' | 'diario' | 'documentos' | 'etapas' | 'cronograma' | 'ocorrencias' | 'disputas' | 'saude' | 'financeiro';
 
+/**
+ * XG12 — ordem por frequência de uso, com adjacência semântica preservada.
+ *
+ * "Atualizações" abre a lista porque é o ciclo central do produto: registrar
+ * avanço e conferir o histórico. Tarefas→Etapas→Cronograma ficam juntas (a
+ * tarefa pertence à etapa, o cronograma é a mesma etapa no eixo do tempo), e
+ * Fotos↔Diário também. "Saúde" desce para o fim: é resumo derivado de tudo
+ * acima, e o `HealthCard` já fica sempre visível antes das abas.
+ */
 const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'saude', label: 'Saúde', Icon: IconHealthAndSafety },
+  // XG12 — a aba que faltava. O botão "Adicionar Atualização" gravava em
+  // `medicoes` e nenhuma tela autenticada lia a tabela: o dono via menos da
+  // própria obra do que o cliente dele, que tem esta lista no link público.
+  { key: 'atualizacoes', label: 'Atualizações', Icon: IconTrendingUp },
   { key: 'tarefas', label: 'Tarefas', Icon: IconTaskAlt },
-  { key: 'checklists', label: 'Checklists', Icon: IconFactCheck },
-  { key: 'timeline', label: 'Timeline', Icon: IconTimeline },
-  { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
-  { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
   // XG10 — o que se chamava "Cronograma" sempre foi cadastro de etapas
   // ("o nome cronograma está errado, isso aqui não é um cronograma, é uma
   // etapa", 08:11). O cronograma de verdade, com datas, é a aba ao lado.
   { key: 'etapas', label: 'Etapas', Icon: IconChecklist },
   { key: 'cronograma', label: 'Cronograma', Icon: IconCalendarMonth },
+  { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
+  { key: 'diario', label: 'Diário', Icon: IconHistory },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
-  { key: 'disputas', label: 'Disputas', Icon: IconWarning },
+  { key: 'checklists', label: 'Checklists', Icon: IconFactCheck },
+  { key: 'documentos', label: 'Documentos', Icon: IconFolderOpen },
+  { key: 'timeline', label: 'Timeline', Icon: IconTimeline },
   { key: 'financeiro', label: 'Financeiro', Icon: IconPayments },
+  { key: 'disputas', label: 'Disputas', Icon: IconWarning },
+  { key: 'saude', label: 'Saúde', Icon: IconHealthAndSafety },
 ];
 
 /**
@@ -89,39 +105,63 @@ function tabsVisiveis(isObraPropria: boolean) {
   return isObraPropria ? TABS.filter((t) => t.key !== 'disputas') : TABS;
 }
 
-/** Roteiro do console: o ciclo de manter a obra atualizada, na ordem de uso. */
-const TOUR_CONSOLE: TourStep[] = [
-  {
-    target: '[data-tour="progresso-geral"]',
-    title: 'Progresso geral',
-    description:
-      'O avanço consolidado da obra. Ele sobe sozinho a cada atualização registrada — não precisa digitar.',
-  },
-  {
-    target: '[data-tour="adicionar-atualizacao"]',
-    title: 'Adicionar atualização',
-    description:
-      'Aqui você registra o que foi feito: o percentual avançado, a descrição e as fotos. É o que move o progresso e aparece para o cliente.',
-  },
-  {
-    target: '[data-tour="detalhes-obra"]',
-    title: 'Detalhes da obra',
-    description:
-      'Descrição, tipo, área e prazos. É o mesmo conteúdo que aparece no link público — use "Editar informações" para completar.',
-  },
-  {
-    target: '[data-tour="abas-obra"]',
-    title: 'Organização do dia a dia',
-    description:
-      'Tarefas, checklists, fotos, documentos e ocorrências. Cada aba guarda um tipo de registro da obra.',
-  },
-  {
-    target: '[data-tour="compartilhar-link"]',
-    title: 'Compartilhar com o cliente',
-    description:
-      'Gere um link para o cliente acompanhar sem criar conta. Valores, equipe e endereço exato nunca são compartilhados. Você pode revogar quando quiser.',
-  },
-];
+/**
+ * Roteiro do console, na ordem do ciclo real de trabalho.
+ *
+ * XG12 — os passos 2 e 3 respondem juntos o relato que abriu a jornada
+ * ("ficou confuso adicionar a atualização"): mostram, lado a lado, onde as
+ * atualizações aparecem e onde se registra uma nova.
+ */
+function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
+  return [
+    {
+      target: '[data-tour="progresso-geral"]',
+      title: 'Progresso geral',
+      description:
+        'O avanço consolidado da obra. Ele sobe sozinho a cada atualização registrada — não precisa digitar.',
+    },
+    {
+      target: '[data-tour="abas-obra"]',
+      title: 'Atualizações da obra',
+      description:
+        'O histórico do que já foi executado: percentual, etapa, descrição, fotos e quem registrou. É a primeira aba porque é o que você mais consulta.',
+      onEnter: () => irParaAba('atualizacoes'),
+    },
+    {
+      // O botão dentro da aba, não o do hero: o passo mostra o registro ao
+      // lado da lista que ele alimenta.
+      target: '[data-tour="adicionar-atualizacao-aba"]',
+      title: 'Registrar um avanço',
+      description:
+        'Aqui você registra o que foi feito: percentual, descrição e fotos. É o que move o progresso e aparece para o cliente.',
+      onEnter: () => irParaAba('atualizacoes'),
+    },
+    {
+      target: '[data-tour="abas-obra"]',
+      title: 'O dia a dia da obra',
+      description:
+        'Tarefas, etapas, cronograma, fotos, diário, ocorrências e financeiro. Cada aba guarda um tipo de registro — tudo em um lugar só.',
+    },
+    {
+      target: '[data-tour="trocar-capa"]',
+      title: 'A cara da obra',
+      description:
+        'Troque a foto de capa sem sair daqui: envie uma nova ou escolha uma já registrada na aba Fotos.',
+    },
+    {
+      target: '[data-tour="detalhes-obra"]',
+      title: 'Detalhes e endereço',
+      description:
+        'Descrição, tipo, área e prazos — o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela; o endereço se edita no card de localização, lá embaixo.',
+    },
+    {
+      target: '[data-tour="compartilhar-link"]',
+      title: 'Compartilhar com o cliente',
+      description:
+        'Gere o link para o cliente acompanhar sem criar conta e escolha, ali mesmo, o que ele vê. Valores, equipe e endereço exato nunca são compartilhados. Dá para revogar quando quiser.',
+    },
+  ];
+}
 
 function BotaoAjuda({ onClick }: { onClick: () => void }) {
   return (
@@ -144,6 +184,67 @@ function formatAreaM2(value: string): string {
 }
 
 /**
+ * XG13 — casca dos KPIs com o acabamento "luminous" que o resto do produto já usa
+ * (`app/globals.css` §Luminous card border, `LuminousHoverCard`): borda em gradiente
+ * mascarado — transparente nos cantos, opaca no meio —, linha primary no topo e
+ * fundo sutil ao passar o mouse.
+ *
+ * Por que não reusar `LuminousHoverCard` direto: ele envolve o `<Card>` do shadcn,
+ * que traz padding e estrutura próprios. Estes cinco KPIs são `div`s com layout
+ * próprio (barra de progresso, legenda, badge condicional) que o `<Card>` quebraria.
+ * As duas `<span>` decorativas abaixo são as mesmas de `LuminousHoverCard.tsx:58-66`.
+ *
+ * `luminous` é opt-in e fica ligado só na obra própria do xgestão: o console é
+ * arquivo compartilhado, e o marketplace não muda de aparência.
+ */
+function KpiCardShell({
+  luminous,
+  className,
+  children,
+}: {
+  luminous: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'relative flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm transition-all dark:bg-gray-900 sm:p-5',
+        luminous
+          ? 'luminous-card group overflow-hidden border-gray-100 hover:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-gray-800/40'
+          : 'border-gray-100 dark:border-gray-800',
+        className,
+      )}
+    >
+      {luminous && (
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-[2]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.03] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-0"
+          />
+        </>
+      )}
+      {/* Acima dos decorativos: o gradiente de fundo é z-0. */}
+      <div className="relative z-10 flex flex-col gap-3">{children}</div>
+    </div>
+  );
+}
+
+/** Caixa do ícone do KPI. `border-transparent` em repouso evita salto de layout
+ *  quando a borda aparece no hover (mesmo cuidado de `StatsCard.tsx:45`). */
+function kpiIconClasses(luminous: boolean, cor: string) {
+  return cn(
+    'p-2.5 rounded-lg transition-all duration-300',
+    cor,
+    luminous && 'border border-transparent group-hover:border-primary/40 group-hover:scale-105',
+  );
+}
+
+/**
  * Espelha a seção "Detalhes da obra" do link público. O que o dono preenche na
  * edição precisa reaparecer aqui — antes `descricao` e `areaM2` eram salvos e
  * só existiam na página pública, o que lia como "a edição não salvou".
@@ -151,9 +252,11 @@ function formatAreaM2(value: string): string {
 function DetalhesObraCard({
   obra,
   basePath,
+  onEditar,
 }: {
   obra: MinhaObraDetalhe;
   basePath: string;
+  onEditar: () => void;
 }) {
   // O adapter devolve "—" para data ausente; tratar como vazio evita um card
   // que anuncia um travessão como se fosse informação.
@@ -174,7 +277,10 @@ function DetalhesObraCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.12 }}
-      className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-6"
+      // XG13 — `luminous-section` é o acabamento dos cards grandes no resto do
+      // produto: borda em gradiente + degradê interno. Este card só existe em obra
+      // própria (ver a condição no chamador), então não alcança o marketplace.
+      className="luminous-section rounded-2xl border border-transparent bg-white p-5 shadow-none dark:bg-gray-900 sm:p-6"
       aria-labelledby="detalhes-obra-console"
       data-testid="detalhes-obra-card"
       data-tour="detalhes-obra"
@@ -188,12 +294,25 @@ function DetalhesObraCard({
             Estas informações também aparecem para quem abrir o link público.
           </p>
         </div>
-        <Link
-          href={`${basePath}/${obra.id}/editar`}
-          className="text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
-        >
-          Editar informações
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onEditar}
+            className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+            data-testid="detalhes-editar-informacoes"
+          >
+            Editar informações
+          </button>
+          {/* O formulário completo segue existindo: é onde mora o cadastro
+              guiado da obra nova e a exclusão. */}
+          <Link
+            href={`${basePath}/${obra.id}/editar`}
+            className="text-xs font-medium text-gray-400 underline underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+            data-testid="detalhes-cadastro-completo"
+          >
+            Cadastro completo
+          </Link>
+        </div>
       </div>
 
       {vazio ? (
@@ -241,31 +360,48 @@ export function ObraConsoleView({
   const user = useAuthStore((state) => state.user);
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
-  const [activeTab, setActiveTab] = useState<ObraTab>('tarefas');
+  const [activeTab, setActiveTab] = useState<ObraTab>('atualizacoes');
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  // XG12 — a edição da obra vem para a tela do console, em modais.
+  const [showCapa, setShowCapa] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [showLocal, setShowLocal] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
   // O tour só faz sentido na obra própria do xgestão; a de marketplace tem
   // outro fluxo e outra contraparte.
-  const tour = useGuidedTour('console', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
+  // XG12 — `console-v2`: a tela foi reorganizada (abas novas, edição em modal),
+  // então quem viu o roteiro anterior viu uma tela que não existe mais. A chave
+  // nova reexibe o tour uma vez, e é o custo certo de uma tela reorganizada.
+  const tour = useGuidedTour('console-v2', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
+  // `useMemo` mantém a identidade dos passos estável: o `useLayoutEffect` do
+  // tour depende de `step`, e um array recriado a cada render remediria o
+  // alvo em loop.
+  const passosDoTour = React.useMemo(() => tourConsole(setActiveTab), []);
 
+  // Deep-link de notificação. XG12 — antes rolava até o bloco solto de
+  // medições no rodapé; agora abre a aba que de fato lista as atualizações,
+  // que é o que quem clica na notificação estava procurando.
+  // `obra?.id` nas dependências, e não só `searchParams`: enquanto carrega, a
+  // página faz early-return e o ref é `null` — o efeito saía pelo guard e
+  // nunca mais rodava, deixando o deep-link dependente de cache quente.
   useEffect(() => {
-    if (searchParams?.get('tab') === 'medicoes' && medicoesSectionRef.current) {
-      // Aguarda a renderização completa antes de rolar.
-      const timer = setTimeout(() => {
-        medicoesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [searchParams, obra]);
+    if (searchParams?.get('tab') !== 'medicoes' || !medicoesSectionRef.current) return;
+    setActiveTab('atualizacoes');
+    // Aguarda a renderização completa antes de rolar.
+    const timer = setTimeout(() => {
+      medicoesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchParams, obra?.id]);
 
   if (isLoading) {
     return (
-      <div className="p-10 animate-pulse space-y-6">
+      <div className="p-4 sm:p-6 lg:p-10 animate-pulse space-y-6">
         <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded w-40" />
         <div className="h-80 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => <div key={i} className="h-36 bg-gray-200 dark:bg-gray-800 rounded-2xl" />)}
         </div>
         <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
@@ -275,7 +411,7 @@ export function ObraConsoleView({
 
   if (!obra) {
     return (
-      <div className="p-10 text-center py-20">
+      <div className="p-4 sm:p-6 lg:p-10 text-center py-20">
         <IconConstruction className="text-5xl text-gray-300 block mb-4" />
         <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
         <Link href={basePath} className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">
@@ -296,9 +432,12 @@ export function ObraConsoleView({
   const statusLabel = mostrarStatusProprio
     ? obraStatusDbLabel(obra.statusObra!)
     : STATUS_LABELS[obra.status];
+  // XG13 — o acabamento luminous é exclusivo do xgestão. O console é o mesmo
+  // arquivo do marketplace, que segue com a aparência atual.
+  const kpiLuminous = Boolean(obra.isObraPropria);
 
   return (
-    <div className="p-10 flex flex-col gap-8">
+    <div className="p-4 sm:p-6 lg:p-10 flex flex-col gap-6 sm:gap-8">
 
       {/* Breadcrumb */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
@@ -331,13 +470,21 @@ export function ObraConsoleView({
         data-testid="hero-minha-obra"
       >
         {/*
-          Sem "Alterar foto de capa" aqui: a capa pertence à obra, e a obra é do
-          contratante — `PATCH /api/obras/[id]` recusa empreiteiro por design
-          ("empreiteiro nunca edita"). O controle existia mas só trocava a imagem
-          via `URL.createObjectURL`, um blob local que sumia no F5 (J40 P0 #3).
-          O empreiteiro registra imagens da obra pela aba Fotos, que persiste.
+          XG12 — "Trocar capa" volta ao hero, agora persistindo de verdade.
+          O controle antigo (J40 P0 #3) usava `URL.createObjectURL`, um blob
+          local que sumia no F5, e a capa era do contratante. Na obra própria do
+          xgestão o `PATCH` aceita `fotoCapaFileId` — com anti-IDOR: o arquivo
+          precisa ser do dono e já vinculado a esta obra. Em obra de marketplace
+          o botão nem aparece, e o backend seguiria recusando.
         */}
-        <div className="aspect-[16/7] relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950">
+        {/*
+          XG13 — no celular o conteúdo do hero sai de cima da capa.
+          Antes, título, endereço, metadados e quatro botões viviam todos em
+          `absolute` dentro de uma capa 16:7: num aparelho de 360px isso dá ~157px
+          de altura útil, e o texto acabava espremido contra a imagem. A partir de
+          `md` nada muda — a sobreposição continua igual ao desktop de hoje.
+        */}
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-56 md:aspect-[16/7] md:h-auto">
           {obra.imagemUrl && (
             <img
               src={obra.imagemUrl}
@@ -346,7 +493,27 @@ export function ObraConsoleView({
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+          {allowOwnWorkEdit && obra.isObraPropria && (
+            <button
+              type="button"
+              onClick={() => setShowCapa(true)}
+              className="absolute right-4 top-4 z-10 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/25 bg-black/40 px-3 py-2 text-xs font-bold text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+              data-testid="xgestao-trocar-capa"
+              data-tour="trocar-capa"
+            >
+              <IconPhotoCamera className="text-base" />
+              Trocar capa
+            </button>
+          )}
+        </div>
+
+        {/*
+          Abaixo de `md` este bloco fica em fluxo normal, logo abaixo da capa, com
+          texto sobre o fundo do card. De `md` para cima ele volta a sobrepor a
+          imagem, exatamente como antes (`absolute` + texto branco).
+        */}
+        <div className="relative bg-white p-4 text-gray-900 dark:bg-gray-900 dark:text-white sm:p-6 md:absolute md:bottom-0 md:left-0 md:right-0 md:bg-transparent md:p-8 md:text-white md:dark:bg-transparent">
+          <div className="md:relative">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
                 <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -367,27 +534,39 @@ export function ObraConsoleView({
                     </span>
                   )}
                 </div>
-                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3" data-testid="text-titulo">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-3" data-testid="text-titulo">
                   {obra.titulo}
                 </h1>
-                <div className="flex items-center gap-2 text-white/90 text-sm">
-                  <IconLocationOn className="text-lg" />
+                <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 md:items-center md:text-white/90">
+                  <IconLocationOn className="text-lg shrink-0" />
                   <span>{obra.endereco}</span>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex items-center gap-2 text-white/90">
-                  <IconEvent className="text-lg" />
-                  <div>
-                    <p className="text-white/60 text-xs">Entrega prevista</p>
-                    <p className="font-bold text-sm">{obra.dataPrevisaoFim}</p>
+              {/*
+                XG13 — no celular estes metadados e os botões empilham em coluna
+                única, e cada botão ocupa a largura toda: é o alvo de toque de quem
+                está em obra, com uma mão ("o cara não vai pegar um computador pra
+                lançar", 17:11). De `md` em diante volta a ser a linha do desktop.
+              */}
+              <div className="flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-end md:gap-4">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 md:text-white/90">
+                  <IconEvent className="text-lg shrink-0" />
+                  <div className="leading-tight">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 md:text-white/60">Entrega prevista</p>
+                    {/* O adapter devolve "—" quando não há data; exibir o
+                        travessão sozinho parece campo quebrado. */}
+                    <p className="font-bold text-sm">
+                      {obra.dataPrevisaoFim && obra.dataPrevisaoFim !== '—'
+                        ? obra.dataPrevisaoFim
+                        : 'A definir'}
+                    </p>
                   </div>
                 </div>
                 {obra.temContratante && (
-                  <div className="flex items-center gap-2 text-white/90">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 md:text-white/90">
                     <IconGroups className="text-lg" />
                     <div>
-                      <p className="text-white/60 text-xs">Contratante</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 md:text-white/60">Contratante</p>
                       <div className="flex items-center gap-2">
                         <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold', obra.contratante.cor)}>
                           {obra.contratante.iniciais}
@@ -399,18 +578,22 @@ export function ObraConsoleView({
                 )}
                 {allowOwnWorkEdit && obra.isObraPropria && (
                   <>
-                    <Link
-                      href={`${basePath}/${obra.id}/editar`}
-                      className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all"
+                    {/* XG12 — abre modal em vez de navegar. A tela de edição
+                        completa continua acessível pelo card de detalhes, para
+                        o cadastro guiado e a exclusão da obra. */}
+                    <button
+                      type="button"
+                      onClick={() => setShowInfo(true)}
+                      className="order-2 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:order-none md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
                       data-testid="xgestao-editar-obra"
                       data-tour="editar-obra"
                     >
                       Editar obra
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       onClick={() => setShowShare(true)}
-                      className="px-5 py-2 bg-white/15 text-white rounded-xl font-bold text-sm flex items-center gap-2 border border-white/25 hover:bg-white/25 transition-all cursor-pointer"
+                      className="order-3 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:order-none md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
                       data-tour="compartilhar-link"
                     >
                       Compartilhar link
@@ -419,7 +602,7 @@ export function ObraConsoleView({
                 )}
                 <button
                   onClick={() => setShowAtualizacao(true)}
-                  className="px-5 py-2 bg-primary text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                  className="order-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl md:order-none md:w-auto md:justify-start md:py-2"
                   data-tour="adicionar-atualizacao"
                 >
                   <IconAddTask className="text-lg" />
@@ -431,15 +614,15 @@ export function ObraConsoleView({
         </div>
 
         {/* Progress bar section */}
-        <div className="p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
-          <div className="flex items-center justify-between mb-3">
-            <div>
+        <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="min-w-0">
               <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
               <p className="mt-1 text-xs text-gray-400">Avanço consolidado da execução da obra</p>
             </div>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
-              <span className="text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
+            <div className="flex shrink-0 items-baseline gap-0.5">
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
             </div>
           </div>
           <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -454,13 +637,13 @@ export function ObraConsoleView({
       </motion.div>
 
       {allowOwnWorkEdit && obra.isObraPropria && (
-        <GuidedTour steps={TOUR_CONSOLE} open={tour.open} onClose={tour.fechar} />
+        <GuidedTour steps={passosDoTour} open={tour.open} onClose={tour.fechar} />
       )}
 
       {/* BLOCO 2.5: Detalhes da obra — espelha a seção do link público, para
           que o dono veja aqui exatamente o que preencheu na edição. */}
       {obra.isObraPropria && (
-        <DetalhesObraCard obra={obra} basePath={basePath} />
+        <DetalhesObraCard obra={obra} basePath={basePath} onEditar={() => setShowInfo(true)} />
       )}
 
       {/* BLOCO 3: KPIs Operacionais */}
@@ -468,12 +651,15 @@ export function ObraConsoleView({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+        // XG13 — duas colunas já no celular: o big number é curto, cabe lado a
+        // lado e corta metade do scroll até as abas. Antes o `md` de 2 colunas
+        // ainda deixava o quinto card sozinho numa linha.
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4"
       >
         {/* Progresso Real */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-success/30 transition-all">
+        <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-success/10 text-success rounded-lg">
+            <div className={kpiIconClasses(kpiLuminous, 'bg-success/10 text-success')}>
               <IconCheckCircle />
             </div>
             <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Atual</span>
@@ -481,20 +667,22 @@ export function ObraConsoleView({
           <div>
             {/* XG10 — "Real" não distinguia de nada: só existe um progresso. */}
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso</p>
-            <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
           </div>
           <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
             <div className="h-full bg-success rounded-full" style={{ width: `${obra.progresso}%` }} />
           </div>
-        </div>
+        </KpiCardShell>
 
         {/* Dias de Atraso */}
-        <div className={cn(
-          'bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 transition-all',
-          obra.diasAtraso > 0 ? 'border-l-4 border-l-amber-500 hover:border-amber-300' : 'hover:border-success/30'
-        )}>
+        {/* O `border-l-4` âmbar é sinal de estado, não decoração: fica mesmo com
+            o acabamento luminous ligado. */}
+        <KpiCardShell
+          luminous={kpiLuminous}
+          className={obra.diasAtraso > 0 ? 'border-l-4 border-l-amber-500' : undefined}
+        >
           <div className="flex justify-between items-start">
-            <div className={cn('p-2.5 rounded-lg', obra.diasAtraso > 0 ? 'bg-amber-50 text-amber-600' : 'bg-success/10 text-success')}>
+            <div className={kpiIconClasses(kpiLuminous, obra.diasAtraso > 0 ? 'bg-amber-50 text-amber-600' : 'bg-success/10 text-success')}>
               <IconSchedule />
             </div>
             {obra.diasAtraso > 0 && (
@@ -508,14 +696,14 @@ export function ObraConsoleView({
           <div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Prazo da obra</p>
             {obra.diasAtraso > 0 ? (
-              <p className="text-3xl font-extrabold mt-1 text-amber-600">
+              <p className="text-2xl sm:text-3xl font-extrabold mt-1 text-amber-600">
                 {obra.diasAtraso}
                 <span className="text-base font-bold ml-1">
                   {obra.diasAtraso === 1 ? 'dia' : 'dias'}
                 </span>
               </p>
             ) : (
-              <p className="text-2xl font-extrabold mt-1 text-success flex items-center gap-1.5">
+              <p className="text-xl sm:text-2xl font-extrabold mt-1 text-success flex items-center gap-1.5">
                 <IconCheckCircle className="text-2xl" />
                 No prazo
               </p>
@@ -528,12 +716,12 @@ export function ObraConsoleView({
                 ? `Previsão: ${obra.dataPrevisaoFim}`
                 : 'Sem data de previsão definida'}
           </p>
-        </div>
+        </KpiCardShell>
 
         {/* Tarefas Pendentes */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-purple-300 transition-all">
+        <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 rounded-lg">
+            <div className={kpiIconClasses(kpiLuminous, 'bg-purple-50 dark:bg-purple-900/20 text-purple-600')}>
               <IconTaskAlt />
             </div>
             <span className="text-purple-600 text-xs font-bold bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
@@ -546,19 +734,19 @@ export function ObraConsoleView({
               o que está em andamento. */}
           <div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Em andamento</p>
-            <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
               {obra.tarefasEmAndamento ?? 0}
             </p>
           </div>
           <p className="text-xs text-gray-500">
             {obra.tarefasTotal - obra.tarefasPendentes} concluídas de {obra.tarefasTotal}
           </p>
-        </div>
+        </KpiCardShell>
 
         {/* Problemas Abertos */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-red-300 transition-all">
+        <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg">
+            <div className={kpiIconClasses(kpiLuminous, 'bg-red-50 dark:bg-red-900/20 text-red-600')}>
               <IconErrorOutline />
             </div>
             {obra.problemasAbertos > 0 && (
@@ -567,7 +755,7 @@ export function ObraConsoleView({
           </div>
           <div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Problemas Abertos</p>
-            <p className={cn('text-3xl font-extrabold mt-1', obra.problemasAbertos > 0 ? 'text-red-600' : 'text-gray-900 dark:text-white')}>
+            <p className={cn('text-2xl sm:text-3xl font-extrabold mt-1', obra.problemasAbertos > 0 ? 'text-red-600' : 'text-gray-900 dark:text-white')}>
               {obra.problemasAbertos}
             </p>
           </div>
@@ -589,12 +777,12 @@ export function ObraConsoleView({
                   .join(', ') || 'Em aberto'
               : 'Nenhum problema'}
           </p>
-        </div>
+        </KpiCardShell>
 
         {/* Equipe no Canteiro */}
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-3 hover:border-blue-300 transition-all">
+        <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
+            <div className={kpiIconClasses(kpiLuminous, 'bg-blue-50 dark:bg-blue-900/20 text-blue-600')}>
               <IconGroups />
             </div>
             {/* XG10 — o badge dizia "Hoje", mas o número é de cadastros na
@@ -605,12 +793,12 @@ export function ObraConsoleView({
           </div>
           <div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Equipe da obra</p>
-            <p className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.equipeAtiva}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.equipeAtiva}</p>
           </div>
           <p className="text-xs text-gray-500">
             {obra.equipeAtiva === 1 ? 'pessoa registrada' : 'pessoas registradas'}
           </p>
-        </div>
+        </KpiCardShell>
       </motion.div>
 
       {/* BLOCO 3.5: Indicador de Saúde */}
@@ -618,14 +806,26 @@ export function ObraConsoleView({
 
       {/* BLOCOs 4–10: Tabs */}
       <motion.div
+        ref={medicoesSectionRef}
+        id="secao-medicoes"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+        className={cn(
+          'bg-white dark:bg-gray-900 rounded-2xl overflow-hidden',
+          kpiLuminous
+            ? 'luminous-section border border-transparent shadow-none'
+            : 'border border-gray-100 dark:border-gray-800 shadow-sm',
+        )}
       >
-        {/* Tab bar */}
+        {/*
+          Tab bar — 12 abas não cabem numa tela de celular, então a barra rola na
+          horizontal. O degradê à direita é a dica de que há mais: sem ele, a
+          última aba visível parece ser a última que existe. `mask-image` não
+          intercepta clique, ao contrário de um overlay posicionado por cima.
+        */}
         <div
-          className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
+          className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
           data-tour="abas-obra"
         >
           {tabsVisiveis(obra.isObraPropria).map((tab) => (
@@ -633,7 +833,7 @@ export function ObraConsoleView({
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'flex items-center gap-2 px-5 py-4 text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer flex-shrink-0',
+                'flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-4 text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer flex-shrink-0',
                 activeTab === tab.key
                   ? 'text-primary border-b-2 border-primary bg-white dark:bg-gray-900'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
@@ -646,7 +846,7 @@ export function ObraConsoleView({
         </div>
 
         {/* Tab content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -655,7 +855,17 @@ export function ObraConsoleView({
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
             >
+              {activeTab === 'atualizacoes' && (
+                <AtualizacoesTab
+                  obraId={obra.id}
+                  isOwnWork={obra.isObraPropria}
+                  onRegistrar={() => setShowAtualizacao(true)}
+                />
+              )}
               {activeTab === 'tarefas' && <TaskManagerSection obra={obra} />}
+              {activeTab === 'diario' && (
+                <DiarioJ06Card obraId={obra.id} canWrite currentUserId={user?.id ?? null} />
+              )}
               {activeTab === 'checklists' && <ChecklistsSection obra={obra} />}
               {activeTab === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
               {activeTab === 'fotos' && (
@@ -678,17 +888,12 @@ export function ObraConsoleView({
               {activeTab === 'cronograma' && (
                 <CronogramaGanttCard obraId={obra.id} />
               )}
-              {activeTab === 'ocorrencias' && <OcorrenciasSection obra={obra} />}
-              {activeTab === 'disputas' && (
-                <TabDisputas
-                  obraId={obra.id}
-                  alvos={obra.financeiro.medicoes.map<DisputaAlvoOption>((m) => ({
-                    tipo: 'medicao',
-                    id: m.id,
-                    label: `Medição #${m.numero}`,
-                  }))}
-                />
-              )}
+              {/* XG12 — `OcorrenciasSection` era `useState` puro: o que o
+                  usuário criava ali evaporava no F5. Quem persiste é este
+                  card, que estava escondido no rodapé. O arquivo antigo fica
+                  no repo (reversibilidade), fora da árvore de render. */}
+              {activeTab === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite />}
+              {activeTab === 'disputas' && <DisputasTab obraId={obra.id} />}
               {activeTab === 'saude' && (
                 <HealthDetailPanel
                   health={computeHealthFromObra(obra)}
@@ -703,6 +908,9 @@ export function ObraConsoleView({
                 <FinanceiroTab
                   obraId={obra.id}
                   metrics={computeProfitFromObra(obra)}
+                  // XG12 — os KPIs de contrato (contratado, aditivos, total,
+                  // saldo) vinham do "Resumo Financeiro" solto no rodapé.
+                  financeiro={obra.financeiro}
                   // Marketplace: o dinheiro da obra é do contratante, então o
                   // empreiteiro atribuído lê mas não lança.
                   podeLancar={obra.isObraPropria}
@@ -713,15 +921,14 @@ export function ObraConsoleView({
         </div>
       </motion.div>
 
-      {/* BLOCO J06: Medições, Diário, Ocorrências e Fotos (fonte de verdade) */}
-      <div ref={medicoesSectionRef} id="secao-medicoes">
-        <ObraJ06Section obraId={obra.id} />
-      </div>
-
-      {/* BLOCO 11: Resumo Financeiro */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-        <FinanceiroSection financeiro={obra.financeiro} />
-      </motion.div>
+      {/*
+        XG12 — o bloco "Medições e diário da obra" e o "Resumo Financeiro"
+        saíram daqui. Diário, Fotos e Ocorrências já eram abas (os cards de
+        baixo eram as mesmas instâncias, duplicadas), e os KPIs de contrato
+        migraram para o topo da aba Financeiro. O que sobra abaixo das abas é
+        contexto da obra — equipe, contrato, localização —, não fluxo de
+        trabalho.
+      */}
 
       {/* BLOCO 12: Equipe e Colaboradores */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
@@ -748,7 +955,12 @@ export function ObraConsoleView({
       {/* BLOCO 15: Localização */}
       {obra.localizacao && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-          <LocalizacaoCard localizacao={obra.localizacao} />
+          <LocalizacaoCard
+            localizacao={obra.localizacao}
+            onEditar={
+              allowOwnWorkEdit && obra.isObraPropria ? () => setShowLocal(true) : undefined
+            }
+          />
         </motion.div>
       )}
 
@@ -760,11 +972,16 @@ export function ObraConsoleView({
         isOwnWork={obra.isObraPropria}
       />
       {allowOwnWorkEdit && obra.isObraPropria && (
-        <CompartilharModal
-          open={showShare}
-          onOpenChange={setShowShare}
-          obra={obra}
-        />
+        <>
+          <CompartilharModal
+            open={showShare}
+            onOpenChange={setShowShare}
+            obra={obra}
+          />
+          <TrocarCapaModal obraId={obra.id} open={showCapa} onOpenChange={setShowCapa} />
+          <EditarInformacoesModal obraId={obra.id} open={showInfo} onOpenChange={setShowInfo} />
+          <EditarLocalizacaoModal obraId={obra.id} open={showLocal} onOpenChange={setShowLocal} />
+        </>
       )}
 
     </div>
@@ -775,22 +992,26 @@ export default function MinhaObraDetalhePage() {
   return <ObraConsoleView basePath="/empreiteiro/minhas-obras" />;
 }
 
-function ObraJ06Section({ obraId }: { obraId: string }) {
-  const user = useAuthStore((s) => s.user);
+/**
+ * XG12 — as disputas passam a apontar para medições de verdade.
+ *
+ * Antes os alvos vinham de `obra.financeiro.medicoes`, que apesar do nome
+ * lista linhas da tabela `financeiro` — o `numero` era o índice do array. A
+ * disputa recebia um ID de lançamento rotulado `tipo: 'medicao'`, e o
+ * validador da rota não tinha como casá-lo com nada.
+ *
+ * Marketplace apenas: no xgestão a aba é ocultada por `tabsVisiveis`.
+ */
+function DisputasTab({ obraId }: { obraId: string }) {
+  const { data: medicoes = [] } = useObraMedicoes(obraId);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.22 }}
-      className="space-y-4"
-    >
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-extrabold text-gray-900 dark:text-white">Medições e diário da obra</h2>
-        <span className="text-xs text-muted-foreground">(dados ao vivo)</span>
-      </div>
-      <DiarioJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} />
-      <OcorrenciasJ06Card obraId={obraId} canWrite />
-      <FotosJ06Card obraId={obraId} canWrite currentUserId={user?.id ?? null} currentUserRole={user?.role} />
-    </motion.div>
+    <TabDisputas
+      obraId={obraId}
+      alvos={medicoes.map<DisputaAlvoOption>((m) => ({
+        tipo: 'medicao',
+        id: m.id,
+        label: `Medição #${m.numero} — ${m.etapa}`,
+      }))}
+    />
   );
 }

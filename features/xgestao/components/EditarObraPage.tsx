@@ -17,49 +17,27 @@ import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components
 import { ExcluirObraDialog } from './ExcluirObraDialog';
 import {
   toAbsoluteShareUrl,
-  useAtualizarSecoes,
   useObraShare,
 } from '@features/xgestao/obra-publica/hooks/use-obra-share';
-import { SECAO_LABELS, SECOES_PUBLICAS } from '@features/xgestao/obra-publica/secoes';
-import { Switch } from '@shared/components/ui/switch';
 import { IconHelpOutline } from '@shared/components/icons';
 import { GuidedTour, type TourStep } from './GuidedTour';
 import { useGuidedTour } from '../hooks/use-guided-tour';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
-import { FileUploader } from '@features/shared/components/FileUploader';
+import { CapaObraEditor } from './CapaObraEditor';
 import { useToast } from '@shared/hooks/use-toast';
 import { cn } from '@shared/lib/utils';
+import {
+  patchObra,
+  validarInformacoes,
+  validarLocalizacao,
+  type ObraEditavel,
+  type ObraStatus,
+} from '../hooks/use-editar-obra';
 
-type ObraStatus = 'planejamento' | 'em_andamento' | 'pausada' | 'concluida';
-
-type ObraEditavel = {
-  id: string;
-  nome: string;
-  endereco: string;
-  tipo: string | null;
-  descricao: string | null;
-  cep: string | null;
-  numero: string | null;
-  complemento: string | null;
-  cidade: string | null;
-  uf: string | null;
-  areaM2: string | null;
-  valorTotal: string | null;
-  progresso: number | null;
-  status: ObraStatus;
-  dataInicio: string | null;
-  dataPrevisao: string | null;
-  fotoCapaFileId: string | null;
-  fotoCapaUrl: string | null;
-};
-
-type FotoDaObra = {
-  id: string;
-  fileId: string;
-  url: string;
-  tag: string | null;
-};
+// XG12 — o tipo e o `patchObra` vivem no hook compartilhado: os modais da tela
+// de detalhe escrevem nos mesmos campos, e manter uma cópia por tela
+// significaria corrigir a validação de CEP em quatro lugares.
 
 type FormState = {
   nome: string;
@@ -102,29 +80,6 @@ async function getJson<T>(url: string): Promise<T> {
     throw new Error(typeof body?.message === 'string' ? body.message : 'Não foi possível carregar a obra.');
   }
   return body as T;
-}
-
-async function patchObra(obraId: string, payload: Record<string, unknown>): Promise<ObraEditavel> {
-  const response = await fetch(`/api/obras/${obraId}`, {
-    method: 'PATCH',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const firstFieldError = body?.errors?.fieldErrors
-      ? Object.values(body.errors.fieldErrors).flat().find((value) => typeof value === 'string')
-      : null;
-    throw new Error(
-      typeof firstFieldError === 'string'
-        ? firstFieldError
-        : typeof body?.message === 'string'
-          ? body.message
-          : 'Não foi possível salvar as alterações.',
-    );
-  }
-  return body as ObraEditavel;
 }
 
 const dataFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
@@ -252,7 +207,7 @@ const TOUR_EDICAO: TourStep[] = [
     target: '#link-publico',
     title: 'Link público',
     description:
-      'Gere o link para o cliente acompanhar sem criar conta e escolha o que ele vê. Dá para revogar quando quiser — quem tiver o link perde o acesso na hora.',
+      'Em "Gerenciar link público" você gera o link, envia ao cliente e escolhe o que ele vê. Dá para revogar quando quiser — quem tiver o link perde o acesso na hora.',
   },
 ];
 
@@ -276,14 +231,9 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     queryKey: ['xgestao', 'obra-editavel', obraId],
     queryFn: () => getJson<ObraEditavel>(`/api/obras/${obraId}`),
   });
-  const fotosQuery = useQuery({
-    queryKey: ['obras', obraId, 'fotos'],
-    queryFn: () => getJson<{ rows: FotoDaObra[] }>(`/api/obras/${obraId}/fotos`).then((data) => data.rows),
-  });
   // Mesma query que o CompartilharModal consome: gerar ou revogar lá reflete
   // aqui, no checklist e no painel de status, sem sincronização manual.
   const shareQuery = useObraShare(obraId);
-  const secoesMutation = useAtualizarSecoes(obraId);
 
   useEffect(() => {
     if (!obraQuery.data || initialized) return;
@@ -323,23 +273,9 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
 
   const saveMutation = useMutation({
     mutationFn: () => {
-      if (form.nome.trim().length < 3) throw new Error('Informe um nome com pelo menos 3 caracteres.');
-      if (form.endereco.trim().length < 3) throw new Error('Informe o endereço da obra.');
-      if (form.dataInicio && form.dataPrevisao && form.dataPrevisao < form.dataInicio) {
-        throw new Error('A previsão de término não pode ser anterior ao início.');
-      }
-      if (form.cep.trim() && !/^\d{5}-?\d{3}$/.test(form.cep.trim())) {
-        throw new Error('CEP inválido. Use o formato 00000-000.');
-      }
-      if (form.uf.trim() && !/^[A-Za-z]{2}$/.test(form.uf.trim())) {
-        throw new Error('UF inválida. Use a sigla de 2 letras, como SP.');
-      }
-      if (form.areaM2.trim() && !Number.isFinite(Number(form.areaM2.trim()))) {
-        throw new Error('Informe a área como número, por exemplo 120.5.');
-      }
-      if (form.valorTotal.trim() && !Number.isFinite(Number(form.valorTotal.trim()))) {
-        throw new Error('Informe o orçamento como número.');
-      }
+      // As mesmas regras que os modais da tela de detalhe aplicam.
+      validarInformacoes(form);
+      validarLocalizacao(form);
       return patchObra(obraId, {
         nome: form.nome.trim(),
         tipo: form.tipo.trim() || null,
@@ -369,25 +305,6 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
     onError: (error) => {
       toast({
         title: 'Não foi possível salvar',
-        description: error instanceof Error ? error.message : 'Tente novamente.',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const coverMutation = useMutation({
-    mutationFn: async ({ fileId, url }: { fileId: string | null; url: string | null }) => {
-      await patchObra(obraId, { fotoCapaFileId: fileId });
-      return { fileId, url };
-    },
-    onSuccess: async (nextCover) => {
-      setCover(nextCover);
-      await invalidateObra();
-      toast({ title: nextCover.fileId ? 'Capa atualizada' : 'Capa removida' });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Não foi possível atualizar a capa',
         description: error instanceof Error ? error.message : 'Tente novamente.',
         variant: 'destructive',
       });
@@ -572,68 +489,7 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
           </Section>
 
           <Section id="capa" title="Imagem de capa" description="Envie uma nova imagem ou escolha uma foto já vinculada a esta obra." icon={RiImageLine}>
-            <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 dark:border-gray-800 dark:bg-gray-950">
-              <div className="aspect-[16/7]">
-                {cover.url ? (
-                  <img src={cover.url} alt="Capa atual da obra" className="size-full object-cover" data-testid="xgestao-cover-preview" />
-                ) : (
-                  <div className="flex size-full flex-col items-center justify-center gap-2 text-gray-400">
-                    <RiImageLine className="size-8" />
-                    <span className="text-sm">Nenhuma capa definida</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <FileUploader
-                kind="obra_capa"
-                accept="image/jpeg,image/png,image/webp"
-                label="Enviar nova capa"
-                helper="PNG, JPG ou WebP, até 8 MB. Prefira imagens horizontais."
-                testId="xgestao-upload-capa"
-                disabled={coverMutation.isPending}
-                onUploaded={async (file) => {
-                  await coverMutation.mutateAsync({
-                    fileId: file.id,
-                    url: file.publicUrl ?? file.signedUrl,
-                  });
-                }}
-              />
-              {cover.fileId && (
-                <Button type="button" variant="outline" disabled={coverMutation.isPending} onClick={() => coverMutation.mutate({ fileId: null, url: null })}>
-                  Remover capa
-                </Button>
-              )}
-            </div>
-
-            {fotosQuery.data && fotosQuery.data.length > 0 && (
-              <div className="mt-7">
-                <p className="mb-3 text-sm font-semibold">Fotos desta obra</p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {fotosQuery.data.map((foto) => {
-                    const selected = cover.fileId === foto.fileId;
-                    return (
-                      <button
-                        key={foto.id}
-                        type="button"
-                        disabled={coverMutation.isPending || !foto.url}
-                        onClick={() => coverMutation.mutate({ fileId: foto.fileId, url: foto.url })}
-                        className={cn(
-                          'group relative aspect-[4/3] overflow-hidden rounded-xl border-2 bg-gray-100 transition-all',
-                          selected ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-primary/50',
-                        )}
-                        data-testid={`xgestao-cover-option-${foto.id}`}
-                      >
-                        <img src={foto.url} alt={foto.tag || 'Foto da obra'} className="size-full object-cover" />
-                        <span className="absolute inset-x-2 bottom-2 rounded-lg bg-black/65 px-2 py-1 text-xs font-semibold text-white">
-                          {selected ? 'Capa atual' : 'Usar como capa'}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            <CapaObraEditor obraId={obraId} cover={cover} onCoverChange={setCover} />
           </Section>
 
           <Section
@@ -690,53 +546,10 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
               </Button>
             </div>
 
-            {/* Só faz sentido escolher o conteúdo quando há um link ativo; sem
-                ele não existe nada publicado para restringir. */}
-            {shareLink && (
-              <div className="mt-5">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">O que o cliente vê</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Vale só para este link. Desmarcar esconde a seção na hora, sem trocar o endereço.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {SECOES_PUBLICAS.map((secao) => (
-                    <label
-                      key={secao}
-                      htmlFor={`secao-${secao}`}
-                      className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-900"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-gray-900 dark:text-white">
-                          {SECAO_LABELS[secao].titulo}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-gray-500">
-                          {SECAO_LABELS[secao].descricao}
-                        </span>
-                      </span>
-                      <Switch
-                        id={`secao-${secao}`}
-                        checked={shareLink.secoes[secao]}
-                        disabled={secoesMutation.isPending}
-                        onCheckedChange={(marcado) =>
-                          secoesMutation.mutate(
-                            { ...shareLink.secoes, [secao]: marcado },
-                            {
-                              onError: () =>
-                                toast({
-                                  title: 'Não foi possível atualizar o link',
-                                  description: 'A alteração foi desfeita. Tente novamente.',
-                                  variant: 'destructive',
-                                }),
-                            },
-                          )
-                        }
-                        data-testid={`xgestao-secao-${secao}`}
-                      />
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* XG12 — os toggles de "o que o cliente vê" migraram para o
+                `CompartilharModal`: escolher as seções e enviar o link eram
+                duas telas para uma decisão só. O botão acima abre o mesmo
+                modal, no console e aqui. */}
           </Section>
 
           <div className="sticky bottom-3 z-10 flex flex-col-reverse gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 sm:flex-row sm:items-center sm:justify-end">

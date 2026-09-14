@@ -58,14 +58,14 @@ Ordem escolhida por dependência, cada bloco é entrega verificável e aprovada 
 
 | # | Bloco | Status |
 |---|---|---|
-| 1 | Sessão que cai | 🔄 em execução |
-| 2 | Financeiro — entrada/saída | ⬜ |
-| 3 | Aditivos | ⬜ |
-| 4 | Etapas × Cronograma (Gantt) | ⬜ |
-| 5 | Saúde + KPIs | ⬜ |
-| 6 | Documentos | ⬜ |
-| 7 | Storage — quota e barra | ⬜ |
-| 8 | Excluir obra + UX pontual | ⬜ |
+| 1 | Sessão que cai | ✅ |
+| 2 | Financeiro — entrada/saída | ✅ |
+| 3 | Aditivos | ✅ |
+| 4 | Etapas × Cronograma (Gantt) | ✅ |
+| 5 | Saúde + KPIs | ✅ |
+| 6 | Documentos | ✅ |
+| 7 | Storage — quota e barra | ✅ |
+| 8 | Excluir obra + UX pontual | ✅ |
 
 ## 5. Checklist de implementação
 
@@ -85,7 +85,9 @@ Ordem escolhida por dependência, cada bloco é entrega verificável e aprovada 
 - [x] Aba "Financeiro" substitui "Lucro": lista + filtro por tipo/categoria, editar e excluir na aba
 - [x] Card "Lucro estimado" oculto na obra (prop `mostrarLucroEstimado`); Receita, Custo e Margem ficam
 - [x] Lançamento automático (medição/webhook) é protegido de edição → 409
-- [ ] Anexo de nota fiscal — o campo `comprovanteFileId` já é aceito pela API; falta o upload no modal
+- [x] Anexo de nota fiscal — entregue na [XG12](12-console-obra-tela-unica.md) Bloco 7
+      (`FileUploader` no `LancamentoFinanceiroModal` + link do comprovante na lista,
+      com validação de posse em `features/financeiro/api/validar-comprovante.ts`)
 
 > Verificado: `npm run check` limpo; 3 specs novas passando (soma real de receita/custo no
 > detalhe + IDOR nas duas rotas); 59 specs de regressão passando. A única falha da suíte é

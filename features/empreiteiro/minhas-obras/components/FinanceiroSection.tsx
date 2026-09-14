@@ -17,6 +17,19 @@ const MEDICAO_DOT: Record<ObraMedicao['status'], string> = {
   rejeitada: 'bg-red-100 text-red-600 dark:bg-red-900/30',
 };
 
+/**
+ * ⚠️ XG12 — sem importadores desde a consolidação do console.
+ *
+ * Os quatro KPIs de contrato e as duas barras viraram `ValoresDoContrato`, no
+ * topo da aba Financeiro (`FinanceiroTab.tsx`); a lista "Medições Realizadas"
+ * foi descontinuada porque mapeava linhas de `financeiro` com rótulo de
+ * medição — o `numero` era o índice do array, não o da medição.
+ *
+ * Preservado, e não apagado, pelo mesmo princípio de `features/disputas/`:
+ * reversibilidade é entregável. Se for retomado, note que `ObraFinanceiro.medicoes`
+ * continua sendo lançamento, não medição — as medições de verdade têm rota
+ * própria (`GET /api/obras/[id]/medicoes`).
+ */
 interface FinanceiroSectionProps {
   financeiro: ObraFinanceiro;
 }

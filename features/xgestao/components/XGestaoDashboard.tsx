@@ -80,7 +80,7 @@ export function XGestaoDashboard() {
           title="Painel de Visão Geral"
           subtitle="Acompanhe os principais indicadores das suas próprias obras."
         />
-        <Card className="border-gray-100 dark:border-gray-800">
+        <Card className="luminous-section border-transparent shadow-none">
           <CardContent className="flex flex-col items-center py-16 text-center">
             <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
               <RiBuilding2Line className="size-8 text-primary" />
@@ -107,10 +107,14 @@ export function XGestaoDashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard label="Obras ativas" value={resumo.ativas} icon={RiToolsLine} iconBgColor="bg-primary/10 text-primary" />
-        <StatsCard label="Obras concluídas" value={resumo.concluidas} icon={RiCheckboxCircleLine} iconBgColor="bg-success/10 text-success" />
-        <StatsCard label="Progresso médio" value={`${resumo.progresso}%`} icon={RiLineChartLine} iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20" />
-        <StatsCard label="Orçamento gerenciado" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
+        {/* XG13 — `luminous` já existia no `StatsCard` e só não era passado aqui:
+            o painel do xgestão renderizava card liso enquanto o dashboard do
+            empreiteiro tinha o acabamento completo. Prop opt-in, nenhum arquivo
+            compartilhado alterado. */}
+        <StatsCard luminous label="Obras ativas" value={resumo.ativas} icon={RiToolsLine} iconBgColor="bg-primary/10 text-primary" />
+        <StatsCard luminous label="Obras concluídas" value={resumo.concluidas} icon={RiCheckboxCircleLine} iconBgColor="bg-success/10 text-success" />
+        <StatsCard luminous label="Progresso médio" value={`${resumo.progresso}%`} icon={RiLineChartLine} iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20" />
+        <StatsCard luminous label="Orçamento gerenciado" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
       </div>
 
       <HealthSummary
@@ -120,18 +124,24 @@ export function XGestaoDashboard() {
         luminous
       />
 
-      <Card className="border-gray-100 dark:border-gray-800">
+      <Card className="luminous-section border-transparent shadow-none">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Obras recentes</CardTitle>
           <Button asChild variant="ghost" size="sm"><Link href="/xgestao/obras">Ver todas</Link></Button>
         </CardHeader>
         <CardContent className="divide-y divide-gray-100 dark:divide-gray-800">
           {obrasProprias.slice(0, 5).map((obra) => (
+            /* XG13 — mesmo realce de item clicável do dashboard do empreiteiro
+               (`ActivityItem`): barra primary que cresce à esquerda no hover. */
             <Link
               key={obra.id}
               href={`/xgestao/obras/${obra.id}`}
-              className="flex items-center justify-between gap-4 py-4 transition-colors hover:text-primary"
+              className="group relative flex items-center justify-between gap-4 rounded-lg px-2 py-4 transition-colors hover:bg-primary/[0.04] hover:text-primary dark:hover:bg-primary/[0.08]"
             >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-0 top-1/2 h-0 w-[2px] -translate-y-1/2 rounded-r bg-primary opacity-0 transition-all duration-300 group-hover:h-[60%] group-hover:opacity-100"
+              />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{obra.titulo}</p>
                 <p className="truncate text-xs text-muted-foreground">{obra.endereco}</p>

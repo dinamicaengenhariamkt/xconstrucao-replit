@@ -9,6 +9,13 @@ export type TourStep = {
   target?: string;
   title: string;
   description: string;
+  /**
+   * XG12 — preparo do passo, executado antes de procurar o alvo. Serve para
+   * abrir a aba onde o elemento vive: sem isso o `querySelector` roda contra
+   * um painel que ainda não montou, `rect` cai em `null` e o passo perde o
+   * spotlight sem erro visível.
+   */
+  onEnter?: () => void;
 };
 
 type Rect = { top: number; left: number; width: number; height: number };
@@ -88,22 +95,33 @@ export function GuidedTour({
   useLayoutEffect(() => {
     if (!open || !step) return;
 
+    // Prepara a tela antes de procurar o alvo (trocar de aba, por exemplo).
+    step.onEnter?.();
+
+    // Só mede. Rolar daqui seria realimentação: este mesmo callback está
+    // registrado em `scroll`, e cada frame da rolagem suave pediria outra.
     const medir = () => {
       if (!step.target) return setRect(null);
       const element = document.querySelector(step.target);
-      if (!element) return setRect(null);
-      setRect(rectOf(element));
+      setRect(element ? rectOf(element) : null);
     };
 
-    const element = step.target ? document.querySelector(step.target) : null;
-    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    medir();
-    // A rolagem suave leva alguns frames; remede enquanto ela acontece.
+    // O painel aberto por `onEnter` só existe no próximo frame — procurar o
+    // alvo agora encontraria o DOM anterior. Daí rolar uma única vez.
+    const frame = window.requestAnimationFrame(() => {
+      if (step.target) {
+        document
+          .querySelector(step.target)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      medir();
+    });
+    // A rolagem suave leva alguns frames; remede quando ela termina.
     const timer = window.setTimeout(medir, 320);
     window.addEventListener('resize', medir);
     window.addEventListener('scroll', medir, true);
     return () => {
+      window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
       window.removeEventListener('resize', medir);
       window.removeEventListener('scroll', medir, true);
