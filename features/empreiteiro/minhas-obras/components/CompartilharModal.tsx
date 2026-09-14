@@ -48,6 +48,30 @@ interface CompartilharModalProps {
 /** Ações que invalidam o link já entregue ao cliente e por isso pedem confirmação. */
 type ConfirmacaoPendente = 'rotacionar' | 'revogar' | null;
 
+/** Prazos oferecidos ao gerar o link. `0` = sem prazo (comportamento anterior). */
+type ValidadeDias = 0 | 7 | 30 | 90;
+
+const VALIDADES: { valor: ValidadeDias; label: string }[] = [
+  { valor: 0, label: 'Sem prazo' },
+  { valor: 7, label: '7 dias' },
+  { valor: 30, label: '30 dias' },
+  { valor: 90, label: '90 dias' },
+];
+
+/** ISO do fim do prazo, ou `null` para link permanente. */
+function expiraEmISO(dias: ValidadeDias): string | null {
+  if (dias === 0) return null;
+  return new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function formatarData(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CompartilharModal({
@@ -58,6 +82,10 @@ export function CompartilharModal({
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [confirmacao, setConfirmacao] = useState<ConfirmacaoPendente>(null);
+  // XG14 — validade do link. A coluna `expira_em`, o filtro na validação do
+  // token e o Zod da rota já existiam desde a XG04; só a UI nunca ofereceu a
+  // escolha, e o modal mandava `null` sempre. Sem backend novo.
+  const [validadeDias, setValidadeDias] = useState<ValidadeDias>(0);
 
   // O estado do link mora na query compartilhada: a tela de edição lê a mesma
   // chave e por isso reflete gerar/revogar sem callback entre os componentes.
@@ -76,9 +104,15 @@ export function CompartilharModal({
   const handleGerar = async () => {
     setConfirmacao(null);
     try {
-      await gerar.mutateAsync(null);
+      await gerar.mutateAsync(expiraEmISO(validadeDias));
       setCopied(false);
-      toast({ title: 'Link público gerado', description: 'Envie este link para acompanhar a obra sem login.' });
+      toast({
+        title: 'Link público gerado',
+        description:
+          validadeDias === 0
+            ? 'Envie este link para acompanhar a obra sem login.'
+            : `Envie este link para acompanhar a obra sem login. Expira em ${validadeDias} dias.`,
+      });
     } catch {
       toast({ title: 'Erro ao gerar link', description: 'Não foi possível criar o link agora.', variant: 'destructive' });
     }
@@ -156,6 +190,39 @@ export function CompartilharModal({
                   {copied ? 'Copiado' : 'Copiar'}
                 </Button>
               </div>
+              {/* Validade — aplica-se ao próximo link gerado. Um link já ativo
+                  mantém o prazo com que nasceu; trocar exige gerar outro, e
+                  isso está dito abaixo para não parecer que o select mudaria
+                  o link atual sozinho. */}
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-gray-500 mb-2">Validade do link</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Validade do link">
+                  {VALIDADES.map((opcao) => (
+                    <button
+                      key={opcao.valor}
+                      type="button"
+                      onClick={() => setValidadeDias(opcao.valor)}
+                      aria-pressed={validadeDias === opcao.valor}
+                      className={
+                        validadeDias === opcao.valor
+                          ? 'rounded-lg border border-primary bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors cursor-pointer'
+                          : 'rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 dark:border-gray-700 dark:text-gray-300 cursor-pointer'
+                      }
+                      data-testid={`xgestao-share-validade-${opcao.valor}`}
+                    >
+                      {opcao.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-gray-500">
+                  {shareLink?.expiraEm
+                    ? `O link atual expira em ${formatarData(shareLink.expiraEm)}.`
+                    : url
+                      ? 'O link atual não expira. A validade escolhida vale para o próximo link gerado.'
+                      : 'Depois do prazo o cliente deixa de ver a obra. Você pode revogar antes disso quando quiser.'}
+                </p>
+              </div>
+
               <div className="mt-3 flex items-center justify-between gap-3">
                 <Button
                   type="button"

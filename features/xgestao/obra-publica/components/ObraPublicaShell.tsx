@@ -96,7 +96,13 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
               >
                 {obraStatusDbLabel(view.obra.status)}
               </span>
-              <h1 className="text-3xl font-extrabold tracking-tight sm:text-5xl">{view.obra.titulo}</h1>
+              {/* XG14 — `break-words` porque nome de obra é texto do usuário e
+                  costuma ser longo ("Residencial … — Bloco B"): sem isso a
+                  palavra estoura a largura da tela no celular, e esta é a
+                  página que vai para o cliente final. */}
+              <h1 className="text-2xl font-extrabold tracking-tight break-words sm:text-4xl lg:text-5xl">
+                {view.obra.titulo}
+              </h1>
               {view.obra.tipo && <p className="text-sm font-medium text-white/90">{view.obra.tipo}</p>}
               <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/85">
                 {local && <span>{local}</span>}

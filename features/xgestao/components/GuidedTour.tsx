@@ -34,23 +34,44 @@ function rectOf(element: Element): Rect {
   };
 }
 
+/** Margem mínima entre o balão e a borda da viewport. */
+const BALLOON_MARGIN = 16;
+/** Palpite só para o primeiro frame, antes de o balão existir para ser medido. */
+const BALLOON_HEIGHT_FALLBACK = 200;
+
 /**
  * Posiciona o balão abaixo do alvo, ou acima quando não há espaço, sempre
  * dentro da viewport. Sem alvo, centraliza.
+ *
+ * `altura` é a altura REAL do balão, medida no DOM. Antes isto era um `200`
+ * fixo, e o balão de um passo com texto mais longo (267px de altura) terminava
+ * fora da tela no celular — com a rolagem do body travada pelo tour, o botão
+ * "Próximo" ficava inalcançável e o usuário não conseguia concluir o roteiro.
+ * O `clamp` final garante que nenhum passo ultrapasse a borda, em qualquer
+ * tela: é a diferença entre estimar e medir.
  */
-function balloonPosition(rect: Rect | null): { top: number; left: number; width: number } {
+function balloonPosition(
+  rect: Rect | null,
+  altura = BALLOON_HEIGHT_FALLBACK,
+): { top: number; left: number; width: number } {
   if (typeof window === 'undefined') return { top: 0, left: 0, width: BALLOON_WIDTH };
   const { innerWidth: vw, innerHeight: vh } = window;
   // Em telas estreitas o balão encolhe em vez de vazar para fora da viewport.
   const width = Math.min(BALLOON_WIDTH, vw - 32);
+  // Topo máximo que ainda deixa o balão inteiro visível. Nunca negativo: numa
+  // tela mais baixa que o balão, o `max-height` do elemento assume e o conteúdo
+  // rola dentro do próprio balão.
+  const topMaximo = Math.max(BALLOON_MARGIN, vh - altura - BALLOON_MARGIN);
+  const prender = (valor: number) =>
+    Math.min(Math.max(BALLOON_MARGIN, valor), topMaximo);
 
   if (!rect) {
-    return { top: Math.max(16, vh / 2 - 120), left: Math.max(16, (vw - width) / 2), width };
+    return { top: prender(vh / 2 - altura / 2), left: Math.max(16, (vw - width) / 2), width };
   }
 
   const below = rect.top + rect.height + BALLOON_GAP;
-  const cabeAbaixo = below + 200 < vh;
-  const top = cabeAbaixo ? below : Math.max(16, rect.top - 200 - BALLOON_GAP);
+  const cabeAbaixo = below + altura + BALLOON_MARGIN <= vh;
+  const top = prender(cabeAbaixo ? below : rect.top - altura - BALLOON_GAP);
   const left = Math.min(
     Math.max(16, rect.left + rect.width / 2 - width / 2),
     Math.max(16, vw - width - 16),
@@ -70,19 +91,40 @@ export function GuidedTour({
   steps,
   open,
   onClose,
+  onDismiss,
   labelConcluir = 'Entendi',
 }: {
   steps: TourStep[];
   open: boolean;
+  /** Saída deliberada (Pular / concluir): marca como visto para sempre. */
   onClose: () => void;
+  /**
+   * Saída acidental (Esc / clique no fundo): fecha só desta vez. Sem isto,
+   * cai em `onClose` e o comportamento antigo é preservado.
+   */
+  onDismiss?: () => void;
   labelConcluir?: string;
 }) {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [mounted, setMounted] = useState(false);
+  /** Altura real do balão. Ver `balloonPosition`: estimar isto era o bug. */
+  const [balloonHeight, setBalloonHeight] = useState(BALLOON_HEIGHT_FALLBACK);
   const balloonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // O texto muda a cada passo e a altura junto. `ResizeObserver` cobre tanto a
+  // troca de passo quanto a rotação da tela e o zoom de fonte do sistema.
+  useLayoutEffect(() => {
+    const elemento = balloonRef.current;
+    if (!open || !elemento) return;
+    const medirBalao = () => setBalloonHeight(elemento.offsetHeight);
+    medirBalao();
+    const observer = new ResizeObserver(medirBalao);
+    observer.observe(elemento);
+    return () => observer.disconnect();
+  }, [open, index, mounted]);
   useEffect(() => {
     if (open) setIndex(0);
   }, [open]);
@@ -135,10 +177,13 @@ export function GuidedTour({
 
   const voltar = useCallback(() => setIndex((atual) => Math.max(0, atual - 1)), []);
 
+  /** Saída acidental cai em `onClose` quando o chamador não distingue as duas. */
+  const dispensar = useCallback(() => (onDismiss ?? onClose)(), [onDismiss, onClose]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') dispensar();
       if (event.key === 'ArrowRight') avancar();
       if (event.key === 'ArrowLeft') voltar();
     };
@@ -150,7 +195,7 @@ export function GuidedTour({
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = overflowAnterior;
     };
-  }, [avancar, onClose, open, voltar]);
+  }, [avancar, dispensar, open, voltar]);
 
   useEffect(() => {
     if (open) balloonRef.current?.focus();
@@ -158,7 +203,7 @@ export function GuidedTour({
 
   if (!mounted || !open || !step) return null;
 
-  const { top, left, width } = balloonPosition(rect);
+  const { top, left, width } = balloonPosition(rect, balloonHeight);
 
   return createPortal(
     <AnimatePresence>
@@ -173,7 +218,7 @@ export function GuidedTour({
             sombra espalhada; sem alvo, escurece a tela inteira. */}
         <div
           className="absolute inset-0 cursor-pointer"
-          onClick={onClose}
+          onClick={dispensar}
           style={
             rect
               ? {
@@ -216,8 +261,11 @@ export function GuidedTour({
           aria-describedby="guided-tour-description"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed rounded-2xl bg-white p-5 shadow-2xl outline-none dark:bg-gray-900"
-          style={{ top, left, width }}
+          className="fixed overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl outline-none dark:bg-gray-900"
+          // Rede de segurança para o caso extremo (tela muito baixa, fonte
+          // ampliada): o balão nunca passa da viewport e o excesso rola DENTRO
+          // dele — o `body` segue travado, como o tour precisa.
+          style={{ top, left, width, maxHeight: `calc(100vh - ${BALLOON_MARGIN * 2}px)` }}
         >
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
             Passo {index + 1} de {steps.length}

@@ -206,6 +206,13 @@ que o **Playwright baixa** — mas existe um Chromium de sistema em
   não roda neste ambiente" e a conclusão virou premissa. Faltava a lib para o binário
   *do Playwright*; o sistema tem um Chromium funcional em `/repl/tools/bin/`.
   **"Não dá para testar aqui" merece uma segunda pergunta: não dá com qual binário?**
+- **2026-09-14 (visto na XG14) — validar a tela não valida o que aparece sobre ela:**
+  esta jornada mediu o console em 390/768/1280px e deu zero overflow — mas a validação
+  parou na página. O **tour**, que é um overlay `fixed` fora do fluxo, não foi
+  percorrido passo a passo, e tinha um balão que saía da viewport travando o usuário no
+  passo 6 (ver XG12 §13). A captura da página não mostra o defeito porque o tour foi
+  dispensado antes do screenshot. **Overlay, modal e tour precisam do próprio passe de
+  validação: eles não aparecem na foto da tela que cobrem.**
 
 ## 7. Links cruzados
 

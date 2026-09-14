@@ -75,7 +75,18 @@ function comDatas(etapas: ObraEtapaApi[]): EtapaComDatas[] {
     .sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
 }
 
-export function CronogramaGanttCard({ obraId }: { obraId: string }) {
+export function CronogramaGanttCard({
+  obraId,
+  onIrParaEtapas,
+}: {
+  obraId: string;
+  /**
+   * XG14 — leva à aba Etapas a partir do estado vazio. O texto já dizia onde
+   * informar as datas; faltava poder ir até lá. Opcional porque o card também
+   * serve telas sem abas (contratante), onde o botão não faria sentido.
+   */
+  onIrParaEtapas?: () => void;
+}) {
   const { data: etapas = [], isLoading } = useObraEtapas(obraId);
 
   const plotadas = useMemo(() => comDatas(etapas), [etapas]);
@@ -136,6 +147,16 @@ export function CronogramaGanttCard({ obraId }: { obraId: string }) {
               <p className="text-xs text-muted-foreground mt-1">
                 Informe as duas datas na aba Etapas para a etapa aparecer no cronograma.
               </p>
+              {onIrParaEtapas && (
+                <button
+                  type="button"
+                  onClick={onIrParaEtapas}
+                  className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-200"
+                  data-testid="cronograma-ir-para-etapas"
+                >
+                  {etapas.length === 0 ? 'Cadastrar etapas' : 'Informar datas nas etapas'}
+                </button>
+              )}
             </div>
           ) : (
             <>

@@ -378,3 +378,11 @@ marketplace** (`/empreiteiro/minhas-obras/[id]`) — é o mesmo arquivo servindo
   `[data-tour="adicionar-atualizacao"]` e existiam dois no DOM. `querySelector` não erra
   nem avisa — devolve o primeiro. O passo "funcionava", destacando o elemento errado.
   **Seletor de tour é identificador único disfarçado de atributo.**
+- **2026-09-14 (XG14) — o `200` que travava o tour no celular:** `balloonPosition` usava
+  um literal `200` como altura presumida do balão para decidir se ele cabia abaixo do
+  alvo. O balão do passo 6 mede **267px**: numa tela de 844px ele terminava em 856 —
+  fora da viewport — e, como o tour faz `body.overflow = hidden`, o botão "Próximo"
+  ficava inalcançável. **O usuário não conseguia concluir o roteiro no celular.**
+  Ninguém tinha percorrido os passos num aparelho; medir os 7 passos × 3 tamanhos achou
+  em minutos o que a leitura do código não pegou. **Estimar a dimensão de um elemento
+  que já está no DOM para ser medido é um bug esperando o texto certo.**

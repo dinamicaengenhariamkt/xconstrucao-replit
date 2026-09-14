@@ -25,6 +25,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG11](11-offline-pwa.md) | Uso offline e instalação no celular | — | planejada | baixa | — |
 | [XG12](12-console-obra-tela-unica.md) | Console da obra em tela única | 9 | pronto | alta | médio |
 | [XG13](13-mobile-e-polimento.md) | O console no celular + acabamento visual | 3 | pronto | alta | baixo |
+| [XG14](14-auditoria-console.md) | Auditoria do console antes do teste com o cliente | 2 | pronto | alta | baixo |
 
 ## Contexto
 

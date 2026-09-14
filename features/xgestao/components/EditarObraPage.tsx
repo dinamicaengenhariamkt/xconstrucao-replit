@@ -586,7 +586,12 @@ export function EditarObraPage({ obraId }: { obraId: string }) {
         redirectTo="/xgestao/obras"
       />
 
-      <GuidedTour steps={TOUR_EDICAO} open={tour.open} onClose={tour.fechar} />
+      <GuidedTour
+        steps={TOUR_EDICAO}
+        open={tour.open}
+        onClose={tour.fechar}
+        onDismiss={tour.dispensar}
+      />
     </div>
   );
 }

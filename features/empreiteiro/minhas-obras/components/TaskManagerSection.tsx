@@ -337,14 +337,29 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
     [tarefas, activeFilter]
   );
 
+  /**
+   * XG14 — agrupa pelo vínculo real (`etapaId`), não pelo texto.
+   *
+   * `obra_tarefas` guarda os dois: a FK `etapaId` (gravada corretamente pelo
+   * `NovaTarefaModal`) e o texto `etapa`, cópia do nome no momento do cadastro.
+   * Agrupar pelo texto fazia renomear uma etapa espalhar as tarefas em dois
+   * grupos — o nome novo na aba Etapas, o antigo aqui —, mesmo com o banco
+   * certo. Com a FK, o título do grupo acompanha o nome atual da etapa.
+   *
+   * O texto continua valendo para tarefas sem `etapaId`: as anteriores a este
+   * vínculo e as de etapa já excluída (`onDelete: set null`).
+   */
   const etapaGroups = useMemo(() => {
+    const nomePorId = new Map(obra.etapas.map((e) => [e.id, e.nome]));
     const groups: Record<string, MinhaObraTarefa[]> = {};
     for (const tarefa of filteredTarefas) {
-      if (!groups[tarefa.etapa]) groups[tarefa.etapa] = [];
-      groups[tarefa.etapa].push(tarefa);
+      const nome =
+        (tarefa.etapaId ? nomePorId.get(tarefa.etapaId) : undefined) ?? tarefa.etapa;
+      if (!groups[nome]) groups[nome] = [];
+      groups[nome].push(tarefa);
     }
     return groups;
-  }, [filteredTarefas]);
+  }, [filteredTarefas, obra.etapas]);
 
   // ── Handlers de CRUD e transições ─────────────────────────────────────────
 

@@ -534,7 +534,7 @@ export function ObraConsoleView({
                     </span>
                   )}
                 </div>
-                <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-3" data-testid="text-titulo">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight break-words mb-3" data-testid="text-titulo">
                   {obra.titulo}
                 </h1>
                 <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 md:items-center md:text-white/90">
@@ -637,7 +637,12 @@ export function ObraConsoleView({
       </motion.div>
 
       {allowOwnWorkEdit && obra.isObraPropria && (
-        <GuidedTour steps={passosDoTour} open={tour.open} onClose={tour.fechar} />
+        <GuidedTour
+          steps={passosDoTour}
+          open={tour.open}
+          onClose={tour.fechar}
+          onDismiss={tour.dispensar}
+        />
       )}
 
       {/* BLOCO 2.5: Detalhes da obra — espelha a seção do link público, para
@@ -886,7 +891,10 @@ export function ObraConsoleView({
                 />
               )}
               {activeTab === 'cronograma' && (
-                <CronogramaGanttCard obraId={obra.id} />
+                <CronogramaGanttCard
+                  obraId={obra.id}
+                  onIrParaEtapas={() => setActiveTab('etapas')}
+                />
               )}
               {/* XG12 — `OcorrenciasSection` era `useState` puro: o que o
                   usuário criava ali evaporava no F5. Quem persiste é este

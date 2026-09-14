@@ -33,12 +33,26 @@ export function useGuidedTour(tour: string, habilitado = true) {
     if (window.localStorage.getItem(chaveDe(tour)) !== '1') setOpen(true);
   }, [habilitado, tour]);
 
+  /**
+   * Saída deliberada: "Pular" ou concluir o último passo. Marca como visto e o
+   * tour não reaparece.
+   */
   const fechar = useCallback(() => {
     setOpen(false);
     if (typeof window !== 'undefined') window.localStorage.setItem(chaveDe(tour), '1');
   }, [tour]);
 
+  /**
+   * Saída acidental: `Esc` ou toque no fundo escuro. Fecha só desta vez e o
+   * tour volta no próximo acesso.
+   *
+   * Antes isto também gravava a flag: no celular, um toque fora do balão tirava
+   * o tour para sempre de quem talvez ainda precisasse dele. Dispensar de vez é
+   * decisão que merece um clique no botão certo.
+   */
+  const dispensar = useCallback(() => setOpen(false), []);
+
   const abrir = useCallback(() => setOpen(true), []);
 
-  return { open, abrir, fechar };
+  return { open, abrir, fechar, dispensar };
 }
