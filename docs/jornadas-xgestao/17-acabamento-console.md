@@ -55,7 +55,30 @@ Prova pelo contraste: nos heros equivalentes
 console do contratante) o bloco segue **dentro** da capa `relative` — e lá o hero pai também
 não tem `relative`, porque nunca precisou.
 
-**Correção: uma palavra** — `relative` no hero.
+**Primeira tentativa de correção — errada.** Pôr `relative` no **hero** deu âncora ao bloco,
+mas a âncora errada: o hero tem **três** filhos (capa, bloco e barra de progresso), então
+`bottom-0` passou a mirar o rodapé do **card inteiro**. O título caiu em cima do
+"PROGRESSO GERAL / 45%".
+
+**Correção final — um wrapper `relative` em volta da capa e do bloco**, com a barra de
+progresso **fora** dele:
+
+```
+<motion.div hero>              ← sem relative
+  <div className="relative">   ← wrapper: a fronteira certa
+    <div capa md:h-[420px]>
+    <div bloco md:absolute md:bottom-0>
+  </div>
+  <div progress-bar-section>   ← fora, intocada
+</motion.div>
+```
+
+Funciona porque no desktop o bloco é `absolute` e sai do fluxo: o wrapper colapsa para a
+altura da capa, e `bottom-0` mira o rodapé dela. No mobile o wrapper fica em fluxo e cresce
+com os dois — a XG13 segue intacta, sem tocar em nenhuma classe responsiva do bloco.
+
+A capa subiu para **420px** (pedido do cliente e necessidade: o bloco sobreposto ocupa ~200px
+e em 340px ficaria espremido contra a imagem).
 
 #### O que foi descartado
 
@@ -102,14 +125,16 @@ oposto do que a XG15 tinha buscado ao corrigir o cálculo.
 ## 4. Checklist de execução
 
 ### Parte 1 — Hero
-- [x] **`relative` no hero** — a correção do "fixo" (A1). Sem ele o bloco
-      `md:absolute md:bottom-0` ancorava no viewport
-- [x] Comentário nos **dois** lados (hero e bloco) registrando a dependência, para que uma
-      próxima mudança de layout não remova o `relative` sem perceber
-- [x] Verificado que os outros `absolute` do hero (degradê e "Trocar capa") estão **dentro**
-      da capa `relative` e não mudam de âncora
-- [x] Capa com altura fixa `md:h-[340px]` no lugar de `md:aspect-[16/7] md:h-auto` — pedido
-      à parte ("está pegando quase 80%"), não a correção do "fixo"
+- [x] **Wrapper `relative` envolvendo capa + bloco**, com a barra de progresso fora dele —
+      a correção do "fixo" (A1), na terceira tentativa
+- [x] `relative` **removido** do hero: ancorar ali fazia o bloco cair sobre o progresso
+- [x] Comentários no hero, no wrapper e no bloco registrando a dependência entre os três
+- [x] Verificado que os outros `absolute` (degradê e "Trocar capa") seguem **dentro** da
+      capa `relative` e não mudam de âncora
+- [x] Capa `md:h-[420px]` — ligeiramente maior, para comportar o bloco sobreposto sem
+      espremer o texto (antes `md:aspect-[16/7]`, que rendia ~720px em monitor largo)
+- [x] Estrutura verificada por contagem de profundidade do DOM, ignorando comentários **e
+      tags auto-fechadas**: capa e bloco irmãos em depth 1, barra em depth 0
 - [x] "Editar obra" e "Adicionar Atualização" saem do hero; fica só "Compartilhar link"
 - [x] Verificado que nenhum passo do tour ficou órfão — `adicionar-atualizacao-aba` já
       apontava para o botão da aba, e `compartilhar-link` permanece
@@ -173,6 +198,19 @@ oposto do que a XG15 tinha buscado ao corrigir o cálculo.
   levou junto a contenção `relative` que o posicionava. O sintoma só aparecia de `md` para
   cima, e passou por duas jornadas. **Ao mudar um elemento de pai, verificar de quais
   propriedades do pai antigo ele dependia — `position` é a mais silenciosa delas.**
+- **2026-09-14 — achar a causa não é achar a âncora:** o diagnóstico ("`absolute` sem
+  ancestral posicionado") estava certo, e mesmo assim a correção quebrou a tela — porque
+  `relative` foi parar no hero, que contém **três** filhos, e não na fronteira certa
+  (capa + bloco). **Um containing block não é "qualquer ancestral": é o ancestral cuja
+  geometria você quer que o `bottom-0` enxergue.**
+- **2026-09-14 — o type-check não valida layout:** o `tsc` passou em versões onde a barra de
+  progresso estava dentro do wrapper e onde um `</div>` tinha caído dentro de um comentário.
+  JSX balanceado no total não significa aninhamento correto. **Estrutura de DOM se verifica
+  contando profundidade, não confiando no compilador.**
+- **2026-09-14 — o script de verificação também erra:** minha contagem somava
+  `<div ... />` (auto-fechada, o overlay do degradê) como abertura sem fechamento, e por isso
+  acusou desbalanço numa árvore correta — me fazendo alternar entre dois estados errados.
+  **Antes de agir sobre a medição, validar o medidor.**
 - **2026-09-14 — corrigir o sintoma parcial adia o diagnóstico:** reduzir a altura da capa
   melhorou a aparência o bastante para eu acreditar que tinha resolvido, e o relato voltou.
   **Quando a correção depende de uma explicação elaborada para justificar por que resolve,

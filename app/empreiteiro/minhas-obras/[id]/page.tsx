@@ -573,30 +573,19 @@ export function ObraConsoleView({
       </motion.div>
 
       {/* BLOCO 1: Hero da Obra */}
+      {/*
+        XG17 — este hero NÃO deve ser `relative`.
+
+        O bloco de título/entrega é `md:absolute md:bottom-0` e precisa ancorar
+        no rodapé da CAPA, não do card. Ancorado aqui, o `bottom-0` miraria o fim
+        do card inteiro — e o bloco cairia em cima da barra de progresso. A
+        âncora correta é o wrapper logo abaixo, que contém só capa + bloco.
+      */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        /*
-          XG17 — `relative` NÃO é decorativo: é o que ancora o bloco de título,
-          endereço e entrega, que é `md:absolute md:bottom-0` logo abaixo.
-
-          Sem ele, nenhum ancestral daquele bloco tinha `position` diferente de
-          `static` — nem este hero, nem a raiz da página. O `absolute` então
-          subia a cadeia inteira sem achar âncora e caía no bloco contenedor
-          inicial (o viewport), virando um `fixed` de fato: o título e os botões
-          grudavam na tela e desciam junto com a rolagem.
-
-          A regressão nasceu na XG13, que tirou o bloco de dentro da capa para o
-          texto sair de cima da imagem no celular. A capa é `relative` e o
-          continha; ao virar irmão dela, o bloco perdeu a âncora e ninguém
-          repôs. O `md:relative` interno não resolve — ele está DENTRO do
-          elemento absoluto, não acima dele.
-
-          Nos heros equivalentes (ObraDetalheHero, console do contratante) o
-          bloco segue dentro da capa `relative`, e por isso nunca falharam.
-        */
-        className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
+        className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
         data-testid="hero-minha-obra"
       >
         {/*
@@ -615,20 +604,36 @@ export function ObraConsoleView({
           `md` nada muda — a sobreposição continua igual ao desktop de hoje.
         */}
         {/*
+          XG17 — o wrapper que ancora a sobreposição.
+
+          Ele existe por um motivo só: ser o containing block do bloco de
+          título/entrega, que é `md:absolute md:bottom-0`. Envolve a capa e o
+          bloco, e NÃO a barra de progresso — é exatamente essa fronteira que
+          faz o `bottom-0` mirar o rodapé da imagem em vez do rodapé do card.
+
+          Por breakpoint:
+          • `<md`  — sem efeito: o wrapper fica em fluxo e cresce com a capa
+                     mais o bloco, que também está em fluxo (XG13 preservada).
+          • `md+`  — o bloco vira `absolute` e sai do fluxo, então o wrapper
+                     colapsa para a altura da capa. `bottom-0` = rodapé da capa.
+
+          Não precisa de `overflow-hidden` (o hero já recorta o arredondamento)
+          nem de altura própria: ela vem da capa.
+        */}
+        <div className="relative">
+        {/*
           XG17 — altura fixa no lugar de `md:aspect-[16/7] md:h-auto`.
 
           A proporção veio dos heros do marketplace, onde o container é estreito.
           No console do xgestão o conteúdo ocupa a largura toda: num monitor de
           ~1650px, 16:7 rendia ~720px de capa — quase toda a área rolável do
-          shell (`h-screen` menos a topbar `h-20`). Como o bloco de título e
-          botões é `md:absolute md:bottom-0` dentro do hero, ele reaparecia
-          colado na borda de baixo durante toda a rolagem: o usuário relatou
-          como "ficou fixo na tela", e visualmente é indistinguível disso.
+          shell (`h-screen` menos a topbar `h-20`).
 
-          Altura fixa não depende da largura do monitor — é o que fecha o
-          problema de raiz, não um paliativo de proporção.
+          420px comporta o bloco sobreposto (badge + título `md:text-5xl` +
+          endereço + `md:p-8` ≈ 200px) sem espremer o texto contra a imagem, e
+          sem voltar ao tamanho que ocupava a tela inteira.
         */}
-        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-56 md:h-[340px]">
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 sm:h-56 md:h-[420px]">
           {obra.imagemUrl && (
             <img
               src={obra.imagemUrl}
@@ -656,9 +661,11 @@ export function ObraConsoleView({
           texto sobre o fundo do card. De `md` para cima ele volta a sobrepor a
           imagem, exatamente como antes (`absolute` + texto branco).
 
-          ⚠️ O `md:absolute` depende do `relative` no hero (ver o comentário lá
-          em cima). Se aquele `relative` sair, este bloco ancora no viewport e
-          passa a acompanhar a rolagem em vez de ficar preso ao rodapé da capa.
+          ⚠️ O `md:absolute` depende do wrapper `relative` que envolve este bloco
+          e a capa. Se aquele wrapper sair, o `absolute` sobe a cadeia procurando
+          âncora: se achar o hero, cai sobre a barra de progresso; se não achar
+          nenhuma, ancora no viewport e passa a acompanhar a rolagem. Os dois
+          cenários já aconteceram — o wrapper é o que fecha a fronteira certa.
         */}
         <div className="relative bg-white p-4 text-gray-900 dark:bg-gray-900 dark:text-white sm:p-6 md:absolute md:bottom-0 md:left-0 md:right-0 md:bg-transparent md:p-8 md:text-white md:dark:bg-transparent">
           <div className="md:relative">
@@ -749,8 +756,13 @@ export function ObraConsoleView({
             </div>
           </div>
         </div>
+        </div>
 
-        {/* Progress bar section */}
+        {/*
+          Progress bar section — fica FORA do wrapper `relative` fechado acima
+          (capa + bloco de título). Se entrasse nele, o `md:bottom-0` do bloco
+          miraria o rodapé desta barra e o texto cairia por cima dela.
+        */}
         <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="min-w-0">
