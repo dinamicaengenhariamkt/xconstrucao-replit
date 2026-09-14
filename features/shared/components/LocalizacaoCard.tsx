@@ -1,7 +1,8 @@
 'use client';
 
 import { cn } from '@shared/lib/utils';
-import { IconEdit, IconLocationOn, IconMap, IconOpenInNew } from '@shared/components/icons';
+import { IconEdit, IconLocationOn, IconOpenInNew } from '@shared/components/icons';
+import { MapaEndereco } from './MapaEndereco';
 
 interface Localizacao {
   cidade: string;
@@ -60,14 +61,26 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
 
       <div className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Map placeholder */}
+          {/*
+            XG18 — mapa de verdade no lugar do placeholder.
+
+            Até aqui este bloco era uma div cinza com um ícone e o texto "Mapa
+            da localização" — renderizava igual com ou sem endereço. Agora é
+            Leaflet + OpenStreetMap, geocodificado pelo Nominatim: ambos sem
+            chave de API, e o par que o projeto já usava no mapa de raio do
+            perfil. O fundo cinza vira o estado de carregando/indisponível, que
+            o `MapaEndereco` preenche.
+          */}
           <div className="lg:col-span-2 aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative">
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
-              <div className="text-center">
-                <IconMap className="text-gray-400 text-6xl" />
-                <p className="text-sm text-gray-500 mt-2">Mapa da localização</p>
-              </div>
-            </div>
+            <MapaEndereco
+              rua={localizacao.rua}
+              numero={localizacao.numero}
+              bairro={localizacao.bairro}
+              cidade={localizacao.cidade}
+              estado={localizacao.estado}
+              cep={localizacao.cep}
+              className="absolute inset-0"
+            />
           </div>
 
           {/* Address + actions */}

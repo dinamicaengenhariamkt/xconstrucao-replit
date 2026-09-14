@@ -40,6 +40,7 @@ import { CompartilharModal } from '@features/empreiteiro/minhas-obras/components
 import { TrocarCapaModal } from '@features/xgestao/components/TrocarCapaModal';
 import { EditarInformacoesModal } from '@features/xgestao/components/EditarInformacoesModal';
 import { EditarLocalizacaoModal } from '@features/xgestao/components/EditarLocalizacaoModal';
+import { ExcluirObraDialog } from '@features/xgestao/components/ExcluirObraDialog';
 import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
 import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
 import { useObraShare, toAbsoluteShareUrl } from '@features/xgestao/obra-publica/hooks/use-obra-share';
@@ -163,10 +164,12 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
         'Descrição, tipo, área e prazos — o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela; o endereço se edita no card de localização, lá embaixo.',
     },
     {
+      // XG18 — aponta para o bloco dentro do card de detalhes: o botão que
+      // ficava sobre a capa saiu, e é ali que o link agora vive por inteiro.
       target: '[data-tour="compartilhar-link"]',
       title: 'Compartilhar com o cliente',
       description:
-        'Gere o link para o cliente acompanhar sem criar conta e escolha, ali mesmo, o que ele vê. Valores, equipe e endereço exato nunca são compartilhados. Dá para revogar quando quiser.',
+        'Gere o link para o cliente acompanhar sem criar conta, copie aqui mesmo e escolha, em "Gerenciar", o que ele vê. Valores, equipe e endereço exato nunca são compartilhados. Dá para revogar quando quiser.',
     },
   ];
 }
@@ -262,8 +265,8 @@ function kpiIconClasses(luminous: boolean, cor: string) {
  *
  * Antes só existia como botão sobre a capa: para saber se havia link ativo,
  * quantas visualizações tinha ou qual era a URL, era preciso abrir o modal ou
- * ir até a tela de edição. O painel espelha o de `EditarObraPage`, com uma
- * diferença deliberada — lá a URL é texto puro e copiar exige selecionar na
+ * ir até a antiga tela de edição (removida na XG18). O painel herdou o layout
+ * dela com uma melhora: lá a URL era texto puro e copiar exigia selecionar na
  * mão; aqui usa o `Input readOnly` + botão "Copiar" do `CompartilharModal`.
  *
  * Lê a mesma query (`useObraShare`) que o modal e a edição consomem, então
@@ -296,6 +299,7 @@ function LinkPublicoBloco({
     <div
       className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
       data-testid="detalhes-link-publico"
+      data-tour="compartilhar-link"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span
@@ -356,14 +360,14 @@ function LinkPublicoBloco({
 
 function DetalhesObraCard({
   obra,
-  basePath,
   onEditar,
   onGerenciarLink,
+  onExcluir,
 }: {
   obra: MinhaObraDetalhe;
-  basePath: string;
   onEditar: () => void;
   onGerenciarLink: () => void;
+  onExcluir: () => void;
 }) {
   // O adapter devolve "—" para data ausente; tratar como vazio evita um card
   // que anuncia um travessão como se fosse informação.
@@ -410,15 +414,10 @@ function DetalhesObraCard({
           >
             Editar informações
           </button>
-          {/* O formulário completo segue existindo: é onde mora o cadastro
-              guiado da obra nova e a exclusão. */}
-          <Link
-            href={`${basePath}/${obra.id}/editar`}
-            className="text-xs font-medium text-gray-400 underline underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
-            data-testid="detalhes-cadastro-completo"
-          >
-            Cadastro completo
-          </Link>
+          {/* XG18 — o link "Cadastro completo" saiu junto com a tela `/editar`.
+              Os 14 campos que ela editava vivem nos modais deste console, pelas
+              mesmas funções de `use-editar-obra`; manter os dois caminhos era
+              manter duas portas para o mesmo dado. */}
         </div>
       </div>
 
@@ -453,6 +452,27 @@ function DetalhesObraCard({
       {/* Fica fora do `vazio`: o link público independe de a obra ter
           descrição ou prazos preenchidos. */}
       <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />
+
+      {/*
+        XG18 — a exclusão desce para cá junto com o fim da tela `/editar`, que
+        era seu único ponto de entrada em todo o produto.
+
+        Fica no rodapé, discreta e separada por uma borda: apagar a obra leva
+        junto tarefas, etapas, fotos, diário, documentos e lançamentos, então
+        não pode disputar atenção com "Editar informações". A proteção real
+        continua no diálogo, que exige digitar o nome da obra — um clique
+        acidental não apaga meses de registro.
+      */}
+      <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+        <button
+          type="button"
+          onClick={onExcluir}
+          className="cursor-pointer text-xs font-semibold text-red-600 underline underline-offset-2 transition-opacity hover:opacity-80 dark:text-red-400"
+          data-testid="detalhes-excluir-obra"
+        >
+          Excluir obra
+        </button>
+      </div>
     </motion.section>
   );
 }
@@ -478,6 +498,8 @@ export function ObraConsoleView({
   const [showCapa, setShowCapa] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showLocal, setShowLocal] = useState(false);
+  // XG18 — a exclusão vinha da tela `/editar`, que deixou de existir.
+  const [showExcluir, setShowExcluir] = useState(false);
   // Ref para scroll até seção de medições via ?tab=medicoes (deep-link de notificações).
   const medicoesSectionRef = useRef<HTMLDivElement>(null);
   // O tour só faz sentido na obra própria do xgestão; a de marketplace tem
@@ -732,26 +754,18 @@ export function ObraConsoleView({
                   </div>
                 )}
                 {/*
-                  XG17 — o hero fica com uma ação só.
+                  XG18 — o hero não tem mais botão nenhum.
 
-                  "Editar obra" e "Adicionar Atualização" saíram daqui porque
-                  já existem no caminho natural de cada um: editar mora no card
-                  "Detalhes da obra" logo abaixo ("Editar informações" e
-                  "Cadastro completo"), e registrar avanço mora na aba
-                  Atualizações — a primeira do console, com o botão no cabeçalho
-                  e no estado vazio. Três botões sobre a capa competiam entre si
-                  e empurravam o conteúdo para fora da tela.
+                  "Editar obra" e "Adicionar Atualização" saíram na XG17, por
+                  já existirem no caminho natural de cada um. Agora sai também
+                  "Compartilhar link": o card "Detalhes da obra", logo abaixo,
+                  mostra o link inteiro com botão "Copiar" e o status do
+                  compartilhamento. O botão sobre a capa repetia, com menos
+                  informação, o que o card entrega melhor.
+
+                  Sobre a capa fica só "Trocar capa", que age sobre a própria
+                  imagem e não tem outro lugar onde caiba.
                 */}
-                {allowOwnWorkEdit && obra.isObraPropria && (
-                  <button
-                    type="button"
-                    onClick={() => setShowShare(true)}
-                    className="w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 md:w-auto md:border-white/25 md:bg-white/15 md:py-2 md:text-white md:hover:bg-white/25 md:dark:bg-white/15"
-                    data-tour="compartilhar-link"
-                  >
-                    Compartilhar link
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -799,9 +813,9 @@ export function ObraConsoleView({
       {obra.isObraPropria && (
         <DetalhesObraCard
           obra={obra}
-          basePath={basePath}
           onEditar={() => setShowInfo(true)}
           onGerenciarLink={() => setShowShare(true)}
+          onExcluir={() => setShowExcluir(true)}
         />
       )}
 
@@ -1088,6 +1102,9 @@ export function ObraConsoleView({
                   // Marketplace: o dinheiro da obra é do contratante, então o
                   // empreiteiro atribuído lê mas não lança.
                   podeLancar={obra.isObraPropria}
+                  // XG18 — mesmo acabamento dos KPIs do topo. Sem isto os cards
+                  // de resultado ficavam com o hover antigo, destoando deles.
+                  luminous={kpiLuminous}
                 />
               )}
             </motion.div>
@@ -1155,6 +1172,13 @@ export function ObraConsoleView({
           <TrocarCapaModal obraId={obra.id} open={showCapa} onOpenChange={setShowCapa} />
           <EditarInformacoesModal obraId={obra.id} open={showInfo} onOpenChange={setShowInfo} />
           <EditarLocalizacaoModal obraId={obra.id} open={showLocal} onOpenChange={setShowLocal} />
+          <ExcluirObraDialog
+            obraId={obra.id}
+            obraNome={obra.titulo}
+            open={showExcluir}
+            onOpenChange={setShowExcluir}
+            redirectTo={basePath}
+          />
         </>
       )}
 

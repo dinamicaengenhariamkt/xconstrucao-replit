@@ -248,8 +248,11 @@ test.describe('xgestão — obras próprias', () => {
     });
     const rotaDaObraPropria = await request.get(`/xgestao/obras/${obra.id}`, { maxRedirects: 0 });
     expect(rotaDaObraPropria.status()).toBe(200);
+    // XG18 — a tela `/editar` foi removida: os 14 campos que ela editava vivem
+    // nos modais do console, pelas mesmas funções de `use-editar-obra`. A rota
+    // deixar de existir é o comportamento esperado, não uma regressão.
     const rotaDeEdicao = await request.get(`/xgestao/obras/${obra.id}/editar`, { maxRedirects: 0 });
-    expect(rotaDeEdicao.status()).toBe(200);
+    expect(rotaDeEdicao.status()).toBe(404);
 
     const camposEditados = {
       nome: 'Reforma da sede xgestão — atualizada',

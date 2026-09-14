@@ -407,26 +407,42 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
     expect(pageLogin.status(), await pageLogin.text()).toBe(200);
 
-    // Preenche pela própria tela de edição — é o caminho que o usuário faz.
-    await page.goto(`/xgestao/obras/${obra.id}/editar`);
-    await expect(page.getByTestId("xgestao-editar-obra-page")).toBeVisible();
-    await page.getByRole("button", { name: "Pular" }).click();
+    // XG18 — preenche pelos modais do console. A tela `/editar` foi removida;
+    // os mesmos campos, com as mesmas validações, vivem aqui agora.
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    await expect(page.getByTestId("detalhes-obra-card")).toBeVisible();
+    const tour = page.getByTestId("guided-tour");
+    if (await tour.isVisible().catch(() => false)) {
+      await page.getByRole("button", { name: "Pular" }).click();
+    }
 
-    await page.locator("#obra-tipo").fill("Reforma comercial");
-    await page.locator("#obra-descricao").fill("Escopo detalhado da execução.");
-    await page.locator("#obra-area").fill("250");
-    await page.locator("#obra-cidade").fill("Campinas");
-    await page.locator("#obra-uf").fill("SP");
-    await page.locator("#obra-numero").fill("45");
-    await page.locator("#obra-status").selectOption("pausada");
+    await page.getByTestId("detalhes-editar-informacoes").click();
+    await page.locator("#modal-obra-tipo").fill("Reforma comercial");
+    await page.locator("#modal-obra-descricao").fill("Escopo detalhado da execução.");
+    await page.locator("#modal-obra-area").fill("250");
+    await page.locator("#modal-obra-status").selectOption("pausada");
 
-    const salvo = page.waitForResponse(
+    const salvoInfo = page.waitForResponse(
       (response) =>
         response.url().includes(`/api/obras/${obra.id}`) &&
         response.request().method() === "PATCH",
     );
-    await page.getByTestId("xgestao-salvar-obra").click();
-    expect((await salvo).status()).toBe(200);
+    await page.getByTestId("modal-salvar-informacoes").click();
+    expect((await salvoInfo).status()).toBe(200);
+
+    // Endereço mora no seu próprio modal, aberto pelo card de localização.
+    await page.getByTestId("btn-editar-localizacao").click();
+    await page.locator("#modal-obra-cidade").fill("Campinas");
+    await page.locator("#modal-obra-uf").fill("SP");
+    await page.locator("#modal-obra-numero").fill("45");
+
+    const salvoLocal = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/api/obras/${obra.id}`) &&
+        response.request().method() === "PATCH",
+    );
+    await page.getByTestId("modal-salvar-localizacao").click();
+    expect((await salvoLocal).status()).toBe(200);
 
     // O que foi editado precisa reaparecer no console — era exatamente o que
     // sumia: descrição e área não voltavam, e "Pausada" virava "Com pendências".

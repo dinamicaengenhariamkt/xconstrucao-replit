@@ -72,6 +72,14 @@ interface FinanceiroTabProps {
    * seguem renderizando só os lançamentos.
    */
   financeiro?: ObraFinanceiro;
+  /**
+   * XG18 — acabamento luminous dos cards de resultado, o mesmo dos KPIs no topo
+   * do console. O `StatsCard` e o `ProfitCard` já implementavam o padrão; a
+   * flag simplesmente não chegava até aqui, então os cards caíam no ramo
+   * "plain" — sem borda em gradiente e com a sombra de hover mais pesada. Era
+   * isso que destoava dos cards de cima.
+   */
+  luminous?: boolean;
 }
 
 function formatarDataBr(iso: string): string {
@@ -87,7 +95,13 @@ function formatarDataBr(iso: string): string {
  * índice do array). Os lançamentos já aparecem logo abaixo, com o nome certo;
  * as atualizações de verdade têm aba própria.
  */
-function ValoresDoContrato({ financeiro }: { financeiro: ObraFinanceiro }) {
+function ValoresDoContrato({
+  financeiro,
+  luminous = false,
+}: {
+  financeiro: ObraFinanceiro;
+  luminous?: boolean;
+}) {
   const percentualAditivo =
     financeiro.valorContratado > 0
       ? Math.round((financeiro.aditivos / financeiro.valorContratado) * 100)
@@ -121,10 +135,14 @@ function ValoresDoContrato({ financeiro }: { financeiro: ObraFinanceiro }) {
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {kpis.map((kpi) => (
+            // XG18 — o mesmo acabamento dos demais cards do console, mas a
+            // `border-l-4` colorida fica: ali a cor distingue contratado ×
+            // aditivo × saldo, é informação e não decoração.
             <div
               key={kpi.label}
               className={cn(
-                'rounded-xl border-l-4 bg-gray-50 p-4 dark:bg-gray-800/50',
+                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-gray-800/50',
+                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-gray-800/80',
                 kpi.accent,
               )}
             >
@@ -187,6 +205,7 @@ export function FinanceiroTab({
   metrics,
   podeLancar = true,
   financeiro,
+  luminous = false,
 }: FinanceiroTabProps) {
   const { toast } = useToast();
   const { data: lancamentos = [], isLoading } = useObraLancamentos(obraId);
@@ -267,13 +286,14 @@ export function FinanceiroTab({
 
   return (
     <div className="space-y-4">
-      {financeiro && <ValoresDoContrato financeiro={financeiro} />}
+      {financeiro && <ValoresDoContrato financeiro={financeiro} luminous={luminous} />}
 
       <ProfitCard
         metrics={metrics}
         title="Resultado da obra"
         description="Receita e custo somam os lançamentos registrados abaixo."
         mostrarLucroEstimado={false}
+        luminous={luminous}
       />
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>

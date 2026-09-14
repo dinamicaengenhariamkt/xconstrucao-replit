@@ -151,6 +151,12 @@ de obra nova (a barra "Progresso do cadastro N/5" — preencher 15 campos em 4 m
 separados é pior) e a exclusão da obra, ação destrutiva que deve morar atrás de navegação
 deliberada. Só a seção de link público migra.
 
+> ⚠️ **Revertido pela [XG18](18-consolidacao-edicao-e-mapa.md) — a tela foi removida.**
+> Dos dois papéis acima, um **nunca existiu no código**: o `NovaObraModal` não redirecionava
+> para `/editar`, então o "onboarding guiado" era intenção, não comportamento — a tela só
+> abria pelo link "Cadastro completo". O outro, a exclusão, era real: migrou para o rodapé do
+> card de detalhes antes de a tela sair. A paridade dos 14 campos foi auditada um a um.
+
 > ⚠️ A ordem de `SECTIONS` em `EditarObraPage.tsx:214` é contrato com `completion.sections`
 > por índice ([comentário nas linhas 206-213](../../features/xgestao/components/EditarObraPage.tsx#L206)).
 > Não reordenar — a quinta entrada segue sendo `Boolean(shareQuery.data)`.
