@@ -69,7 +69,10 @@ export async function POST(request: NextRequest) {
 
   if (isRateLimited(`medicoes.create:user:${guard.user.id}`, 30, 60 * 1000)) {
     const r = NextResponse.json(
-      { message: "Muitas medições enviadas em pouco tempo. Aguarde um minuto." },
+      // XG15 — redação neutra de propósito: o rate limit dispara antes de o body
+      // ser lido, então aqui ainda não se sabe se a obra é própria ("atualização")
+      // ou do marketplace ("medição"). "Registros" serve aos dois.
+      { message: "Muitos registros enviados em pouco tempo. Aguarde um minuto." },
       { status: 429 },
     );
     setNoCacheHeaders(r);
@@ -296,11 +299,15 @@ export async function POST(request: NextRequest) {
       request,
     });
   }
+  // XG15 — o mesmo tipo `medicao_aprovada` significa duas coisas: no marketplace,
+  // "o contratante aprovou"; no xgestão, "o dono registrou um avanço". Sem esse
+  // marcador a Timeline da obra própria rotulava toda atualização como
+  // "Medição aprovada" — palavra que só existe onde há contratante para aprovar.
   if (!result.duplicate) void registrarAtividade({
     tipo: ownWork ? "medicao_aprovada" : "medicao_criada",
     actorUserId: guard.user.id,
     obraId,
-    payload: { medicaoId: created.id, numero, etapa, percentual, valor: valor ?? 0 },
+    payload: { medicaoId: created.id, numero, etapa, percentual, valor: valor ?? 0, ownWork },
   });
 
   // J06 — notificar contratante de nova medição aguardando avaliação.

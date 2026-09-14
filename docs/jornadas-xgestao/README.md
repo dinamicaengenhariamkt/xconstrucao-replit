@@ -26,6 +26,8 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG12](12-console-obra-tela-unica.md) | Console da obra em tela única | 9 | pronto | alta | médio |
 | [XG13](13-mobile-e-polimento.md) | O console no celular + acabamento visual | 3 | pronto | alta | baixo |
 | [XG14](14-auditoria-console.md) | Auditoria do console antes do teste com o cliente | 2 | pronto | alta | baixo |
+| [XG15](15-coerencia-saude-e-progresso.md) | Coerência da Saúde, do progresso e da linguagem | 3 | pronto | alta | baixo |
+| [XG16](16-revalidacao-pre-teste.md) | Revalidação antes do teste em obra real | 3 | parcial (§5 — minuta legal aguarda jurídico) | alta | baixo |
 
 ## Contexto
 
@@ -99,6 +101,21 @@ Sobraram **2**. Nenhuma bloqueia o desenvolvimento já entregue.
 
 1. **Preços finais e composição funcional dos 3 planos** — bloqueia apenas [XG03 §8](03-planos-limites-trial.md) (a mecânica do teste) e o seed de preços. O cliente ficou de enviar o documento (18:44). **Atenção:** a reunião 002 (*"ele vai ter o acesso ao plano dele"*, 14:41) **contradiz** o PDF de monetização (*"3 meses 100% grátis irrestrito"*). São implementações diferentes — a segunda exige um job de downgrade inteiro. Resolver antes de codificar §8.
 2. **Fim do teste com obras acima do limite** — o que acontece quando o período acaba e o usuário tem mais obras que o plano permite. Depende da resposta 1. A recomendação da jornada continua valendo: **nunca retirar acesso de leitura**, bloquear apenas a criação de novas.
+
+### Pendência jurídica (bloqueia o go-live comercial, não o teste)
+
+**Termos de Uso e Política de Privacidade descrevem o marketplace, não o xgestão.** Os Termos
+publicados declaram a plataforma "intermediadora, conectando contratantes e empreiteiros" e
+**não mencionam assinatura, cobrança ou cancelamento** — num produto vendido por assinatura.
+A Política não cobre o **link público** nem os **dados de terceiros** que o empreiteiro
+insere (cliente, equipe, fotos), que definem controlador × operador na LGPD. E há
+**placeholders literais no ar** (`[Nome do DPO]`, `[Endereço completo]`, `[CEP]`) contra uma
+declaração de "total conformidade" — o controlador não está identificado (art. 41, LGPD).
+
+Minutas escritas e **não publicadas** em `server/legal-seed/termos-v2.md` e
+`privacidade-v2.md`. O conteúdo é **dado**, não código: publicar é uma edição em
+`/admin/legal`, que dispara o re-consentimento sozinho (J28). Falta o jurídico revisar e
+preencher os campos entre colchetes. Detalhes em [XG16 §3](16-revalidacao-pre-teste.md).
 
 ### Pendência de configuração (não bloqueia desenvolvimento)
 

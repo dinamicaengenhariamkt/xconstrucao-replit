@@ -32,6 +32,13 @@ interface Props extends J06DataSource<EtapaJ06Data> {
   progressoDerivado?: boolean;
 }
 
+/** Data curta para a listagem: "12/03". A data vem ISO do servidor. */
+function formatarDiaMes(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 const STATUS_LABEL: Record<EtapaStatus, string> = {
   pendente: 'Pendente',
   em_andamento: 'Em andamento',
@@ -163,8 +170,11 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
                       <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} data-testid="input-etapa-prazo" />
                     </div>
                   </div>
+                  {/* XG15 — "alimentam o gráfico" soava opcional; a regra real é
+                      exclusão: sem as duas datas a etapa não é desenhada. */}
                   <p className="text-xs text-muted-foreground">
-                    As datas alimentam o gráfico do cronograma.
+                    Preencha as duas datas para a etapa aparecer no cronograma —{' '}
+                    <strong>sem elas ela fica de fora do gráfico</strong>.
                   </p>
                 </div>
                 <DialogFooter>
@@ -182,9 +192,38 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : !etapas || etapas.length === 0 ? (
-          <p className="text-sm text-muted-foreground" data-testid="empty-etapas">
-            {canEditScope ? 'Nenhuma etapa criada. Use "Nova etapa" para definir o cronograma.' : 'Nenhuma etapa cadastrada ainda.'}
-          </p>
+          /* XG15 — o empty state dizia "defina o cronograma", mandando para a aba
+             errada, e não explicava o que é uma etapa. Etapa é o conceito-raiz:
+             tarefa pertence a ela e o cronograma a desenha. */
+          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-gray-700" data-testid="empty-etapas">
+            <p className="font-semibold text-gray-700 dark:text-gray-200">
+              Nenhuma etapa cadastrada ainda
+            </p>
+            {canEditScope ? (
+              <>
+                <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+                  Etapas são as fases da obra — fundação, alvenaria, acabamento. As tarefas
+                  ficam dentro delas, e com as datas preenchidas viram o cronograma.
+                </p>
+                <div className="mt-4">
+                  <Button
+                    onClick={() => {
+                      resetForm();
+                      setOpen(true);
+                    }}
+                    data-testid="button-etapa-empty"
+                  >
+                    <RiAddLine className="mr-1 h-4 w-4" />
+                    Criar primeira etapa
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">
+                As fases desta obra aparecerão aqui.
+              </p>
+            )}
+          </div>
         ) : (
           <ul className="space-y-3">
             {etapas.map((e) => (
@@ -194,6 +233,19 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
                     <p className="font-semibold">{e.nome}</p>
                     {e.descricao && <p className="text-xs text-muted-foreground mt-0.5">{e.descricao}</p>}
                      {e.responsavel && <p className="text-xs text-muted-foreground">Responsável: {e.responsavel}</p>}
+                    {/* XG15 — as datas passam a aparecer na lista. Sem isto, o
+                        aviso do cronograma ("N etapas ainda não têm início e
+                        fim") era inacionável: o usuário teria de abrir uma a uma
+                        para descobrir quais faltavam. */}
+                    {e.dataInicio && e.prazo ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground" data-testid={`etapa-datas-${e.id}`}>
+                        {formatarDiaMes(e.dataInicio)} até {formatarDiaMes(e.prazo)}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-amber-600" data-testid={`etapa-sem-datas-${e.id}`}>
+                        Sem datas — não aparece no cronograma
+                      </p>
+                    )}
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_BADGE[e.status]}`}>{STATUS_LABEL[e.status]}</span>
                 </div>

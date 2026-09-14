@@ -1,4 +1,4 @@
-import { calculateHealth } from './calculate';
+import { calculateHealth, type HealthDetalhes } from './calculate';
 import type { ObraHealth } from './types';
 
 /**
@@ -11,15 +11,28 @@ import type { ObraHealth } from './types';
  *    mais o pagamento acompanha a execução, mais saudável). Neutro (100)
  *    quando a obra não tem contrato nem pagamento lançado — sem dado, não há
  *    desalinhamento a apontar (XG10).
- *  - tarefas:    proporção (total - pendentes) / total + penalidade por
- *    problemas abertos; cai pra 50 se não há dados de tarefas mas há
- *    ocorrências abertas; vai a 100 quando não há nada pra fazer.
+ *  - tarefas:    execução creditada (concluídas + em andamento) sobre o total,
+ *    com penalidade por problemas abertos. Neutro (100) enquanto o plano só foi
+ *    cadastrado e nada começou — planejar não é sintoma (XG15).
  */
 export interface HealthObraInput {
   progresso: number;
   diasAtraso: number;
   problemasAbertos: number;
+  /**
+   * Tudo que não está concluído — inclui o que está em execução. Mantido para
+   * os chamadores que só têm este número; prefira informar `tarefasEmAndamento`
+   * junto, senão trabalho em curso é lido como pendência (ver o fator abaixo).
+   */
   tarefasPendentes: number;
+  /**
+   * XG15 — o que está em execução. A XG10 separou este contador para o KPI
+   * ("eu tô executando, ele coloca como tarefa pendente", 25:39) mas o score
+   * continuou somando tudo em `tarefasPendentes`: uma obra no prazo com uma
+   * única tarefa em andamento caía em "Risco". É o relato de 11:42 da mesma
+   * reunião, sobrevivendo no cálculo.
+   */
+  tarefasEmAndamento?: number;
   tarefasTotal: number;
   financeiro: {
     valorContratado: number;
@@ -42,6 +55,12 @@ export interface HealthObraInput {
 function clamp(n: number) {
   return Math.min(100, Math.max(0, n));
 }
+
+/**
+ * Quanto uma tarefa em execução vale, de 0 a 1, no fator de tarefas.
+ * Ver a justificativa do valor no cálculo, mais abaixo.
+ */
+const PESO_EM_ANDAMENTO = 0.7;
 
 export function computeHealthFromObra(obra: HealthObraInput): ObraHealth {
   const atraso = clamp(100 - obra.diasAtraso * 4);
@@ -71,14 +90,41 @@ export function computeHealthFromObra(obra: HealthObraInput): ObraHealth {
     financeiro = clamp(100 - gap * 120);
   }
 
+  /**
+   * XG15 — o fator de tarefas passou a distinguir três coisas que antes eram
+   * uma só ("não concluída"):
+   *
+   *  - concluída  → crédito integral;
+   *  - em andamento → crédito parcial (`PESO_EM_ANDAMENTO`). Trabalho em curso
+   *    é avanço, não dívida: era isto que jogava obra no prazo para "Risco";
+   *  - nem iniciada → sem crédito, mas só depois que a obra começou (abaixo).
+   *
+   * O peso 0,7 foi escolhido por simulação: mantém "Saudável" quem está
+   * tocando a obra e preserva "Risco" para quem tem metade do plano parado —
+   * se fosse 1,0, o fator viraria enfeite e deixaria de sinalizar qualquer coisa.
+   */
+  const emAndamento = Math.min(
+    obra.tarefasEmAndamento ?? 0,
+    Math.max(0, obra.tarefasPendentes),
+  );
+  const concluidas = Math.max(0, obra.tarefasTotal - obra.tarefasPendentes);
+  const naoIniciadas = Math.max(0, obra.tarefasTotal - concluidas - emAndamento);
+
   let tarefas: number;
-  if (obra.tarefasTotal > 0) {
-    const concluidas = Math.max(0, obra.tarefasTotal - obra.tarefasPendentes);
-    tarefas = clamp((concluidas / obra.tarefasTotal) * 100 - obra.problemasAbertos * 8);
-  } else if (obra.problemasAbertos > 0) {
-    tarefas = clamp(70 - obra.problemasAbertos * 10);
-  } else {
+  if (obra.tarefasTotal === 0) {
+    // Sem tarefa cadastrada não há execução a medir; só ocorrência pesa.
+    tarefas = obra.problemasAbertos > 0 ? clamp(70 - obra.problemasAbertos * 10) : 100;
+  } else if (concluidas === 0 && emAndamento === 0 && obra.problemasAbertos === 0) {
+    /**
+     * O plano foi cadastrado e nada começou: neutro, pelo mesmo princípio que a
+     * XG10 aplicou ao financeiro ("sem contrato lançado não há o que medir").
+     * Antes, cadastrar 8 tarefas derrubava a obra de "Saudável 100" para
+     * "Risco 75" — o produto punia justamente quem planejava.
+     */
     tarefas = 100;
+  } else {
+    const credito = (concluidas + emAndamento * PESO_EM_ANDAMENTO) / obra.tarefasTotal;
+    tarefas = clamp(credito * 100 - obra.problemasAbertos * 8);
   }
 
   const iso =
@@ -87,5 +133,26 @@ export function computeHealthFromObra(obra: HealthObraInput): ObraHealth {
       : typeof obra.updatedAt === 'string'
         ? obra.updatedAt
         : new Date().toISOString();
-  return calculateHealth({ atraso, financeiro, tarefas }, iso);
+
+  /**
+   * XG15 — o motivo diz o número e o que fazer. O template genérico ("Muitas
+   * tarefas pendentes ou bloqueadas") não ajuda quem está no canteiro a decidir
+   * nada, e chegava a mentir: aparecia em obra sem nada bloqueado.
+   */
+  const plural = (n: number, um: string, muitos: string) => (n === 1 ? um : muitos);
+  const detalhes: HealthDetalhes = {};
+  if (obra.problemasAbertos > 0 && naoIniciadas > 0) {
+    detalhes.tarefas =
+      `${obra.problemasAbertos} ${plural(obra.problemasAbertos, 'problema em aberto', 'problemas em aberto')}` +
+      ` e ${naoIniciadas} ${plural(naoIniciadas, 'tarefa ainda não iniciada', 'tarefas ainda não iniciadas')}`;
+  } else if (obra.problemasAbertos > 0) {
+    detalhes.tarefas = `${obra.problemasAbertos} ${plural(obra.problemasAbertos, 'problema em aberto', 'problemas em aberto')} — resolva para liberar o indicador`;
+  } else if (naoIniciadas > 0) {
+    detalhes.tarefas = `${naoIniciadas} ${plural(naoIniciadas, 'tarefa ainda não foi iniciada', 'tarefas ainda não foram iniciadas')}`;
+  }
+  if (obra.diasAtraso > 0) {
+    detalhes.atraso = `${obra.diasAtraso} ${plural(obra.diasAtraso, 'dia', 'dias')} além da data prevista`;
+  }
+
+  return calculateHealth({ atraso, financeiro, tarefas }, iso, detalhes);
 }

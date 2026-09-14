@@ -114,7 +114,9 @@ export function AtualizarProgressoModal({
       if (result.skipped) {
         toast({
           title: 'Progresso atualizado',
-          description: 'Sem aumento de percentual — nenhuma medição nova foi enviada.',
+          description: isOwnWork
+            ? 'Sem aumento de percentual — nenhuma atualização nova foi registrada.'
+            : 'Sem aumento de percentual — nenhuma medição nova foi enviada.',
         });
       } else {
         toast({
@@ -128,7 +130,9 @@ export function AtualizarProgressoModal({
     },
     onError: (err: unknown) => {
       toast({
-        title: 'Não foi possível registrar a medição',
+        title: isOwnWork
+          ? 'Não foi possível registrar a atualização'
+          : 'Não foi possível registrar a medição',
         description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
         variant: 'destructive',
       });

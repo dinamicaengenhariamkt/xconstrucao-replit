@@ -128,6 +128,11 @@ Ordem escolhida por dependência, cada bloco é entrega verificável e aprovada 
 - [x] "Dias em Atraso" → "Prazo da obra" (✓ verde "No prazo"; dias só quando atrasa)
 - [x] "Tarefas Pendentes" → "Em andamento"
 - [x] Separar `tarefasEmAndamento` de `tarefasPendentes` no servidor
+      ⚠️ **Correção parcial — fechada só na [XG15](15-coerencia-saude-e-progresso.md).**
+      A separação chegou ao KPI, mas o **score de saúde continuou lendo
+      `tarefasPendentes`**: obra no prazo com uma tarefa em andamento seguia caindo em
+      "Risco" — o mesmo relato de 11:42/28:00 que este bloco pretendia fechar. O sintoma
+      visível sumiu e o defeito continuou no cálculo.
 - [x] Remover textos hardcoded (`~7% do cronograma`, `1 crítico, 2 médios`)
 - [x] Card de equipe: badge "Hoje" → "Cadastrados" (medía cadastro, não presença)
 - [x] 7 testes unitários do cálculo (`compute-from-obra.test.ts`) + 3 de integração

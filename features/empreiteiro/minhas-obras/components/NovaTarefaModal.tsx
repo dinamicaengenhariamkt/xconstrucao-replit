@@ -220,7 +220,9 @@ export function NovaTarefaModal({
                          <p className="text-[11px] text-gray-400 mt-1">
                            {obra.etapas.length > 0
                              ? 'A tarefa ficará vinculada à etapa selecionada.'
-                             : 'Nenhuma etapa foi criada ainda. A tarefa será registrada em Geral; crie etapas pelo Cronograma quando quiser organizar a obra.'}
+                             /* XG15 — apontava para o "Cronograma", que só exibe o
+                                gráfico. Etapas se criam na aba Etapas. */
+                             : 'Nenhuma etapa foi criada ainda. A tarefa será registrada em Geral; crie etapas na aba Etapas quando quiser organizar a obra.'}
                          </p>
                         <FormMessage />
                       </FormItem>

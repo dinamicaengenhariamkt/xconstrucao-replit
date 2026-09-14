@@ -20,8 +20,29 @@ import {
   type RegisterRateLimitDecision,
 } from "@features/auth/api/register-rate-limit";
 
-const VERSAO_TERMOS = "1.0";
-const VERSAO_PRIVACIDADE = "1.0";
+/**
+ * XG16 — a versão do aceite é lida de `legal_documents`, não fixada no código.
+ *
+ * Antes eram constantes `"1.0"`. Como `pendenciasReconsent` compara a versão
+ * aceita com a vigente, no dia em que o jurídico publicasse a v2 todo cadastro
+ * novo gravaria "1.0" e cairia em pendência de re-consentimento na hora — o
+ * usuário aceitava no cadastro e levava o modal na primeira tela.
+ *
+ * O fallback para "1.0" cobre o caso de a tabela ainda não ter sido semeada:
+ * é melhor registrar o aceite com a versão presumida do que recusar o cadastro,
+ * já que o insert é obrigatório para o cadastro ser válido (ver rollback abaixo).
+ */
+const VERSAO_FALLBACK = "1.0";
+
+async function versaoVigenteDe(tipo: "termos" | "privacidade"): Promise<string> {
+  try {
+    const { getVersaoVigente } = await import("@features/legal/legal-service");
+    const doc = await getVersaoVigente(tipo);
+    return doc ? String(doc.versao) : VERSAO_FALLBACK;
+  } catch {
+    return VERSAO_FALLBACK;
+  }
+}
 
 const GENERIC_BAD = "Não foi possível processar a solicitação. Tente novamente.";
 
@@ -137,9 +158,13 @@ export async function POST(request: NextRequest) {
     // Se falhar, removemos o usuário recém-criado para manter consistência
     // (cadastro só é considerado válido com aceite LGPD persistido).
     try {
+      const [versaoTermos, versaoPrivacidade] = await Promise.all([
+        versaoVigenteDe("termos"),
+        versaoVigenteDe("privacidade"),
+      ]);
       await db.insert(userConsents).values([
-        { userId: user.id, documento: "termos", versao: VERSAO_TERMOS, ip, userAgent },
-        { userId: user.id, documento: "privacidade", versao: VERSAO_PRIVACIDADE, ip, userAgent },
+        { userId: user.id, documento: "termos", versao: versaoTermos, ip, userAgent },
+        { userId: user.id, documento: "privacidade", versao: versaoPrivacidade, ip, userAgent },
       ]);
     } catch (consentError) {
       void logError("error", "Failed to persist consent records", { stack: (consentError as Error)?.stack, route: "/api/auth/register" });

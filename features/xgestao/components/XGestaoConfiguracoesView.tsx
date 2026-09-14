@@ -41,11 +41,12 @@ const NAV_ITEMS = [
   { id: 'plano' as const, label: 'Plano & Uso', icon: RiPriceTag3Line },
 ];
 
+// XG16 — só chaves com leitor de verdade. As antigas `sis_*` eram gravadas e
+// nunca lidas; ver o comentário na aba de notificações. O PATCH de preferências
+// faz merge (app/api/perfil/preferencias/route.ts), então valores já salvos
+// permanecem no banco inertes — nada é apagado do histórico de quem já mexeu.
 const NOTIFICATION_DEFAULTS = {
   email_prazo: true,
-  sis_documentos: true,
-  sis_ocorrencias: true,
-  sis_diario: true,
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -299,11 +300,25 @@ export function XGestaoConfiguracoesView() {
                 <Card>
                   <CardHeader><CardTitle>Notificações operacionais</CardTitle></CardHeader>
                   <CardContent className="space-y-1">
+                    {/* XG16 — a aba tinha quatro switches e só um tinha efeito.
+                        `sis_documentos`, `sis_ocorrencias` e `sis_diario` eram
+                        gravados no banco e lidos por ninguém: não estão em
+                        `EmailPreferenceKey` (features/notificacoes/preferences.ts),
+                        e não existe disparo de aviso de ocorrência nem de diário
+                        no produto. O usuário desligava e nada mudava — ou supunha
+                        receber avisos que nunca são enviados.
+
+                        Um controle que não controla é pior que a ausência dele:
+                        promete no toast ("Preferências salvas") o que não cumpre.
+                        Os switches voltam quando os disparos existirem.
+
+                        `email_prazo` fica porque tem leitor de verdade — mas em
+                        `features/planos/aviso-expiracao-job.ts`, que avisa sobre
+                        a ASSINATURA, não sobre prazo de obra. O rótulo antigo
+                        ("prazos próximos ou alterados") descrevia o que ele não
+                        faz; o novo descreve o que ele faz. */}
                     {[
-                      ['email_prazo', 'Atualizações de prazo', 'Receba avisos sobre prazos próximos ou alterados.'],
-                      ['sis_documentos', 'Documentos', 'Alertas sobre documentos das suas obras.'],
-                      ['sis_ocorrencias', 'Ocorrências', 'Avisos quando uma ocorrência for registrada ou atualizada.'],
-                      ['sis_diario', 'Diário de obra', 'Lembretes para manter o diário atualizado.'],
+                      ['email_prazo', 'Avisos sobre sua assinatura', 'Emails quando sua assinatura estiver perto de vencer.'],
                     ].map(([key, label, description]) => (
                       <div key={key} className="flex items-center justify-between gap-4 border-b border-gray-100 py-4 last:border-0 dark:border-gray-800">
                         <div><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{description}</p></div>

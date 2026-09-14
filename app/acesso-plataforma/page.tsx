@@ -11,7 +11,13 @@ export default function AcessoPlataformaPage() {
 
   return (
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
-      <GlassNav showAccessButton={false} showAdminButton={true} />
+      {/* XG16 — o botão "Administrador" saiu da navegação pública. Era o único
+          elemento desta página fora do toggle do XG05: título, subtítulo e cards
+          já trocavam para xgestão, mas a navbar seguia anunciando a área admin.
+          Pior, ele suprimia o CTA "Acessar xgestão" (`&& !showAdminButton`).
+          As telas continuam onde estavam — o admin entra por
+          /login?perfil=administrador, que segue funcionando por URL direta. */}
+      <GlassNav />
 
       <main className="relative pt-32 flex-1">
         <section className="flex flex-col items-center justify-center px-6 py-16 text-center">

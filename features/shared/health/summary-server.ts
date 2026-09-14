@@ -31,6 +31,9 @@ export async function computeHealthMapForObras(
       updatedAt: obras.updatedAt,
       tarefasTotal: sql<number>`COALESCE((SELECT COUNT(*) FROM obra_tarefas t WHERE t.obra_id = ${obras.id}), 0)::int`,
       tarefasPendentes: sql<number>`COALESCE((SELECT COUNT(*) FROM obra_tarefas t WHERE t.obra_id = ${obras.id} AND t.status <> 'concluido'), 0)::int`,
+      // XG15 — sem este contador o fator de tarefas lê trabalho em curso como
+      // pendência, e a lista de obras diverge do card da obra (que já o tinha).
+      tarefasEmAndamento: sql<number>`COALESCE((SELECT COUNT(*) FROM obra_tarefas t WHERE t.obra_id = ${obras.id} AND t.status = 'em_andamento'), 0)::int`,
       problemasAbertos: sql<number>`COALESCE((SELECT COUNT(*) FROM obra_ocorrencias o WHERE o.obra_id = ${obras.id} AND o.status = 'aberta'), 0)::int`,
     })
     .from(obras)
@@ -51,6 +54,7 @@ export async function computeHealthMapForObras(
       diasAtraso,
       problemasAbertos: r.problemasAbertos,
       tarefasPendentes: r.tarefasPendentes,
+      tarefasEmAndamento: r.tarefasEmAndamento,
       tarefasTotal: r.tarefasTotal,
       financeiro: { valorContratado: valorTotal, valorTotal, saldoReceber: Math.max(0, valorTotal - valorPago) },
       valorPago,

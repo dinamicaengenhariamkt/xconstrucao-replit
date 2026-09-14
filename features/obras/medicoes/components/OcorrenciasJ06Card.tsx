@@ -62,17 +62,42 @@ export function OcorrenciasJ06Card({ obraId, canWrite, data, isLoading: isLoadin
     <Card className="rounded-xl border shadow-sm" data-testid="card-ocorrencias-j06">
       <CardContent className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold">Ocorrências</h3>
+          {/* XG15 — "ocorrência" é jargão; o KPI do topo da tela já diz
+              "Problemas Abertos" para o mesmo dado. O subtítulo aproxima as duas
+              palavras sem renomear a aba, que é contrato com o link público. */}
+          <div>
+            <h3 className="text-base font-bold">Ocorrências</h3>
+            <p className="text-xs text-muted-foreground">
+              Problemas e imprevistos da obra — o que travou e precisa de solução.
+            </p>
+          </div>
           {canWrite && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" data-testid="button-nova-ocorrencia"><RiAddLine className="w-4 h-4 mr-1" />Nova ocorrência</Button>
+                <Button size="sm" data-testid="button-nova-ocorrencia"><RiAddLine className="w-4 h-4 mr-1" />Registrar problema</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Registrar ocorrência</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Registrar problema da obra</DialogTitle></DialogHeader>
                 <div className="space-y-3">
-                  <div><Label>Título*</Label><Input value={titulo} onChange={(e) => setTitulo(e.target.value)} data-testid="input-ocorr-titulo" /></div>
-                  <div><Label>Descrição*</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} data-testid="input-ocorr-desc" /></div>
+                  <div>
+                    <Label>Título*</Label>
+                    <Input
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      placeholder="Ex.: Vazamento na laje do 2º andar"
+                      data-testid="input-ocorr-titulo"
+                    />
+                  </div>
+                  <div>
+                    <Label>Descrição*</Label>
+                    <Textarea
+                      value={desc}
+                      onChange={(e) => setDesc(e.target.value)}
+                      rows={3}
+                      placeholder="O que aconteceu, onde, e o que precisa ser feito."
+                      data-testid="input-ocorr-desc"
+                    />
+                  </div>
                   <div>
                     <Label>Gravidade</Label>
                     <Select value={grav} onValueChange={(v) => setGrav(v as OcorrenciaGravidade)}>
@@ -107,7 +132,15 @@ export function OcorrenciasJ06Card({ obraId, canWrite, data, isLoading: isLoadin
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : !rows || rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground" data-testid="empty-ocorrencias">Nenhuma ocorrência registrada.</p>
+          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-gray-700" data-testid="empty-ocorrencias">
+            <p className="font-semibold text-gray-700 dark:text-gray-200">
+              Nenhum problema registrado
+            </p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Registre aqui o que atrapalhou a obra — chuva, material que não chegou,
+              retrabalho. Fica documentado e entra no indicador de saúde.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {rows.map((o) => (

@@ -476,11 +476,38 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
         </div>
 
         {/* Lista agrupada por etapa */}
+        {/* XG15 — "Nenhuma tarefa encontrada" servia aos dois casos e soava a
+            busca falhada. Obra nova precisa saber o que é uma tarefa e como
+            criar a primeira; filtro vazio precisa saber que é só o filtro. */}
         {Object.keys(etapaGroups).length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            <IconTaskAlt className="text-4xl block mb-2 opacity-40" />
-            Nenhuma tarefa encontrada
-          </div>
+          tarefas.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center dark:border-gray-700" data-testid="tarefas-vazio">
+              <IconTaskAlt className="mb-2 block text-4xl text-gray-300" />
+              <p className="font-semibold text-gray-700 dark:text-gray-200">
+                Nenhuma tarefa cadastrada ainda
+              </p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                Tarefas são o que precisa ser feito no dia a dia — "assentar piso da sala",
+                "passar fiação do quarto". Cada uma pertence a uma etapa.
+              </p>
+              {!obraFinalizada && (
+                <button
+                  type="button"
+                  onClick={() => openModal('nova')}
+                  className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-all hover:shadow-md"
+                  data-testid="btn-primeira-tarefa"
+                >
+                  <IconAddCircle className="text-lg" />
+                  Criar primeira tarefa
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-sm text-gray-400" data-testid="tarefas-filtro-vazio">
+              <IconTaskAlt className="mb-2 block text-4xl opacity-40" />
+              Nenhuma tarefa com este filtro.
+            </div>
+          )
         ) : (
           Object.entries(etapaGroups).map(([etapaNome, tarefasGrupo]) => {
             const completedCount = tarefasGrupo.filter((t) => t.status === 'concluido').length;

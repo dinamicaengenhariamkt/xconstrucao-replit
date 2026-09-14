@@ -133,8 +133,14 @@ export function XGestaoPlanosSection() {
     checkout.mutate(
       { planoId: plano.id, ciclo: 'mensal' },
       {
-        onSuccess: () => {
-          toast({ title: 'Plano atualizado', description: `${plano.nome} está ativo para sua conta xgestão.` });
+        // XG16 — só anuncia ativação quando ela de fato ocorreu. Com o gateway
+        // Asaas o retorno é `kind: 'redirect'`: o usuário é levado ao checkout
+        // e ainda não pagou — a ativação só acontece no webhook. O toast antigo
+        // era incondicional e dizia "está ativo" a caminho da tela de pagamento.
+        // Mesmo guard já usado no marketplace (app/empreiteiro/planos/page.tsx).
+        onSuccess: (data) => {
+          if (data.kind !== 'activated') return;
+          toast({ title: 'Plano ativado', description: `${plano.nome} está ativo para sua conta xgestão.` });
         },
         onError: (error: CheckoutError) => {
           if (error.code === 'SESSION_EXPIRED') {

@@ -9,7 +9,13 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@shared/component
 import type { GlassNavProps } from '../types';
 import { usePublicConfig } from '@features/shared/hooks/use-public-config';
 
-export function GlassNav({ showAccessButton = true, showAdminButton = false }: GlassNavProps) {
+/**
+ * XG16 — a prop `showAdminButton` foi aposentada: o link público para a área
+ * administrativa saiu da navegação. Não é uma barreira de segurança (o
+ * `proxy.ts` e as rotas de API é que protegem `/admin/*`), e sim a decisão de
+ * não anunciar publicamente uma área que o produto ativo não usa.
+ */
+export function GlassNav({ showAccessButton = true }: GlassNavProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -82,23 +88,14 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
         </div>
 
         <div className="hidden md:flex items-center">
-          {showAdminButton && (
-            <Link
-              href="/login?perfil=administrador"
-              className="bg-[#333] text-white text-sm font-bold px-6 py-2 rounded-full hover:brightness-110 transition-all"
-              data-testid="link-admin-login"
-            >
-              Administrador
-            </Link>
-          )}
-          {showAccessButton && !showAdminButton && isLoading && (
+          {showAccessButton && isLoading && (
             <div
               className="h-9 w-40 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"
               aria-label="Carregando acesso"
               role="status"
             />
           )}
-          {showAccessButton && !showAdminButton && !isLoading && (
+          {showAccessButton && !isLoading && (
             <Link
               href={accessHref}
               prefetch={false}
@@ -157,23 +154,14 @@ export function GlassNav({ showAccessButton = true, showAdminButton = false }: G
           </nav>
 
           <div className="mt-auto pt-6 border-t border-white/20">
-            {showAdminButton && (
-              <Link
-                href="/login?perfil=administrador"
-                className="block w-full bg-[#333] text-white text-sm font-bold px-6 py-3 rounded-full hover:brightness-110 transition-all text-center"
-                data-testid="link-admin-login-mobile"
-              >
-                Administrador
-              </Link>
-            )}
-            {showAccessButton && !showAdminButton && isLoading && (
+            {showAccessButton && isLoading && (
               <div
                 className="h-11 w-full rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"
                 aria-label="Carregando acesso"
                 role="status"
               />
             )}
-            {showAccessButton && !showAdminButton && !isLoading && (
+            {showAccessButton && !isLoading && (
               <Link
                 href={accessHref}
                 prefetch={false}

@@ -71,6 +71,11 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
       await expect(page.getByTestId('link-login-xgestao')).toBeVisible();
       await expect(page.getByTestId('link-cadastro-xgestao')).toBeVisible();
       await expect(page.getByTestId('card-marketplace-em-breve')).toHaveCount(0);
+      // XG16 — o botão "Administrador" saiu da navegação pública. Era o único
+      // elemento desta página fora do toggle, e por isso passou despercebido:
+      // o spec cobria a home, não `/acesso-plataforma`.
+      await expect(page.getByTestId('link-admin-login')).toHaveCount(0);
+      await expect(page.getByTestId('link-admin-login-mobile')).toHaveCount(0);
 
       await loginAs(request, SEED_EMPREITEIRO_EMAIL);
       await page.goto('/empreiteiro/dashboard');
@@ -89,6 +94,14 @@ test.describe('xgestão — marketplace oculto de forma reversível', () => {
       await page.goto('/');
       await expect(page.getByTestId('link-sou-empreiteiro')).toBeVisible();
       await expect(page.getByTestId('link-acessar-xgestao')).toHaveCount(0);
+
+      // XG16 — o marketplace volta, o botão "Administrador" não: a remoção é
+      // definitiva, não atrelada ao toggle. Esta é a assertion que distingue
+      // "oculto por configuração" de "fora da navegação pública".
+      await page.goto('/acesso-plataforma');
+      await expect(page.getByTestId('card-contratante')).toBeVisible();
+      await expect(page.getByTestId('link-admin-login')).toHaveCount(0);
+      await expect(page.getByTestId('link-admin-login-mobile')).toHaveCount(0);
     } finally {
       await logout(request);
       await loginAs(request, SEED_ADMIN_EMAIL);

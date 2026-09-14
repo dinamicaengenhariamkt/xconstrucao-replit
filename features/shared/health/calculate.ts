@@ -32,7 +32,19 @@ const REASON_TEMPLATES: Record<HealthFactorKey, Record<Exclude<HealthStatus, 'sa
   },
 };
 
-export function calculateHealth(factorsInput: HealthFactors, updatedAt: string = new Date().toISOString()): ObraHealth {
+/**
+ * XG15 — mensagem concreta no lugar do template, quando o chamador conhece os
+ * números. "Muitas tarefas pendentes ou bloqueadas" não diz quantas nem o que
+ * fazer; quem calcula o fator sabe dizer "3 tarefas ainda não foram iniciadas".
+ * Opcional: sem isto, o texto genérico continua valendo.
+ */
+export type HealthDetalhes = Partial<Record<HealthFactorKey, string>>;
+
+export function calculateHealth(
+  factorsInput: HealthFactors,
+  updatedAt: string = new Date().toISOString(),
+  detalhes: HealthDetalhes = {},
+): ObraHealth {
   const factors: HealthFactors = {
     atraso: clamp(factorsInput.atraso),
     financeiro: clamp(factorsInput.financeiro),
@@ -55,7 +67,7 @@ export function calculateHealth(factorsInput: HealthFactors, updatedAt: string =
     reasons.push({
       fator: key,
       severidade: severity,
-      mensagem: REASON_TEMPLATES[key][severity],
+      mensagem: detalhes[key] ?? REASON_TEMPLATES[key][severity],
     });
   });
 

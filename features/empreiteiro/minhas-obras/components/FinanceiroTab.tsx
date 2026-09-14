@@ -346,9 +346,31 @@ export function FinanceiroTab({
                     : 'Nenhum lançamento com esses filtros.'}
                 </p>
                 {lancamentos.length === 0 && podeLancar && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Registre o que entrou e o que saiu para ver receita, custo e margem.
-                  </p>
+                  <>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Registre o que entrou e o que saiu para ver receita, custo e margem.
+                    </p>
+                    {/* XG15 — os botões ficavam só no cabeçalho, acima dos
+                        filtros; quem chega na aba vazia não tinha ação à mão. */}
+                    <div className="mt-4 flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => abrirNovo('entrada')}
+                        className="cursor-pointer rounded-lg bg-success px-4 py-2 text-sm font-bold text-white transition-all hover:shadow-md"
+                        data-testid="btn-primeira-entrada"
+                      >
+                        Registrar entrada
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => abrirNovo('saida')}
+                        className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-200"
+                        data-testid="btn-primeira-saida"
+                      >
+                        Registrar saída
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             ) : (

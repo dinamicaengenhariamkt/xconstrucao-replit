@@ -101,3 +101,81 @@ test("obra sem tarefas e sem problemas não inventa pendência", () => {
   const h = computeHealthFromObra(obra({ tarefasTotal: 0, problemasAbertos: 0 }));
   assert.equal(h.factors.tarefas, 100);
 });
+
+/**
+ * XG15 — a outra metade do relato de 11:42, que a XG10 não cobriu.
+ *
+ * A XG10 corrigiu o fator financeiro e o KPI de tarefas, mas o score continuou
+ * lendo `tarefasPendentes` (que inclui `em_andamento`). Na prática, a obra no
+ * prazo em que o empreiteiro começou a trabalhar caía em "Risco" — exatamente
+ * o "eu tô executando o serviço, tá dando alerta" (28:00).
+ */
+
+test("tarefa em andamento NÃO é pendência: quem trabalha não vira risco", () => {
+  // O caso do relato: uma tarefa criada e posta em execução.
+  const trabalhando = computeHealthFromObra(
+    obra({ tarefasTotal: 1, tarefasPendentes: 1, tarefasEmAndamento: 1 }),
+  );
+  assert.equal(trabalhando.status, "saudavel");
+  assert.ok(
+    trabalhando.factors.tarefas >= 60,
+    `esperado fator alto para obra em execução, veio ${trabalhando.factors.tarefas}`,
+  );
+
+  // Vale em escala: dez frentes abertas continuam sendo trabalho, não dívida.
+  const dezFrentes = computeHealthFromObra(
+    obra({ tarefasTotal: 10, tarefasPendentes: 10, tarefasEmAndamento: 10 }),
+  );
+  assert.equal(dezFrentes.status, "saudavel");
+});
+
+test("planejar a obra não derruba a saúde", () => {
+  // Antes: cadastrar o plano levava de "saudável 100" para "risco 75".
+  const soPlano = computeHealthFromObra(
+    obra({ tarefasTotal: 8, tarefasPendentes: 8, tarefasEmAndamento: 0 }),
+  );
+  assert.equal(soPlano.factors.tarefas, 100);
+  assert.equal(soPlano.status, "saudavel");
+  assert.equal(soPlano.reasons.length, 0);
+});
+
+test("obra realmente parada continua sinalizando", () => {
+  // Metade do plano parado enquanto a obra anda: o indicador tem de falar.
+  const metadeParada = computeHealthFromObra(
+    obra({ tarefasTotal: 10, tarefasPendentes: 10, tarefasEmAndamento: 5 }),
+  );
+  assert.notEqual(metadeParada.status, "saudavel");
+
+  // E problema aberto continua pesando mesmo com todo mundo trabalhando.
+  const comProblemas = computeHealthFromObra(
+    obra({ tarefasTotal: 5, tarefasPendentes: 5, tarefasEmAndamento: 5, problemasAbertos: 2 }),
+  );
+  assert.ok(
+    comProblemas.factors.tarefas < 100,
+    "problema aberto deve descontar do fator",
+  );
+});
+
+test("o motivo diz o número, não uma frase genérica", () => {
+  const h = computeHealthFromObra(
+    obra({ tarefasTotal: 10, tarefasPendentes: 10, tarefasEmAndamento: 1 }),
+  );
+  const motivo = h.reasons.find((r) => r.fator === "tarefas");
+  assert.ok(motivo, "esperava um motivo para o fator tarefas");
+  assert.match(motivo!.mensagem, /9 tarefas ainda não foram iniciadas/);
+
+  // 12 dias ⇒ fator 52, abaixo do limiar individual: aí sim vira motivo.
+  // (3 dias dariam 88, que é saudável e, corretamente, não gera alerta.)
+  const atrasada = computeHealthFromObra(obra({ diasAtraso: 12 }));
+  const motivoAtraso = atrasada.reasons.find((r) => r.fator === "atraso");
+  assert.ok(motivoAtraso, "esperava um motivo para o fator atraso");
+  assert.match(motivoAtraso!.mensagem, /12 dias além da data prevista/);
+});
+
+test("tarefa concluída conta integralmente", () => {
+  const todasFeitas = computeHealthFromObra(
+    obra({ tarefasTotal: 4, tarefasPendentes: 0, tarefasEmAndamento: 0 }),
+  );
+  assert.equal(todasFeitas.factors.tarefas, 100);
+  assert.equal(todasFeitas.status, "saudavel");
+});

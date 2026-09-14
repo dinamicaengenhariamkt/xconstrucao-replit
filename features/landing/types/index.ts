@@ -1,6 +1,7 @@
 export interface GlassNavProps {
   showAccessButton?: boolean;
-  showAdminButton?: boolean;
+  // XG16 — `showAdminButton` removida: o link público para a área administrativa
+  // saiu da navegação. O acesso segue por /login?perfil=administrador.
 }
 
 export interface StructuredDataProps {

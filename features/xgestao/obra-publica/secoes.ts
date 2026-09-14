@@ -55,7 +55,9 @@ export const SECOES_PADRAO: SecoesPublicas = {
 /** Rótulos e explicações usados nos toggles da tela de edição. */
 export const SECAO_LABELS: Record<SecaoPublica, { titulo: string; descricao: string }> = {
   etapas: { titulo: 'Etapas', descricao: 'Fases da obra com percentual concluído.' },
-  atualizacoes: { titulo: 'Atualizações', descricao: 'Avanços aprovados, com data e percentual.' },
+  // XG16 — "aprovados" era vocabulário de marketplace, onde existe um contratante
+  // para aprovar. Em obra própria o avanço é registrado, não aprovado (XG15).
+  atualizacoes: { titulo: 'Atualizações', descricao: 'Avanços registrados, com data e percentual.' },
   // A capa não entra aqui: ela identifica a obra no topo da página e segue
   // visível mesmo com a galeria desligada.
   fotos: { titulo: 'Galeria de fotos', descricao: 'Somente as fotos marcadas para o cliente. Não afeta a capa.' },

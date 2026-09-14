@@ -124,6 +124,30 @@ const TIPO_META: Record<
   disputa_resolvida:     { titulo: 'Disputa resolvida',      tipoTimeline: 'progresso', icon: 'check',   color: 'success' },
 };
 
+/**
+ * XG15 — vocabulário por contexto na Timeline.
+ *
+ * `medicao_aprovada` cobre dois fatos diferentes: no marketplace o contratante
+ * aprovou uma medição; no xgestão o dono registrou um avanço na própria obra,
+ * onde não existe ninguém para aprovar. A rota grava `ownWork` no payload
+ * (`app/api/empreiteiro/medicoes/route.ts`) e é ele que decide a palavra.
+ *
+ * Atividades gravadas antes desta mudança não têm o campo — caem no rótulo
+ * antigo, que continua correto para o marketplace.
+ */
+function isOwnWorkPayload(payload: Record<string, unknown>): boolean {
+  return payload.ownWork === true;
+}
+
+function tituloDaAtividade(
+  tipo: AtividadeTipo,
+  payload: Record<string, unknown>,
+  padrao: string,
+): string {
+  if (tipo === 'medicao_aprovada' && isOwnWorkPayload(payload)) return 'Avanço registrado';
+  return padrao;
+}
+
 function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, obraNome: string | null): string {
   const obra = obraNome ?? 'obra';
   const medicaoDetalhes = (includeEtapa = true) => {
@@ -157,6 +181,9 @@ function describePayload(tipo: AtividadeTipo, payload: Record<string, unknown>, 
     case 'medicao_aprovada': {
       const numero = payload.numero ?? '?';
       const lanc = payload.lancamentoId ? ' Fatura gerada automaticamente.' : '';
+      if (isOwnWorkPayload(payload)) {
+        return `Avanço #${numero} registrado em "${obra}"${medicaoDetalhes()}.${lanc}`;
+      }
       return `Medição #${numero} aprovada em "${obra}"${medicaoDetalhes()}.${lanc}`;
     }
     case 'medicao_contestada': {
@@ -212,7 +239,7 @@ export function toAtividadeDisplay(
   const meta = TIPO_META[item.tipo];
   return {
     id: item.id,
-    titulo: meta.titulo,
+    titulo: tituloDaAtividade(item.tipo, item.payload ?? {}, meta.titulo),
     descricao: describePayload(item.tipo, item.payload ?? {}, item.obraNome),
     obraNome: item.obraNome,
     obraId: item.obraId,

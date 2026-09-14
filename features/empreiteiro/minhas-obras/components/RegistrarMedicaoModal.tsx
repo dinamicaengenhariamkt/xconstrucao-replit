@@ -124,7 +124,9 @@ export function RegistrarMedicaoModal({
     },
     onError: (err) => {
       toast({
-        title: 'Não foi possível registrar a medição',
+        title: isOwnWork
+          ? 'Não foi possível registrar a atualização'
+          : 'Não foi possível registrar a medição',
         description: err instanceof Error ? err.message : 'Tente novamente em instantes.',
         variant: 'destructive',
       });
@@ -137,7 +139,9 @@ export function RegistrarMedicaoModal({
     if (etapa.trim().length < 2) {
       toast({
         title: 'Informe a etapa',
-        description: 'Descreva a etapa da obra que está sendo medida (mín. 2 caracteres).',
+        description: isOwnWork
+          ? 'Descreva a etapa da obra que avançou (mín. 2 caracteres).'
+          : 'Descreva a etapa da obra que está sendo medida (mín. 2 caracteres).',
         variant: 'destructive',
       });
       return;
@@ -145,7 +149,9 @@ export function RegistrarMedicaoModal({
     if (percentual < 1) {
       toast({
         title: 'Percentual inválido',
-        description: 'O percentual da medição deve ser maior que 0%.',
+        description: isOwnWork
+          ? 'Informe quanto da obra avançou desde a última atualização.'
+          : 'O percentual da medição deve ser maior que 0%.',
         variant: 'destructive',
       });
       return;
@@ -192,8 +198,12 @@ export function RegistrarMedicaoModal({
               <IconAddTask className="text-primary text-xl" />
             </div>
             <div>
+              {/* XG15 — na obra própria o ato chama "atualização", do botão ao
+                  título. "Medição" é palavra do marketplace, onde existe um
+                  contratante para aprovar; no xgestão ela abria um modal com
+                  nome diferente do botão que o usuário acabara de clicar. */}
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
-                Registrar medição
+                {isOwnWork ? 'Registrar atualização' : 'Registrar medição'}
               </DialogTitle>
               <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                 {obraTitulo
@@ -256,6 +266,13 @@ export function RegistrarMedicaoModal({
                   </button>
                 ))}
               </div>
+              {/* XG15 — o campo que mais move o produto não tinha uma linha de
+                  ajuda. "Avanço" sozinho não diz se é do total da obra ou da
+                  etapa, nem se soma ao que já existe. */}
+              <p className="mt-2 text-xs text-gray-500">
+                Quanto a obra avançou <strong>desde a última atualização</strong> — soma-se
+                ao progresso atual, não o substitui.
+              </p>
             </div>
 
             {/* Valor */}
@@ -274,7 +291,8 @@ export function RegistrarMedicaoModal({
                 data-testid="input-valor-medicao"
               />
               <p className="text-[11px] text-gray-400 mt-1">
-                Opcional. Deixe em branco se ainda não houver valor definido para esta medição.
+                Opcional. Deixe em branco se ainda não houver valor definido para{' '}
+                {isOwnWork ? 'esta atualização' : 'esta medição'}.
               </p>
             </div>
 

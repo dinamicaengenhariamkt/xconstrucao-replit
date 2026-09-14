@@ -70,7 +70,21 @@ export async function PATCH(
     updateData.etapaId = null;
     updateData.etapa = "Geral";
   }
-  if (data.status === "concluido" && data.progresso === undefined) updateData.progresso = 100;
+  /**
+   * XG15 — tarefa concluída vale 100, e `null` conta como "não informado".
+   *
+   * A guarda cobria só `undefined`, mas o checkbox da lista manda
+   * `progresso: null` explícito ao concluir. O `null` passava direto e a tarefa
+   * ficava concluída sem valor; o recálculo da etapa usa
+   * `COALESCE(progresso, 0)` e a contava como **zero**. Resultado visível: o
+   * usuário concluía 7 de 7 tarefas, a aba mostrava "7/7 completas" e a etapa
+   * caía para 0%, com a barra do Gantt vazia. Tratar aqui, no servidor, fecha o
+   * caminho para qualquer cliente — não só para o checkbox que expôs o caso.
+   */
+  if (data.status === "concluido" && data.progresso == null) updateData.progresso = 100;
+  // Reabrir devolve a tarefa ao início da régua em vez de apagar o valor: `null`
+  // tem o mesmo efeito de 0 na média, com a diferença de não dizer nada.
+  if (data.status === "pendente" && data.progresso === null) updateData.progresso = 0;
   const updated = await db.transaction(async (tx) => {
     // Serializa com a atualização de progresso/medição, que usa o mesmo lock.
     await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
