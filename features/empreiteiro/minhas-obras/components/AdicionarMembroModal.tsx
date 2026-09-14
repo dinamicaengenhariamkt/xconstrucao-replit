@@ -30,6 +30,7 @@ import {
 import { Input } from '@shared/components/ui/input';
 import { Button } from '@shared/components/ui/button';
 import { cn } from '@shared/lib/utils';
+import { IconPerson, IconPersonAdd } from '@shared/components/icons';
 import type { MembroEquipe } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -160,7 +161,11 @@ export function AdicionarMembroModal({
     handleClose();
   };
 
-  const previewIniciais = gerarIniciais(nomeValue) || '??';
+  // XG19 — sem nome digitado, o fallback era o texto literal "??", que parecia
+  // um dado quebrado. O círculo continua: ele é o preview ao vivo do avatar do
+  // membro (segue a cor escolhida abaixo e espelha a lista de equipe); só o
+  // conteúdo vira um ícone enquanto não há o que abreviar.
+  const previewIniciais = gerarIniciais(nomeValue);
   const previewCor = corValue || 'bg-gray-300';
 
   return (
@@ -169,8 +174,16 @@ export function AdicionarMembroModal({
         {/* Header */}
         <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0', previewCor)}>
-              {previewIniciais}
+            <div
+              className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0', previewCor)}
+              data-testid="membro-avatar-preview"
+            >
+              {previewIniciais ||
+                (isEdit ? (
+                  <IconPerson className="text-lg" aria-hidden />
+                ) : (
+                  <IconPersonAdd className="text-lg" aria-hidden />
+                ))}
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">

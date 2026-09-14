@@ -411,3 +411,31 @@ input[type="search"]::-webkit-search-cancel-button {
     rgba(0, 0, 0, 0.015)
   );
 }
+
+/* ---------------------------------------------------------------------------
+   XG19 — Leaflet abaixo dos overlays da aplicação.
+
+   O `leaflet.css` define z-index próprios e altos: panes de 200 a 700,
+   `.leaflet-control` em 800 e `.leaflet-top/.leaflet-bottom` em 1000. Os
+   modais Radix usam `z-50` (= 50). Como o wrapper do mapa não cria stacking
+   context, esses números competem direto com o Portal do modal na raiz do
+   documento — e o maior vence. Resultado: o mapa atravessava o modal, com os
+   controles de zoom por cima do conteúdo.
+
+   Rebaixamos a escala inteira para abaixo de 50, preservando a ordem interna
+   (tile < overlay < sombra < marcador < tooltip < popup < controles). Corrige
+   todos os mapas de uma vez, incluindo os futuros.
+   --------------------------------------------------------------------------- */
+.leaflet-pane { z-index: 4; }
+.leaflet-tile-pane { z-index: 2; }
+.leaflet-overlay-pane { z-index: 4; }
+.leaflet-shadow-pane { z-index: 5; }
+.leaflet-marker-pane { z-index: 6; }
+.leaflet-tooltip-pane { z-index: 7; }
+.leaflet-popup-pane { z-index: 8; }
+.leaflet-map-pane canvas { z-index: 1; }
+.leaflet-map-pane svg { z-index: 2; }
+.leaflet-zoom-box { z-index: 9; }
+.leaflet-control { z-index: 9; }
+.leaflet-top,
+.leaflet-bottom { z-index: 10; }

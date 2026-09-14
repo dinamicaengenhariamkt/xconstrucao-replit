@@ -114,7 +114,9 @@ export default function MapaRaioInner({ cep, cidade, estado, raioKm, className }
   }
 
   return (
-    <div className={`w-full h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 ${className ?? ''}`}>
+    // XG19 — `isolate` isola os z-index do Leaflet, que senão atravessam
+    // modais. Mesmo tratamento do mapa de endereço da obra.
+    <div className={`w-full h-64 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 isolate ${className ?? ''}`}>
       <MapContainer
         center={[coords.lat, coords.lon]}
         zoom={11}

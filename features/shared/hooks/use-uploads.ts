@@ -48,6 +48,14 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
       (parsed && typeof parsed === 'object' && 'message' in parsed && typeof (parsed as { message?: string }).message === 'string')
         ? (parsed as { message: string }).message
         : `${res.status}: ${text || 'erro'}`;
+    // XG19 — o servidor manda um `reason` técnico junto da mensagem amigável.
+    // Ele não vai para a tela, mas ir para o console poupa abrir o DevTools na
+    // aba Network para descobrir por que um upload foi recusado.
+    const reason =
+      parsed && typeof parsed === 'object' && 'reason' in parsed
+        ? (parsed as { reason?: unknown }).reason
+        : undefined;
+    if (reason) console.warn(`[upload] ${url} recusou:`, reason);
     throw new Error(message);
   }
   return parsed as T;
@@ -136,8 +144,12 @@ export function useUpload() {
           extras: opts.extras,
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : 'Tente novamente.';
-        throw new Error(`O arquivo foi enviado, mas não foi possível confirmá-lo. ${detail}`);
+        // XG19 — a mensagem do servidor já explica a causa em português de
+        // gente; prefixá-la com "foi enviado, mas não foi possível confirmá-lo"
+        // só acrescentava jargão de implementação a um erro que o usuário
+        // precisa entender para agir.
+        const detail = error instanceof Error ? error.message : '';
+        throw new Error(detail || 'Não foi possível concluir o envio. Tente novamente.');
       }
       setProgress(100);
       // Avatar mudou → recarrega o usuário no store (reflete em topbar/sidebar imediatamente).

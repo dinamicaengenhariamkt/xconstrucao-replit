@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { QUOTA_OBRA_BYTES, maxBytesParaMime, validateUpload } from "./validation";
+import { KIND_RULES, QUOTA_OBRA_BYTES, maxBytesParaMime, validateUpload } from "./validation";
+import { KIND_ROLES, buildKey, roleAllowedForKind, validateKeyForOwner } from "./key-builder";
 
 /**
  * XG10 — limites de upload por tipo de arquivo.
@@ -61,10 +62,14 @@ test("o dono da obra no xgestão pode anexar", () => {
   assert.equal(r.ok, true);
 });
 
-test("formato fora da lista segue recusado", () => {
+test("formato fora da lista segue recusado, com mensagem em português de gente", () => {
   const r = validateUpload({ ...empreiteiro, mime: "application/x-msdownload", size: 1_000 });
   assert.equal(r.ok, false);
-  assert.match(r.message ?? "", /Formato não aceito/);
+  // XG19 — a mensagem diz o que É aceito, em nome de família ("planilha"),
+  // não a lista crua de 20 mime types.
+  assert.match(r.message ?? "", /não é aceito aqui/);
+  assert.match(r.message ?? "", /planilha/);
+  assert.doesNotMatch(r.message ?? "", /application\//);
 });
 
 test("arquivo vazio é recusado", () => {
@@ -79,4 +84,75 @@ test("outros kinds não herdaram os novos formatos", () => {
 
 test("quota da obra é o valor combinado na reunião", () => {
   assert.equal(QUOTA_OBRA_BYTES, 200_000_000);
+});
+
+/**
+ * XG19 — o upload tem DOIS portões de permissão: `validateUpload` no presign e
+ * `validateKeyForOwner` no commit. Os testes acima cobriam só o primeiro.
+ *
+ * Foi por isso que a regressão passou verde: a XG10 liberou `obra_anexo` para
+ * o empreiteiro, o teste do presign confirmou, e o commit — que tinha a lista
+ * duplicada à mão — seguiu recusando. O arquivo subia inteiro para o R2 e era
+ * apagado na rejeição.
+ *
+ * Os testes abaixo exercitam os dois lados juntos. Um portão sozinho passando
+ * não significa upload funcionando.
+ */
+
+const UID = "11111111-2222-4333-8444-555555555555";
+
+function chaveCanonica(kind: "obra_anexo" | "obra_capa" | "obra_foto") {
+  return buildKey({ kind, role: "empreiteiro", userId: UID, originalName: "planilha.xlsx" });
+}
+
+test("empreiteiro anexa documento na própria obra — presign E commit", () => {
+  const mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+  // Portão 1: presign.
+  assert.equal(validateUpload({ ...empreiteiro, mime, size: 1_000_000 }).ok, true);
+
+  // Portão 2: commit. Era aqui que quebrava.
+  const key = chaveCanonica("obra_anexo");
+  const r = validateKeyForOwner({ key, kind: "obra_anexo", role: "empreiteiro", userId: UID });
+  assert.equal(r.ok, true, `commit recusou a chave do presign: ${r.reason}`);
+});
+
+test("as duas pontas concordam sobre quem pode subir cada kind", () => {
+  // Trava estrutural: qualquer divergência futura entre `KIND_ROLES` e a
+  // checagem do presign quebra aqui, não em produção.
+  for (const kind of Object.keys(KIND_ROLES) as (keyof typeof KIND_ROLES)[]) {
+    for (const role of ["admin", "contratante", "empreiteiro", "superadmin", "anunciante"]) {
+      const presign = validateUpload({
+        kind,
+        role,
+        mime: KIND_RULES[kind].mimes[0],
+        size: 1_000,
+      });
+      const permitido = roleAllowedForKind(kind, role);
+      // Se o presign recusou por OUTRO motivo (mime/tamanho), ignora: aqui só
+      // interessa o veredito de permissão.
+      if (!presign.ok && !/permissão/.test(presign.message ?? "")) continue;
+      assert.equal(
+        presign.ok,
+        permitido,
+        `${kind}/${role}: presign diz ${presign.ok}, KIND_ROLES diz ${permitido}`,
+      );
+    }
+  }
+});
+
+test("role sem permissão é recusado no commit com motivo legível", () => {
+  const key = chaveCanonica("obra_anexo");
+  const r = validateKeyForOwner({ key, kind: "obra_anexo", role: "anunciante", userId: UID });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, "role");
+});
+
+test("chave de outro usuário é recusada mesmo com role válido", () => {
+  // O anti-tampering que motivou toda essa validação continua de pé.
+  const key = chaveCanonica("obra_anexo");
+  const outro = "99999999-8888-4777-8666-555555555555";
+  const r = validateKeyForOwner({ key, kind: "obra_anexo", role: "empreiteiro", userId: outro });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, "userId mismatch");
 });

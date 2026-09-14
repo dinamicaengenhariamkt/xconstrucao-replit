@@ -11,6 +11,43 @@
 
 export type UploadKind = "avatar" | "portfolio_imagem" | "portfolio_doc" | "empreiteiro_documento" | "obra_anexo" | "obra_capa" | "comprovante_pagamento" | "candidatura_anexo" | "obra_foto" | "anuncio_criativo" | "cliente_documento";
 export type UploadVisibility = "public" | "private";
+export type UploadRole = "admin" | "contratante" | "empreiteiro" | "superadmin" | "anunciante";
+
+/**
+ * XG19 — quem pode subir cada `kind`. **Fonte de verdade única.**
+ *
+ * Esta tabela existia duplicada: uma cópia em `KIND_RULES.roles`
+ * (`validation.ts`, checada no presign) e outra escrita à mão nos `if` de
+ * `validateKeyForOwner` (checada no commit). As duas divergiram: a XG10
+ * liberou `obra_anexo` para o empreiteiro — que no xgestão é o dono da obra —
+ * e mudou só a primeira.
+ *
+ * O resultado era o pior arranjo possível: o presign aprovava, o arquivo subia
+ * inteiro para o R2, e o commit rejeitava com "Chave inválida" — e ainda
+ * apagava o objeto. O usuário perdia o upload e recebia uma mensagem sobre
+ * "chave" para um problema de permissão.
+ *
+ * Mora aqui, no módulo mais baixo, porque `validation.ts` já importa daqui;
+ * o inverso criaria dependência circular.
+ */
+export const KIND_ROLES: Record<UploadKind, readonly UploadRole[]> = {
+  avatar: ["admin", "contratante", "empreiteiro", "superadmin"],
+  portfolio_imagem: ["empreiteiro", "superadmin"],
+  portfolio_doc: ["empreiteiro", "superadmin"],
+  empreiteiro_documento: ["empreiteiro", "superadmin"],
+  obra_anexo: ["contratante", "empreiteiro", "superadmin"],
+  obra_capa: ["contratante", "empreiteiro", "superadmin"],
+  comprovante_pagamento: ["contratante", "superadmin"],
+  candidatura_anexo: ["empreiteiro", "superadmin"],
+  obra_foto: ["contratante", "empreiteiro", "superadmin"],
+  cliente_documento: ["admin", "superadmin"],
+  anuncio_criativo: ["admin", "superadmin", "anunciante", "contratante", "empreiteiro"],
+};
+
+/** O role tem permissão para este `kind`? Usado no presign E no commit. */
+export function roleAllowedForKind(kind: UploadKind, role: string): boolean {
+  return (KIND_ROLES[kind] as readonly string[] | undefined)?.includes(role) ?? false;
+}
 
 export interface KeyBuilderArgs {
   kind: UploadKind;
@@ -99,6 +136,16 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     return { ok: false, reason: "userId inválido" };
   }
 
+  // XG19 — permissão por role, uma vez só, lida de `KIND_ROLES`.
+  //
+  // Antes cada `kind` repetia a lista à mão no seu próprio `if`, em paralelo
+  // com `KIND_RULES.roles`. Manter duas cópias da mesma regra em arquivos
+  // diferentes foi o que deixou `obra_anexo` divergir e quebrar o upload de
+  // documento do empreiteiro. Agora as duas pontas leem a mesma tabela.
+  if (!roleAllowedForKind(kind, role)) {
+    return { ok: false, reason: "role" };
+  }
+
   // Strip do prefixo de dev/prod antes de checar a shape canônica.
   const prefix = getKeyPrefix();
   let effectiveKey = key;
@@ -133,7 +180,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo portfolio" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -148,7 +194,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo portfolio-doc" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -163,7 +208,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo obra-anexo" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "contratante" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -180,9 +224,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo obra-capa" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "contratante" && role !== "empreiteiro" && role !== "superadmin") {
-      return { ok: false, reason: "role" };
-    }
     return { ok: true };
   }
 
@@ -197,7 +238,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo comprovante" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "contratante" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -212,7 +252,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo candidatura-anexo" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -221,7 +260,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     if (segments.length !== 4) return { ok: false, reason: "shape obra-foto" };
     if (segments[0] !== "public" || segments[1] !== "obra-fotos") return { ok: false, reason: "prefixo obra-foto" };
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "contratante" && role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -237,8 +275,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo anuncio-criativo" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    const rolesPermitidos = ["admin", "superadmin", "anunciante", "contratante", "empreiteiro"];
-    if (!rolesPermitidos.includes(role)) return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -255,7 +291,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
       return { ok: false, reason: "prefixo cliente-documento" };
     }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
-    if (role !== "admin" && role !== "superadmin") return { ok: false, reason: "role" };
     return { ok: true };
   }
 
@@ -270,7 +305,6 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
   }
   if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
   if (!/^[a-z0-9-]{1,40}$/.test(segments[4])) return { ok: false, reason: "tipo inválido" };
-  if (role !== "empreiteiro" && role !== "superadmin") return { ok: false, reason: "role" };
   return { ok: true };
 }
 

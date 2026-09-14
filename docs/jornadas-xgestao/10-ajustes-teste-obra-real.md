@@ -147,6 +147,13 @@ Ordem escolhida por dependência, cada bloco é entrega verificável e aprovada 
 
 ### Bloco 6 — Documentos ✅
 - [x] `obra_anexo` aceita role `empreiteiro` (o dono não podia anexar na própria obra)
+      ⚠️ **Correção parcial — fechada só na [XG19](19-upload-e-acabamento.md).** O role entrou
+      em `validateUpload` (presign) e **não** em `validateKeyForOwner` (commit), que tinha a
+      mesma lista escrita à mão em outro arquivo. O upload passava a subir o arquivo inteiro
+      para o R2 e era rejeitado na confirmação com "Chave inválida" — e o objeto era apagado.
+      O teste de regressão escrito aqui exercitava só o presign, então passava verde.
+      **Segunda meia correção desta jornada a voltar como bug** (a primeira foi a Saúde, na
+      [XG15](15-coerencia-saude-e-progresso.md)).
 - [x] Guards das rotas de anexo trocados por `findObraAccess`/`canWriteObraContent`
 - [x] `linkUrl` + `titulo` no schema (+ bootstrap e migration `0004`); `fileId` vira nullable
 - [x] API aceita arquivo **ou** link (exatamente um), com validação de `http(s)`

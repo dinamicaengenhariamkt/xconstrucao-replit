@@ -71,7 +71,9 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
             perfil. O fundo cinza vira o estado de carregando/indisponível, que
             o `MapaEndereco` preenche.
           */}
-          <div className="lg:col-span-2 aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative">
+          {/* `isolate` cria stacking context: os z-index do Leaflet resolvem
+              dentro deste card em vez de competir com os modais na raiz. */}
+          <div className="lg:col-span-2 aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative isolate">
             <MapaEndereco
               rua={localizacao.rua}
               numero={localizacao.numero}

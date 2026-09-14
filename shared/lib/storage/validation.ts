@@ -1,9 +1,16 @@
 import type { UploadKind } from "./key-builder";
+import { roleAllowedForKind } from "./key-builder";
 
 export interface KindRule {
   maxBytes: number;
   mimes: readonly string[];
-  /** Quem pode subir esse kind */
+  /**
+   * @deprecated XG19 — a permissão por role mora em `KIND_ROLES`
+   * (`key-builder.ts`), lida tanto aqui quanto no anti-tampering do commit.
+   * Este campo virou documentação: manter as duas listas em sincronia à mão
+   * foi o que quebrou o upload de documento do empreiteiro. Não usar para
+   * decidir acesso — use `roleAllowedForKind`.
+   */
   roles: readonly ("admin" | "contratante" | "empreiteiro" | "superadmin" | "anunciante")[];
 }
 
@@ -161,16 +168,44 @@ export interface ValidationResult {
   message?: string;
 }
 
+/**
+ * XG19 — traduz a allowlist de mimes para o que o usuário reconhece.
+ *
+ * O `obra_anexo` aceita 20 mime types; despejá-los na mensagem de erro dava
+ * uma parede de `application/vnd.openxmlformats-...` que não ajuda a decidir
+ * o que fazer. Agrupar por família devolve a frase que o usuário precisa:
+ * "envie imagem, PDF, planilha, documento, projeto CAD ou vídeo".
+ */
+function descreverFormatos(mimes: readonly string[]): string {
+  const familias: { nome: string; teste: (m: string) => boolean }[] = [
+    { nome: 'imagem', teste: (m) => m.startsWith('image/') && !m.includes('dwg') && !m.includes('dxf') },
+    { nome: 'PDF', teste: (m) => m === 'application/pdf' },
+    { nome: 'planilha', teste: (m) => m.includes('spreadsheet') || m.includes('ms-excel') || m === 'text/csv' },
+    { nome: 'documento de texto', teste: (m) => m.includes('wordprocessing') || m === 'application/msword' },
+    { nome: 'projeto CAD', teste: (m) => m.includes('dwg') || m.includes('dxf') || m.includes('acad') },
+    { nome: 'vídeo', teste: (m) => m.startsWith('video/') },
+  ];
+
+  const presentes = familias.filter((f) => mimes.some(f.teste)).map((f) => f.nome);
+  if (presentes.length === 0) return 'outro formato';
+  if (presentes.length === 1) return presentes[0];
+  return `${presentes.slice(0, -1).join(', ')} ou ${presentes[presentes.length - 1]}`;
+}
+
 export function validateUpload(input: ValidateUploadInput): ValidationResult {
   const rule = KIND_RULES[input.kind];
   if (!rule) return { ok: false, message: "Tipo de upload desconhecido." };
-  if (!rule.roles.includes(input.role as KindRule["roles"][number])) {
-    return { ok: false, message: "Você não tem permissão para esse upload." };
+  // XG19 — mesma fonte que o commit usa; ver `KIND_ROLES`.
+  if (!roleAllowedForKind(input.kind, input.role)) {
+    return { ok: false, message: "Você não tem permissão para enviar arquivos aqui." };
   }
   if (!rule.mimes.includes(input.mime as KindRule["mimes"][number])) {
+    // XG19 — listar 20 mime types crus não ajuda ninguém. O usuário pensa em
+    // extensão ("meu arquivo é .xlsx"), não em
+    // `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
     return {
       ok: false,
-      message: `Formato não aceito. Use ${rule.mimes.join(", ")}.`,
+      message: `Este tipo de arquivo não é aceito aqui. Envie ${descreverFormatos(rule.mimes)}.`,
     };
   }
   if (input.size <= 0) return { ok: false, message: "Arquivo vazio." };

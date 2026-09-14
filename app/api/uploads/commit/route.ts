@@ -71,8 +71,17 @@ export async function POST(request: NextRequest) {
   if (!keyCheck.ok) {
     // Tenta apagar o objeto subido por uma chave inválida (best-effort).
     await deleteObject(key).catch(() => null);
+    // XG19 — "Chave inválida" é vocabulário de servidor: o usuário não sabe o
+    // que é uma chave, nem o que fazer com a informação. A causa mais provável
+    // de chegar aqui é permissão; o `reason` segue no corpo para depuração.
     const r = NextResponse.json(
-      { message: "Chave inválida.", reason: keyCheck.reason },
+      {
+        message:
+          keyCheck.reason === "role"
+            ? "Você não tem permissão para enviar arquivos aqui."
+            : "Não foi possível confirmar este arquivo. Tente enviar novamente.",
+        reason: keyCheck.reason,
+      },
       { status: 400 },
     );
     setNoCacheHeaders(r);
