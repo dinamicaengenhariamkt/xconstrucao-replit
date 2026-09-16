@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,6 +47,8 @@ import {
   useEditarLancamento,
   type ObraLancamentoApi,
 } from '@features/financeiro/hooks/use-obra-lancamentos';
+import { isVirtualMembroId } from '../hooks/use-obra-operacao';
+import type { MembroEquipe } from '../types';
 
 /**
  * XG10 — lançamento de entrada e saída da obra.
@@ -57,8 +59,17 @@ import {
  * mão de obra?" — pedido explícito na reunião de 2026-09-12.
  */
 
+/**
+ * Valor sentinela do select "Para quem". Um `SelectItem` não aceita `value=""`
+ * (o Radix reserva a string vazia para "sem seleção"), e usar o id de um membro
+ * confundiria com uma escolha real.
+ */
+const FORNECEDOR_OUTRO = '__outro__';
+
 const schema = z.object({
   categoria: z.string().optional(),
+  fornecedorId: z.string().optional(),
+  fornecedorNome: z.string().max(80, 'Máximo 80 caracteres').optional(),
   descricao: z
     .string()
     .min(2, 'Descreva o lançamento')
@@ -102,6 +113,8 @@ interface LancamentoFinanceiroModalProps {
   tipo: LancamentoTipo;
   /** Quando presente, o modal edita em vez de criar. */
   lancamento?: ObraLancamentoApi | null;
+  /** XG20 — equipe da obra, para escolher quem recebeu a saída. */
+  equipe?: MembroEquipe[];
 }
 
 export function LancamentoFinanceiroModal({
@@ -110,6 +123,7 @@ export function LancamentoFinanceiroModal({
   obraId,
   tipo,
   lancamento = null,
+  equipe = [],
 }: LancamentoFinanceiroModalProps) {
   const { toast } = useToast();
   const criar = useCriarLancamento(obraId);
@@ -121,10 +135,40 @@ export function LancamentoFinanceiroModal({
   // usuário escolhe o arquivo, e o que guardamos é só a referência.
   const [comprovante, setComprovante] = useState<{ fileId: string; nome: string } | null>(null);
 
+  /**
+   * Quem pode receber uma saída: membro ativo com linha própria em
+   * `obra_equipe`. Os ids virtuais (`contratante-*`, `empreiteira-*`) são
+   * derivados e não existem no banco — se entrassem aqui, o FK falharia no
+   * insert.
+   */
+  const membrosElegiveis = useMemo(() => {
+    const ativos = equipe.filter((m) => !isVirtualMembroId(m.id) && m.ativo !== false);
+    // Ao editar, o beneficiário gravado pode não estar mais entre os ativos
+    // (desativado desde então). Sem reinseri-lo, o select abriria vazio e um
+    // simples "salvar" apagaria o vínculo sem o usuário perceber.
+    const gravado = lancamento?.fornecedorId;
+    if (gravado && !ativos.some((m) => m.id === gravado)) {
+      const inativo = equipe.find((m) => m.id === gravado);
+      if (inativo) return [...ativos, inativo];
+    }
+    return ativos;
+  }, [equipe, lancamento]);
+
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { categoria: '', descricao: '', valor: '', data: hojeBr() },
+    defaultValues: {
+      categoria: '',
+      fornecedorId: '',
+      fornecedorNome: '',
+      descricao: '',
+      valor: '',
+      data: hojeBr(),
+    },
   });
+
+  // Controla o input de nome livre: aparece com "Outro", some com um membro.
+  const fornecedorSelecionado = form.watch('fornecedorId');
+  const usandoNomeLivre = fornecedorSelecionado === FORNECEDOR_OUTRO;
 
   // Reidrata a cada abertura: o modal é reusado para criar e para editar.
   useEffect(() => {
@@ -138,11 +182,27 @@ export function LancamentoFinanceiroModal({
       lancamento
         ? {
             categoria: lancamento.categoria ?? '',
+            // Saída gravada com nome mas sem membro (texto livre, ou membro que
+            // saiu da equipe e teve o vínculo zerado) reabre em "Outro", com o
+            // nome preservado no input.
+            fornecedorId: lancamento.fornecedorId
+              ? lancamento.fornecedorId
+              : lancamento.fornecedorNome
+                ? FORNECEDOR_OUTRO
+                : '',
+            fornecedorNome: lancamento.fornecedorId ? '' : (lancamento.fornecedorNome ?? ''),
             descricao: lancamento.descricao,
             valor: String(lancamento.valor).replace('.', ','),
             data: toBrDate(lancamento.data),
           }
-        : { categoria: '', descricao: '', valor: '', data: hojeBr() },
+        : {
+            categoria: '',
+            fornecedorId: '',
+            fornecedorNome: '',
+            descricao: '',
+            valor: '',
+            data: hojeBr(),
+          },
     );
   }, [open, lancamento, form]);
 
@@ -157,6 +217,21 @@ export function LancamentoFinanceiroModal({
       return;
     }
 
+    // "Outro" sem nome digitado é escolha pela metade — grava beneficiário vazio
+    // e o filtro não teria por onde pegar.
+    const nomeLivre = data.fornecedorNome?.trim() ?? '';
+    if (isSaida && data.fornecedorId === FORNECEDOR_OUTRO && !nomeLivre) {
+      form.setError('fornecedorNome', { message: 'Digite o nome de quem recebeu' });
+      return;
+    }
+
+    // A API aceita um OU outro: id quando veio da equipe, nome quando é avulso.
+    const membroEscolhido =
+      isSaida && data.fornecedorId && data.fornecedorId !== FORNECEDOR_OUTRO
+        ? data.fornecedorId
+        : null;
+    const nomeEscolhido = isSaida && data.fornecedorId === FORNECEDOR_OUTRO ? nomeLivre : null;
+
     try {
       if (lancamento) {
         await editar.mutateAsync({
@@ -166,6 +241,8 @@ export function LancamentoFinanceiroModal({
           valor,
           data: toIsoDate(data.data),
           comprovanteFileId: comprovante?.fileId ?? null,
+          fornecedorId: membroEscolhido,
+          fornecedorNome: nomeEscolhido,
         });
       } else {
         await criar.mutateAsync({
@@ -175,6 +252,8 @@ export function LancamentoFinanceiroModal({
           valor,
           data: toIsoDate(data.data),
           comprovanteFileId: comprovante?.fileId ?? null,
+          fornecedorId: membroEscolhido,
+          fornecedorNome: nomeEscolhido,
         });
       }
       toast({
@@ -233,6 +312,74 @@ export function LancamentoFinanceiroModal({
                     <FormDescription>
                       Separar aqui é o que permite filtrar depois quanto foi para mão de obra.
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* XG20 — "é bom eu ter um card para colocar qual que é a pessoa
+                que vai receber... depois no filtro eu posso colocar lá Jefferson
+                elétrica e eu vejo quanto eu paguei só para ele". A lista é a
+                equipe da obra, onde ele já cadastra essas pessoas. */}
+            {isSaida && (
+              <FormField
+                control={form.control}
+                name="fornecedorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Para quem <span className="font-normal text-gray-400">(opcional)</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        // Trocar para um membro descarta o nome livre digitado
+                        // antes; deixá-lo faria a API recusar os dois juntos.
+                        if (v !== FORNECEDOR_OUTRO) form.setValue('fornecedorNome', '');
+                      }}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger data-testid="select-fornecedor-lancamento">
+                          <SelectValue placeholder="Quem recebeu este pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {membrosElegiveis.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.papel ? `${m.nome} — ${m.papel}` : m.nome}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={FORNECEDOR_OUTRO}>Outro (digitar nome)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {membrosElegiveis.length === 0
+                        ? 'A obra ainda não tem equipe cadastrada — use "Outro" para digitar o nome.'
+                        : 'Depois dá para filtrar os lançamentos por pessoa e ver quanto já foi pago a ela.'}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {isSaida && usandoNomeLivre && (
+              <FormField
+                control={form.control}
+                name="fornecedorNome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome de quem recebeu</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        maxLength={80}
+                        placeholder="Ex.: Jefferson Elétrica"
+                        data-testid="input-fornecedor-nome"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

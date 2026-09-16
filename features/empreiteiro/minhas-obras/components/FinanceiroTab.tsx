@@ -35,6 +35,7 @@ import {
 } from '@shared/components/icons';
 import {
   LANCAMENTO_CATEGORIA_LABELS,
+  LANCAMENTO_CATEGORIAS,
   type LancamentoCategoria,
   type LancamentoTipo,
 } from '@features/financeiro/lancamentos';
@@ -46,7 +47,7 @@ import {
 import { LancamentoFinanceiroModal } from './LancamentoFinanceiroModal';
 import { AditivosCard } from './AditivosCard';
 import type { ProfitMetrics } from '@features/shared/profit';
-import type { ObraFinanceiro } from '../types';
+import type { MembroEquipe, ObraFinanceiro } from '../types';
 
 /**
  * XG10 — aba Financeiro da obra (substitui a antiga "Lucro").
@@ -60,11 +61,16 @@ import type { ObraFinanceiro } from '../types';
 type FiltroTipo = 'todos' | LancamentoTipo;
 type FiltroCategoria = 'todas' | LancamentoCategoria;
 
+/** Chave do filtro "Para quem": o id do membro, ou o nome quando foi avulso. */
+const FILTRO_PESSOA_TODAS = 'todas';
+
 interface FinanceiroTabProps {
   obraId: string;
   metrics: ProfitMetrics;
   /** Obra de marketplace é read-only aqui: o dinheiro é do contratante. */
   podeLancar?: boolean;
+  /** XG20 — equipe da obra, para o modal oferecer quem recebeu a saída. */
+  equipe?: MembroEquipe[];
   /**
    * XG12 — os valores de contrato (contratado, aditivos, total, saldo) e as
    * barras de recebido/executado, que viviam no "Resumo Financeiro" solto no
@@ -205,6 +211,7 @@ export function FinanceiroTab({
   metrics,
   podeLancar = true,
   financeiro,
+  equipe = [],
   luminous = false,
 }: FinanceiroTabProps) {
   const { toast } = useToast();
@@ -213,17 +220,39 @@ export function FinanceiroTab({
 
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [filtroCategoria, setFiltroCategoria] = useState<FiltroCategoria>('todas');
+  const [filtroPessoa, setFiltroPessoa] = useState<string>(FILTRO_PESSOA_TODAS);
   const [modalTipo, setModalTipo] = useState<LancamentoTipo | null>(null);
   const [emEdicao, setEmEdicao] = useState<ObraLancamentoApi | null>(null);
   const [paraExcluir, setParaExcluir] = useState<ObraLancamentoApi | null>(null);
+
+  /**
+   * XG20 — as pessoas que de fato aparecem nos lançamentos, não a equipe
+   * inteira: um filtro que oferece quem nunca recebeu nada só devolve lista
+   * vazia. A chave é o `fornecedorId` quando existe (vínculo exato) e o nome
+   * quando o pagamento foi avulso.
+   */
+  const pessoasComLancamento = useMemo(() => {
+    const porChave = new Map<string, string>();
+    for (const l of lancamentos) {
+      if (!l.fornecedorNome) continue;
+      porChave.set(l.fornecedorId ?? `nome:${l.fornecedorNome}`, l.fornecedorNome);
+    }
+    return [...porChave.entries()]
+      .map(([chave, nome]) => ({ chave, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  }, [lancamentos]);
 
   const filtrados = useMemo(() => {
     return lancamentos.filter((l) => {
       if (filtroTipo !== 'todos' && l.tipo !== filtroTipo) return false;
       if (filtroCategoria !== 'todas' && l.categoria !== filtroCategoria) return false;
+      if (filtroPessoa !== FILTRO_PESSOA_TODAS) {
+        const chave = l.fornecedorId ?? (l.fornecedorNome ? `nome:${l.fornecedorNome}` : null);
+        if (chave !== filtroPessoa) return false;
+      }
       return true;
     });
-  }, [lancamentos, filtroTipo, filtroCategoria]);
+  }, [lancamentos, filtroTipo, filtroCategoria, filtroPessoa]);
 
   // Total do que está em tela: com filtro de mão de obra aplicado, responde
   // direto "quanto já gastei com isso".
@@ -347,11 +376,34 @@ export function FinanceiroTab({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas as categorias</SelectItem>
-                  <SelectItem value="mao_de_obra">Mão de obra</SelectItem>
-                  <SelectItem value="material">Material</SelectItem>
-                  <SelectItem value="outras_despesas">Outras despesas</SelectItem>
+                  {/* Itera a constante, como o modal já faz: a lista escrita à
+                      mão aqui divergiria na primeira categoria nova. */}
+                  {LANCAMENTO_CATEGORIAS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {LANCAMENTO_CATEGORIA_LABELS[c]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
+              {/* XG20 — "depois no filtro eu posso colocar lá Jefferson elétrica
+                  e eu vejo quanto eu paguei só para ele". Só aparece quando há
+                  alguém para filtrar. */}
+              {pessoasComLancamento.length > 0 && (
+                <Select value={filtroPessoa} onValueChange={setFiltroPessoa}>
+                  <SelectTrigger className="w-[180px] h-9" data-testid="filtro-pessoa-lancamento">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={FILTRO_PESSOA_TODAS}>Todas as pessoas</SelectItem>
+                    {pessoasComLancamento.map((p) => (
+                      <SelectItem key={p.chave} value={p.chave}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </CardHeader>
 
@@ -411,6 +463,15 @@ export function FinanceiroTab({
                             {l.categoria && (
                               <Badge variant="secondary" className="text-[10px]">
                                 {LANCAMENTO_CATEGORIA_LABELS[l.categoria]}
+                              </Badge>
+                            )}
+                            {l.fornecedorNome && (
+                              <Badge
+                                variant="outline"
+                                className="max-w-[12rem] truncate text-[10px]"
+                                data-testid={`fornecedor-${l.id}`}
+                              >
+                                {l.fornecedorNome}
                               </Badge>
                             )}
                             {automatico && (
@@ -504,6 +565,7 @@ export function FinanceiroTab({
           obraId={obraId}
           tipo={modalTipo}
           lancamento={emEdicao}
+          equipe={equipe}
         />
       )}
 

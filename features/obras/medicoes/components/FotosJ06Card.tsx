@@ -1,7 +1,8 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+// XG20 — mesma data absoluta do diário e das ocorrências. A aba de fotos tinha
+// o mesmo `addSuffix`; deixá-la de fora manteria o "em 1 minuto" vivo ao lado.
+import { formatDateTime } from '@shared/lib/formatters';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { FileUploader } from '@features/shared/components/FileUploader';
@@ -97,7 +98,7 @@ export function FotosJ06Card({ obraId, canWrite, currentUserId, currentUserRole,
                   </a>
                   <div className="p-2 text-xs">
                      <p className="font-medium truncate">{f.autorNome ?? 'Equipe da obra'}</p>
-                    <p className="text-muted-foreground">{formatDistanceToNow(new Date(f.createdAt), { addSuffix: true, locale: ptBR })}</p>
+                    <p className="text-muted-foreground">{formatDateTime(f.createdAt)}</p>
                     {/* Só quem executa a obra cura o que vai ao cliente — o
                         mesmo predicado do PATCH. O contratante enxerga as fotos
                         mas não decide quais lhe são mostradas. A checagem de

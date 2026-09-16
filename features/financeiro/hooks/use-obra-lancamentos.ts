@@ -25,6 +25,10 @@ export interface ObraLancamentoApi {
   comprovanteFileId: string | null;
   medicaoId: string | null;
   origemId: string | null;
+  /** XG20 — membro da equipe que recebeu a saída, quando veio da lista. */
+  fornecedorId: string | null;
+  /** Nome de quem recebeu: do membro, ou digitado à mão. Sobrevive à saída dele da equipe. */
+  fornecedorNome: string | null;
   createdAt: string | null;
 }
 
@@ -35,6 +39,8 @@ export interface NovoLancamentoInput {
   valor: number;
   data: string;
   comprovanteFileId?: string | null;
+  fornecedorId?: string | null;
+  fornecedorNome?: string | null;
 }
 
 export type EditarLancamentoInput = Partial<Omit<NovoLancamentoInput, 'tipo'>> & {

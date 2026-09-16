@@ -1,0 +1,6 @@
+Fala Ramon, quando vai cadastrar a saída é bom eu ter um card para colocar qual que é a pessoa que vai receber.
+Por exemplo, cadastro lá embaixo os fornecedores, já está funcionando isso.
+Só que, por exemplo, cadastrei lá o Jefferson de elétrica.
+Eu quero fazer um pagamento para ele, eu posso selecionar ele aqui.
+Porque depois no filtro eu posso colocar lá Jefferson elétrica e eu vejo quanto eu paguei só para ele, entendeu?
+Então é bom na hora de saída eu ter mais esse filtro também de para quem está indo.

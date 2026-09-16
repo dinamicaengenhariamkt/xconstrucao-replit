@@ -1102,6 +1102,9 @@ export function ObraConsoleView({
                   // Marketplace: o dinheiro da obra é do contratante, então o
                   // empreiteiro atribuído lê mas não lança.
                   podeLancar={obra.isObraPropria}
+                  // XG20 — a mesma equipe do bloco abaixo, para o modal de saída
+                  // oferecer quem recebeu. Já vem no detalhe, sem fetch novo.
+                  equipe={obra.equipe}
                   // XG18 — mesmo acabamento dos KPIs do topo. Sem isto os cards
                   // de resultado ficavam com o hover antigo, destoando deles.
                   luminous={kpiLuminous}

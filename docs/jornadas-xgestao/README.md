@@ -31,6 +31,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG17](17-acabamento-console.md) | Acabamento do console: hero, atualizações e saída da Saúde | 4 | pronto | alta | baixo |
 | [XG18](18-consolidacao-edicao-e-mapa.md) | Edição só no console, cards padronizados e o mapa | 4 | pronto | alta | médio |
 | [XG19](19-upload-e-acabamento.md) | Upload de documento, z-index do mapa e acabamento | 3 | pronto | alta | baixo |
+| [XG20](20-beneficiario-saida-e-datas.md) | Beneficiário da saída e data/hora nos registros | 3 | pronto | alta | baixo |
 
 ## Contexto
 

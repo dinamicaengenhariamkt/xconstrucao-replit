@@ -401,6 +401,16 @@ export const financeiro = pgTable(
     origemId: varchar("origem_id"),
     pagadorUserId: varchar("pagador_user_id").references(() => users.id, { onDelete: "set null" }),
     recebedorUserId: varchar("recebedor_user_id").references(() => users.id, { onDelete: "set null" }),
+    // XG20 — a quem a saída foi paga. `pagador/recebedorUserId` não servem: são
+    // FK para `users`, e o beneficiário típico ("o Jefferson da elétrica") não
+    // tem conta na plataforma — `obra_equipe.user_id` é nullable de propósito.
+    // Sem `.references()` porque `obraEquipe` é declarada abaixo; a FK nasce no
+    // `server/bootstrap-financeiro-fornecedor.ts`, mesmo arranjo de `medicaoId`.
+    fornecedorId: varchar("fornecedor_id"),
+    // Snapshot do nome no momento do lançamento: o FK é `ON DELETE SET NULL`, e
+    // sem isto uma saída antiga viraria "pagamento para ninguém" ao remover o
+    // membro da equipe.
+    fornecedorNome: text("fornecedor_nome"),
     createdAt: timestamp("created_at").defaultNow(),
   },
   (t) => ({

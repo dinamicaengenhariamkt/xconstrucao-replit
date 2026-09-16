@@ -8,6 +8,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
+import { resolverFornecedor } from "@features/financeiro/api/resolver-fornecedor";
 import {
   LANCAMENTO_CATEGORIAS,
   LANCAMENTO_TIPOS,
@@ -39,6 +40,11 @@ const createSchema = z.object({
   valor: z.number().positive().max(999_999_999),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use o formato AAAA-MM-DD"),
   comprovanteFileId: z.string().uuid().optional().nullable(),
+  // XG20 — para quem a saída foi paga. Ou um membro da equipe da obra (`Id`,
+  // que é o que o filtro agrega) ou um nome avulso. `resolverFornecedor` cuida
+  // da coerência entre os dois e da checagem de que o membro é desta obra.
+  fornecedorId: z.string().uuid().optional().nullable(),
+  fornecedorNome: z.string().trim().max(80).optional().nullable(),
 });
 
 function validarCategoria(
@@ -130,6 +136,18 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
 
+  const fornecedor = await resolverFornecedor({
+    tipo,
+    obraId: id,
+    fornecedorId: parsed.data.fornecedorId,
+    fornecedorNome: parsed.data.fornecedorNome,
+  });
+  if ("erro" in fornecedor) {
+    const r = NextResponse.json({ message: fornecedor.erro }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   const donoUserId = await resolverDonoUserId(access.obra.empreiteiraId);
 
   const [created] = await db
@@ -149,6 +167,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       comprovanteFileId: comprovanteFileId ?? null,
       recebedorUserId: tipo === "entrada" ? donoUserId : null,
       pagadorUserId: tipo === "saida" ? donoUserId : null,
+      fornecedorId: fornecedor.fornecedorId,
+      fornecedorNome: fornecedor.fornecedorNome,
     })
     .returning();
 

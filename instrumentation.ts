@@ -110,6 +110,12 @@ async function initializeNodeRuntime() {
     const { bootstrapObraOperacaoSchema } = await import("./server/bootstrap-obra-operacao");
     await runBootstrap("obra-operacao", bootstrapObraOperacaoSchema);
 
+    // XG20 — beneficiário da saída. Precisa vir DEPOIS de `obra-operacao`: a FK
+    // aponta para `obra_equipe`, que é criada ali. Num banco limpo, inverter a
+    // ordem faz a constraint falhar.
+    const { bootstrapFinanceiroFornecedorSchema } = await import("./server/bootstrap-financeiro-fornecedor");
+    await runBootstrap("financeiro-fornecedor", bootstrapFinanceiroFornecedorSchema);
+
     // XG10 — aditivos de contrato. Depende de `obras` e `users`, ambos já criados acima.
     const { bootstrapObraAditivosSchema } = await import("./server/bootstrap-obra-aditivos");
     await runBootstrap("obra-aditivos", bootstrapObraAditivosSchema);

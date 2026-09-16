@@ -1,8 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+// XG20 — data absoluta no lugar de "há 2 dias". Pedido do cliente ("coloca a
+// data... até a data e horário"), e de quebra some o "em 1 minuto": o sufixo
+// direcional do date-fns virava futuro quando o relógio do navegador estava
+// alguns segundos atrás do servidor.
+import { formatDateTime } from '@shared/lib/formatters';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
@@ -154,9 +157,9 @@ export function OcorrenciasJ06Card({ obraId, canWrite, data, isLoading: isLoadin
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words">{o.descricao}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                       Por <strong className="text-foreground">{o.autorNome ?? 'Equipe da obra'}</strong> · {formatDistanceToNow(new Date(o.createdAt), { addSuffix: true, locale: ptBR })}
+                       Por <strong className="text-foreground">{o.autorNome ?? 'Equipe da obra'}</strong> · {formatDateTime(o.createdAt)}
                       {o.resolvidoPorNome && o.resolvidoEm && (
-                        <> · Resolvida por <strong className="text-foreground">{o.resolvidoPorNome}</strong> {formatDistanceToNow(new Date(o.resolvidoEm), { addSuffix: true, locale: ptBR })}</>
+                        <> · Resolvida por <strong className="text-foreground">{o.resolvidoPorNome}</strong> em {formatDateTime(o.resolvidoEm)}</>
                       )}
                     </p>
                     {o.fotoUrl && (

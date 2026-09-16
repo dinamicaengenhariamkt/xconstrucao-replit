@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+// XG20 — data absoluta: "coloca a data, pede pra mostrar a data ali e o horário
+// que foi feita as entradas". Ver a nota em OcorrenciasJ06Card.
+import { formatDateTime } from '@shared/lib/formatters';
 import { Card, CardContent } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
 import { Textarea } from '@shared/components/ui/textarea';
@@ -103,7 +104,7 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId, data, isLoading
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">
-                         <strong className="text-foreground">{e.autorNome ?? 'Equipe da obra'}</strong> · {formatDistanceToNow(new Date(e.createdAt), { addSuffix: true, locale: ptBR })}
+                         <strong className="text-foreground">{e.autorNome ?? 'Equipe da obra'}</strong> · {formatDateTime(e.createdAt)}
                       </p>
                       <p className="text-sm mt-1 whitespace-pre-wrap break-words">{e.texto}</p>
                       {e.fotos.length > 0 && (

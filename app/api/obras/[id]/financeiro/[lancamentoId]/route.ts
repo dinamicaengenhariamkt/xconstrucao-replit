@@ -8,6 +8,7 @@ import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { LANCAMENTO_CATEGORIAS } from "@features/financeiro/lancamentos";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
+import { resolverFornecedor } from "@features/financeiro/api/resolver-fornecedor";
 
 /**
  * XG10 — edição e exclusão de um lançamento da obra. O cliente pediu para
@@ -26,6 +27,9 @@ const patchSchema = z
     valor: z.number().positive().max(999_999_999).optional(),
     data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use o formato AAAA-MM-DD").optional(),
     comprovanteFileId: z.string().uuid().nullable().optional(),
+    // XG20 — trocar o beneficiário da saída. `null` em ambos limpa o vínculo.
+    fornecedorId: z.string().uuid().nullable().optional(),
+    fornecedorNome: z.string().trim().max(80).nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nada para atualizar." });
 
@@ -118,6 +122,25 @@ export async function PATCH(
     return r;
   }
 
+  // Beneficiário só é reavaliado quando o PATCH o menciona: num patch parcial,
+  // campo ausente significa "não mexa", não "apague".
+  const mexeNoFornecedor = data.fornecedorId !== undefined || data.fornecedorNome !== undefined;
+  let fornecedor: { fornecedorId: string | null; fornecedorNome: string | null } | null = null;
+  if (mexeNoFornecedor) {
+    const resolvido = await resolverFornecedor({
+      tipo: existing.tipo,
+      obraId: id,
+      fornecedorId: data.fornecedorId,
+      fornecedorNome: data.fornecedorNome,
+    });
+    if ("erro" in resolvido) {
+      const r = NextResponse.json({ message: resolvido.erro }, { status: 400 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    fornecedor = resolvido;
+  }
+
   const updateData: Partial<typeof financeiro.$inferInsert> = {};
   if (data.categoria !== undefined) updateData.categoria = data.categoria;
   if (data.descricao !== undefined) updateData.descricao = data.descricao;
@@ -127,6 +150,10 @@ export async function PATCH(
     updateData.dataPagamento = data.data;
   }
   if (data.comprovanteFileId !== undefined) updateData.comprovanteFileId = data.comprovanteFileId;
+  if (fornecedor) {
+    updateData.fornecedorId = fornecedor.fornecedorId;
+    updateData.fornecedorNome = fornecedor.fornecedorNome;
+  }
 
   const [updated] = await db
     .update(financeiro)
