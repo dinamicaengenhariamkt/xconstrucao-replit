@@ -125,65 +125,95 @@ test.describe('XG10 — etapas com datas do cronograma', () => {
     await logout(request);
   });
 
-  test('progresso da etapa é derivado: PATCH direto na obra do xgestão → 409', async ({ request }) => {
-    const { obraId } = await criarAssinanteComObra(request, 'xg10-etapa-derivado');
+  /*
+   * XG23 — o inverso do teste que estava aqui.
+   *
+   * A XG10 asserava 409 `PROGRESSO_DERIVADO` no PATCH de progresso em obra
+   * própria, porque o valor vinha da média das tarefas. O cliente desfez a
+   * premissa: "a etapa deixa com uma barrinha manual mesmo, pra poder encher
+   * ali, colocar a porcentagem que ela tá". A regra continua sendo regra — só
+   * trocou de lado, e agora o que ela protege é a persistência do digitado.
+   */
+  test('progresso da etapa é manual na obra do xgestão: PATCH grava o valor digitado', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg23-etapa-manual');
 
     const criada = await request.post(`/api/obras/${obraId}/etapas`, {
       data: { nome: 'Estrutura' },
     });
     const etapa = (await criada.json()) as { id: string };
 
-    // O campo saiu da UI; o servidor fecha o caminho para não voltar por
-    // outra porta e recriar a segunda fonte de verdade (XG09/D6).
-    const tentativa = await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, {
+    const patch = await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, {
       data: { progresso: 40 },
     });
-    expect(tentativa.status(), 'progresso digitado → 409').toBe(409);
-    expect((await tentativa.json()).error).toBe('PROGRESSO_DERIVADO');
+    expect(patch.status(), await patch.text()).toBe(200);
 
     const [linha] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
-    expect(linha.progresso, 'progresso não foi alterado').toBe(0);
+    expect(linha.progresso, 'valor digitado persistido').toBe(40);
 
-    // O resto do PATCH segue funcionando normalmente.
-    const status = await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, {
-      data: { status: 'em_andamento' },
+    // 100% fecha a etapa (auto-coerência que já existia)...
+    await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, { data: { progresso: 100 } });
+    const [cheia] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
+    expect(cheia.status, '100% ⇒ concluído').toBe('concluido');
+
+    // ...e voltar abaixo de 100 reabre. Sem isto a etapa ficaria "Concluído"
+    // exibindo 80%, contradição que só passou a ser alcançável com a barrinha.
+    await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, { data: { progresso: 80 } });
+    const [reaberta] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
+    expect(reaberta.status, 'etapa reaberta não fica "Concluído" com 80%').toBe('em_andamento');
+
+    // Fora da faixa continua barrado pelo schema.
+    const invalido = await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, {
+      data: { progresso: 120 },
     });
-    expect(status.status(), 'status continua editável').toBe(200);
+    expect(invalido.status(), 'acima de 100 → 400').toBe(400);
 
     await logout(request);
   });
 
-  test('progresso sobe pela medição da tarefa, não pela digitação', async ({ request }) => {
-    const { obraId } = await criarAssinanteComObra(request, 'xg10-etapa-medicao');
+  /*
+   * XG23 — o contrato que substitui "a etapa recebe a média das tarefas".
+   *
+   * Era exatamente esse recálculo que o cliente chamou de bagunça: "se eu
+   * conclui essa tarefa, ela conclui a etapa". Na obra própria ele foi
+   * desligado, e este teste existe para que não volte sem querer — as rotas de
+   * tarefa continuam ativas e há tarefas legadas nessas obras.
+   */
+  test('na obra própria, mexer em tarefa NÃO sobrescreve o percentual manual da etapa', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg23-etapa-preservada');
 
     const criada = await request.post(`/api/obras/${obraId}/etapas`, {
       data: { nome: 'Alvenaria' },
     });
     const etapa = (await criada.json()) as { id: string };
 
+    // O dono digita o avanço que enxerga no canteiro.
+    await request.patch(`/api/obras/${obraId}/etapas/${etapa.id}`, { data: { progresso: 60 } });
+
+    // Criar tarefa na etapa não pode mexer no número.
     const tarefa = await request.post(`/api/obras/${obraId}/tarefas`, {
       data: { titulo: 'Levantar paredes', etapa: 'Alvenaria', etapaId: etapa.id },
     });
     expect(tarefa.status(), await tarefa.text()).toBe(201);
     const tarefaCriada = (await tarefa.json()) as { id: string };
 
-    const medicao = await request.post('/api/empreiteiro/medicoes', {
-      data: {
-        obraId,
-        etapa: 'Alvenaria',
-        descricao: 'Paredes do térreo',
-        percentual: 50,
-        tarefaId: tarefaCriada.id,
-        tarefaProgresso: 50,
-        requestId: crypto.randomUUID(),
-      },
-    });
-    expect(medicao.status(), await medicao.text()).toBe(201);
+    const [aposCriar] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
+    expect(aposCriar.progresso, 'criar tarefa não mexe na etapa').toBe(60);
 
-    // É este o caminho legítimo: a etapa recebe a média das tarefas medidas.
-    const [linha] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
-    expect(linha.progresso, 'etapa recebeu o avanço da medição').toBe(50);
-    expect(linha.status, 'status acompanha o avanço').toBe('em_andamento');
+    // Concluir a tarefa também não — era este o caminho que fechava a etapa
+    // inteira quando ela tinha uma tarefa só.
+    const concluir = await request.patch(`/api/obras/${obraId}/tarefas/${tarefaCriada.id}`, {
+      data: { status: 'concluido' },
+    });
+    expect(concluir.status(), await concluir.text()).toBe(200);
+
+    const [aposConcluir] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
+    expect(aposConcluir.progresso, 'concluir tarefa não fecha a etapa').toBe(60);
+    expect(aposConcluir.status, 'status da etapa preservado').not.toBe('concluido');
+
+    // Excluir a tarefa idem.
+    await request.delete(`/api/obras/${obraId}/tarefas/${tarefaCriada.id}`);
+    const [aposExcluir] = await db.select().from(obraEtapas).where(eq(obraEtapas.id, etapa.id));
+    expect(aposExcluir.progresso, 'excluir tarefa não zera a etapa').toBe(60);
 
     await logout(request);
   });

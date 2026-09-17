@@ -6,6 +6,7 @@ import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { etapaProgressoEhDerivado } from "@features/obras/api/etapa-progresso";
 
 const patchSchema = z.object({
   titulo: z.string().trim().min(2).max(160).optional(),
@@ -97,7 +98,12 @@ export async function PATCH(
       .set(updateData)
       .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)))
       .returning();
-    const shouldRecalculate = data.etapaId !== undefined || data.progresso !== undefined || data.status !== undefined;
+    // XG23 — só no marketplace. Na obra própria a etapa tem percentual
+    // digitado, e recalcular pela média aqui o apagaria na primeira vez que
+    // alguém tocasse numa tarefa (inclusive numa tarefa legada).
+    const shouldRecalculate =
+      etapaProgressoEhDerivado(access.obra) &&
+      (data.etapaId !== undefined || data.progresso !== undefined || data.status !== undefined);
     if (shouldRecalculate) {
       const affectedStageIds = new Set([existing.etapaId, row.etapaId].filter((stageId): stageId is string => Boolean(stageId)));
       for (const stageId of affectedStageIds) {
@@ -157,7 +163,8 @@ export async function DELETE(
     if (!existing) return false;
     await tx.delete(obraTarefas)
       .where(and(eq(obraTarefas.id, tarefaId), eq(obraTarefas.obraId, id)));
-    if (existing.etapaId) {
+    // XG23 — idem ao PATCH: na obra própria o percentual da etapa é manual.
+    if (existing.etapaId && etapaProgressoEhDerivado(access.obra)) {
       const [avg] = await tx.select({
         progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
       }).from(obraTarefas).where(eq(obraTarefas.etapaId, existing.etapaId));

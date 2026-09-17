@@ -105,10 +105,26 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
  * (princípio do README §3 — reversibilidade é entregável).
  */
 function tabsVisiveis(isObraPropria: boolean) {
-  // XG17 — "Saúde" sai junto com "Disputas" na obra própria, pelo mesmo
-  // mecanismo: ocultar por filtro, não apagar a aba. Em obra de marketplace
-  // as duas continuam, e restaurar é remover a chave desta lista.
-  const ocultasNaObraPropria: ObraTab[] = ['disputas', 'saude'];
+  /*
+   * XG17 — "Saúde" sai junto com "Disputas" na obra própria, pelo mesmo
+   * mecanismo: ocultar por filtro, não apagar a aba. Em obra de marketplace
+   * as duas continuam, e restaurar é remover a chave desta lista.
+   *
+   * XG23 — "Atualizações" e "Tarefas" entram na lista pelo mesmo caminho:
+   *
+   *   "exclui essa aba atualizações, exclui essa aba tarefas e exclui essa
+   *    barra de porcentagem (...) tira isso tudo, e deixa só a etapas, e a
+   *    etapa deixa com uma barrinha manual mesmo"
+   *
+   * O motivo dele é concreto: a etapa fechava sozinha quando a única tarefa
+   * dela era concluída (média não-ponderada em `tarefas/[tarefaId]`). Na obra
+   * própria o avanço passa a ser digitado na etapa, então as duas abas que
+   * alimentavam o cálculo antigo saem da frente.
+   *
+   * Só na obra própria: no marketplace a atualização é medição contratual —
+   * o contratante aprova e isso libera pagamento. Lá nada muda.
+   */
+  const ocultasNaObraPropria: ObraTab[] = ['disputas', 'saude', 'atualizacoes', 'tarefas'];
   return isObraPropria
     ? TABS.filter((t) => !ocultasNaObraPropria.includes(t.key))
     : TABS;
@@ -123,33 +139,33 @@ function tabsVisiveis(isObraPropria: boolean) {
  */
 function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
   return [
-    {
-      target: '[data-tour="progresso-geral"]',
-      title: 'Progresso geral',
-      description:
-        'O avanço consolidado da obra. Ele sobe sozinho a cada atualização registrada — não precisa digitar.',
-    },
+    /*
+     * XG23 — o roteiro perdeu três passos de uma vez: o da barra "Progresso
+     * geral" (que saiu da obra própria) e os dois de "Atualizações" (aba
+     * removida). Um passo que mira seletor inexistente não falha alto: ele
+     * ancora o balão num canto e o usuário vê uma explicação órfã.
+     *
+     * No lugar deles entram dois sobre Etapas, que é o novo centro da tela.
+     */
     {
       target: '[data-tour="abas-obra"]',
-      title: 'Atualizações da obra',
+      title: 'As etapas da obra',
       description:
-        'O histórico do que já foi executado: percentual, etapa, descrição, fotos e quem registrou. É a primeira aba porque é o que você mais consulta.',
-      onEnter: () => irParaAba('atualizacoes'),
+        'Cadastre as fases — fundação, alvenaria, acabamento — e acompanhe cada uma por aqui. É delas que sai o cronograma.',
+      onEnter: () => irParaAba('etapas'),
     },
     {
-      // O botão dentro da aba, não o do hero: o passo mostra o registro ao
-      // lado da lista que ele alimenta.
-      target: '[data-tour="adicionar-atualizacao-aba"]',
-      title: 'Registrar um avanço',
+      target: '[data-tour="etapa-progresso"]',
+      title: 'O avanço é você quem marca',
       description:
-        'Aqui você registra o que foi feito: percentual, descrição e fotos. É o que move o progresso e aparece para o cliente.',
-      onEnter: () => irParaAba('atualizacoes'),
+        'Arraste a barrinha da etapa ou digite a porcentagem ao lado. Vale na hora, aparece no cronograma e é o que o seu cliente vê no link.',
+      onEnter: () => irParaAba('etapas'),
     },
     {
       target: '[data-tour="abas-obra"]',
       title: 'O dia a dia da obra',
       description:
-        'Tarefas, etapas, cronograma, fotos, diário, ocorrências e financeiro. Cada aba guarda um tipo de registro — tudo em um lugar só.',
+        'Cronograma, fotos, diário, ocorrências, checklists, documentos e financeiro. Cada aba guarda um tipo de registro — tudo em um lugar só.',
     },
     {
       target: '[data-tour="trocar-capa"]',
@@ -492,6 +508,19 @@ export function ObraConsoleView({
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
   const [activeTab, setActiveTab] = useState<ObraTab>('atualizacoes');
+  /*
+   * XG23 — a aba ativa tem de existir na lista visível.
+   *
+   * O estado nasce em 'atualizacoes', que é a primeira aba do marketplace mas
+   * está oculta na obra própria. Sem esta correção a tela abriria com a barra
+   * de abas montada e a área de conteúdo vazia, porque todo `activeTab === x`
+   * falharia. Vale também para quem chega por um caminho que força uma aba
+   * oculta (o painel de Saúde, por exemplo), em vez de tratar caso a caso.
+   */
+  const abasVisiveis = tabsVisiveis(Boolean(obra?.isObraPropria));
+  const abaAtual = abasVisiveis.some((t) => t.key === activeTab)
+    ? activeTab
+    : (abasVisiveis[0]?.key ?? activeTab);
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
   // XG12 — a edição da obra vem para a tela do console, em modais.
@@ -507,7 +536,9 @@ export function ObraConsoleView({
   // XG12 — `console-v2`: a tela foi reorganizada (abas novas, edição em modal),
   // então quem viu o roteiro anterior viu uma tela que não existe mais. A chave
   // nova reexibe o tour uma vez, e é o custo certo de uma tela reorganizada.
-  const tour = useGuidedTour('console-v2', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
+  // XG23 — `console-v3` pelo mesmo motivo: a barra de progresso e duas abas
+  // saíram, e três passos do roteiro apontavam para o que não existe mais.
+  const tour = useGuidedTour('console-v3', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
   // `useMemo` mantém a identidade dos passos estável: o `useLayoutEffect` do
   // tour depende de `step`, e um array recriado a cada render remediria o
   // alvo em loop.
@@ -519,7 +550,11 @@ export function ObraConsoleView({
   // `obra?.id` nas dependências, e não só `searchParams`: enquanto carrega, a
   // página faz early-return e o ref é `null` — o efeito saía pelo guard e
   // nunca mais rodava, deixando o deep-link dependente de cache quente.
+  // XG23 — só no marketplace: na obra própria a aba 'atualizacoes' está oculta,
+  // e forçá-la deixaria a área de conteúdo vazia. A notificação que gera este
+  // link é a de medição, que é fluxo de marketplace de qualquer modo.
   useEffect(() => {
+    if (obra?.isObraPropria) return;
     if (searchParams?.get('tab') !== 'medicoes' || !medicoesSectionRef.current) return;
     setActiveTab('atualizacoes');
     // Aguarda a renderização completa antes de rolar.
@@ -777,26 +812,40 @@ export function ObraConsoleView({
           (capa + bloco de título). Se entrasse nele, o `md:bottom-0` do bloco
           miraria o rodapé desta barra e o texto cairia por cima dela.
         */}
-        <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="min-w-0">
-              <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
-              <p className="mt-1 text-xs text-gray-400">Avanço consolidado da execução da obra</p>
+        {/*
+          XG23 — a barra sai da obra própria: "exclui essa barra de porcentagem,
+          pode excluir, deixa 100".
+
+          Ela consolidava as medições, e as medições eram justamente o caminho
+          que o cliente pediu para remover. Sem escritor, o número ficaria
+          parado na tela — pior que não mostrar. O avanço agora se lê nas
+          etapas, cada uma com a sua porcentagem digitada.
+
+          No marketplace continua: lá `obras.progresso` é a soma das medições
+          aprovadas pelo contratante, e tem peso contratual.
+        */}
+        {!obra.isObraPropria && (
+          <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
+                <p className="mt-1 text-xs text-gray-400">Avanço consolidado da execução da obra</p>
+              </div>
+              <div className="flex shrink-0 items-baseline gap-0.5">
+                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
+                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
+              </div>
             </div>
-            <div className="flex shrink-0 items-baseline gap-0.5">
-              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
+            <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${obra.progresso}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+                className={cn('h-full rounded-full', progressBarColor)}
+              />
             </div>
           </div>
-          <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${obra.progresso}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-              className={cn('h-full rounded-full', progressBarColor)}
-            />
-          </div>
-        </div>
+        )}
       </motion.div>
 
       {allowOwnWorkEdit && obra.isObraPropria && (
@@ -827,25 +876,33 @@ export function ObraConsoleView({
         // XG13 — duas colunas já no celular: o big number é curto, cabe lado a
         // lado e corta metade do scroll até as abas. Antes o `md` de 2 colunas
         // ainda deixava o quinto card sozinho numa linha.
-        className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4"
+        // XG23 — na obra própria sobram 3 cards (Progresso e Tarefas saíram),
+        // então o grid acompanha para não deixar duas colunas vazias.
+        className={cn(
+          'grid grid-cols-2 gap-3 sm:gap-4',
+          obra.isObraPropria ? 'lg:grid-cols-3' : 'lg:grid-cols-5',
+        )}
       >
-        {/* Progresso Real */}
-        <KpiCardShell luminous={kpiLuminous}>
-          <div className="flex justify-between items-start">
-            <div className={kpiIconClasses(kpiLuminous, 'bg-success/10 text-success')}>
-              <IconCheckCircle />
+        {/* Progresso Real — XG23: sai junto com a barra na obra própria, pelo
+            mesmo motivo (lê o mesmo `obra.progresso`, que lá não tem escritor). */}
+        {!obra.isObraPropria && (
+          <KpiCardShell luminous={kpiLuminous}>
+            <div className="flex justify-between items-start">
+              <div className={kpiIconClasses(kpiLuminous, 'bg-success/10 text-success')}>
+                <IconCheckCircle />
+              </div>
+              <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Atual</span>
             </div>
-            <span className="text-success text-xs font-bold bg-success/10 px-2 py-1 rounded-full">Atual</span>
-          </div>
-          <div>
-            {/* XG10 — "Real" não distinguia de nada: só existe um progresso. */}
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
-          </div>
-          <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
-            <div className="h-full bg-success rounded-full" style={{ width: `${obra.progresso}%` }} />
-          </div>
-        </KpiCardShell>
+            <div>
+              {/* XG10 — "Real" não distinguia de nada: só existe um progresso. */}
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
+            </div>
+            <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
+              <div className="h-full bg-success rounded-full" style={{ width: `${obra.progresso}%` }} />
+            </div>
+          </KpiCardShell>
+        )}
 
         {/* Dias de Atraso */}
         {/* O `border-l-4` âmbar é sinal de estado, não decoração: fica mesmo com
@@ -891,7 +948,11 @@ export function ObraConsoleView({
           </p>
         </KpiCardShell>
 
-        {/* Tarefas Pendentes */}
+        {/* Tarefas Pendentes — XG23: escondido na obra própria junto com a aba.
+            Sem a aba, o número vira um dado sem destino: o usuário lê "2 total"
+            e não tem para onde clicar. Os contadores seguem vindo do servidor,
+            então basta reexibir o card se as tarefas voltarem. */}
+        {!obra.isObraPropria && (
         <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
             <div className={kpiIconClasses(kpiLuminous, 'bg-purple-50 dark:bg-purple-900/20 text-purple-600')}>
@@ -915,6 +976,7 @@ export function ObraConsoleView({
             {obra.tarefasTotal - obra.tarefasPendentes} concluídas de {obra.tarefasTotal}
           </p>
         </KpiCardShell>
+        )}
 
         {/* Problemas Abertos */}
         <KpiCardShell luminous={kpiLuminous}>
@@ -1011,13 +1073,13 @@ export function ObraConsoleView({
           className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
           data-tour="abas-obra"
         >
-          {tabsVisiveis(obra.isObraPropria).map((tab) => (
+          {abasVisiveis.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
                 'flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-4 text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer flex-shrink-0',
-                activeTab === tab.key
+                abaAtual === tab.key
                   ? 'text-primary border-b-2 border-primary bg-white dark:bg-gray-900'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
               )}
@@ -1032,26 +1094,26 @@ export function ObraConsoleView({
         <div className="p-4 sm:p-6">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab}
+              key={abaAtual}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
             >
-              {activeTab === 'atualizacoes' && (
+              {abaAtual === 'atualizacoes' && (
                 <AtualizacoesTab
                   obraId={obra.id}
                   isOwnWork={obra.isObraPropria}
                   onRegistrar={() => setShowAtualizacao(true)}
                 />
               )}
-              {activeTab === 'tarefas' && <TaskManagerSection obra={obra} />}
-              {activeTab === 'diario' && (
+              {abaAtual === 'tarefas' && <TaskManagerSection obra={obra} />}
+              {abaAtual === 'diario' && (
                 <DiarioJ06Card obraId={obra.id} canWrite currentUserId={user?.id ?? null} />
               )}
-              {activeTab === 'checklists' && <ChecklistsSection obra={obra} />}
-              {activeTab === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
-              {activeTab === 'fotos' && (
+              {abaAtual === 'checklists' && <ChecklistsSection obra={obra} />}
+              {abaAtual === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
+              {abaAtual === 'fotos' && (
                 <FotosJ06Card
                   obraId={obra.id}
                   canWrite
@@ -1059,16 +1121,15 @@ export function ObraConsoleView({
                   currentUserRole={user?.role}
                 />
               )}
-              {activeTab === 'documentos' && <DocumentosSection obra={obra} />}
-              {activeTab === 'etapas' && (
+              {abaAtual === 'documentos' && <DocumentosSection obra={obra} />}
+              {abaAtual === 'etapas' && (
                 <EtapasJ06Card
                   obraId={obra.id}
                   canWrite
                   canEditScope={obra.isObraPropria}
-                  progressoDerivado={obra.isObraPropria}
                 />
               )}
-              {activeTab === 'cronograma' && (
+              {abaAtual === 'cronograma' && (
                 <CronogramaGanttCard
                   obraId={obra.id}
                   onIrParaEtapas={() => setActiveTab('etapas')}
@@ -1078,11 +1139,11 @@ export function ObraConsoleView({
                   usuário criava ali evaporava no F5. Quem persiste é este
                   card, que estava escondido no rodapé. O arquivo antigo fica
                   no repo (reversibilidade), fora da árvore de render. */}
-              {activeTab === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite />}
-              {activeTab === 'disputas' && <DisputasTab obraId={obra.id} />}
+              {abaAtual === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite />}
+              {abaAtual === 'disputas' && <DisputasTab obraId={obra.id} />}
               {/* XG17 — inalcançável na obra própria (`tabsVisiveis` filtra a
                   aba), mas mantido para o marketplace, onde a Saúde continua. */}
-              {activeTab === 'saude' && (
+              {abaAtual === 'saude' && (
                 <HealthDetailPanel
                   health={computeHealthFromObra(obra)}
                   actionsByFactor={{
@@ -1092,7 +1153,7 @@ export function ObraConsoleView({
                   }}
                 />
               )}
-              {activeTab === 'financeiro' && (
+              {abaAtual === 'financeiro' && (
                 <FinanceiroTab
                   obraId={obra.id}
                   metrics={computeProfitFromObra(obra)}

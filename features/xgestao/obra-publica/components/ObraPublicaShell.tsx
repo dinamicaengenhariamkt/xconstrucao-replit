@@ -113,20 +113,30 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 p-6 dark:bg-gray-800/50">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Progresso geral</span>
-              <span className="text-2xl font-extrabold text-gray-900 dark:text-white">{view.obra.progresso}%</span>
-            </div>
-            <div className="h-3 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${view.obra.progresso}%` }} />
-            </div>
-            {view.obra.ultimaAtualizacao && (
-              <p className="mt-3 text-xs text-gray-500">
+          {/*
+            XG23 — a barra de "Progresso geral" saiu daqui junto com a do
+            console.
+
+            Ela lia `obras.progresso`, que era escrito pelas atualizações. Com
+            as atualizações fora da obra própria — e o link público só existe
+            para obra própria — a coluna ficou sem escritor: a barra mostraria
+            o mesmo número para sempre, 0% nas obras novas. Um número errado na
+            página que o cliente final vê é pior que número nenhum.
+
+            O avanço continua visível ali embaixo, na seção de etapas, cada uma
+            com o percentual que o dono da obra digitou — que é onde o próprio
+            cliente pediu para concentrar: "deixa só a etapas".
+
+            A data da última atualização fica: ela vem do diário/medições e
+            segue verdadeira.
+          */}
+          {view.obra.ultimaAtualizacao && (
+            <div className="bg-gray-50 p-6 dark:bg-gray-800/50">
+              <p className="text-xs text-gray-500">
                 Última atualização: {new Date(view.obra.ultimaAtualizacao).toLocaleDateString('pt-BR')}
               </p>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         {hasDetails && (

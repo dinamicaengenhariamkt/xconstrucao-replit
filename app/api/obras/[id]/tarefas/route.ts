@@ -6,6 +6,7 @@ import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { etapaProgressoEhDerivado } from "@features/obras/api/etapa-progresso";
 
 const createSchema = z.object({
   titulo: z.string().trim().min(2).max(160),
@@ -102,7 +103,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         bloqueioInfo: data.bloqueioInfo ?? null,
       })
       .returning();
-    if (etapaId) {
+    // XG23 — na obra própria a etapa tem percentual manual; criar uma tarefa
+    // nela não pode reescrever o valor digitado. Ver `etapa-progresso.ts`.
+    if (etapaId && etapaProgressoEhDerivado(access.obra)) {
       const [avg] = await tx.select({
         progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
       }).from(obraTarefas).where(eq(obraTarefas.etapaId, etapaId));

@@ -93,8 +93,9 @@ test.describe('xgestão — link público de obra', () => {
     });
     expect(detalhes.status(), await detalhes.text()).toBe(200);
 
-    // O progresso da obra própria vem da medição, não da edição — por isso o
-    // avanço é registrado aqui em vez de ir no PATCH acima.
+    // XG23 — a medição continua aqui porque alimenta a data de "última
+    // atualização" e o histórico, mas já não move o progresso da obra própria:
+    // desde que a aba Atualizações saiu, o avanço é digitado por etapa.
     const avanco = await request.post('/api/empreiteiro/medicoes', {
       data: {
         obraId: obra.id,
@@ -182,7 +183,18 @@ test.describe('xgestão — link público de obra', () => {
     expect(html).toContain('84,5 m²');
     expect(html).toContain('10/09/2026');
     expect(html).toContain('20/02/2027');
-    expect(html).toContain('35%');
+    /*
+     * XG23 — a barra de "Progresso geral" saiu da página pública.
+     *
+     * Ela lia `obras.progresso`, alimentado pelas atualizações; com elas fora
+     * da obra própria a coluna ficou sem escritor e o número congelaria. O
+     * avanço passou a viver nas etapas, cada uma com o percentual digitado, e
+     * é isso que o cliente final lê agora.
+     *
+     * A asserção inverte: o consolidado não pode reaparecer sem que alguém
+     * volte a alimentá-lo.
+     */
+    expect(html).not.toContain('Progresso geral');
     expect(html).not.toContain(privateFile.key);
     // O badge de status precisa sair traduzido. Antes o dicionário aplicado era
     // o do status derivado da UI, e o valor do banco vazava cru para o cliente.

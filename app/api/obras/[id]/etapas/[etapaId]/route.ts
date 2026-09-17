@@ -49,29 +49,27 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
   const data = parsed.data;
 
-  // XG10 — na obra do xgestão, o progresso da etapa é GRANDEZA DERIVADA: a
-  // medição recalcula `obra_etapas.progresso` como média do progresso das
-  // tarefas (app/api/empreiteiro/medicoes/route.ts). Aceitar um valor digitado
-  // aqui criava segunda fonte de verdade — o mesmo defeito que a XG09 (D6)
-  // corrigiu no progresso da obra: a medição seguinte partia do valor
-  // sobrescrito. O campo saiu da UI e o servidor recusa, para o caminho não
-  // voltar por outra porta.
-  //
-  // O marketplace segue inalterado: lá o empreiteiro atualiza progresso/status
-  // da etapa como sempre (ver o gate logo abaixo).
-  const obraPropriaXgestao = access.obra.clienteId === null;
-  if (obraPropriaXgestao && data.progresso !== undefined) {
-    const r = NextResponse.json(
-      {
-        error: "PROGRESSO_DERIVADO",
-        message:
-          "O avanço da etapa vem das tarefas medidas. Registre uma atualização em vez de digitar a porcentagem.",
-      },
-      { status: 409 },
-    );
-    setNoCacheHeaders(r);
-    return r;
-  }
+  /*
+   * XG23 — o guard `PROGRESSO_DERIVADO` saiu daqui, e a inversão é deliberada.
+   *
+   * A XG10 recusava `progresso` em obra própria porque o valor era grandeza
+   * derivada: a medição recalculava a etapa como média das tarefas, e um valor
+   * digitado criava segunda fonte de verdade. O cliente desfez a premissa:
+   *
+   *   "eu crio uma etapa, uma tarefa dentro da etapa, aí se eu conclui essa
+   *    tarefa, ela conclui a etapa (...) tá uma bagunça (...) tira isso tudo, e
+   *    deixa só a etapas, e a etapa deixa com uma barrinha manual mesmo"
+   *
+   * Não há mais segunda fonte porque a primeira foi desligada: as abas
+   * Atualizações e Tarefas saíram da obra própria e o recálculo por média
+   * passou a valer só no marketplace (ver `etapaProgressoEhDerivado`). Aqui o
+   * valor digitado é o único.
+   *
+   * Se for restaurar o guard, restaure junto o que o alimentava — senão a
+   * etapa fica sem nenhuma forma de ter progresso na obra própria.
+   *
+   * O gate abaixo permanece: no marketplace o escopo continua do contratante.
+   */
 
   // No marketplace o escopo continua sendo do contratante. Na obra própria do
   // xgestão, o empreiteiro é o dono operacional e pode manter o cronograma.
@@ -96,6 +94,22 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (data.prazo !== undefined) updateData.prazo = data.prazo ? new Date(data.prazo) : null;
   // Auto-coerência: progresso=100 ⇒ status=concluido
   if (data.progresso === 100 && data.status === undefined) updateData.status = "concluido";
+  /*
+   * XG23 — e o simétrico, que antes não fazia falta.
+   *
+   * Até agora o único caminho até 100 era a média das tarefas, que escrevia o
+   * status junto. Com a barrinha manual, puxar uma etapa de 100% para 80% é um
+   * gesto de um segundo — e sem isto ela continuaria marcada "Concluído"
+   * exibindo 80% na barra, com o cronograma desenhando a contradição.
+   */
+  if (
+    data.progresso !== undefined &&
+    data.progresso < 100 &&
+    data.status === undefined &&
+    existing.status === "concluido"
+  ) {
+    updateData.status = data.progresso > 0 ? "em_andamento" : "pendente";
+  }
   const [updated] = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
     const rows = await tx.update(obraEtapas).set(updateData)

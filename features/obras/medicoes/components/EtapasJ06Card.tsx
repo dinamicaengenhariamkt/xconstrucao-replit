@@ -23,13 +23,20 @@ interface Props extends J06DataSource<EtapaJ06Data> {
   obraId: string;
   canWrite: boolean;
   canEditScope: boolean; // contratante/admin
-  /**
-   * XG10 — obra própria do xgestão. O progresso da etapa é derivado da média
-   * das tarefas medidas, então o campo editável some: ele era uma segunda
-   * fonte de verdade brigando com o cálculo (mesmo defeito da XG09/D6). A
-   * barra continua, agora só como leitura. No marketplace nada muda.
+  /*
+   * XG23 — a prop `progressoDerivado` saiu daqui.
+   *
+   * Ela nasceu na XG10 para esconder o campo de percentual na obra própria,
+   * onde o valor vinha da média das tarefas. O cliente desfez essa cadeia:
+   * "tira isso tudo, e deixa só a etapas, e a etapa deixa com uma barrinha
+   * manual mesmo, pra poder encher ali, colocar a porcentagem que ela tá".
+   *
+   * Com o percentual manual nos dois contextos, a prop valeria o mesmo nos
+   * quatro consumidores do card (console, contratante, admin e obra pública)
+   * — e prop que ninguém varia é constante disfarçada. Quem decide agora é
+   * só `canWrite`, que já era a permissão certa: os dois consumidores
+   * read-only passam `false` e continuam vendo a barra sem controle.
    */
-  progressoDerivado?: boolean;
 }
 
 /** Data curta para a listagem: "12/03". A data vem ISO do servidor. */
@@ -53,7 +60,98 @@ const STATUS_BADGE: Record<EtapaStatus, string> = {
   concluido: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
-export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivado = false, data, isLoading: isLoadingProp }: Props) {
+/**
+ * XG23 — o percentual da etapa: barrinha + número.
+ *
+ * O cliente pediu a barrinha nestas palavras: *"eu coloco uma barrinha de
+ * cursor ali mesmo, se eu colocar 10, 15, 20% e 100% na etapa (...) aí eu
+ * consigo pôr manualmente mesmo, porque eu acho mais fácil de fazer"*. O campo
+ * numérico fica ao lado porque arrastar acerta a dezena, não o valor exato.
+ *
+ * O PATCH sai ao **soltar** o cursor, não a cada movimento: arrastar de 0 a 100
+ * emite dezenas de eventos, e cada um viraria um PATCH com `SELECT ... FOR
+ * UPDATE` na obra — fila de escrita e histórico de auditoria inútil.
+ *
+ * `valorLocal` guarda o arrasto em andamento; sem ele o valor voltaria ao dado
+ * do servidor a cada render e a barrinha escorregaria de volta sob o dedo.
+ */
+function ProgressoEtapaControl({
+  progresso,
+  etapaId,
+  disabled,
+  onCommit,
+}: {
+  progresso: number;
+  etapaId: string;
+  disabled: boolean;
+  onCommit: (valor: number) => void;
+}) {
+  const [valorLocal, setValorLocal] = useState<number | null>(null);
+  /*
+   * Reconciliação com o servidor sem `useEffect`: guardamos junto o progresso
+   * que o servidor tinha quando o arrasto começou. Quando ele muda (a resposta
+   * do PATCH chegou, ou outra aba alterou), o rascunho local é descartado —
+   * um `useEffect` de sincronia aqui causaria render extra a cada arrasto.
+   */
+  const [progressoBase, setProgressoBase] = useState(progresso);
+  if (progressoBase !== progresso) {
+    setProgressoBase(progresso);
+    setValorLocal(null);
+  }
+  const valor = valorLocal ?? progresso;
+
+  const comitar = (v: number) => {
+    const limitado = Math.min(100, Math.max(0, Math.round(v)));
+    setValorLocal(limitado);
+    if (limitado !== progresso) onCommit(limitado);
+  };
+
+  return (
+    <div className="flex items-center gap-3" data-tour="etapa-progresso">
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={valor}
+        disabled={disabled}
+        onChange={(ev) => setValorLocal(Number(ev.target.value))}
+        onMouseUp={(ev) => comitar(Number(ev.currentTarget.value))}
+        onTouchEnd={(ev) => comitar(Number(ev.currentTarget.value))}
+        onKeyUp={(ev) => comitar(Number(ev.currentTarget.value))}
+        className="h-2 flex-1 cursor-pointer rounded-full accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="Percentual concluído da etapa"
+        data-testid={`slider-progresso-${etapaId}`}
+      />
+      <div className="flex items-center gap-1">
+        <Input
+          type="number"
+          min={0}
+          max={100}
+          value={valor}
+          disabled={disabled}
+          className="h-8 w-16 text-right"
+          onChange={(ev) => setValorLocal(Number(ev.target.value))}
+          onBlur={(ev) => {
+            const v = Number(ev.target.value);
+            if (Number.isNaN(v)) {
+              setValorLocal(null);
+              return;
+            }
+            comitar(v);
+          }}
+          onKeyDown={(ev) => {
+            if (ev.key === 'Enter') ev.currentTarget.blur();
+          }}
+          data-testid={`input-progresso-${etapaId}`}
+        />
+        <span className="text-xs font-semibold text-muted-foreground">%</span>
+      </div>
+    </div>
+  );
+}
+
+export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading: isLoadingProp }: Props) {
   const injected = data !== undefined;
   const query = useObraEtapas(obraId, !injected);
   const etapas = injected ? data : query.data;
@@ -70,6 +168,8 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
   // XG10 — datas do Gantt, no formato do <input type="date"> (AAAA-MM-DD).
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  // XG23 — percentual editável junto do resto da etapa (só na edição).
+  const [progressoForm, setProgressoForm] = useState(0);
 
   const resetForm = () => {
     setNome('');
@@ -77,6 +177,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
     setResponsavel('');
     setDataInicio('');
     setDataFim('');
+    setProgressoForm(0);
     setEditingId(null);
   };
 
@@ -97,6 +198,8 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
           responsavel: responsavel.trim() || null,
           dataInicio: toIso(dataInicio),
           prazo: toIso(dataFim),
+          // XG23 — o percentual vai junto com o resto da edição.
+          progresso: progressoForm,
         });
       } else {
         await createMut.mutateAsync({
@@ -176,6 +279,48 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
                     Preencha as duas datas para a etapa aparecer no cronograma —{' '}
                     <strong>sem elas ela fica de fora do gráfico</strong>.
                   </p>
+                  {/*
+                    XG23 — o percentual no modal, porque foi assim que o cliente
+                    descreveu o fluxo: "eu posso editar ela e eu coloco uma
+                    barrinha de cursor ali mesmo". Na lista o controle serve o
+                    ajuste rápido do dia a dia; aqui, quem abriu a etapa inteira
+                    para revisar.
+
+                    Só na edição: etapa nasce em 0% e o POST de etapas não
+                    aceita o campo — incluir na criação obrigaria a mexer também
+                    no contrato de criação, além do escopo pedido.
+                  */}
+                  {editingId && (
+                    <div>
+                      <Label>Percentual concluído</Label>
+                      <div className="flex items-center gap-3 pt-2">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={5}
+                          value={progressoForm}
+                          onChange={(e) => setProgressoForm(Number(e.target.value))}
+                          className="h-2 flex-1 cursor-pointer rounded-full accent-primary"
+                          aria-label="Percentual concluído da etapa"
+                          data-testid="slider-etapa-progresso"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={progressoForm}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setProgressoForm(Number.isNaN(v) ? 0 : Math.min(100, Math.max(0, v)));
+                          }}
+                          className="h-8 w-16 text-right"
+                          data-testid="input-etapa-progresso"
+                        />
+                        <span className="text-xs font-semibold text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -249,30 +394,26 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_BADGE[e.status]}`}>{STATUS_LABEL[e.status]}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${e.progresso}%` }} />
+                {/* XG23 — quem pode escrever arrasta a barrinha; quem só lê vê
+                    a barra. Antes eram dois controles para o mesmo número: a
+                    barra aqui e um campo numérico solto na linha dos botões. */}
+                {canWrite ? (
+                  <ProgressoEtapaControl
+                    progresso={e.progresso}
+                    etapaId={e.id}
+                    disabled={updateMut.isPending}
+                    onCommit={(v) => handleProgresso(e.id, v)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${e.progresso}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold w-10 text-right">{e.progresso}%</span>
                   </div>
-                  <span className="text-xs font-semibold w-10 text-right">{e.progresso}%</span>
-                </div>
+                )}
                 {canWrite && (
                   <div className="flex flex-wrap items-center gap-2 pt-2">
-                    {!progressoDerivado && (
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        defaultValue={e.progresso}
-                        className="w-20 h-8"
-                        onBlur={(ev) => {
-                          const v = Number(ev.target.value);
-                          if (!Number.isNaN(v) && v !== e.progresso && v >= 0 && v <= 100) {
-                            handleProgresso(e.id, v);
-                          }
-                        }}
-                        data-testid={`input-progresso-${e.id}`}
-                      />
-                    )}
                     <Select value={e.status} onValueChange={(v) => handleStatus(e.id, v as EtapaStatus)}>
                       <SelectTrigger className="w-44 h-8" data-testid={`select-status-${e.id}`}><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -293,6 +434,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, progressoDerivad
                             setResponsavel(e.responsavel ?? '');
                             setDataInicio(toInputDate(e.dataInicio));
                             setDataFim(toInputDate(e.prazo));
+                            setProgressoForm(e.progresso);
                             setOpen(true);
                           }}
                           data-testid={`button-edit-etapa-${e.id}`}

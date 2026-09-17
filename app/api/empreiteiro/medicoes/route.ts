@@ -225,29 +225,18 @@ export async function POST(request: NextRequest) {
     const novoProgresso = ownWork ? base + percentual : progressoAtualObra;
     if (ownWork) {
       await tx.update(obras).set({ progresso: novoProgresso, updatedAt: now }).where(eq(obras.id, obraId));
-      if (tarefa?.etapaId) {
-        const [avg] = await tx.select({
-          progresso: sql<number>`COALESCE(ROUND(AVG(COALESCE(${obraTarefas.progresso}, 0))), 0)::int`,
-        }).from(obraTarefas).where(eq(obraTarefas.etapaId, tarefa.etapaId));
-        const etapaProgresso = Number(avg?.progresso ?? 0);
-        await tx.update(obraEtapas).set({
-          progresso: etapaProgresso,
-          status: etapaProgresso === 100 ? "concluido" : etapaProgresso > 0 ? "em_andamento" : "pendente",
-          updatedAt: now,
-        }).where(and(eq(obraEtapas.id, tarefa.etapaId), eq(obraEtapas.obraId, obraId)));
-      } else {
-        const [etapaRow] = await tx.select().from(obraEtapas)
-          .where(and(eq(obraEtapas.obraId, obraId), sql`lower(${obraEtapas.nome}) = lower(${etapa})`))
-          .limit(1);
-        if (etapaRow) {
-          const etapaProgresso = Math.min(100, (etapaRow.progresso ?? 0) + percentual);
-          await tx.update(obraEtapas).set({
-            progresso: etapaProgresso,
-            status: etapaProgresso === 100 ? "concluido" : "em_andamento",
-            updatedAt: now,
-          }).where(eq(obraEtapas.id, etapaRow.id));
-        }
-      }
+      /*
+       * XG23 — a medição não mexe mais no progresso da etapa.
+       *
+       * Este bloco só rodava em obra própria (`ownWork`), que é justamente onde
+       * o percentual da etapa passou a ser digitado à mão. Mantê-lo faria a
+       * medição sobrescrever o valor manual — pelos dois caminhos que existiam
+       * aqui: a média das tarefas, quando a medição vinha vinculada a uma, e a
+       * soma incremental por nome da etapa, quando não vinha.
+       *
+       * A UI que criava medição em obra própria saiu junto (aba Atualizações),
+       * mas a rota continua de pé para o marketplace e para quem já a chama.
+       */
     }
 
     if (fotoFileIds?.length) {
