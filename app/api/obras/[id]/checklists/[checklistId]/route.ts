@@ -34,6 +34,14 @@ const patchSchema = z.object({
   itens: z.array(itemPatchSchema).max(200).optional(),
   toggleItemId: z.string().optional(),
   markAllItens: z.boolean().optional(),
+  /**
+   * Reabertura de checklist concluído. Não muda nada do que é gravado — o
+   * cliente já manda status e assinatura limpos no mesmo patch, e os itens são
+   * preservados de propósito (quem reabre quer corrigir a assinatura, não
+   * refazer a inspeção). Existe só para a auditoria distinguir "editei o nome"
+   * de "apaguei uma assinatura profissional com CREA".
+   */
+  reabrir: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -180,8 +188,18 @@ export async function PATCH(
 
   await recordAudit({
     actorId: guard.user.id,
-    action: "obras.checklist.update",
-    payload: { obraId: id, checklistId, changes: Object.keys(data) },
+    action: data.reabrir ? "obras.checklist.reabrir" : "obras.checklist.update",
+    payload: data.reabrir
+      ? {
+          obraId: id,
+          checklistId,
+          // Guardar o que foi apagado: sem isto o log prova que houve
+          // reabertura, mas não de quem era a assinatura descartada.
+          assinaturaAnterior: existing.assinadoPor,
+          assinadoEmAnterior: existing.assinadoEm,
+          registroProfissionalAnterior: existing.registroProfissional,
+        }
+      : { obraId: id, checklistId, changes: Object.keys(data) },
     request,
   });
   const r = NextResponse.json({

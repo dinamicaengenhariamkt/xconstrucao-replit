@@ -84,6 +84,7 @@ export type ChecklistModalType =
   | 'assinar'
   | 'registro'
   | 'finalizar_confirm'
+  | 'reabrir_confirm'
   | 'excluir'
   | null;
 

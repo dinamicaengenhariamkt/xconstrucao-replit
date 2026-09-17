@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
+  auditLogs,
   obraAnexos,
   obraChecklistItens,
   obraChecklistMarcacoes,
@@ -416,6 +417,169 @@ test.describe("J36 — obras/[id]/checklists", () => {
       .from(obraChecklistMarcacoes)
       .where(eq(obraChecklistMarcacoes.checklistId, created.id));
     expect(marcacoes.length, "sem recorrência não deve criar marcação").toBe(0);
+
+    await logout(request);
+  });
+
+  /*
+   * Reabrir checklist.
+   *
+   * Assinar era um caminho sem volta: com a assinatura gravada o card fica
+   * read-only e, num checklist sem recorrência, a única saída era excluir o
+   * checklist inteiro. Reabrir limpa a assinatura e devolve a edição — mas
+   * **mantém os itens marcados**, porque quem reabre quer corrigir o nome de
+   * quem assinou, não refazer a inspeção no canteiro.
+   */
+  test("reabrir: limpa a assinatura e MANTÉM os itens marcados", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist para reabrir",
+        tipo: "etapa",
+        itens: [{ titulo: "E2E reabrir 1" }, { titulo: "E2E reabrir 2" }],
+      },
+    });
+    const created = (await post.json()) as { id: string; itens: Array<{ id: string }> };
+
+    // Assina: marca todos os itens e carimba quem assinou.
+    const assinar = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: {
+        status: "completo",
+        markAllItens: true,
+        assinadoPor: "E2E Engenheiro",
+        assinadoEm: "17/09/2026 10:00",
+        registroProfissional: "CREA-E2E-123",
+        completadoEm: "10:00",
+      },
+    });
+    expect(assinar.status(), "PATCH de assinatura deve retornar 200").toBe(200);
+
+    const reabrir = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: {
+        reabrir: true,
+        status: "em_andamento",
+        assinadoPor: null,
+        assinadoEm: null,
+        registroProfissional: null,
+        completadoEm: null,
+      },
+    });
+    expect(reabrir.status(), "PATCH de reabertura deve retornar 200").toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(obraChecklists)
+      .where(eq(obraChecklists.id, created.id))
+      .limit(1);
+    expect(row?.assinadoPor, "a assinatura deve ser apagada").toBeNull();
+    expect(row?.assinadoEm, "a data da assinatura deve ser apagada").toBeNull();
+    expect(row?.registroProfissional, "o registro profissional deve ser apagado").toBeNull();
+    expect(row?.completadoEm, "a hora de conclusão deve ser apagada").toBeNull();
+    expect(row?.status, "status reaberto deve destravar o card").toBe("em_andamento");
+
+    // O ponto central: a inspeção feita continua registrada.
+    const itens = await db
+      .select()
+      .from(obraChecklistItens)
+      .where(eq(obraChecklistItens.checklistId, created.id));
+    expect(itens.length, "os itens devem continuar lá").toBe(2);
+    expect(
+      itens.every((i) => i.concluida),
+      "reabrir NÃO pode desmarcar os itens — corrigir a assinatura não é refazer a inspeção",
+    ).toBe(true);
+
+    await logout(request);
+  });
+
+  test("reabrir: grava auditoria própria com a assinatura descartada", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist auditoria de reabertura",
+        tipo: "etapa",
+        itens: [{ titulo: "E2E audit 1" }],
+      },
+    });
+    const created = (await post.json()) as { id: string };
+
+    await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: {
+        status: "completo",
+        markAllItens: true,
+        assinadoPor: "E2E Assinante Original",
+        assinadoEm: "17/09/2026 11:00",
+        registroProfissional: "CREA-E2E-999",
+        completadoEm: "11:00",
+      },
+    });
+    await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: {
+        reabrir: true,
+        status: "em_andamento",
+        assinadoPor: null,
+        assinadoEm: null,
+        registroProfissional: null,
+        completadoEm: null,
+      },
+    });
+
+    const logs = await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "obras.checklist.reabrir"));
+    const doTeste = logs.find((l) => l.payload?.checklistId === created.id);
+    expect(
+      doTeste,
+      "reabertura deve ter action própria — apagar assinatura profissional não é 'editei o nome'",
+    ).toBeTruthy();
+    expect(
+      doTeste?.payload?.assinaturaAnterior,
+      "sem o valor antigo o log prova que houve reabertura, mas não de quem era a assinatura",
+    ).toBe("E2E Assinante Original");
+    expect(doTeste?.payload?.registroProfissionalAnterior).toBe("CREA-E2E-999");
+
+    await logout(request);
+  });
+
+  /*
+   * O PATCH de toggle já responde com o checklist projetado no período
+   * corrente. É desse contrato que o update otimista do cliente depende: o
+   * `onSuccess` escreve esta resposta direto no cache em vez de refazer o
+   * detalhe inteiro da obra (~19 queries + presigns R2). Se a rota parar de
+   * projetar, o tique volta a piscar — por isso o contrato é testado aqui.
+   */
+  test("PATCH de toggle responde com o checklist já projetado", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist contrato de resposta",
+        tipo: "seguranca",
+        recorrencia: "diaria",
+        itens: [{ titulo: "E2E resp 1" }, { titulo: "E2E resp 2" }],
+      },
+    });
+    const created = (await post.json()) as { id: string; itens: Array<{ id: string }> };
+
+    const patch = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { toggleItemId: created.itens[0]!.id },
+    });
+    expect(patch.status()).toBe(200);
+    const body = (await patch.json()) as {
+      status: string;
+      pendenteNoPeriodo: boolean;
+      periodoRef: string | null;
+      itens: Array<{ id: string; concluida: boolean }>;
+    };
+
+    expect(
+      body.itens.find((i) => i.id === created.itens[0]!.id)?.concluida,
+      "a resposta deve trazer o item já marcado, sem precisar de um novo GET",
+    ).toBe(true);
+    expect(body.status, "status deve vir derivado do período").toBe("em_andamento");
+    expect(body.pendenteNoPeriodo, "ainda há item por marcar hoje").toBe(true);
+    expect(body.periodoRef, "a resposta deve dizer de que período ela fala").toBe(
+      periodoAtual("diaria"),
+    );
 
     await logout(request);
   });

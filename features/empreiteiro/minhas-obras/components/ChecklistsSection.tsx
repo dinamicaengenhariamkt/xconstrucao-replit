@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { cn } from '@shared/lib/utils';
 import {
   useCreateChecklist,
   useUpdateChecklist,
   useDeleteChecklist,
+  useToggleChecklistItem,
 } from '../hooks/use-obra-operacao';
 import {
   DropdownMenu,
@@ -40,6 +41,7 @@ import {
   IconAdd,
   IconFactCheck,
   IconAutorenew,
+  IconUndo,
 } from '@shared/components/icons';
 import { rotuloRecorrencia } from '../lib/checklist-periodo';
 import {
@@ -59,38 +61,51 @@ import {
 interface ChecklistCardProps {
   checklist: MinhaObraChecklist;
   obraFinalizada: boolean;
+  /** Itens com PATCH em voo — feedback visual do toggle otimista. */
+  itensEmVoo: ReadonlySet<string>;
   onToggleItem: (checklistId: string, itemId: string) => void;
   onFinalizar: (c: MinhaObraChecklist) => void;
   onAssinar: (c: MinhaObraChecklist) => void;
   onVerRegistro: (c: MinhaObraChecklist) => void;
   onEditar: (c: MinhaObraChecklist) => void;
   onDuplicar: (c: MinhaObraChecklist) => void;
+  onReabrir: (c: MinhaObraChecklist) => void;
   onExcluir: (c: MinhaObraChecklist) => void;
 }
 
 function ChecklistCard({
   checklist,
   obraFinalizada,
+  itensEmVoo,
   onToggleItem,
   onFinalizar,
   onAssinar,
   onVerRegistro,
   onEditar,
   onDuplicar,
+  onReabrir,
   onExcluir,
 }: ChecklistCardProps) {
   const [avisoAssinar, setAvisoAssinar] = useState(false);
   const config = CHECKLIST_CONFIG[checklist.tipo];
   const badge = STATUS_BADGE[checklist.status];
   const isCompleto = checklist.status === 'completo';
-  const isReadOnly = isCompleto || obraFinalizada;
+  // XG21 — o servidor já projeta o período corrente, então um checklist
+  // recorrente nunca chega aqui "completo de ontem".
+  const eRecorrente = (checklist.recorrencia ?? 'nenhuma') !== 'nenhuma';
+  /*
+   * Um recorrente "completo" está completo NO PERÍODO — não foi assinado nem
+   * finalizado, o status dele é derivado das marcações de hoje. Travar os
+   * checkboxes dele impediria desmarcar o item que o usuário acabou de marcar
+   * por engano, e a única saída seria esperar virar o dia. O travamento só faz
+   * sentido para o não-recorrente, cujo `completo` é estado gravado — e que
+   * agora tem "Reabrir checklist" como saída.
+   */
+  const isReadOnly = obraFinalizada || (isCompleto && !eRecorrente);
   const concluidos = checklist.itens.filter((i) => i.concluida).length;
   const total = checklist.itens.length;
   const todosMarcados = concluidos === total && total > 0;
   const pendentesCount = total - concluidos;
-  // XG21 — o servidor já projeta o período corrente, então um checklist
-  // recorrente nunca chega aqui "completo de ontem".
-  const eRecorrente = (checklist.recorrencia ?? 'nenhuma') !== 'nenhuma';
   const seloRecorrencia = rotuloRecorrencia(
     checklist.recorrencia ?? 'nenhuma',
     checklist.recorrenciaDiaSemana,
@@ -191,6 +206,23 @@ function ChecklistCard({
                   Editar checklist
                 </DropdownMenuItem>
               )}
+              {/*
+                Assinar não pode ser um caminho sem volta: assinado com o nome
+                errado, a única saída era excluir o checklist inteiro. Reabrir
+                destrava o card e apaga a assinatura, mas mantém os tiques — a
+                correção é da assinatura, não da inspeção.
+              */}
+              {isCompleto && (
+                <DropdownMenuItem
+                  onClick={() => onReabrir(checklist)}
+                  className="cursor-pointer"
+                  disabled={obraFinalizada}
+                  data-testid={`checklist-reabrir-${checklist.id}`}
+                >
+                  <IconUndo className="text-sm mr-2 text-gray-500" />
+                  Reabrir checklist
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => onDuplicar(checklist)} className="cursor-pointer">
                 <IconContentCopy className="text-sm mr-2 text-gray-500" />
                 Duplicar
@@ -232,8 +264,13 @@ function ChecklistCard({
             className={cn(
               'flex items-center gap-3 p-2 rounded-lg transition-colors',
               item.concluida ? config.itemCheckedBg : config.itemHoverBg,
-              isReadOnly ? 'cursor-default' : 'cursor-pointer'
+              isReadOnly ? 'cursor-default' : 'cursor-pointer',
+              // Sinal discreto de que o item está sendo salvo. Não usamos
+              // `disabled`: o tique já apareceu (otimista) e travar o input
+              // tiraria o foco do teclado sem nada a ganhar.
+              itensEmVoo.has(item.id) && 'opacity-70'
             )}
+            data-testid={`checklist-item-${item.id}`}
           >
             <input
               type="checkbox"
@@ -241,6 +278,7 @@ function ChecklistCard({
               disabled={isReadOnly}
               onChange={() => !isReadOnly && onToggleItem(checklist.id, item.id)}
               className={cn('w-4 h-4 rounded flex-shrink-0', config.checkboxAccent)}
+              data-testid={`checklist-check-${item.id}`}
             />
             <span
               className={cn(
@@ -328,6 +366,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
   const createMut = useCreateChecklist(obra.id);
   const updateMut = useUpdateChecklist(obra.id);
   const deleteMut = useDeleteChecklist(obra.id);
+  const toggleMut = useToggleChecklistItem(obra.id);
 
   const obraFinalizada = obra.status === 'finalizada';
 
@@ -336,10 +375,31 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
   const closeModal = () => setModalState({ type: null, checklist: null });
 
   // ── Toggle de item ─────────────────────────────────────────────────────────
-  // server-side: PATCH { toggleItemId } recalcula status/progresso atomicamente
+  /*
+   * O tique aparece na hora (mutação otimista em `useToggleChecklistItem`), mas
+   * o servidor faz FLIP: `alternarMarcacao` inverte o estado atual em vez de
+   * aceitar o valor desejado, então dois PATCHes do mesmo item se cancelam e o
+   * tique volta sozinho. Por isso serializamos POR ITEM — enquanto um toggle
+   * daquele item está em voo, o clique seguinte nele é ignorado. Os demais
+   * itens seguem livres, e nada fica `disabled`.
+   */
+  const emVooRef = useRef<Set<string>>(new Set());
+  const [itensEmVoo, setItensEmVoo] = useState<ReadonlySet<string>>(new Set());
+
   const handleToggleItem = useCallback((checklistId: string, itemId: string) => {
-    updateMut.mutate({ id: checklistId, patch: { toggleItemId: itemId } });
-  }, [updateMut]);
+    if (emVooRef.current.has(itemId)) return;
+    emVooRef.current.add(itemId);
+    setItensEmVoo(new Set(emVooRef.current));
+    toggleMut.mutate(
+      { checklistId, itemId },
+      {
+        onSettled: () => {
+          emVooRef.current.delete(itemId);
+          setItensEmVoo(new Set(emVooRef.current));
+        },
+      },
+    );
+  }, [toggleMut]);
 
   // ── Finalizar ──────────────────────────────────────────────────────────────
 
@@ -359,6 +419,37 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
         status: 'completo',
         completadoEm: horaAtual(),
         markAllItens: true,
+      },
+    });
+    closeModal();
+  };
+
+  // ── Reabrir ────────────────────────────────────────────────────────────────
+
+  /*
+   * Destrava o card e apaga a assinatura, SEM desmarcar os itens.
+   *
+   * O caso real é "assinei com o nome errado": quem reabre quer corrigir a
+   * assinatura, não refazer a inspeção de doze itens no canteiro. As marcações
+   * são a evidência de que a inspeção foi feita — apagá-las junto transformaria
+   * uma correção de digitação em retrabalho de campo. Quem quiser mesmo zerar
+   * desmarca item a item, o que volta a ser possível assim que o card destrava.
+   *
+   * O status vai derivado dos itens em vez de 'pendente' seco para o badge não
+   * divergir do que está na tela: reaberto com tudo ticado é "Em andamento".
+   * `calcularStatus` nunca devolve 'completo' — esse estado é exclusivo de
+   * Finalizar/Assinar —, então não há risco de reabrir e continuar travado.
+   */
+  const confirmarReabrir = (checklist: MinhaObraChecklist) => {
+    updateMut.mutate({
+      id: checklist.id,
+      patch: {
+        status: calcularStatus(checklist.itens),
+        assinadoPor: null,
+        assinadoEm: null,
+        registroProfissional: null,
+        completadoEm: null,
+        reabrir: true,
       },
     });
     closeModal();
@@ -494,12 +585,14 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
                 key={checklist.id}
                 checklist={checklist}
                 obraFinalizada={obraFinalizada}
+                itensEmVoo={itensEmVoo}
                 onToggleItem={handleToggleItem}
                 onFinalizar={handleFinalizar}
                 onAssinar={(c) => openModal('assinar', c)}
                 onVerRegistro={(c) => openModal('registro', c)}
                 onEditar={(c) => openModal('editar', c)}
                 onDuplicar={handleDuplicar}
+                onReabrir={(c) => openModal('reabrir_confirm', c)}
                 onExcluir={(c) => openModal('excluir', c)}
               />
             ))}
@@ -559,6 +652,41 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Finalizar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog: Reabrir checklist — a assinatura some, então avisamos */}
+      <AlertDialog
+        open={modalState.type === 'reabrir_confirm'}
+        onOpenChange={(open) => { if (!open) closeModal(); }}
+      >
+        <AlertDialogContent data-testid="dialog-reabrir-checklist">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reabrir checklist?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong className="text-gray-900 dark:text-white">
+                {modalState.checklist?.nome}
+              </strong>{' '}
+              volta a ficar editável. Os itens já marcados são mantidos.
+              {modalState.checklist?.assinadoPor && (
+                <span className="block mt-2 text-amber-600 font-medium">
+                  A assinatura de {modalState.checklist.assinadoPor} será apagada.
+                  Será preciso assinar de novo para concluir.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeModal}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                modalState.checklist && confirmarReabrir(modalState.checklist)
+              }
+              data-testid="confirmar-reabrir-checklist"
+            >
+              Reabrir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

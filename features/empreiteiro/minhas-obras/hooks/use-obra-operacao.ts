@@ -2,7 +2,12 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@shared/hooks/use-toast';
-import type { MembroEquipe, MinhaObraChecklist, MinhaObraTarefa } from '../types';
+import type { MembroEquipe, MinhaObraChecklist, MinhaObraDetalhe, MinhaObraTarefa } from '../types';
+import {
+  aplicarToggleOtimista,
+  normalizarChecklistResposta,
+  type ChecklistPatchResponse,
+} from '../lib/checklist-projecao';
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -142,6 +147,78 @@ export function useUpdateChecklist(obraId: string) {
       }),
     onSuccess: () => invalidateDetalhe(qc, obraId),
     onError: (err: Error) => toast({ title: 'Erro ao atualizar checklist', description: err.message, variant: 'destructive' }),
+  });
+}
+
+/**
+ * Toggle de item do checklist, com mutação otimista.
+ *
+ * Separado de `useUpdateChecklist` de propósito. É o único caminho de alta
+ * frequência — o usuário tica doze itens seguidos no canteiro — e o único cuja
+ * projeção local é barata e determinística. Finalizar, assinar e editar passam
+ * por modal, onde a latência é esperada, e replicar `markAllItens` ou o carimbo
+ * de assinatura no cache seria duplicar regra de negócio sem ganho percebido.
+ *
+ * E, principalmente: **não invalida nada**. `invalidateDetalhe` dispararia
+ * `buildMinhaObraDetalheReal` (~19 queries sequenciais mais um presign R2 por
+ * foto, documento e contrato de equipe) para reler um booleano que o PATCH já
+ * respondeu projetado. Era daí que vinham os 5-6 segundos até o tique aparecer.
+ */
+export function useToggleChecklistItem(obraId: string) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const detalheKey = ['empreiteiro', 'minhas-obras', obraId];
+
+  return useMutation({
+    mutationFn: ({ checklistId, itemId }: { checklistId: string; itemId: string }) =>
+      jsonFetch<ChecklistPatchResponse>(`/api/obras/${obraId}/checklists/${checklistId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ toggleItemId: itemId }),
+      }),
+
+    onMutate: async ({ checklistId, itemId }) => {
+      // Sem cancelar, um refetch já em voo (o detalhe usa
+      // `refetchOnWindowFocus`) pousaria depois do `setQueryData` e desfaria o
+      // tique na tela.
+      await qc.cancelQueries({ queryKey: detalheKey });
+      const anterior = qc.getQueryData<MinhaObraDetalhe>(detalheKey);
+      if (anterior) {
+        qc.setQueryData<MinhaObraDetalhe>(detalheKey, {
+          ...anterior,
+          checklists: anterior.checklists.map((c) =>
+            c.id === checklistId ? aplicarToggleOtimista(c, itemId) : c,
+          ),
+        });
+      }
+      return { anterior };
+    },
+
+    onError: (err: Error, _vars, ctx) => {
+      if (ctx?.anterior) qc.setQueryData(detalheKey, ctx.anterior);
+      toast({
+        title: 'Não foi possível marcar o item',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+
+    onSuccess: (resp) => {
+      // A rota devolve o checklist já projetado no período corrente. Escrever a
+      // resposta fecha a janela em que o otimista poderia divergir do servidor
+      // — por exemplo se a meia-noite virar entre o clique e a resposta — sem
+      // custar nenhum refetch.
+      const atualizado = normalizarChecklistResposta(resp);
+      qc.setQueryData<MinhaObraDetalhe>(detalheKey, (prev) =>
+        prev
+          ? {
+              ...prev,
+              checklists: prev.checklists.map((c) =>
+                c.id === atualizado.id ? atualizado : c,
+              ),
+            }
+          : prev,
+      );
+    },
   });
 }
 

@@ -51,6 +51,14 @@ export type EditarLancamentoInput = Partial<Omit<NovoLancamentoInput, 'tipo'>> &
  * Um lançamento muda receita, custo, margem e o fator financeiro da saúde —
  * todos derivados no detalhe da obra. Invalidar só a lista deixaria os cards
  * com número velho.
+ *
+ * Aqui a invalidação do detalhe é mesmo necessária, diferente do toggle de
+ * checklist: receita e custo saem de `recebedorUserId`/`pagadorUserId` e do
+ * `status: 'pago'`, e o saldo a receber é `contratado + aditivos − receita`.
+ * Recalcular isso no cliente recriaria a segunda fonte de verdade que a XG22
+ * acabou de eliminar. O que dá para adiantar é a **lista** (tabela crua), e é
+ * o que `aplicarNaLista` faz — a linha aparece na hora e os KPIs chegam logo
+ * atrás, sinalizados por `isFetching`.
  */
 function useInvalidarFinanceiro(obraId: string) {
   const qc = useQueryClient();
@@ -61,6 +69,32 @@ function useInvalidarFinanceiro(obraId: string) {
     qc.invalidateQueries({ queryKey: ['admin', 'obras', obraId] });
     qc.invalidateQueries({ queryKey: ['obras', obraId, 'health'] });
   };
+}
+
+/**
+ * Escreve o resultado da mutation na lista em cache, sem esperar o refetch.
+ *
+ * A lista é a tabela crua — não há regra de negócio a replicar, só a linha
+ * entrando, mudando ou saindo. Mantém a ordenação do servidor (`data` desc,
+ * depois `createdAt` desc) para a linha nova não aparecer no lugar errado e
+ * pular quando o refetch pousar.
+ */
+function useAplicarNaLista(obraId: string) {
+  const qc = useQueryClient();
+  return (fn: (rows: ObraLancamentoApi[]) => ObraLancamentoApi[]) => {
+    qc.setQueryData<ObraLancamentoApi[]>(['obras', obraId, 'lancamentos'], (prev) =>
+      prev ? ordenarLancamentos(fn(prev)) : prev,
+    );
+  };
+}
+
+/** Mesma ordenação do GET: mais recentes primeiro. */
+function ordenarLancamentos(rows: ObraLancamentoApi[]): ObraLancamentoApi[] {
+  return [...rows].sort((a, b) => {
+    const porData = b.data.localeCompare(a.data);
+    if (porData !== 0) return porData;
+    return (b.createdAt ?? '').localeCompare(a.createdAt ?? '');
+  });
 }
 
 export function useObraLancamentos(obraId: string, enabled = true) {
@@ -78,17 +112,24 @@ export function useObraLancamentos(obraId: string, enabled = true) {
 
 export function useCriarLancamento(obraId: string) {
   const invalidar = useInvalidarFinanceiro(obraId);
+  const aplicarNaLista = useAplicarNaLista(obraId);
   return useMutation({
     mutationFn: async (body: NovoLancamentoInput) => {
       const res = await apiRequest('POST', `/api/obras/${obraId}/financeiro`, body);
       return (await res.json()) as ObraLancamentoApi;
     },
-    onSuccess: invalidar,
+    onSuccess: (criado) => {
+      // A linha entra com o registro que o servidor devolveu (id e status reais),
+      // então nada pisca quando o refetch dos KPIs pousar.
+      aplicarNaLista((rows) => [criado, ...rows.filter((l) => l.id !== criado.id)]);
+      invalidar();
+    },
   });
 }
 
 export function useEditarLancamento(obraId: string) {
   const invalidar = useInvalidarFinanceiro(obraId);
+  const aplicarNaLista = useAplicarNaLista(obraId);
   return useMutation({
     mutationFn: async ({ lancamentoId, ...body }: EditarLancamentoInput) => {
       const res = await apiRequest(
@@ -98,12 +139,18 @@ export function useEditarLancamento(obraId: string) {
       );
       return (await res.json()) as ObraLancamentoApi;
     },
-    onSuccess: invalidar,
+    onSuccess: (atualizado) => {
+      aplicarNaLista((rows) =>
+        rows.map((l) => (l.id === atualizado.id ? atualizado : l)),
+      );
+      invalidar();
+    },
   });
 }
 
 export function useExcluirLancamento(obraId: string) {
   const invalidar = useInvalidarFinanceiro(obraId);
+  const aplicarNaLista = useAplicarNaLista(obraId);
   return useMutation({
     mutationFn: async (lancamentoId: string) => {
       const res = await apiRequest(
@@ -112,6 +159,9 @@ export function useExcluirLancamento(obraId: string) {
       );
       return (await res.json()) as { ok: true };
     },
-    onSuccess: invalidar,
+    onSuccess: (_res, lancamentoId) => {
+      aplicarNaLista((rows) => rows.filter((l) => l.id !== lancamentoId));
+      invalidar();
+    },
   });
 }

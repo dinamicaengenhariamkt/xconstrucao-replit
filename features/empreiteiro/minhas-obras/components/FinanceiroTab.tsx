@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useIsFetching } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@shared/components/ui/card';
 import { Button } from '@shared/components/ui/button';
@@ -104,9 +105,12 @@ function formatarDataBr(iso: string): string {
 function ValoresDoContrato({
   financeiro,
   luminous = false,
+  recalculando = false,
 }: {
   financeiro: ObraFinanceiro;
   luminous?: boolean;
+  /** Detalhe da obra em refetch: os números abaixo ainda são os de antes. */
+  recalculando?: boolean;
 }) {
   const percentualAditivo =
     financeiro.valorContratado > 0
@@ -133,10 +137,28 @@ function ValoresDoContrato({
   return (
     <Card data-testid="valores-do-contrato">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Valores do contrato</CardTitle>
-        <CardDescription>
-          O combinado com o cliente, somado aos aditivos lançados abaixo.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Valores do contrato</CardTitle>
+            <CardDescription>
+              O combinado com o cliente, somado aos aditivos lançados abaixo.
+            </CardDescription>
+          </div>
+          {/*
+            O recálculo do saldo acontece no servidor e leva um instante. Sem
+            este aviso o número antigo fica parado na tela logo depois de
+            lançar, e a leitura natural é que o lançamento não entrou.
+          */}
+          {recalculando && (
+            <span
+              className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-gray-500"
+              data-testid="valores-contrato-recalculando"
+            >
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+              Atualizando…
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -300,6 +322,15 @@ export function FinanceiroTab({
   const { data: lancamentos = [], isLoading } = useObraLancamentos(obraId);
   const excluir = useExcluirLancamento(obraId);
 
+  /*
+   * Receita, custo, margem e saldo a receber são derivados no servidor, então
+   * depois de lançar eles só mudam quando o detalhe da obra volta. Observamos o
+   * refetch pela própria queryKey em vez de descer uma prop desde a página: a
+   * aba não é dona dessa query e não deveria passar a exigir que quem a renderiza
+   * saiba disso.
+   */
+  const recalculando = useIsFetching({ queryKey: ['empreiteiro', 'minhas-obras', obraId] }) > 0;
+
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [filtroCategoria, setFiltroCategoria] = useState<FiltroCategoria>('todas');
   const [filtroPessoa, setFiltroPessoa] = useState<string>(FILTRO_PESSOA_TODAS);
@@ -397,12 +428,22 @@ export function FinanceiroTab({
 
   return (
     <div className="space-y-4">
-      {financeiro && <ValoresDoContrato financeiro={financeiro} luminous={luminous} />}
+      {financeiro && (
+        <ValoresDoContrato
+          financeiro={financeiro}
+          luminous={luminous}
+          recalculando={recalculando}
+        />
+      )}
 
       <ProfitCard
         metrics={metrics}
         title="Resultado da obra"
-        description="Receita e custo somam os lançamentos registrados abaixo."
+        description={
+          recalculando
+            ? 'Atualizando com o lançamento…'
+            : 'Receita e custo somam os lançamentos registrados abaixo.'
+        }
         mostrarLucroEstimado={false}
         luminous={luminous}
       />
