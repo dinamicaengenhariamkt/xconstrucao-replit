@@ -77,7 +77,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
       </div>
 
       <div className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/*
             XG18 — mapa de verdade no lugar do placeholder.
 
@@ -91,11 +91,21 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           {/* `isolate` cria stacking context: os z-index do Leaflet resolvem
               dentro deste card em vez de competir com os modais na raiz.
 
-              XG21 — altura fixa `h-64` no lugar de `aspect-video`, e 1 de 3
-              colunas em vez de 2: o mapa é apoio, o que o usuário age é o
-              endereço e os botões. `h-64` é o mesmo valor de `MapaRaioInner`,
-              que passa a ser o padrão de mapa do projeto. */}
-          <div className="lg:col-span-1 h-64 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative isolate">
+              Altura fixa em vez de `aspect-video`: o mapa precisa de altura
+              previsível para o Leaflet montar, e os estados de carregando/erro
+              são `absolute inset-0`, então dependem dela.
+
+              Metade da largura, e não o terço de antes: a coluna ao lado tem
+              só o endereço e dois botões, conteúdo curto demais para justificar
+              dois terços.
+
+              No desktop o mapa estica até a altura da coluna de ações
+              (`lg:h-full`, sobre o `items-stretch` padrão do grid) com piso de
+              320px. Altura fixa deixava sobra de branco ao lado: a coluna
+              direita fica entre ~170px (contratante, um botão só) e ~270px,
+              nunca os 320px do mapa. O piso evita o inverso — um mapa achatado
+              quando o endereço é curto. Empilhado no mobile, `h-64`. */}
+          <div className="h-64 lg:h-full lg:min-h-80 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative isolate">
             <MapaEndereco
               rua={localizacao.rua}
               numero={localizacao.numero}
@@ -108,7 +118,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           </div>
 
           {/* Address + actions */}
-          <div className="lg:col-span-2 flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
