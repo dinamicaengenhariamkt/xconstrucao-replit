@@ -422,9 +422,14 @@ export function dbToObraDetalheEmpreiteiro(
     inicioPrevisto: o.dataInicio ? formatDate(o.dataInicio) : undefined,
     situacaoProjeto: undefined,
     observacoes: o.descricao ?? undefined,
+    // XG21 — `''` e não `'—'`: este objeto alimenta a busca do mapa, não só a
+    // exibição. Com o travessão, uma obra sem cidade virava a query
+    // "—, —, Brasil", que o Nominatim resolve com sucesso para o centro
+    // geográfico do Brasil (Mato Grosso) — marcador confiante no lugar errado.
+    // Vazio faz a cascata pular a tentativa e o card dizer que falta cidade.
     localizacao: {
-      cidade: o.cidade ?? '—',
-      estado: o.uf ?? '—',
+      cidade: o.cidade ?? '',
+      estado: o.uf ?? '',
       bairro: '',
       rua: o.endereco ?? undefined,
       numero: o.numero ?? undefined,

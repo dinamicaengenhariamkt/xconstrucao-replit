@@ -32,6 +32,8 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG18](18-consolidacao-edicao-e-mapa.md) | Edição só no console, cards padronizados e o mapa | 4 | pronto | alta | médio |
 | [XG19](19-upload-e-acabamento.md) | Upload de documento, z-index do mapa e acabamento | 3 | pronto | alta | baixo |
 | [XG20](20-beneficiario-saida-e-datas.md) | Beneficiário da saída e data/hora nos registros | 3 | pronto | alta | baixo |
+| [XG21](21-checklist-recorrente-e-mapa.md) | Checklist com recorrência (diária/semanal) e correções do mapa | 5 | pronto (falta verificação visual) | alta | médio |
+| [XG22](22-valores-contrato-e-contrato-prestador.md) | Saldo a receber corrigido, PIX/contrato do prestador e prévia de gasto | 3 | pronto (falta verificação visual) | alta | médio |
 
 ## Contexto
 

@@ -25,17 +25,34 @@ interface LocalizacaoCardProps {
   onEditar?: () => void;
 }
 
+/**
+ * XG21 — um campo só vale se tiver letra ou número.
+ *
+ * Placeholders de exibição (`—`, `-`) chegavam aqui vindos dos adapters e
+ * viravam parte da busca. Mesma regra do `MapaEnderecoInner`.
+ */
+function preenchido(v?: string | null): v is string {
+  return typeof v === 'string' && /[\p{L}\p{N}]/u.test(v);
+}
+
 export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: LocalizacaoCardProps) {
   // Rua + número (ex.: "Rua X, 123") dá ao Google Maps o ponto mais preciso.
   const ruaComNumero = localizacao.numero
     ? [localizacao.rua, localizacao.numero].filter(Boolean).join(', ')
     : localizacao.rua;
 
+  const cidadeEstado = [localizacao.cidade, localizacao.estado].filter(preenchido).join(' - ');
+
   const handleOpenMaps = () => {
     // Preferimos CEP + rua/número quando disponíveis — geocodifica melhor que
     // texto solto. Ordem: rua+número, bairro, cidade, estado, CEP.
-    const partes = [ruaComNumero, localizacao.bairro, localizacao.cidade, localizacao.estado, localizacao.cep]
-      .filter(Boolean);
+    const partes = [
+      ruaComNumero,
+      localizacao.bairro,
+      localizacao.cidade,
+      localizacao.estado,
+      localizacao.cep,
+    ].filter(preenchido);
     const q = encodeURIComponent(partes.join(', '));
     window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank');
   };
@@ -72,8 +89,13 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
             o `MapaEndereco` preenche.
           */}
           {/* `isolate` cria stacking context: os z-index do Leaflet resolvem
-              dentro deste card em vez de competir com os modais na raiz. */}
-          <div className="lg:col-span-2 aspect-video bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative isolate">
+              dentro deste card em vez de competir com os modais na raiz.
+
+              XG21 — altura fixa `h-64` no lugar de `aspect-video`, e 1 de 3
+              colunas em vez de 2: o mapa é apoio, o que o usuário age é o
+              endereço e os botões. `h-64` é o mesmo valor de `MapaRaioInner`,
+              que passa a ser o padrão de mapa do projeto. */}
+          <div className="lg:col-span-1 h-64 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden relative isolate">
             <MapaEndereco
               rua={localizacao.rua}
               numero={localizacao.numero}
@@ -86,7 +108,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           </div>
 
           {/* Address + actions */}
-          <div className="flex flex-col gap-4">
+          <div className="lg:col-span-2 flex flex-col gap-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
@@ -98,8 +120,17 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
                   {localizacao.complemento && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.complemento}</p>
                   )}
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.bairro}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.cidade} - {localizacao.estado}</p>
+                  {localizacao.bairro && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.bairro}</p>
+                  )}
+                  {/* XG21 — sem o guard, uma obra sem cidade mostrava só " - ".
+                      Os adapters agora mandam '' (antes mandavam '—', que
+                      envenenava a busca do mapa). */}
+                  {cidadeEstado ? (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{cidadeEstado}</p>
+                  ) : (
+                    <p className="text-sm italic text-amber-600 dark:text-amber-400">Cidade não informada</p>
+                  )}
                   {localizacao.cep && (
                     <p className="text-sm text-gray-600 dark:text-gray-400">CEP: {localizacao.cep}</p>
                   )}

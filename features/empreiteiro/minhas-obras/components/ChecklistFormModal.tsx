@@ -24,8 +24,14 @@ import { Button } from '@shared/components/ui/button';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist } from '../types';
-import { IconClose, IconAdd, IconTaskAlt, IconEdit, IconPlaylistAdd, IconDragIndicator, IconSave } from '@shared/components/icons';
-import { checklistSchema, type ChecklistFormData, TIPO_OPTIONS } from '../schemas/checklist-form.schema';
+import { IconClose, IconAdd, IconTaskAlt, IconEdit, IconPlaylistAdd, IconDragIndicator, IconSave, IconEvent } from '@shared/components/icons';
+import {
+  checklistSchema,
+  type ChecklistFormData,
+  TIPO_OPTIONS,
+  RECORRENCIA_OPTIONS,
+  DIAS_SEMANA,
+} from '../schemas/checklist-form.schema';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +67,8 @@ export function ChecklistFormModal({
     defaultValues: {
       nome: '',
       tipo: 'seguranca',
+      recorrencia: 'nenhuma',
+      recorrenciaDiaSemana: 1,
       descricao: '',
       itens: [{ titulo: '' }],
     },
@@ -77,11 +85,20 @@ export function ChecklistFormModal({
       form.reset({
         nome: checklistParaEditar.nome,
         tipo: checklistParaEditar.tipo,
+        recorrencia: checklistParaEditar.recorrencia ?? 'nenhuma',
+        recorrenciaDiaSemana: checklistParaEditar.recorrenciaDiaSemana ?? 1,
         descricao: checklistParaEditar.descricao ?? '',
         itens: checklistParaEditar.itens.map((i) => ({ titulo: i.titulo })),
       });
     } else if (open && !checklistParaEditar) {
-      form.reset({ nome: '', tipo: 'seguranca', descricao: '', itens: [{ titulo: '' }] });
+      form.reset({
+        nome: '',
+        tipo: 'seguranca',
+        recorrencia: 'nenhuma',
+        recorrenciaDiaSemana: 1,
+        descricao: '',
+        itens: [{ titulo: '' }],
+      });
     }
   }, [open, checklistParaEditar]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -101,7 +118,15 @@ export function ChecklistFormModal({
           concluida: original?.concluida ?? false,
         };
       });
-      onSalvar({ ...checklistParaEditar, nome: data.nome, tipo: data.tipo, descricao: data.descricao ?? '', itens: itensAtualizados });
+      onSalvar({
+        ...checklistParaEditar,
+        nome: data.nome,
+        tipo: data.tipo,
+        descricao: data.descricao ?? '',
+        recorrencia: data.recorrencia,
+        recorrenciaDiaSemana: data.recorrencia === 'semanal' ? data.recorrenciaDiaSemana ?? 1 : undefined,
+        itens: itensAtualizados,
+      });
     } else {
       const novoChecklist: MinhaObraChecklist = {
         id: gerarId(),
@@ -109,6 +134,8 @@ export function ChecklistFormModal({
         tipo: data.tipo,
         descricao: data.descricao ?? '',
         status: 'pendente',
+        recorrencia: data.recorrencia,
+        recorrenciaDiaSemana: data.recorrencia === 'semanal' ? data.recorrenciaDiaSemana ?? 1 : undefined,
         itens: data.itens.map((item) => ({ id: gerarItemId(), titulo: item.titulo, concluida: false })),
       };
       onSalvar(novoChecklist);
@@ -217,6 +244,86 @@ export function ChecklistFormModal({
                     </FormItem>
                   )}
                 />
+
+                {/*
+                  XG21 — Recorrência.
+
+                  Fica separada do Tipo porque são coisas diferentes: o pedido
+                  do cliente foi reset diário num checklist de SEGURANÇA/EPIs.
+                  Amarrar a recorrência ao tipo "Diário" obrigaria a escolher
+                  entre a cor certa e o comportamento certo.
+                */}
+                <FormField
+                  control={form.control}
+                  name="recorrencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Recorrência <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col gap-2">
+                          {RECORRENCIA_OPTIONS.map((opt) => (
+                            <label
+                              key={opt.value}
+                              className={cn(
+                                'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer border-2 transition-all',
+                                field.value === opt.value
+                                  ? 'border-primary bg-primary/5 text-primary'
+                                  : 'border-transparent bg-gray-50 dark:bg-gray-800 hover:border-gray-200',
+                                isCompleto && 'cursor-default pointer-events-none',
+                              )}
+                              data-testid={`recorrencia-${opt.value}`}
+                            >
+                              <input
+                                type="radio"
+                                value={opt.value}
+                                checked={field.value === opt.value}
+                                onChange={() => !isCompleto && field.onChange(opt.value)}
+                                className="sr-only"
+                              />
+                              <IconEvent className="text-lg" />
+                              <div>
+                                <p className="text-sm font-semibold">{opt.label}</p>
+                                <p className="text-xs text-gray-400">{opt.descricao}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Dia da virada — só faz sentido para o ciclo semanal. */}
+                {form.watch('recorrencia') === 'semanal' && (
+                  <FormField
+                    control={form.control}
+                    name="recorrenciaDiaSemana"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>A semana começa em</FormLabel>
+                        <FormControl>
+                          <select
+                            value={field.value ?? 1}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            disabled={isCompleto}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                            data-testid="recorrencia-dia-semana"
+                          >
+                            {DIAS_SEMANA.map((d) => (
+                              <option key={d.value} value={d.value}>
+                                {d.label}
+                              </option>
+                            ))}
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Descrição */}
                 <FormField

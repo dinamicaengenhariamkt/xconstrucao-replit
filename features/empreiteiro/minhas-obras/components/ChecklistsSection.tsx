@@ -39,7 +39,9 @@ import {
   IconCheckCircle,
   IconAdd,
   IconFactCheck,
+  IconAutorenew,
 } from '@shared/components/icons';
+import { rotuloRecorrencia } from '../lib/checklist-periodo';
 import {
   CHECKLIST_CONFIG,
   TIPO_ICON,
@@ -86,6 +88,14 @@ function ChecklistCard({
   const total = checklist.itens.length;
   const todosMarcados = concluidos === total && total > 0;
   const pendentesCount = total - concluidos;
+  // XG21 — o servidor já projeta o período corrente, então um checklist
+  // recorrente nunca chega aqui "completo de ontem".
+  const eRecorrente = (checklist.recorrencia ?? 'nenhuma') !== 'nenhuma';
+  const seloRecorrencia = rotuloRecorrencia(
+    checklist.recorrencia ?? 'nenhuma',
+    checklist.recorrenciaDiaSemana,
+  );
+  const rotuloPeriodo = checklist.recorrencia === 'semanal' ? 'esta semana' : 'hoje';
 
   const handleAssinar = () => {
     if (!todosMarcados) {
@@ -129,6 +139,19 @@ function ChecklistCard({
           <div>
             <h4 className="text-sm font-bold text-gray-900 dark:text-white">{checklist.nome}</h4>
             <p className="text-xs text-gray-500">{checklist.descricao}</p>
+            {/*
+              XG21 — o selo avisa que o card zera sozinho. Sem ele, ver os
+              tiques sumirem de um dia para o outro parece perda de dado.
+            */}
+            {seloRecorrencia && (
+              <span
+                className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400"
+                data-testid={`checklist-recorrencia-${checklist.id}`}
+              >
+                <IconAutorenew className="text-xs" />
+                {seloRecorrencia}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -245,9 +268,24 @@ function ChecklistCard({
             <IconCheckCircle className="text-sm" />
             Concluído às {checklist.completadoEm}
           </span>
+        ) : eRecorrente && concluidos === 0 ? (
+          /*
+            XG21 — a resposta à pergunta que o cliente faz ao abrir o app:
+            "se tiver sem ticar, quer dizer que não foi feito no dia".
+            Zero itens marcados num checklist que deveria ter sido refeito não
+            é "0/5 itens" — é um aviso.
+          */
+          <span
+            className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1"
+            data-testid={`checklist-nao-feito-${checklist.id}`}
+          >
+            <IconWarning className="text-sm" />
+            Não foi feito {rotuloPeriodo}
+          </span>
         ) : (
           <span className="text-xs text-gray-500">
             {concluidos}/{total} {total === 1 ? 'item' : 'itens'}
+            {eRecorrente && ` · ${rotuloPeriodo}`}
           </span>
         )}
 
@@ -354,6 +392,8 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
           nome: checklist.nome,
           descricao: checklist.descricao,
           tipo: checklist.tipo,
+          recorrencia: checklist.recorrencia ?? 'nenhuma',
+          recorrenciaDiaSemana: checklist.recorrenciaDiaSemana ?? null,
           itens: checklist.itens.map((i) => ({ titulo: i.titulo, concluida: i.concluida })),
         },
       });
@@ -362,6 +402,8 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
         nome: checklist.nome,
         descricao: checklist.descricao,
         tipo: checklist.tipo,
+        recorrencia: checklist.recorrencia ?? 'nenhuma',
+        recorrenciaDiaSemana: checklist.recorrenciaDiaSemana ?? null,
         itens: checklist.itens.map((i) => ({ titulo: i.titulo })),
       });
     }
@@ -374,6 +416,11 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
       nome: `${checklist.nome} (cópia)`,
       descricao: checklist.descricao,
       tipo: checklist.tipo,
+      // A cópia herda o ciclo: duplicar um checklist diário para outra frente
+      // de serviço sem a recorrência recriaria justamente o trabalho manual
+      // que a XG21 veio eliminar.
+      recorrencia: checklist.recorrencia ?? 'nenhuma',
+      recorrenciaDiaSemana: checklist.recorrenciaDiaSemana ?? null,
       itens: checklist.itens.map((i) => ({ titulo: i.titulo })),
     });
   };

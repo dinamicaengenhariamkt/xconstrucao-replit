@@ -21,6 +21,9 @@ export async function bootstrapObraOperacaoSchema(): Promise<void> {
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='obra_checklist_status') THEN
           CREATE TYPE obra_checklist_status AS ENUM ('pendente','em_andamento','completo');
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='obra_checklist_recorrencia') THEN
+          CREATE TYPE obra_checklist_recorrencia AS ENUM ('nenhuma','diaria','semanal');
+        END IF;
         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='obra_equipe_tipo') THEN
           CREATE TYPE obra_equipe_tipo AS ENUM ('contratante','engenheiro','mestre','equipe');
         END IF;
@@ -104,6 +107,44 @@ export async function bootstrapObraOperacaoSchema(): Promise<void> {
       )
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_obra_checklist_itens_checklist_id ON obra_checklist_itens(checklist_id, ordem)`);
+
+    /*
+     * XG21 — recorrência ("zera todo dia") e o histórico que a torna auditável.
+     *
+     * As colunas entram com default 'nenhuma', então todo checklist que já
+     * existe segue se comportando exatamente como antes.
+     *
+     * `obra_checklist_marcacoes` guarda um tique por (item, período). O reset
+     * não apaga nada: o período novo apenas nasce sem linhas. `item_ordem` em
+     * vez de `item_id` porque o PATCH de edição recria os itens (DELETE +
+     * reinsert) e os IDs não sobrevivem a uma correção de texto.
+     */
+    await db.execute(sql`
+      ALTER TABLE obra_checklists
+        ADD COLUMN IF NOT EXISTS recorrencia obra_checklist_recorrencia NOT NULL DEFAULT 'nenhuma'
+    `);
+    await db.execute(sql`
+      ALTER TABLE obra_checklists ADD COLUMN IF NOT EXISTS recorrencia_dia_semana INTEGER
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS obra_checklist_marcacoes (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        checklist_id VARCHAR NOT NULL REFERENCES obra_checklists(id) ON DELETE CASCADE,
+        item_ordem INTEGER NOT NULL,
+        periodo_ref DATE NOT NULL,
+        marcado_por VARCHAR REFERENCES users(id) ON DELETE SET NULL,
+        marcado_em TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_checklist_marcacao_periodo
+        ON obra_checklist_marcacoes(checklist_id, item_ordem, periodo_ref)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_checklist_marcacoes_periodo
+        ON obra_checklist_marcacoes(checklist_id, periodo_ref)
+    `);
 
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS obra_equipe (

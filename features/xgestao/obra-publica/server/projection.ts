@@ -17,6 +17,7 @@ import {
 import type { ObraPublicaView } from '../types';
 import { SECOES_PADRAO, type SecoesPublicas } from '../secoes';
 import { createSignedReadUrl } from '@shared/lib/storage/r2';
+import { carregarMarcacoes, projetarChecklist } from '@features/obras/api/checklist-recorrencia';
 
 const PUBLIC_LINK_MEDIA_TTL_SECONDS = 12 * 60 * 60;
 
@@ -156,6 +157,10 @@ export async function buildObraPublicaView(
         tipo: obraChecklists.tipo,
         status: obraChecklists.status,
         completadoEm: obraChecklists.completadoEm,
+        // XG21 — o link público precisa enxergar o mesmo período que o console,
+        // senão o cliente vê "completo" num checklist que já zerou hoje.
+        recorrencia: obraChecklists.recorrencia,
+        recorrenciaDiaSemana: obraChecklists.recorrenciaDiaSemana,
       })
       .from(obraChecklists)
       .where(eq(obraChecklists.obraId, obraId))
@@ -203,10 +208,14 @@ export async function buildObraPublicaView(
         checklistId: obraChecklistItens.checklistId,
         titulo: obraChecklistItens.titulo,
         concluida: obraChecklistItens.concluida,
+        ordem: obraChecklistItens.ordem,
       })
       .from(obraChecklistItens)
       .where(inArray(obraChecklistItens.checklistId, checklistIds))
       .orderBy(asc(obraChecklistItens.ordem), asc(obraChecklistItens.createdAt));
+
+  // XG21 — projeta o período corrente, igual à API e ao console.
+  const marcacoesPublicas = await carregarMarcacoes(checklistRows);
 
   return {
     obra: {
@@ -268,17 +277,29 @@ export async function buildObraPublicaView(
       createdAt: toIso(item.createdAt) ?? '',
       fotosCount: item.fotos?.length ?? 0,
     })),
-    checklists: checklistRows.map((checklist) => ({
-      id: checklist.id,
-      nome: checklist.nome,
-      descricao: checklist.descricao,
-      tipo: checklist.tipo,
-      status: checklist.status,
-      completadoEm: checklist.completadoEm ?? undefined,
-      itens: checklistItems
-        .filter((item) => item.checklistId === checklist.id)
-        .map((item) => ({ id: item.id, titulo: item.titulo, concluida: item.concluida })),
-    })),
+    checklists: checklistRows.map((checklist) => {
+      const projetado = projetarChecklist(
+        checklist,
+        checklistItems.filter((item) => item.checklistId === checklist.id),
+        marcacoesPublicas,
+      );
+      return {
+        id: checklist.id,
+        nome: checklist.nome,
+        descricao: checklist.descricao,
+        tipo: checklist.tipo,
+        status: projetado.status as typeof checklist.status,
+        completadoEm: projetado.completadoEm ?? undefined,
+        recorrencia: checklist.recorrencia,
+        recorrenciaDiaSemana: checklist.recorrenciaDiaSemana ?? undefined,
+        pendenteNoPeriodo: projetado.pendenteNoPeriodo,
+        itens: projetado.itens.map((item) => ({
+          id: item.id,
+          titulo: item.titulo,
+          concluida: item.concluida,
+        })),
+      };
+    }),
     tarefas: tarefaRows.map((tarefa) => ({
       id: tarefa.id,
       titulo: tarefa.titulo,

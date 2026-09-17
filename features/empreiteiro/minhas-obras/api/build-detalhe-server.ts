@@ -18,6 +18,7 @@ import {
   userFiles,
   users,
 } from "@shared/db/schema";
+import { carregarMarcacoes, projetarChecklist } from "@features/obras/api/checklist-recorrencia";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { formatDate } from "@shared/lib/formatters";
 import type {
@@ -506,23 +507,13 @@ export async function buildMinhaObraDetalheReal(
     .where(eq(financeiro.obraId, obraId))
     .orderBy(asc(financeiro.data));
 
-  const valorContratado = Number(obra.valorTotal ?? 0);
-  const valorPagoNum = Number(obra.valorPago ?? 0);
-  // XG10 — soma real dos aditivos (antes era `0` fixo, com o card já na tela).
-  const [aditivosAgg] = await db
-    .select({ total: sql<string>`COALESCE(SUM(${obraAditivos.valor}), 0)` })
-    .from(obraAditivos)
-    .where(eq(obraAditivos.obraId, obraId));
-  const aditivos = Number(aditivosAgg?.total ?? 0);
-  const valorTotal = valorContratado + aditivos;
-  const saldoReceber = Math.max(0, valorTotal - valorPagoNum);
-  const percentualRecebido = valorTotal > 0 ? Math.round((valorPagoNum / valorTotal) * 100) : 0;
-  const progresso = obra.progresso ?? 0;
-
   // Receita real (entradas pagas onde o empreiteiro é recebedor) e custo real
   // (saídas pagas onde o empreiteiro é pagador — materiais, mão de obra,
   // equipamentos). Cobre legados: quando `recebedorUserId` é null mas a obra
   // está atribuída à empreiteira do usuário, conta como entrada.
+  //
+  // XG22 — este loop subiu para ANTES do bloco de contrato porque o saldo a
+  // receber agora deriva dele. Ver a nota sobre `valor_pago` logo abaixo.
   const empreiteiroUserId = empreiteiraRow?.userId ?? null;
   let receitaTotal = 0;
   let custoTotal = 0;
@@ -549,6 +540,40 @@ export async function buildMinhaObraDetalheReal(
     }
   }
 
+  const valorContratado = Number(obra.valorTotal ?? 0);
+  // XG10 — soma real dos aditivos (antes era `0` fixo, com o card já na tela).
+  const [aditivosAgg] = await db
+    .select({ total: sql<string>`COALESCE(SUM(${obraAditivos.valor}), 0)` })
+    .from(obraAditivos)
+    .where(eq(obraAditivos.obraId, obraId));
+  const aditivos = Number(aditivosAgg?.total ?? 0);
+  const valorTotal = valorContratado + aditivos;
+
+  /**
+   * XG22 — o recebido vem dos lançamentos, NÃO de `obras.valor_pago`.
+   *
+   * Relato do cliente: "não está entrando ali com pagamentos, não está
+   * subtraindo quanto que falta receber". A tela mostrava "Receita total
+   * R$ 191.000" e, logo acima, "Saldo a receber R$ 437.000" (o total cheio) com
+   * 0% recebido — dois blocos discordando sobre o mesmo dinheiro.
+   *
+   * A causa: `obras.valor_pago` é escrita só por `quitarLancamento` e pelo
+   * webhook de split, ambos do marketplace. No xgestão o lançamento já nasce
+   * `status:"pago"`, então nada nunca preenchia a coluna (no banco de dev: 1 de
+   * 519 obras com valor > 0).
+   *
+   * Não materializamos a coluna de propósito. O SQL de recompute que existe
+   * (features/financeiro/lancamentos-service.ts) filtra `tipo = 'saida'`, que no
+   * marketplace é saída do contratante (= entrada nossa) mas no xgestão é CUSTO:
+   * reusá-lo somaria as despesas como se fossem recebimento. Derivar na leitura
+   * é imune a essa ambiguidade e mantém este card coerente, por construção, com
+   * o "Resultado da obra" logo abaixo — que sai do mesmo `receitaTotal`.
+   */
+  const valorPagoNum = receitaTotal;
+  const saldoReceber = Math.max(0, valorTotal - valorPagoNum);
+  const percentualRecebido = valorTotal > 0 ? Math.round((valorPagoNum / valorTotal) * 100) : 0;
+  const progresso = obra.progresso ?? 0;
+
   const financeiroOut: ObraFinanceiro = {
     valorContratado,
     aditivos,
@@ -558,6 +583,8 @@ export async function buildMinhaObraDetalheReal(
     percentualExecutado: progresso,
     receitaTotal,
     custoTotal,
+    // Preenchido logo abaixo, quando a equipe é carregada.
+    custoPrevistoEquipe: 0,
     medicoes: finRows.map((f, i) => ({
       id: f.id,
       numero: i + 1,
@@ -575,11 +602,36 @@ export async function buildMinhaObraDetalheReal(
   // Equipe = membros reais da tabela `obra_equipe` (Task #76) +
   // membros derivados (contratante + responsável da empreiteira) como
   // entradas virtuais sempre presentes pra dar contexto.
-  const equipeRows = await db
-    .select()
+  // XG22 — o join traz o arquivo do contrato junto: sem ele a tela teria de
+  // pedir uma URL por prestador, um N+1 na abertura da obra.
+  const equipeJoin = await db
+    .select({
+      m: obraEquipe,
+      bucketKey: userFiles.bucketKey,
+      visibility: userFiles.visibility,
+      publicUrl: userFiles.publicUrl,
+      originalName: userFiles.originalName,
+    })
     .from(obraEquipe)
+    .leftJoin(userFiles, eq(userFiles.id, obraEquipe.contratoFileId))
     .where(eq(obraEquipe.obraId, obraId))
     .orderBy(asc(obraEquipe.createdAt));
+  const equipeRows = equipeJoin.map((r) => r.m);
+
+  /**
+   * XG22 — a prévia de gasto: "ele soma todos os valores de contrato com os
+   * prestadores que eu cadastrei, ele vai ter uma prévia de quando eu vou gastar
+   * na obra".
+   *
+   * Sai de `equipeRows` (linhas do banco) e não do array `equipe`, que inclui o
+   * contratante e a empreiteira como entradas virtuais — essas não têm linha na
+   * tabela, logo nunca têm contrato. Inativos ficam de fora: quem saiu da obra
+   * não deve continuar pesando no custo previsto.
+   */
+  financeiroOut.custoPrevistoEquipe = equipeRows.reduce(
+    (soma, m) => (m.ativo && m.valorContrato != null ? soma + Number(m.valorContrato) : soma),
+    0,
+  );
 
   const equipe: MembroEquipe[] = [];
   if (temContratante) {
@@ -613,7 +665,20 @@ export async function buildMinhaObraDetalheReal(
       permissao: "editar",
     });
   }
-  for (const m of equipeRows) {
+  for (const linha of equipeJoin) {
+    const m = linha.m;
+    // Link externo abre direto; arquivo precisa de URL assinada (o contrato é
+    // privado, como todo `obra_anexo`).
+    const contratoUrl = m.contratoLinkUrl
+      ? m.contratoLinkUrl
+      : linha.bucketKey
+        ? await resolveSignedFotoUrl({
+            bucketKey: linha.bucketKey,
+            visibility: linha.visibility,
+            publicUrl: linha.publicUrl,
+            originalName: linha.originalName,
+          })
+        : undefined;
     equipe.push({
       id: m.id,
       nome: m.nome,
@@ -627,6 +692,14 @@ export async function buildMinhaObraDetalheReal(
       membros: m.membros ?? undefined,
       ativo: m.ativo,
       permissao: m.permissao ?? undefined,
+      pixChave: m.pixChave ?? undefined,
+      valorContrato: m.valorContrato == null ? undefined : Number(m.valorContrato),
+      contratoFileId: m.contratoFileId ?? undefined,
+      contratoLinkUrl: m.contratoLinkUrl ?? undefined,
+      contratoUrl: contratoUrl || undefined,
+      contratoNome: m.contratoLinkUrl
+        ? "Contrato (link)"
+        : (linha.originalName ?? undefined),
     });
   }
 
@@ -645,14 +718,32 @@ export async function buildMinhaObraDetalheReal(
           .where(inArray(obraChecklistItens.checklistId, checklistIds))
           .orderBy(asc(obraChecklistItens.ordem), asc(obraChecklistItens.createdAt))
       : [];
-  const itensByChecklist = new Map<string, { id: string; titulo: string; concluida: boolean }[]>();
+  const itensByChecklist = new Map<
+    string,
+    { id: string; checklistId: string; titulo: string; concluida: boolean; ordem: number }[]
+  >();
   for (const it of checklistItensRows) {
     const arr = itensByChecklist.get(it.checklistId) ?? [];
-    arr.push({ id: it.id, titulo: it.titulo, concluida: it.concluida });
+    // `ordem` viaja junto porque é a âncora das marcações por período (XG21).
+    arr.push({
+      id: it.id,
+      checklistId: it.checklistId,
+      titulo: it.titulo,
+      concluida: it.concluida,
+      ordem: it.ordem,
+    });
     itensByChecklist.set(it.checklistId, arr);
   }
+  // XG21 — esta é a projeção que a tela do empreiteiro realmente consome, então
+  // ela precisa enxergar o período corrente igual à API REST.
+  const marcacoesChecklist = await carregarMarcacoes(checklistsRows);
   const checklists = checklistsRows.map((c) => {
-    const itens = itensByChecklist.get(c.id) ?? [];
+    const projetado = projetarChecklist(c, itensByChecklist.get(c.id) ?? [], marcacoesChecklist);
+    const itens = projetado.itens.map((i) => ({
+      id: i.id,
+      titulo: i.titulo,
+      concluida: i.concluida,
+    }));
     const concluidos = itens.filter((i) => i.concluida).length;
     const total = itens.length;
     const progresso = total > 0 ? Math.round((concluidos / total) * 100) : 0;
@@ -661,13 +752,16 @@ export async function buildMinhaObraDetalheReal(
       nome: c.nome,
       descricao: c.descricao,
       tipo: c.tipo,
-      status: c.status,
+      status: projetado.status as typeof c.status,
       itens,
-      completadoEm: c.completadoEm ?? undefined,
+      completadoEm: projetado.completadoEm ?? undefined,
       progresso,
       assinadoPor: c.assinadoPor ?? undefined,
       assinadoEm: c.assinadoEm ?? undefined,
       registroProfissional: c.registroProfissional ?? undefined,
+      recorrencia: c.recorrencia,
+      recorrenciaDiaSemana: c.recorrenciaDiaSemana ?? undefined,
+      pendenteNoPeriodo: projetado.pendenteNoPeriodo,
     };
   });
 

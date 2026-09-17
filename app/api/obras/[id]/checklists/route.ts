@@ -6,11 +6,15 @@ import { obraChecklistItens, obraChecklists } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { carregarMarcacoes, projetarChecklist } from "@features/obras/api/checklist-recorrencia";
 
 const createSchema = z.object({
   nome: z.string().trim().min(2).max(160),
   tipo: z.enum(["seguranca", "diario", "etapa"]).optional(),
   descricao: z.string().trim().max(500).optional().default(""),
+  // XG21 — recorrência. Opcional: quem não manda segue com 'nenhuma'.
+  recorrencia: z.enum(["nenhuma", "diaria", "semanal"]).optional(),
+  recorrenciaDiaSemana: z.number().int().min(0).max(6).nullable().optional(),
   itens: z
     .array(z.object({ titulo: z.string().trim().min(1).max(240) }))
     .min(1)
@@ -47,7 +51,20 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     arr.push(it);
     byList.set(it.checklistId, arr);
   }
-  const rows = lists.map((l) => ({ ...l, itens: byList.get(l.id) ?? [] }));
+  // XG21 — para checklist recorrente, o que vale é o período corrente: os itens
+  // voltam desmarcados sozinhos quando o dia (ou a semana) vira, sem nenhum job.
+  const marcacoes = await carregarMarcacoes(lists);
+  const rows = lists.map((l) => {
+    const p = projetarChecklist(l, byList.get(l.id) ?? [], marcacoes);
+    return {
+      ...l,
+      itens: p.itens,
+      status: p.status,
+      completadoEm: p.completadoEm,
+      periodoRef: p.periodoRef,
+      pendenteNoPeriodo: p.pendenteNoPeriodo,
+    };
+  });
   const r = NextResponse.json({ rows });
   setNoCacheHeaders(r);
   return r;
@@ -77,7 +94,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  const { nome, tipo, descricao, itens } = parsed.data;
+  const { nome, tipo, descricao, itens, recorrencia, recorrenciaDiaSemana } = parsed.data;
+  const recorrenciaFinal = recorrencia ?? "nenhuma";
   const [created] = await db
     .insert(obraChecklists)
     .values({
@@ -85,6 +103,10 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       nome,
       tipo: tipo ?? "seguranca",
       descricao: descricao ?? "",
+      recorrencia: recorrenciaFinal,
+      // O dia da semana só faz sentido para 'semanal'; nos outros casos fica
+      // null para não guardar dado que ninguém lê.
+      recorrenciaDiaSemana: recorrenciaFinal === "semanal" ? (recorrenciaDiaSemana ?? 1) : null,
     })
     .returning();
   const inserted = await db

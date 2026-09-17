@@ -116,6 +116,12 @@ async function initializeNodeRuntime() {
     const { bootstrapFinanceiroFornecedorSchema } = await import("./server/bootstrap-financeiro-fornecedor");
     await runBootstrap("financeiro-fornecedor", bootstrapFinanceiroFornecedorSchema);
 
+    // XG22 — PIX e contrato do prestador. Depende de `obra-operacao` (a tabela
+    // `obra_equipe`) e de `storage` (a FK do arquivo aponta para `user_files`),
+    // ambos já registrados acima.
+    const { bootstrapObraEquipeContratoSchema } = await import("./server/bootstrap-obra-equipe-contrato");
+    await runBootstrap("obra-equipe-contrato", bootstrapObraEquipeContratoSchema);
+
     // XG10 — aditivos de contrato. Depende de `obras` e `users`, ambos já criados acima.
     const { bootstrapObraAditivosSchema } = await import("./server/bootstrap-obra-aditivos");
     await runBootstrap("obra-aditivos", bootstrapObraAditivosSchema);

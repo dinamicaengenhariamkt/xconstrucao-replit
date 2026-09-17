@@ -1,0 +1,4 @@
+Aí no cadastro do prestador, coloca uma caixa para pôr a chave PIX dele também, deixar registrado, porque facilita para a gente de obra, e também o valor de contrato, ou até anexar um link, se for o caso, um PDF, porque se a gente tiver um contrato assinado, a gente anexa aqui também junto com o card do prestador, e um valor de contrato.
+E esse valor de contrato, o sistema tem que puxar e colocar como prévia de gasto da obra, então ele soma todos os valores de contrato com os prestadores que eu cadastrei, ele vai ter uma prévia de quando eu vou gastar na obra, entendeu?
+Ele já vai conseguir mensurar meu custo de obra, não vai ser 100%, mas vai misturar uma boa parte.
+Não sei se dá para fazer tudo no card do prestador, se tiver, fazer é mais fácil, mais simples.

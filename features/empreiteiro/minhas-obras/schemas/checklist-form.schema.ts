@@ -6,6 +6,10 @@ import { IconHealthAndSafety, IconFactCheck, IconDomain } from '@shared/componen
 export const checklistSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter ao menos 3 caracteres'),
   tipo: z.enum(['seguranca', 'diario', 'etapa']),
+  // XG21 — separado do `tipo` de propósito: o cliente pediu reset diário num
+  // checklist de Segurança/EPIs, e `tipo` é só rótulo, ícone e cor.
+  recorrencia: z.enum(['nenhuma', 'diaria', 'semanal']),
+  recorrenciaDiaSemana: z.number().int().min(0).max(6).optional(),
   descricao: z.string().optional(),
   itens: z
     .array(z.object({ titulo: z.string().min(1, 'Item não pode ser vazio') }))
@@ -42,4 +46,43 @@ export const TIPO_OPTIONS: {
     Icon: IconDomain,
     color: 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600',
   },
+];
+
+/**
+ * XG21 — com que frequência o checklist zera.
+ *
+ * "Deu meia-noite, ele zera, o stick some, daí eu tenho que ir lá na obra e
+ * ticar tudo de novo." O histórico de cada período fica guardado, então dá para
+ * saber depois se num dia específico o checklist não foi feito.
+ */
+export const RECORRENCIA_OPTIONS: {
+  value: 'nenhuma' | 'diaria' | 'semanal';
+  label: string;
+  descricao: string;
+}[] = [
+  {
+    value: 'nenhuma',
+    label: 'Não repete',
+    descricao: 'Marca uma vez e fica concluído',
+  },
+  {
+    value: 'diaria',
+    label: 'Todo dia',
+    descricao: 'Zera à meia-noite; precisa ser refeito diariamente',
+  },
+  {
+    value: 'semanal',
+    label: 'Toda semana',
+    descricao: 'Zera no início da semana escolhida',
+  },
+];
+
+export const DIAS_SEMANA: { value: number; label: string }[] = [
+  { value: 0, label: 'Domingo' },
+  { value: 1, label: 'Segunda' },
+  { value: 2, label: 'Terça' },
+  { value: 3, label: 'Quarta' },
+  { value: 4, label: 'Quinta' },
+  { value: 5, label: 'Sexta' },
+  { value: 6, label: 'Sábado' },
 ];

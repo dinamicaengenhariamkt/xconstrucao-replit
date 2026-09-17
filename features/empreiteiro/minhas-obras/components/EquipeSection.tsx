@@ -26,10 +26,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
+import { formatCurrency } from '@shared/lib/formatters';
 import { AdicionarMembroModal } from './AdicionarMembroModal';
 import { PermissoesMembroModal } from './PermissoesMembroModal';
 import type { MembroEquipe, MinhaObraDetalhe } from '../types';
-import { IconMoreVert, IconEdit, IconKey, IconPersonRemove, IconEngineering, IconCall, IconMail, IconGroup, IconPersonAdd, IconPersonOff, IconPersonCheck } from '@shared/components/icons';
+import { IconMoreVert, IconEdit, IconKey, IconPersonRemove, IconEngineering, IconCall, IconMail, IconGroup, IconPersonAdd, IconPersonOff, IconPersonCheck, IconPayments, IconAttachMoney, IconDescription } from '@shared/components/icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -185,6 +186,35 @@ function MembroCard({
           <div className="flex items-center gap-2">
             <IconGroup className="text-gray-400 text-sm" />
             <span className="truncate">{membro.membros}</span>
+          </div>
+        )}
+        {/* XG22 — acordo com o prestador: PIX, valor e contrato. */}
+        {membro.pixChave && (
+          <div className="flex items-center gap-2" data-testid="membro-pix">
+            <IconPayments className="text-gray-400 text-sm" />
+            <span className="truncate">{membro.pixChave}</span>
+          </div>
+        )}
+        {membro.valorContrato != null && (
+          <div className="flex items-center gap-2" data-testid="membro-valor-contrato">
+            <IconAttachMoney className="text-gray-400 text-sm" />
+            <span className="font-semibold text-gray-700 dark:text-gray-300">
+              {formatCurrency(membro.valorContrato)}
+            </span>
+          </div>
+        )}
+        {membro.contratoUrl && (
+          <div className="flex items-center gap-2">
+            <IconDescription className="text-gray-400 text-sm" />
+            <a
+              href={membro.contratoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate text-primary hover:underline"
+              data-testid="membro-contrato-link"
+            >
+              {membro.contratoNome ?? 'Ver contrato'}
+            </a>
           </div>
         )}
       </div>
@@ -352,6 +382,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
         open={modal.type === 'novo' || modal.type === 'editar'}
         onOpenChange={(open) => { if (!open) closeModal(); }}
         membro={modal.type === 'editar' ? modal.membro : null}
+        obraId={obra.id}
         onSalvar={handleSalvar}
       />
 

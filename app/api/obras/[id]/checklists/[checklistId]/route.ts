@@ -6,6 +6,13 @@ import { obraChecklistItens, obraChecklists } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import {
+  alternarMarcacao,
+  carregarMarcacoes,
+  marcarTodosNoPeriodo,
+  projetarChecklist,
+} from "@features/obras/api/checklist-recorrencia";
+import { periodoAtual } from "@features/empreiteiro/minhas-obras/lib/checklist-periodo";
 
 const itemPatchSchema = z.object({
   id: z.string().optional(),
@@ -16,6 +23,8 @@ const itemPatchSchema = z.object({
 const patchSchema = z.object({
   nome: z.string().trim().min(2).max(160).optional(),
   tipo: z.enum(["seguranca", "diario", "etapa"]).optional(),
+  recorrencia: z.enum(["nenhuma", "diaria", "semanal"]).optional(),
+  recorrenciaDiaSemana: z.number().int().min(0).max(6).nullable().optional(),
   descricao: z.string().trim().max(500).optional(),
   status: z.enum(["pendente", "em_andamento", "completo"]).optional(),
   completadoEm: z.string().max(40).nullable().optional(),
@@ -65,6 +74,21 @@ export async function PATCH(
   }
   const data = parsed.data;
 
+  /*
+   * XG21 — com recorrência, o tique vira uma linha em
+   * `obra_checklist_marcacoes` ancorada no período corrente, em vez de
+   * sobrescrever `obra_checklist_itens.concluida`.
+   *
+   * A recorrência que vale é a do corpo quando ela veio no mesmo PATCH (o
+   * usuário acabou de mudar), senão a que está gravada.
+   */
+  const recorrenciaEfetiva = data.recorrencia ?? existing.recorrencia;
+  const diaSemanaEfetivo =
+    data.recorrenciaDiaSemana !== undefined
+      ? data.recorrenciaDiaSemana
+      : existing.recorrenciaDiaSemana;
+  const periodoRef = periodoAtual(recorrenciaEfetiva, diaSemanaEfetivo);
+
   // Toggle de item individual (mutação otimista do cliente)
   if (data.toggleItemId) {
     const [item] = await db
@@ -74,19 +98,36 @@ export async function PATCH(
         and(eq(obraChecklistItens.id, data.toggleItemId), eq(obraChecklistItens.checklistId, checklistId)),
       );
     if (item) {
-      await db
-        .update(obraChecklistItens)
-        .set({ concluida: !item.concluida })
-        .where(eq(obraChecklistItens.id, item.id));
+      if (periodoRef) {
+        await alternarMarcacao(checklistId, item.ordem, periodoRef, guard.user.id);
+      } else {
+        await db
+          .update(obraChecklistItens)
+          .set({ concluida: !item.concluida })
+          .where(eq(obraChecklistItens.id, item.id));
+      }
     }
   }
 
   // Marcar todos como concluídos (finalizar / assinar)
   if (data.markAllItens) {
-    await db
-      .update(obraChecklistItens)
-      .set({ concluida: true })
-      .where(eq(obraChecklistItens.checklistId, checklistId));
+    if (periodoRef) {
+      const todos = await db
+        .select({ ordem: obraChecklistItens.ordem })
+        .from(obraChecklistItens)
+        .where(eq(obraChecklistItens.checklistId, checklistId));
+      await marcarTodosNoPeriodo(
+        checklistId,
+        todos.map((t) => t.ordem),
+        periodoRef,
+        guard.user.id,
+      );
+    } else {
+      await db
+        .update(obraChecklistItens)
+        .set({ concluida: true })
+        .where(eq(obraChecklistItens.checklistId, checklistId));
+    }
   }
 
   // Substituição da lista de itens (edição)
@@ -105,8 +146,15 @@ export async function PATCH(
   }
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
-  for (const k of ["nome", "tipo", "descricao", "status", "completadoEm", "assinadoPor", "assinadoEm", "registroProfissional"] as const) {
+  for (const k of ["nome", "tipo", "descricao", "status", "completadoEm", "assinadoPor", "assinadoEm", "registroProfissional", "recorrencia", "recorrenciaDiaSemana"] as const) {
     if (data[k] !== undefined) updateData[k] = data[k];
+  }
+  // Trocar para 'semanal' sem dizer o dia ancora na segunda; sair de 'semanal'
+  // limpa o dia, para não sobrar dado que ninguém lê.
+  if (data.recorrencia === "semanal" && diaSemanaEfetivo == null) {
+    updateData.recorrenciaDiaSemana = 1;
+  } else if (data.recorrencia && data.recorrencia !== "semanal") {
+    updateData.recorrenciaDiaSemana = null;
   }
   let updated = existing;
   if (Object.keys(updateData).length > 1) {
@@ -124,13 +172,26 @@ export async function PATCH(
     .where(eq(obraChecklistItens.checklistId, checklistId))
     .orderBy(asc(obraChecklistItens.ordem), asc(obraChecklistItens.createdAt));
 
+  // Projeta antes de responder: sem isto a UI receberia o estado da coluna
+  // `concluida` (que não é mais a fonte da verdade para checklist recorrente) e
+  // os tiques piscariam de volta ao valor antigo.
+  const marcacoes = await carregarMarcacoes([updated]);
+  const projetado = projetarChecklist(updated, itens, marcacoes);
+
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.checklist.update",
     payload: { obraId: id, checklistId, changes: Object.keys(data) },
     request,
   });
-  const r = NextResponse.json({ ...updated, itens });
+  const r = NextResponse.json({
+    ...updated,
+    itens: projetado.itens,
+    status: projetado.status,
+    completadoEm: projetado.completadoEm,
+    periodoRef: projetado.periodoRef,
+    pendenteNoPeriodo: projetado.pendenteNoPeriodo,
+  });
   setNoCacheHeaders(r);
   return r;
 }

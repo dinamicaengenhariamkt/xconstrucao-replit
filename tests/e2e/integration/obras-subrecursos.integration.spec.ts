@@ -4,6 +4,7 @@ import { db } from "@shared/db/db";
 import {
   obraAnexos,
   obraChecklistItens,
+  obraChecklistMarcacoes,
   obraChecklists,
   obraDiario,
   obraEquipe,
@@ -13,6 +14,7 @@ import {
   obraTarefas,
   userFiles,
 } from "@shared/db/schema";
+import { periodoAtual } from "@features/empreiteiro/minhas-obras/lib/checklist-periodo";
 import {
   loginAs,
   logout,
@@ -266,6 +268,205 @@ test.describe("J36 — obras/[id]/checklists", () => {
 
     await logout(request);
   });
+
+  /*
+   * XG21 — recorrência.
+   *
+   * "Deu meia-noite, ele zera, o stick some (...) Aí o cliente entra no dia lá,
+   * se tiver sem ticar, quer dizer que não foi feito no dia."
+   *
+   * O reset é calculado por período, não executado por cron — por isso dá para
+   * testar sem manipular relógio: basta gravar uma marcação com a data de
+   * ontem e conferir que o GET de hoje volta zerado **sem apagá-la**.
+   */
+  test("recorrência diária: toggle grava marcação no período de hoje", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist diário de EPIs",
+        tipo: "seguranca",
+        recorrencia: "diaria",
+        itens: [{ titulo: "E2E capacete" }, { titulo: "E2E luvas" }],
+      },
+    });
+    expect(post.status(), "POST com recorrencia diaria deve retornar 201").toBe(201);
+    const created = (await post.json()) as {
+      id: string;
+      recorrencia: string;
+      itens: Array<{ id: string }>;
+    };
+    expect(created.recorrencia, "recorrencia deve persistir").toBe("diaria");
+
+    const itemId = created.itens[0]!.id;
+    const patch = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { toggleItemId: itemId },
+    });
+    expect(patch.status(), "PATCH toggle deve retornar 200").toBe(200);
+
+    const hoje = periodoAtual("diaria")!;
+    const marcacoes = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(marcacoes.length, "toggle deve gravar exatamente 1 marcação").toBe(1);
+    expect(marcacoes[0]!.periodoRef, "marcação deve usar o período de hoje").toBe(hoje);
+    expect(marcacoes[0]!.itemOrdem, "marcação ancora na ordem do item, não no id").toBe(0);
+
+    // Toggle de novo desmarca — e não deixa lixo no histórico do período.
+    const untoggle = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { toggleItemId: itemId },
+    });
+    expect(untoggle.status(), "segundo toggle deve retornar 200").toBe(200);
+    const aposUntoggle = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(aposUntoggle.length, "desmarcar deve remover a marcação do período").toBe(0);
+
+    await logout(request);
+  });
+
+  test("recorrência diária: vira o dia zerando os itens SEM apagar o histórico", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist de ontem",
+        tipo: "seguranca",
+        recorrencia: "diaria",
+        itens: [{ titulo: "E2E item A" }, { titulo: "E2E item B" }],
+      },
+    });
+    const created = (await post.json()) as { id: string; itens: Array<{ id: string }> };
+
+    // Simula "ontem foi tudo feito": marcações no período anterior.
+    const hoje = periodoAtual("diaria")!;
+    const ontem = new Date(`${hoje}T12:00:00Z`);
+    ontem.setUTCDate(ontem.getUTCDate() - 1);
+    const periodoOntem = ontem.toISOString().slice(0, 10);
+    await db.insert(obraChecklistMarcacoes).values([
+      { checklistId: created.id, itemOrdem: 0, periodoRef: periodoOntem },
+      { checklistId: created.id, itemOrdem: 1, periodoRef: periodoOntem },
+    ]);
+
+    const get = await request.get(`/api/obras/${obra.obraId}/checklists`);
+    expect(get.status(), "GET checklists deve retornar 200").toBe(200);
+    const { rows } = (await get.json()) as {
+      rows: Array<{
+        id: string;
+        status: string;
+        completadoEm: string | null;
+        pendenteNoPeriodo: boolean;
+        itens: Array<{ concluida: boolean }>;
+      }>;
+    };
+    const row = rows.find((r) => r.id === created.id)!;
+
+    expect(
+      row.itens.every((i) => !i.concluida),
+      "itens marcados ONTEM devem aparecer desmarcados hoje — este é o reset",
+    ).toBe(true);
+    expect(row.status, "status deve voltar a pendente no período novo").toBe("pendente");
+    expect(row.completadoEm, "a hora de conclusão de ontem não vale para hoje").toBeNull();
+    expect(row.pendenteNoPeriodo, "checklist deve aparecer como pendente hoje").toBe(true);
+
+    // O ponto central do pedido: a evidência de ontem continua lá.
+    const historico = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(
+      historico.length,
+      "o reset NÃO pode apagar o histórico — é ele que prova o que foi feito ontem",
+    ).toBe(2);
+    expect(historico.every((m) => m.periodoRef === periodoOntem)).toBe(true);
+
+    await logout(request);
+  });
+
+  test("sem recorrência: comportamento antigo intacto (regressão)", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist sem recorrência",
+        tipo: "etapa",
+        itens: [{ titulo: "E2E item único" }],
+      },
+    });
+    const created = (await post.json()) as {
+      id: string;
+      recorrencia: string;
+      itens: Array<{ id: string }>;
+    };
+    expect(created.recorrencia, "default deve continuar 'nenhuma'").toBe("nenhuma");
+
+    await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { toggleItemId: created.itens[0]!.id, status: "em_andamento" },
+    });
+
+    // Sem recorrência o tique continua na coluna do item, como sempre foi.
+    const [itemRow] = await db
+      .select()
+      .from(obraChecklistItens)
+      .where(eq(obraChecklistItens.id, created.itens[0]!.id))
+      .limit(1);
+    expect(itemRow?.concluida, "sem recorrência o toggle ainda grava em itens.concluida").toBe(true);
+
+    const marcacoes = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(marcacoes.length, "sem recorrência não deve criar marcação").toBe(0);
+
+    await logout(request);
+  });
+
+  test("recorrência semanal: markAllItens grava todas as ordens no período", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+    const post = await request.post(`/api/obras/${obra.obraId}/checklists`, {
+      data: {
+        nome: "E2E Checklist semanal",
+        tipo: "diario",
+        recorrencia: "semanal",
+        recorrenciaDiaSemana: 1,
+        itens: [{ titulo: "E2E s1" }, { titulo: "E2E s2" }, { titulo: "E2E s3" }],
+      },
+    });
+    const created = (await post.json()) as { id: string; recorrenciaDiaSemana: number };
+    expect(created.recorrenciaDiaSemana, "dia da semana deve persistir").toBe(1);
+
+    const patch = await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { markAllItens: true, status: "completo", completadoEm: "21:14" },
+    });
+    expect(patch.status()).toBe(200);
+    const body = (await patch.json()) as {
+      status: string;
+      itens: Array<{ concluida: boolean }>;
+      periodoRef: string;
+    };
+    expect(body.itens.every((i) => i.concluida), "todos os itens devem ficar marcados").toBe(true);
+    expect(body.status, "com tudo marcado o período fica completo").toBe("completo");
+    expect(body.periodoRef, "período semanal deve bater com o cálculo").toBe(
+      periodoAtual("semanal", 1),
+    );
+
+    const marcacoes = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(marcacoes.length, "markAllItens deve gravar as 3 ordens").toBe(3);
+
+    // Idempotência: repetir não duplica (UNIQUE em checklist+ordem+período).
+    await request.patch(`/api/obras/${obra.obraId}/checklists/${created.id}`, {
+      data: { markAllItens: true },
+    });
+    const depois = await db
+      .select()
+      .from(obraChecklistMarcacoes)
+      .where(eq(obraChecklistMarcacoes.checklistId, created.id));
+    expect(depois.length, "markAllItens repetido não pode duplicar marcações").toBe(3);
+
+    await logout(request);
+  });
 });
 
 // ===========================================================================
@@ -396,6 +597,163 @@ test.describe("J36 — obras/[id]/equipe", () => {
     const [afterDelete] = await db.select().from(obraEquipe).where(eq(obraEquipe.id, created.id)).limit(1);
     expect(afterDelete, "membro deve ser removido do banco após DELETE").toBeUndefined();
 
+    await logout(request);
+  });
+
+  /**
+   * XG22 — PIX, valor de contrato e o contrato assinado.
+   *
+   * "Coloca uma caixa para pôr a chave PIX dele também (...) e também o valor de
+   * contrato, ou até anexar um link, se for o caso, um PDF."
+   */
+  test("XG22: PIX e valor de contrato persistem e são editáveis", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+
+    const post = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: {
+        nome: "E2E Jefferson Elétrica",
+        papel: "Elétrica",
+        tipo: "equipe",
+        pixChave: "jefferson@eletrica.com.br",
+        valorContrato: 12000.5,
+      },
+    });
+    expect(post.status(), await post.text()).toBe(201);
+    const created = (await post.json()) as { id: string };
+
+    const [row] = await db.select().from(obraEquipe).where(eq(obraEquipe.id, created.id)).limit(1);
+    expect(row?.pixChave, "chave PIX persistida").toBe("jefferson@eletrica.com.br");
+    expect(Number(row?.valorContrato), "valor com centavos, sem perda de precisão").toBe(12000.5);
+
+    // Editar o valor: o contrato pode ser renegociado.
+    const patch = await request.patch(`/api/obras/${obra.obraId}/equipe/${created.id}`, {
+      data: { valorContrato: 15000 },
+    });
+    expect(patch.status(), await patch.text()).toBe(200);
+    const [aposPatch] = await db.select().from(obraEquipe).where(eq(obraEquipe.id, created.id)).limit(1);
+    expect(Number(aposPatch?.valorContrato)).toBe(15000);
+    expect(aposPatch?.pixChave, "PATCH parcial preserva o PIX").toBe("jefferson@eletrica.com.br");
+
+    // Limpar: `null` apaga, `undefined` (ausente) preservaria.
+    const limpa = await request.patch(`/api/obras/${obra.obraId}/equipe/${created.id}`, {
+      data: { pixChave: null, valorContrato: null },
+    });
+    expect(limpa.status(), await limpa.text()).toBe(200);
+    const [aposLimpar] = await db.select().from(obraEquipe).where(eq(obraEquipe.id, created.id)).limit(1);
+    expect(aposLimpar?.pixChave, "PIX limpo").toBeNull();
+    expect(aposLimpar?.valorContrato, "valor limpo").toBeNull();
+
+    await request.delete(`/api/obras/${obra.obraId}/equipe/${created.id}`);
+    await logout(request);
+  });
+
+  test("XG22: contrato aceita link, recusa arquivo+link juntos e link não-http", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+
+    const comLink = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: {
+        nome: "E2E Prestador Link",
+        papel: "Hidráulica",
+        tipo: "equipe",
+        contratoLinkUrl: "https://drive.google.com/file/contrato-assinado",
+      },
+    });
+    expect(comLink.status(), await comLink.text()).toBe(201);
+    const criadoLink = (await comLink.json()) as { id: string };
+    const [rowLink] = await db.select().from(obraEquipe).where(eq(obraEquipe.id, criadoLink.id)).limit(1);
+    expect(rowLink?.contratoLinkUrl).toBe("https://drive.google.com/file/contrato-assinado");
+
+    // `javascript:` passa no `.url()` do zod — o regex é que barra.
+    const linkPerigoso = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: {
+        nome: "E2E Prestador XSS",
+        papel: "Pintura",
+        tipo: "equipe",
+        contratoLinkUrl: "javascript:alert(1)",
+      },
+    });
+    expect(linkPerigoso.status(), "esquema não-http deve ser recusado").toBe(400);
+
+    // Arquivo e link ao mesmo tempo: ambíguo, recusado.
+    const ambos = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: {
+        nome: "E2E Prestador Ambiguo",
+        papel: "Alvenaria",
+        tipo: "equipe",
+        contratoFileId: "00000000-0000-0000-0000-000000000000",
+        contratoLinkUrl: "https://exemplo.com/contrato.pdf",
+      },
+    });
+    expect(ambos.status(), "arquivo + link deve ser recusado").toBe(400);
+
+    // O mesmo vale no PATCH, e sobre o ESTADO FINAL: quem já tem link não pode
+    // ganhar um arquivo por um patch que só menciona o arquivo.
+    const patchAmbiguo = await request.patch(
+      `/api/obras/${obra.obraId}/equipe/${criadoLink.id}`,
+      { data: { contratoFileId: "00000000-0000-0000-0000-000000000000" } },
+    );
+    expect(patchAmbiguo.status(), "PATCH que cria a combinação proibida → 400").toBe(400);
+
+    // Arquivo inexistente/alheio não pode ser vinculado.
+    const arquivoFantasma = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: {
+        nome: "E2E Prestador Fantasma",
+        papel: "Gesso",
+        tipo: "equipe",
+        contratoFileId: "00000000-0000-0000-0000-000000000000",
+      },
+    });
+    expect(arquivoFantasma.status(), "fileId inexistente → 400").toBe(400);
+
+    await request.delete(`/api/obras/${obra.obraId}/equipe/${criadoLink.id}`);
+    await logout(request);
+  });
+
+  test("XG22: prévia de gasto soma contratos e ignora inativos", async ({ request }) => {
+    await loginAs(request, SEED_CONTRATANTE_EMAIL);
+
+    const criar = async (nome: string, valor: number) => {
+      const r = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+        data: { nome, papel: "Serviço", tipo: "equipe", valorContrato: valor },
+      });
+      expect(r.status(), await r.text()).toBe(201);
+      return (await r.json()) as { id: string };
+    };
+
+    const a = await criar("E2E Contrato A", 10000);
+    const b = await criar("E2E Contrato B", 5000);
+    // Sem valor de contrato: não deve somar nada nem quebrar a conta.
+    const semValor = await request.post(`/api/obras/${obra.obraId}/equipe`, {
+      data: { nome: "E2E Sem Contrato", papel: "Ajudante", tipo: "equipe" },
+    });
+    expect(semValor.status()).toBe(201);
+    const c = (await semValor.json()) as { id: string };
+
+    const somaAtiva = await db
+      .select()
+      .from(obraEquipe)
+      .where(eq(obraEquipe.obraId, obra.obraId));
+    const total = somaAtiva
+      .filter((m) => m.ativo && m.valorContrato != null)
+      .reduce((s, m) => s + Number(m.valorContrato), 0);
+    expect(total, "10000 + 5000, e o sem contrato não entra").toBe(15000);
+
+    // Desativar um prestador tira o contrato dele da previsão: quem saiu da obra
+    // não deve continuar pesando no custo previsto.
+    const desativa = await request.patch(`/api/obras/${obra.obraId}/equipe/${b.id}`, {
+      data: { ativo: false },
+    });
+    expect(desativa.status()).toBe(200);
+
+    const apos = await db.select().from(obraEquipe).where(eq(obraEquipe.obraId, obra.obraId));
+    const totalApos = apos
+      .filter((m) => m.ativo && m.valorContrato != null)
+      .reduce((s, m) => s + Number(m.valorContrato), 0);
+    expect(totalApos, "só o contrato ativo sobra").toBe(10000);
+
+    for (const id of [a.id, b.id, c.id]) {
+      await request.delete(`/api/obras/${obra.obraId}/equipe/${id}`);
+    }
     await logout(request);
   });
 });

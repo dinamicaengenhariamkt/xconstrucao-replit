@@ -108,6 +108,9 @@ type CreateChecklistInput = {
   nome: string;
   tipo: MinhaObraChecklist['tipo'];
   descricao?: string;
+  /** XG21 — de quanto em quanto tempo o checklist zera. */
+  recorrencia?: MinhaObraChecklist['recorrencia'];
+  recorrenciaDiaSemana?: number | null;
   itens: { titulo: string }[];
 };
 

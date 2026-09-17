@@ -13,6 +13,7 @@ import {
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { useToast } from '@shared/hooks/use-toast';
+import { CepInput } from '@features/perfil/components/CepInput';
 import {
   patchObra,
   payloadLocalizacao,
@@ -175,13 +176,30 @@ export function EditarLocalizacaoModal({
                 maxLength={120}
               />
             </Campo>
+            {/*
+              XG21 — o CEP passa a ser validado contra o ViaCEP e a preencher
+              cidade/UF sozinho.
+
+              Foi a falta disso que deixou entrar o `06070-212` (dígitos
+              trocados de `06701-212`, em Cotia): CEP inexistente, cidade em
+              branco, e o mapa sem nada para procurar. Reusa o `CepInput` que o
+              perfil já usa — ele só depende de `@shared`.
+            */}
             <Campo label="CEP" htmlFor="modal-obra-cep" optional>
-              <Input
-                id="modal-obra-cep"
+              <CepInput
                 value={form.cep}
-                onChange={(e) => update('cep', e.target.value)}
-                maxLength={9}
-                placeholder="00000-000"
+                onChange={(cep) => update('cep', cep)}
+                onAutofill={({ endereco, cidade, estado }) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    // O logradouro só é sobrescrito se estiver vazio: quem já
+                    // digitou a rua (ou corrigiu à mão) não pode perder o texto.
+                    endereco: atual.endereco.trim() ? atual.endereco : endereco.split(',')[0]?.trim() || '',
+                    cidade: cidade || atual.cidade,
+                    uf: estado || atual.uf,
+                  }))
+                }
+                data-testid="modal-edit-cep"
               />
             </Campo>
             <Campo label="Cidade" htmlFor="modal-obra-cidade" optional>

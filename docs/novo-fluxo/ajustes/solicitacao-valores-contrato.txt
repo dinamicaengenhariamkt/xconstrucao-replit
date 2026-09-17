@@ -1,0 +1,6 @@
+Essa parte do financeiro, ele está com erro de programação aí e no dashboard também, tá?
+Ele não está entrando ali com pagamentos, ele não está subtraindo também no dashboard, tipo, quanto que falta receber.
+Aqui também não está subtraindo, então tem que fazer essa parte de matemática aqui só.
+Acho que é coisa simples.
+Mas eu vou mandar áudio para acrescentar mais coisa aqui ainda, só vai acompanhando.
+Essa é só para mostrar que não está fazendo as somas aí, está a subtração.

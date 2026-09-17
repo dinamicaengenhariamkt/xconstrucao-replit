@@ -6,19 +6,24 @@ import { obraEquipe } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { contratoFields, refineContrato } from "@features/obras/api/equipe-contrato-schema";
+import { validarContratoMembro } from "@features/obras/api/validar-contrato-membro";
 
-const createSchema = z.object({
-  nome: z.string().trim().min(1).max(120),
-  papel: z.string().trim().max(120).optional().default(""),
-  tipo: z.enum(["contratante", "engenheiro", "mestre", "equipe"]).optional(),
-  cor: z.string().trim().max(40).optional(),
-  telefone: z.string().trim().max(40).nullable().optional(),
-  email: z.string().trim().max(160).nullable().optional(),
-  registro: z.string().trim().max(80).nullable().optional(),
-  membros: z.string().trim().max(240).nullable().optional(),
-  ativo: z.boolean().optional(),
-  permissao: z.enum(["visualizar", "editar", "admin"]).nullable().optional(),
-});
+const createSchema = z
+  .object({
+    nome: z.string().trim().min(1).max(120),
+    papel: z.string().trim().max(120).optional().default(""),
+    tipo: z.enum(["contratante", "engenheiro", "mestre", "equipe"]).optional(),
+    cor: z.string().trim().max(40).optional(),
+    telefone: z.string().trim().max(40).nullable().optional(),
+    email: z.string().trim().max(160).nullable().optional(),
+    registro: z.string().trim().max(80).nullable().optional(),
+    membros: z.string().trim().max(240).nullable().optional(),
+    ativo: z.boolean().optional(),
+    permissao: z.enum(["visualizar", "editar", "admin"]).nullable().optional(),
+    ...contratoFields,
+  })
+  .superRefine(refineContrato);
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -65,6 +70,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
   const data = parsed.data;
+  // XG22 — o arquivo do contrato precisa ser de quem o anexa; sem isto, um
+  // `fileId` alheio criaria FK entre tenants.
+  const erroContrato = await validarContratoMembro(data.contratoFileId, guard.user.id);
+  if (erroContrato) {
+    const r = NextResponse.json({ message: erroContrato }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const [created] = await db
     .insert(obraEquipe)
     .values({
@@ -79,6 +92,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       membros: data.membros ?? null,
       ativo: data.ativo ?? true,
       permissao: data.permissao ?? null,
+      pixChave: data.pixChave ?? null,
+      // `numeric` chega como string no driver; `String()` evita perda de
+      // precisão que o float faria no caminho.
+      valorContrato: data.valorContrato == null ? null : String(data.valorContrato),
+      contratoFileId: data.contratoFileId ?? null,
+      contratoLinkUrl: data.contratoLinkUrl ?? null,
     })
     .returning();
   await recordAudit({

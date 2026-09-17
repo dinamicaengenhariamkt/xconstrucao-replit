@@ -197,6 +197,11 @@ BEGIN
   WHERE checklist_id IN (
     SELECT id FROM obra_checklists WHERE obra_id = ANY(v_alvo_ids)
   );
+  -- XG21 — marcações por período do checklist.
+  DELETE FROM obra_checklist_marcacoes
+  WHERE checklist_id IN (
+    SELECT id FROM obra_checklists WHERE obra_id = ANY(v_alvo_ids)
+  );
   DELETE FROM obra_checklists WHERE obra_id = ANY(v_alvo_ids);
   DELETE FROM obra_tarefas WHERE obra_id = ANY(v_alvo_ids);
   DELETE FROM obra_equipe WHERE obra_id = ANY(v_alvo_ids);

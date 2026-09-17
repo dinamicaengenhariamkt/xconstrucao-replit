@@ -121,6 +121,8 @@ const PASSOS: Passo[] = [
   { tabela: "survey_respostas", where: null },
   { tabela: "disputa_mensagens", where: null },
   { tabela: "obra_checklist_itens", where: null },
+  // XG21 — histórico de marcações por período; cai antes de obra_checklists.
+  { tabela: "obra_checklist_marcacoes", where: null },
   { tabela: "chat_mensagens", where: null },
   { tabela: "candidatura_anexos", where: null },
 

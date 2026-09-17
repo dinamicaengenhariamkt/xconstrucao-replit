@@ -107,6 +107,15 @@ export interface MinhaObraChecklist {
   assinadoPor?: string;
   assinadoEm?: string;
   registroProfissional?: string;
+  /**
+   * XG21 — de quanto em quanto tempo o checklist zera. Ortogonal ao `tipo`:
+   * o pedido foi reset diário num checklist de Segurança/EPIs.
+   */
+  recorrencia?: 'nenhuma' | 'diaria' | 'semanal';
+  /** 0=domingo … 6=sábado. Só vale para `recorrencia: 'semanal'`. */
+  recorrenciaDiaSemana?: number;
+  /** Recorrente e ainda com item por marcar no período corrente. */
+  pendenteNoPeriodo?: boolean;
 }
 
 export interface TimelineEvent {
@@ -201,6 +210,12 @@ export interface ObraFinanceiro {
   receitaTotal: number;
   /** Soma de saídas pagas (pagador = empreiteiro: materiais, mão de obra, equipamentos). */
   custoTotal: number;
+  /**
+   * XG22 — soma dos valores de contrato dos prestadores da equipe ("prévia de
+   * gasto da obra"). É **previsto**, não realizado: contrapõe-se a `custoTotal`,
+   * que só existe depois que o dinheiro saiu. Só conta membros reais e ativos.
+   */
+  custoPrevistoEquipe: number;
 }
 
 export interface MembroEquipe {
@@ -216,6 +231,22 @@ export interface MembroEquipe {
   ativo?: boolean;
   membros?: string;
   permissao?: 'visualizar' | 'editar' | 'admin';
+  /**
+   * XG22 — chave PIX do prestador, em qualquer formato (CPF, e-mail, aleatória).
+   *
+   * `null` é significativo nos campos deste bloco: o formulário o usa para
+   * **limpar** o valor no PATCH, onde `undefined` significaria "não mexer".
+   */
+  pixChave?: string | null;
+  /** XG22 — valor combinado; alimenta a prévia de gasto da obra. */
+  valorContrato?: number | null;
+  /** XG22 — contrato assinado: arquivo enviado OU link externo, nunca os dois. */
+  contratoFileId?: string | null;
+  contratoLinkUrl?: string | null;
+  /** URL pronta para abrir o contrato (assinada quando é arquivo). */
+  contratoUrl?: string;
+  /** Nome original do arquivo, para rotular o link no card. */
+  contratoNome?: string;
 }
 
 export interface MinhaObraCardProps {

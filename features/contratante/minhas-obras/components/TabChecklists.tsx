@@ -7,7 +7,10 @@ import {
   IconDomain,
   IconDraw,
   IconCheckCircle,
+  IconAutorenew,
+  IconWarning,
 } from '@shared/components/icons';
+import { rotuloRecorrencia } from '@features/empreiteiro/minhas-obras/lib/checklist-periodo';
 import type { ComponentType } from 'react';
 import type { MinhaObraChecklist } from '../types';
 
@@ -68,6 +71,13 @@ function ChecklistCardReadOnly({ checklist }: { checklist: MinhaObraChecklist })
   const isCompleto = checklist.status === 'completo';
   const concluidos = checklist.itens.filter((i) => i.concluida).length;
   const total = checklist.itens.length;
+  // XG21 — mesma leitura do console: o servidor já projeta o período corrente.
+  const eRecorrente = (checklist.recorrencia ?? 'nenhuma') !== 'nenhuma';
+  const seloRecorrencia = rotuloRecorrencia(
+    checklist.recorrencia ?? 'nenhuma',
+    checklist.recorrenciaDiaSemana,
+  );
+  const rotuloPeriodo = checklist.recorrencia === 'semanal' ? 'esta semana' : 'hoje';
 
   return (
     <div
@@ -82,6 +92,12 @@ function ChecklistCardReadOnly({ checklist }: { checklist: MinhaObraChecklist })
           <div>
             <h4 className="text-sm font-bold text-gray-900 dark:text-white">{checklist.nome}</h4>
             <p className="text-xs text-gray-500">{checklist.descricao}</p>
+            {seloRecorrencia && (
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                <IconAutorenew className="text-xs" />
+                {seloRecorrencia}
+              </span>
+            )}
           </div>
         </div>
         <span className={cn('text-[10px] font-bold px-2 py-1 rounded shrink-0', badge.classes)}>
@@ -153,9 +169,18 @@ function ChecklistCardReadOnly({ checklist }: { checklist: MinhaObraChecklist })
             <IconCheckCircle className="text-sm" />
             Concluído às {checklist.completadoEm}
           </span>
+        ) : eRecorrente && concluidos === 0 ? (
+          <span
+            className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1"
+            data-testid={`contratante-checklist-nao-feito-${checklist.id}`}
+          >
+            <IconWarning className="text-sm" />
+            Não foi feito {rotuloPeriodo}
+          </span>
         ) : (
           <span className="text-xs text-gray-500">
             {concluidos}/{total} {total === 1 ? 'item' : 'itens'}
+            {eRecorrente && ` · ${rotuloPeriodo}`}
           </span>
         )}
       </div>

@@ -206,6 +206,88 @@ function ValoresDoContrato({
   );
 }
 
+/**
+ * XG22 — a prévia de gasto da obra.
+ *
+ * Pedido do cliente: "esse valor de contrato o sistema tem que puxar e colocar
+ * como prévia de gasto da obra (...) ele já vai conseguir mensurar meu custo de
+ * obra, não vai ser 100%, mas vai misturar uma boa parte".
+ *
+ * Fica ao lado do custo realizado de propósito: sozinho, o previsto é só um
+ * número; contra o que já saiu, vira "quanto ainda falta desembolsar".
+ *
+ * O rótulo diz de onde o número vem ("soma dos contratos"), pela mesma razão
+ * que o lucro estimado foi retirado desta tela — o console não inventa projeção,
+ * só soma o que foi combinado. Por isso o card some quando não há contrato: zero
+ * aqui não significa "obra barata", significa "ninguém preencheu ainda".
+ */
+function CustoPrevistoEquipe({
+  financeiro,
+  luminous = false,
+}: {
+  financeiro: ObraFinanceiro;
+  luminous?: boolean;
+}) {
+  const previsto = financeiro.custoPrevistoEquipe;
+  const realizado = financeiro.custoTotal;
+  const aDesembolsar = Math.max(0, previsto - realizado);
+  const pctPago = previsto > 0 ? Math.min(100, Math.round((realizado / previsto) * 100)) : 0;
+
+  return (
+    <Card data-testid="custo-previsto-equipe">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Prévia de gasto com a equipe</CardTitle>
+        <CardDescription>
+          Soma dos contratos dos prestadores cadastrados na obra — não inclui material nem
+          despesas avulsas.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[
+            { label: 'Custo previsto', valor: previsto, accent: 'border-amber-500', destaque: false },
+            { label: 'Já pago à equipe', valor: realizado, accent: 'border-gray-400', destaque: false },
+            { label: 'Ainda a desembolsar', valor: aDesembolsar, accent: 'border-primary', destaque: true },
+          ].map((kpi) => (
+            <div
+              key={kpi.label}
+              className={cn(
+                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-gray-800/50',
+                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-gray-800/80',
+                kpi.accent,
+              )}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                {kpi.label}
+              </p>
+              <p
+                className={cn(
+                  'mt-2 text-2xl font-extrabold',
+                  kpi.destaque ? 'text-primary' : 'text-gray-900 dark:text-white',
+                )}
+              >
+                {formatCurrency(kpi.valor)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-end justify-between">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Pago do previsto
+            </p>
+            <p className="text-lg font-bold text-primary">{pctPago}%</p>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${pctPago}%` }} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function FinanceiroTab({
   obraId,
   metrics,
@@ -324,6 +406,10 @@ export function FinanceiroTab({
         mostrarLucroEstimado={false}
         luminous={luminous}
       />
+
+      {financeiro && financeiro.custoPrevistoEquipe > 0 && (
+        <CustoPrevistoEquipe financeiro={financeiro} luminous={luminous} />
+      )}
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <Card>

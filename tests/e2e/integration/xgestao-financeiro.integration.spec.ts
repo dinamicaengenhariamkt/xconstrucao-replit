@@ -317,3 +317,160 @@ test.describe('XG10 — aditivos de contrato', () => {
     await logout(request);
   });
 });
+
+/**
+ * XG22 — o saldo a receber precisa descontar o que já entrou.
+ *
+ * O cliente relatou: "não está entrando ali com pagamentos, não está subtraindo
+ * quanto que falta receber". A tela mostrava "Receita total R$ 191.000" e, logo
+ * acima, "Saldo a receber R$ 437.000" (o valor total cheio) com 0% recebido.
+ *
+ * A causa era `obras.valor_pago`, coluna que nenhum fluxo do xgestão preenche.
+ * Estes testes existem porque a suíte antiga cobria `receitaTotal` mas **nunca**
+ * `saldoReceber`/`percentualRecebido` — foi por essa fresta que o bug passou.
+ */
+test.describe('XG22 — saldo a receber e percentual recebido', () => {
+  /**
+   * A obra do xgestão nasce sem valor contratado (`valor_total` default "0"), e
+   * um saldo sobre zero não prova nada: todo percentual daria 0. Aqui fixamos o
+   * contrato para que os números do teste tenham significado.
+   */
+  async function definirValorContratado(
+    request: APIRequestContext,
+    obraId: string,
+    valor: number,
+  ) {
+    const r = await request.patch(`/api/obras/${obraId}`, { data: { valorTotal: String(valor) } });
+    expect(r.status(), await r.text()).toBeLessThan(300);
+  }
+
+  /** Lê o bloco de contrato do detalhe da obra. */
+  async function lerFinanceiro(request: APIRequestContext, obraId: string) {
+    const r = await request.get(`/api/empreiteiro/minhas-obras/${obraId}`);
+    expect(r.status(), await r.text()).toBe(200);
+    return (await r.json()).financeiro as {
+      valorContratado: number;
+      aditivos: number;
+      valorTotal: number;
+      saldoReceber: number;
+      percentualRecebido: number;
+      receitaTotal: number;
+      custoTotal: number;
+      custoPrevistoEquipe: number;
+    };
+  }
+
+  test('entrada paga reduz o saldo e move o percentual recebido', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg22-saldo-entrada');
+    await definirValorContratado(request, obraId, 400000);
+
+    const antes = await lerFinanceiro(request, obraId);
+    const total = antes.valorTotal;
+    expect(total, 'a obra precisa ter valor contratado para o teste valer').toBe(400000);
+    expect(antes.saldoReceber, 'sem entrada, o saldo é o total cheio').toBe(total);
+    expect(antes.percentualRecebido).toBe(0);
+
+    // Metade do contrato entra.
+    const metade = Math.round(total / 2);
+    const entrada = await request.post(`/api/obras/${obraId}/financeiro`, {
+      data: { tipo: 'entrada', descricao: 'Entrada de 50%', valor: metade, data: HOJE },
+    });
+    expect(entrada.status(), await entrada.text()).toBe(201);
+
+    const depois = await lerFinanceiro(request, obraId);
+    expect(depois.receitaTotal, 'receita registra a entrada').toBe(metade);
+    expect(depois.saldoReceber, 'o saldo desconta o que entrou').toBe(total - metade);
+    expect(
+      depois.percentualRecebido,
+      'percentual acompanha o saldo',
+    ).toBe(Math.round((metade / total) * 100));
+
+    // O ponto do bug: os dois blocos da tela precisam contar a mesma história.
+    expect(
+      depois.valorTotal - depois.saldoReceber,
+      'saldo e receita descrevem o mesmo dinheiro',
+    ).toBe(depois.receitaTotal);
+
+    await logout(request);
+  });
+
+  test('saída não mexe no saldo a receber; só a entrada mexe', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg22-saldo-saida');
+    await definirValorContratado(request, obraId, 100000);
+    const antes = await lerFinanceiro(request, obraId);
+
+    // Regressão da armadilha central: o SQL legado de `valor_pago` filtrava
+    // `tipo = 'saida'`, que no xgestão é CUSTO. Se alguém reintroduzir aquele
+    // caminho, a saída viraria "recebimento" e este teste quebra.
+    const saida = await request.post(`/api/obras/${obraId}/financeiro`, {
+      data: {
+        tipo: 'saida',
+        categoria: 'material',
+        descricao: 'Cimento',
+        valor: 5000,
+        data: HOJE,
+      },
+    });
+    expect(saida.status(), await saida.text()).toBe(201);
+
+    const depois = await lerFinanceiro(request, obraId);
+    expect(depois.custoTotal, 'a saída é custo').toBe(5000);
+    expect(depois.saldoReceber, 'custo não é recebimento').toBe(antes.saldoReceber);
+    expect(depois.percentualRecebido, 'e não move o percentual').toBe(0);
+
+    await logout(request);
+  });
+
+  test('entrada pendente não conta como recebida', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg22-saldo-pendente');
+    await definirValorContratado(request, obraId, 50000);
+    const antes = await lerFinanceiro(request, obraId);
+
+    const entrada = await request.post(`/api/obras/${obraId}/financeiro`, {
+      data: { tipo: 'entrada', descricao: 'Parcela combinada', valor: 1000, data: HOJE },
+    });
+    expect(entrada.status(), await entrada.text()).toBe(201);
+    const criada = (await entrada.json()) as { id: string };
+
+    // O lançamento manual nasce "pago"; forçamos "pendente" direto no banco para
+    // exercitar o outro lado da regra ("a receber" é o que ainda não entrou).
+    await db.update(financeiro).set({ status: 'pendente' }).where(eq(financeiro.id, criada.id));
+
+    const depois = await lerFinanceiro(request, obraId);
+    expect(depois.receitaTotal, 'pendente não é receita').toBe(0);
+    expect(depois.saldoReceber, 'e continua sendo "a receber"').toBe(antes.saldoReceber);
+    expect(depois.percentualRecebido).toBe(0);
+
+    await logout(request);
+  });
+
+  test('aditivo aumenta o saldo a receber e dilui o percentual', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg22-saldo-aditivo');
+    await definirValorContratado(request, obraId, 10000);
+
+    const entradaValor = 1000;
+    const entrada = await request.post(`/api/obras/${obraId}/financeiro`, {
+      data: { tipo: 'entrada', descricao: 'Primeira parcela', valor: entradaValor, data: HOJE },
+    });
+    expect(entrada.status(), await entrada.text()).toBe(201);
+    const comEntrada = await lerFinanceiro(request, obraId);
+
+    const aditivo = await request.post(`/api/obras/${obraId}/aditivos`, {
+      data: { descricao: 'Escopo extra', valor: 2000, data: HOJE },
+    });
+    expect(aditivo.status(), await aditivo.text()).toBe(201);
+
+    const depois = await lerFinanceiro(request, obraId);
+    expect(depois.valorTotal, 'o total cresce com o aditivo').toBe(comEntrada.valorTotal + 2000);
+    expect(depois.saldoReceber, 'e o que falta receber cresce junto').toBe(
+      comEntrada.saldoReceber + 2000,
+    );
+    expect(depois.receitaTotal, 'o que já entrou não muda').toBe(entradaValor);
+    expect(
+      depois.percentualRecebido,
+      'mesmo valor recebido sobre um total maior = percentual menor',
+    ).toBeLessThanOrEqual(comEntrada.percentualRecebido);
+
+    await logout(request);
+  });
+});

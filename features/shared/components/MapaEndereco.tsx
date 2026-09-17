@@ -26,6 +26,7 @@ export function MapaEndereco(props: {
   estado?: string | null;
   cep?: string | null;
   className?: string;
+  onPrecisao?: (p: 'exata' | 'aproximada' | null) => void;
 }) {
   return <MapaEnderecoInner {...props} />;
 }

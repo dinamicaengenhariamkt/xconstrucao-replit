@@ -34,6 +34,15 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     expect(projection).toContain("import 'server-only';");
     expect(apenasCodigo(projection)).not.toMatch(/\busers\b|valorPago|valorTotal|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
 
+    // XG22 — a chave PIX, o valor de contrato e o contrato assinado do prestador
+    // são dados financeiros de terceiro. A equipe inteira já fica fora do link
+    // público por LGPD; estes campos reforçam a guarda, porque agora existe algo
+    // em `obra_equipe` que é sigiloso mesmo para quem acompanha a obra.
+    expect(apenasCodigo(types)).not.toMatch(/pixChave|valorContrato|contratoFileId|contratoLinkUrl/);
+    expect(apenasCodigo(projection)).not.toMatch(
+      /pixChave|pix_chave|valorContrato|valor_contrato|contratoFileId|contratoLinkUrl|obraEquipe/,
+    );
+
     // O logradouro é o único componente de endereço que pode sair, e só quando
     // o dono liga a seção. Número, complemento, CEP e coordenadas seguem
     // ausentes do contrato — as linhas acima garantem isso.

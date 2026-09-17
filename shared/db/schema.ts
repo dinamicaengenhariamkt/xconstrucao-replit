@@ -937,6 +937,19 @@ export const obraChecklistStatusEnum = pgEnum("obra_checklist_status", [
   "em_andamento",
   "completo",
 ]);
+/**
+ * XG21 — de quanto em quanto tempo o checklist "zera".
+ *
+ * Ortogonal ao `tipo` de propósito: o pedido do cliente foi reset diário num
+ * checklist de **Segurança/EPIs**, não de tipo "Diário" (que é só rótulo e cor).
+ * `nenhuma` é o default e preserva o comportamento de todos os checklists que
+ * já existem.
+ */
+export const obraChecklistRecorrenciaEnum = pgEnum("obra_checklist_recorrencia", [
+  "nenhuma",
+  "diaria",
+  "semanal",
+]);
 export const obraEquipeTipoEnum = pgEnum("obra_equipe_tipo", [
   "contratante",
   "engenheiro",
@@ -974,9 +987,54 @@ export const obraChecklists = pgTable("obra_checklists", {
   assinadoPor: text("assinado_por"),
   assinadoEm: text("assinado_em"),
   registroProfissional: text("registro_profissional"),
+  // XG21 — recorrência. `recorrenciaDiaSemana` (0=domingo … 6=sábado) só é
+  // lido quando `recorrencia = 'semanal'`; define em que dia o ciclo vira.
+  recorrencia: obraChecklistRecorrenciaEnum("recorrencia").notNull().default("nenhuma"),
+  recorrenciaDiaSemana: integer("recorrencia_dia_semana"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * XG21 — o histórico de marcações por período.
+ *
+ * O pedido do cliente tem duas metades: "deu meia-noite, ele zera" **e** "se
+ * tiver sem ticar, quer dizer que não foi feito no dia". A segunda é o
+ * problema: `obra_checklist_itens.concluida` é um booleano destrutivo — zerar
+ * ali apagaria a evidência de que o EPI foi conferido ontem.
+ *
+ * Aqui cada tique vira uma linha ancorada num `periodo_ref`. O "zerar" acontece
+ * porque o novo período simplesmente não tem linhas — sem job, sem UPDATE em
+ * massa, e o passado permanece auditável.
+ *
+ * **Ancora em `item_ordem`, não em `item_id`, de propósito:** o PATCH de edição
+ * faz DELETE + reinsert de todos os itens, então os IDs mudam a cada correção
+ * de texto. Uma FK para `item_id` apagaria o histórico inteiro por causa de um
+ * typo corrigido.
+ */
+export const obraChecklistMarcacoes = pgTable(
+  "obra_checklist_marcacoes",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    checklistId: varchar("checklist_id")
+      .notNull()
+      .references(() => obraChecklists.id, { onDelete: "cascade" }),
+    itemOrdem: integer("item_ordem").notNull(),
+    /** Início do período, `YYYY-MM-DD` em America/Sao_Paulo. */
+    periodoRef: date("periodo_ref").notNull(),
+    marcadoPor: varchar("marcado_por").references(() => users.id, { onDelete: "set null" }),
+    marcadoEm: timestamp("marcado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // Um tique por item por período: torna o toggle idempotente.
+    unicaPorPeriodo: uniqueIndex("uq_checklist_marcacao_periodo").on(
+      t.checklistId,
+      t.itemOrdem,
+      t.periodoRef,
+    ),
+    porPeriodo: index("idx_checklist_marcacoes_periodo").on(t.checklistId, t.periodoRef),
+  }),
+);
 
 export const obraChecklistItens = pgTable("obra_checklist_itens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1001,6 +1059,19 @@ export const obraEquipe = pgTable("obra_equipe", {
   email: text("email"),
   registro: text("registro"),
   membros: text("membros"),
+  // XG22 — "coloca uma caixa para pôr a chave PIX dele também, deixar
+  // registrado, porque facilita para a gente de obra". Texto livre de propósito:
+  // chave PIX é CPF, CNPJ, e-mail, telefone ou aleatória, e validar formato aqui
+  // só criaria falso negativo no cadastro de quem está com o celular na mão.
+  pixChave: text("pix_chave"),
+  // Valor combinado com o prestador. Alimenta a prévia de gasto da obra — é o
+  // "previsto" que se contrapõe ao `custoTotal` (realizado) dos lançamentos.
+  valorContrato: numeric("valor_contrato", { precision: 15, scale: 2 }),
+  // O contrato assinado: arquivo enviado OU link externo (Drive etc.), nunca os
+  // dois. Mesmo arranjo de `obra_anexos`. Sem `.references()` porque a FK nasce
+  // no bootstrap, como em `financeiro.fornecedorId`.
+  contratoFileId: varchar("contrato_file_id"),
+  contratoLinkUrl: text("contrato_link_url"),
   ativo: boolean("ativo").notNull().default(true),
   permissao: obraEquipePermissaoEnum("permissao"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
