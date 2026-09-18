@@ -484,4 +484,130 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(tour).toBeVisible();
     await expect(contador).toHaveText(`Passo 1 de ${total}`);
   });
+
+  /**
+   * XG25 — a barra do cronograma fica vermelha quando o prazo venceu.
+   *
+   * As datas saem de `Date.now()`, e não de constantes como no spec de
+   * integração da XG10 (que fixa 2026-10-01/20): um fixture com data absoluta
+   * "passa a atrasar" sozinho quando o calendário alcança a data, e o teste
+   * diria a verdade por acidente.
+   */
+  test("barra do cronograma fica vermelha quando o prazo venceu", async ({
+    page,
+    request,
+  }) => {
+    const email = await registrarEmpreiteiro(request);
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const obraResponse = await request.post("/api/xgestao/obras", {
+      data: { nome: `Obra atraso ${Date.now()}`, endereco: "Rua do Prazo, 60" },
+    });
+    expect(obraResponse.status(), await obraResponse.text()).toBe(201);
+    const obra = (await obraResponse.json()) as { id: string };
+
+    const emDias = (dias: number) =>
+      new Date(Date.now() + dias * 86_400_000).toISOString();
+
+    /**
+     * O POST de etapa não aceita `status` — ela sempre nasce `pendente`, e é o
+     * PATCH que define o resto. Sem o segundo passo, todas as barras sairiam
+     * cinza e o teste mediria outra coisa.
+     */
+    const criarEtapa = async (
+      nome: string,
+      dataInicio: string,
+      prazo: string,
+      status: string,
+    ) => {
+      const criada = await request.post(`/api/obras/${obra.id}/etapas`, {
+        data: { nome, dataInicio, prazo },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const etapa = (await criada.json()) as { id: string };
+
+      const ajustada = await request.patch(`/api/obras/${obra.id}/etapas/${etapa.id}`, {
+        data: { status },
+      });
+      expect(ajustada.status(), await ajustada.text()).toBe(200);
+      return etapa;
+    };
+
+    // Vencida e em andamento: o caso exato do print do cliente.
+    const vencida = await criarEtapa("Gesso liso", emDias(-30), emDias(-5), "em_andamento");
+    // No prazo: continua azul, e é o contraste que prova que a cor veio da
+    // data e não de uma mudança global.
+    const noPrazo = await criarEtapa("Pintura", emDias(-2), emDias(20), "em_andamento");
+    // Concluída com prazo vencido: entregou atrasado, mas entregou. Fica verde.
+    const concluida = await criarEtapa("Demolição", emDias(-40), emDias(-10), "concluido");
+    // Bloqueada E vencida: a decisão de precedência. Sai como atrasada.
+    const bloqueadaVencida = await criarEtapa(
+      "Impermeabilização",
+      emDias(-25),
+      emDias(-3),
+      "bloqueado",
+    );
+    await logout(request);
+
+    const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(pageLogin.status(), await pageLogin.text()).toBe(200);
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
+
+    const tour = page.getByTestId("guided-tour");
+    if (await tour.isVisible().catch(() => false)) {
+      await page.getByRole("button", { name: "Pular" }).click();
+    }
+
+    await page.getByRole("button", { name: "Cronograma", exact: true }).click();
+    await expect(page.getByTestId("gantt-svg")).toBeVisible();
+
+    const ATRASADA = "#b91c1c";
+    const BLOQUEADO = "#ef4444";
+    const EM_ANDAMENTO = "#3b82f6";
+    const CONCLUIDO = "#10b981";
+
+    /** Cor do trilho da barra — o primeiro `rect` do grupo da etapa. */
+    const corDaBarra = (id: string) =>
+      page.getByTestId(`gantt-etapa-${id}`).locator("rect").first();
+
+    await expect(corDaBarra(vencida.id), "prazo vencido pinta de vermelho").toHaveAttribute(
+      "fill",
+      ATRASADA,
+    );
+    await expect(corDaBarra(noPrazo.id), "dentro do prazo segue azul").toHaveAttribute(
+      "fill",
+      EM_ANDAMENTO,
+    );
+    await expect(
+      corDaBarra(concluida.id),
+      "concluída não atrasa, mesmo com o prazo para trás",
+    ).toHaveAttribute("fill", CONCLUIDO);
+    await expect(
+      corDaBarra(bloqueadaVencida.id),
+      "atraso vence sobre bloqueado",
+    ).toHaveAttribute("fill", ATRASADA);
+    await expect(corDaBarra(bloqueadaVencida.id)).not.toHaveAttribute("fill", BLOQUEADO);
+
+    // O contorno é o que separa atrasada de bloqueada sem depender do matiz.
+    await expect(corDaBarra(vencida.id)).toHaveAttribute("stroke", "#7f1d1d");
+    await expect(corDaBarra(noPrazo.id)).not.toHaveAttribute("stroke", /.+/);
+
+    // O status original não se perde: fica no tooltip, junto da contagem. A
+    // contagem é assertada por padrão, e não no número exato: as datas do
+    // fixture são deslocamentos em horas e o arredondamento para dias vira na
+    // fronteira, o que faria o teste piscar conforme a hora em que roda.
+    const titulo = page.getByTestId(`gantt-etapa-${bloqueadaVencida.id}`).locator("title");
+    await expect(titulo).toContainText("Bloqueado");
+    await expect(titulo).toContainText(/Atrasada há \d+ dias?/);
+
+    // A legenda ganhou a entrada. Escopado nela, e não na página: "Atrasada"
+    // também aparece nos tooltips das barras.
+    await expect(
+      page.getByTestId("gantt-legenda").getByText("Atrasada", { exact: true }),
+    ).toBeVisible();
+  });
 });

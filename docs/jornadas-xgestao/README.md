@@ -36,6 +36,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG22](22-valores-contrato-e-contrato-prestador.md) | Saldo a receber corrigido, PIX/contrato do prestador e prévia de gasto | 3 | pronto (falta verificação visual) | alta | médio |
 | [XG23](23-etapas-progresso-manual.md) | A etapa vira dona do próprio avanço (percentual manual) | 3 | pronto (falta verificação visual) | alta | médio |
 | [XG24](24-tour-guiado-completo.md) | O tour guiado passa pela obra inteira | 2 | pronto (falta verificação visual) | média | baixo |
+| [XG25](25-cronograma-atraso-visivel.md) | A barra do cronograma mostra o atraso | 2 | pronto (falta verificação visual) | média | baixo |
 
 ## Contexto
 

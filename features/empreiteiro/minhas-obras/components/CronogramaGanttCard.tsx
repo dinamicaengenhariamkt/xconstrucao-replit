@@ -43,6 +43,21 @@ const STATUS_LABEL: Record<ObraEtapaApi['status'], string> = {
   concluido: 'Concluído',
 };
 
+/**
+ * XG25 — cor do atraso, deliberadamente FORA de `STATUS_COR`.
+ *
+ * Duas razões. A legenda itera `Object.keys(STATUS_COR)`, então uma chave a
+ * mais ali apareceria como se atraso fosse um status da etapa — e não é: é
+ * derivado de `prazo` a cada render, nunca gravado. E o tipo daquele mapa é
+ * `Record<ObraEtapaApi['status'], …>`, que só aceita os quatro valores do enum.
+ *
+ * O tom é mais fechado que o `#ef4444` de `bloqueado` porque os dois convivem
+ * no mesmo gráfico; o contorno é o que separa os dois de relance, sem depender
+ * de distinguir matizes de vermelho.
+ */
+const COR_ATRASADA = '#b91c1c';
+const COR_ATRASADA_BORDA = '#7f1d1d';
+
 interface EtapaComDatas {
   etapa: ObraEtapaApi;
   inicio: Date;
@@ -55,6 +70,25 @@ function meiaNoite(d: Date): Date {
 
 function formatarDiaMes(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * XG25 — prazo vencido e etapa não concluída.
+ *
+ * Estado derivado, nunca gravado: o `status` da etapa é escolhido à mão, e
+ * ninguém volta na etapa para marcá-la de atrasada no dia em que o prazo vira.
+ * Sem isto o cronograma mostrava a intenção, não o fato — foi o que o cliente
+ * viu ("está como andamento mas já esgotou o prazo").
+ *
+ * É a mesma forma da regra da obra em `diasAtrasoFor`
+ * (`features/empreiteiro/minhas-obras/api/build-detalhe-server.ts`), que não dá
+ * para reusar aqui: é privada do módulo e server-only.
+ *
+ * `fim` e `hoje` já chegam à meia-noite. A comparação é estrita porque a barra
+ * cobre o dia final inteiro: uma etapa que vence hoje ainda está no prazo.
+ */
+function estaAtrasada(etapa: ObraEtapaApi, fim: Date, hoje: Date): boolean {
+  return etapa.status !== 'concluido' && fim < hoje;
 }
 
 /**
@@ -223,7 +257,15 @@ export function CronogramaGanttCard({
                       grafico.pxDia,
                       grafico.xDe(fim) + grafico.pxDia - x,
                     );
-                    const cor = STATUS_COR[etapa.status];
+                    // XG25 — atraso vence sobre o status escolhido, inclusive
+                    // sobre `bloqueado`: uma etapa bloqueada E vencida está nos
+                    // dois estados, e o prazo estourado é o urgente. O status
+                    // original segue legível no tooltip e no badge da aba Etapas.
+                    const atrasada = estaAtrasada(etapa, fim, grafico.hoje);
+                    const cor = atrasada ? COR_ATRASADA : STATUS_COR[etapa.status];
+                    const diasAtraso = atrasada
+                      ? Math.round((grafico.hoje.getTime() - fim.getTime()) / DIA_MS)
+                      : 0;
                     return (
                       <g key={etapa.id} data-testid={`gantt-etapa-${etapa.id}`}>
                         <text
@@ -237,7 +279,20 @@ export function CronogramaGanttCard({
                         </text>
 
                         {/* Trilho da etapa */}
-                        <rect x={x} y={y} width={largura} height={BARRA_H} rx={4} fill={cor} opacity={0.25} />
+                        <rect
+                          x={x}
+                          y={y}
+                          width={largura}
+                          height={BARRA_H}
+                          rx={4}
+                          fill={cor}
+                          opacity={0.25}
+                          // O contorno fica só no trilho: ele envolve a barra
+                          // inteira, então marca o atraso mesmo numa etapa com
+                          // pouco avanço, onde o preenchimento é um toco.
+                          stroke={atrasada ? COR_ATRASADA_BORDA : undefined}
+                          strokeWidth={atrasada ? 1.5 : undefined}
+                        />
                         {/* Avanço medido */}
                         <rect
                           x={x}
@@ -248,7 +303,11 @@ export function CronogramaGanttCard({
                           fill={cor}
                         />
                         <title>
-                          {`${etapa.nome}\n${STATUS_LABEL[etapa.status]} · ${etapa.progresso}%\n${formatarDiaMes(inicio)} a ${formatarDiaMes(fim)}`}
+                          {`${etapa.nome}\n${STATUS_LABEL[etapa.status]} · ${etapa.progresso}%\n${formatarDiaMes(inicio)} a ${formatarDiaMes(fim)}${
+                            atrasada
+                              ? `\nAtrasada há ${diasAtraso} ${diasAtraso === 1 ? 'dia' : 'dias'}`
+                              : ''
+                          }`}
                         </title>
                       </g>
                     );
@@ -257,13 +316,28 @@ export function CronogramaGanttCard({
               </div>
 
               {/* Legenda */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+              <div
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800"
+                data-testid="gantt-legenda"
+              >
                 {(Object.keys(STATUS_COR) as ObraEtapaApi['status'][]).map((s) => (
                   <span key={s} className="flex items-center gap-1.5 text-xs text-gray-500">
                     <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COR[s] }} />
                     {STATUS_LABEL[s]}
                   </span>
                 ))}
+                {/* Avulsa, e não dentro do `.map` acima: atraso não é status
+                    da etapa, é derivado do prazo. Mesmo tratamento da de "Hoje". */}
+                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span
+                    className="w-3 h-3 rounded-sm"
+                    style={{
+                      backgroundColor: COR_ATRASADA,
+                      border: `1.5px solid ${COR_ATRASADA_BORDA}`,
+                    }}
+                  />
+                  Atrasada
+                </span>
                 <span className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span className="w-3 h-0.5 bg-amber-500" />
                   Hoje
