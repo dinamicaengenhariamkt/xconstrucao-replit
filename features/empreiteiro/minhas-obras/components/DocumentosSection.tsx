@@ -251,7 +251,10 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+    <div
+      className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+      data-tour="aba-documentos"
+    >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>

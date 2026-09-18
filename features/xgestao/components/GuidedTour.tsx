@@ -38,6 +38,17 @@ function rectOf(element: Element): Rect {
 const BALLOON_MARGIN = 16;
 /** Palpite só para o primeiro frame, antes de o balão existir para ser medido. */
 const BALLOON_HEIGHT_FALLBACK = 200;
+/**
+ * XG24 — quanto esperar pelo alvo antes de desistir do passo.
+ *
+ * O teto cobre a soma do pior caso: a saída da aba anterior sob
+ * `AnimatePresence mode="wait"` (150ms), a montagem do painel novo e a query
+ * que ele dispara. Antes disto a espera era um `setTimeout` de 320ms, calibrado
+ * para a rolagem suave e não para o carregamento de uma aba — abas com fetch
+ * (Cronograma, Diário, Financeiro) estouravam o prazo e o passo perdia o
+ * spotlight para sempre, porque nada remedia depois.
+ */
+const ALVO_TIMEOUT_MS = 1500;
 
 /**
  * Posiciona o balão abaixo do alvo, ou acima quando não há espaço, sempre
@@ -108,6 +119,15 @@ export function GuidedTour({
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [mounted, setMounted] = useState(false);
+  /**
+   * Sentido da navegação, para o pulo de passo sem alvo saber para onde ir.
+   * Num ref, e não em estado: o efeito de medição não deve re-rodar por causa
+   * dele — trocaria de aba e reiniciaria a busca do alvo a cada clique.
+   */
+  const direcaoRef = useRef<1 | -1>(1);
+  const setDirecao = useCallback((valor: 1 | -1) => {
+    direcaoRef.current = valor;
+  }, []);
   /** Altura real do balão. Ver `balloonPosition`: estimar isto era o bug. */
   const [balloonHeight, setBalloonHeight] = useState(BALLOON_HEIGHT_FALLBACK);
   const balloonRef = useRef<HTMLDivElement>(null);
@@ -126,56 +146,133 @@ export function GuidedTour({
     return () => observer.disconnect();
   }, [open, index, mounted]);
   useEffect(() => {
-    if (open) setIndex(0);
-  }, [open]);
+    if (!open) return;
+    setIndex(0);
+    // Reabrir pelo botão de ajuda recomeça do zero, inclusive o sentido: sem
+    // isto, quem fechou o tour após clicar "Anterior" o reabriria pulando para
+    // trás no primeiro passo sem alvo.
+    setDirecao(1);
+  }, [open, setDirecao]);
 
   const step = steps[index];
   const ultimo = index === steps.length - 1;
 
+  const avancar = useCallback(() => {
+    setDirecao(1);
+    if (ultimo) return onClose();
+    setIndex((atual) => atual + 1);
+  }, [onClose, setDirecao, ultimo]);
+
+  const voltar = useCallback(() => {
+    setDirecao(-1);
+    setIndex((atual) => Math.max(0, atual - 1));
+  }, [setDirecao]);
+
+  /**
+   * Pula um passo cujo alvo não apareceu, seguindo a direção em que o usuário
+   * navegava.
+   *
+   * A direção importa: pular sempre para frente prenderia quem clicou
+   * "Anterior" num passo sem alvo — ele voltaria e seria empurrado de novo para
+   * o passo de onde saiu, sem entender por quê. E no primeiro ou no último
+   * passo não há para onde pular: aí o balão centralizado é a saída honesta,
+   * porque fechar o tour sozinho o marcaria como visto sem ter sido.
+   */
+  const pularPasso = useCallback(() => {
+    setIndex((atual) => {
+      const proximo = atual + direcaoRef.current;
+      return proximo >= 0 && proximo < steps.length ? proximo : atual;
+    });
+  }, [steps.length]);
+
   // Mede o alvo e o mantém visível. `useLayoutEffect` evita o flash de um
   // spotlight na posição antiga antes da primeira pintura.
+  //
+  // XG24 — o efeito ganhou duas responsabilidades além de medir: esperar o alvo
+  // aparecer e desistir do passo quando ele não aparece. Com o roteiro curto e
+  // síncrono de antes, um alvo ausente virava um balão solto no centro da tela
+  // e ninguém reparava; num roteiro que atravessa nove abas, o mesmo silêncio
+  // esconderia passos quebrados em obra recém-criada, que é justamente quem vê
+  // o tour.
   useLayoutEffect(() => {
     if (!open || !step) return;
 
     // Prepara a tela antes de procurar o alvo (trocar de aba, por exemplo).
     step.onEnter?.();
 
+    // Passo sem alvo declarado é legítimo: centraliza e não espera nada.
+    if (!step.target) {
+      setRect(null);
+      return;
+    }
+
+    const alvo = step.target;
+    let encontrado = false;
+    let timerRolagem = 0;
+
     // Só mede. Rolar daqui seria realimentação: este mesmo callback está
     // registrado em `scroll`, e cada frame da rolagem suave pediria outra.
     const medir = () => {
-      if (!step.target) return setRect(null);
-      const element = document.querySelector(step.target);
+      const element = document.querySelector(alvo);
       setRect(element ? rectOf(element) : null);
     };
 
-    // O painel aberto por `onEnter` só existe no próximo frame — procurar o
-    // alvo agora encontraria o DOM anterior. Daí rolar uma única vez.
-    const frame = window.requestAnimationFrame(() => {
-      if (step.target) {
-        document
-          .querySelector(step.target)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    /**
+     * Primeira aparição do alvo: rola até ele, mede, e passa a acompanhar
+     * rolagem e redimensionamento. O `scrollIntoView` acontece uma única vez —
+     * repeti-lo a cada remedição brigaria com a rolagem do usuário.
+     */
+    const fixar = (element: Element) => {
+      encontrado = true;
+      pararDeEsperar();
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setRect(rectOf(element));
+      // A rolagem suave leva alguns frames; remede quando ela termina.
+      timerRolagem = window.setTimeout(medir, 320);
+      window.addEventListener('resize', medir);
+      window.addEventListener('scroll', medir, true);
+    };
+
+    const procurar = () => {
+      const element = document.querySelector(alvo);
+      if (element) fixar(element);
+      return Boolean(element);
+    };
+
+    // O painel aberto por `onEnter` não existe ainda; o observer avisa no
+    // instante em que ele montar, em vez de apostar num prazo fixo.
+    const observer = new MutationObserver(() => procurar());
+    const desistir = window.setTimeout(() => {
+      if (encontrado) return;
+      pararDeEsperar();
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(
+          `[GuidedTour] passo ${index + 1} ("${step.title}") pulado: nenhum elemento casa com "${alvo}".`,
+        );
       }
-      medir();
-    });
-    // A rolagem suave leva alguns frames; remede quando ela termina.
-    const timer = window.setTimeout(medir, 320);
-    window.addEventListener('resize', medir);
-    window.addEventListener('scroll', medir, true);
+      // Sem alvo não há o que explicar: segue em frente em vez de exibir um
+      // balão órfão. Nas pontas do roteiro o passo fica, centralizado.
+      pularPasso();
+    }, ALVO_TIMEOUT_MS);
+
+    function pararDeEsperar() {
+      observer.disconnect();
+      window.clearTimeout(desistir);
+    }
+
+    if (!procurar()) {
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
     return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
+      pararDeEsperar();
+      // Sem isto, um passo trocado durante a rolagem suave mediria o alvo
+      // anterior e o spotlight pousaria no elemento errado.
+      window.clearTimeout(timerRolagem);
       window.removeEventListener('resize', medir);
       window.removeEventListener('scroll', medir, true);
     };
-  }, [open, step]);
-
-  const avancar = useCallback(() => {
-    if (ultimo) return onClose();
-    setIndex((atual) => atual + 1);
-  }, [onClose, ultimo]);
-
-  const voltar = useCallback(() => setIndex((atual) => Math.max(0, atual - 1)), []);
+  }, [open, step, index, pularPasso]);
 
   /** Saída acidental cai em `onClose` quando o chamador não distingue as duas. */
   const dispensar = useCallback(() => (onDismiss ?? onClose)(), [onDismiss, onClose]);
@@ -267,9 +364,27 @@ export function GuidedTour({
           // dele — o `body` segue travado, como o tour precisa.
           style={{ top, left, width, maxHeight: `calc(100vh - ${BALLOON_MARGIN * 2}px)` }}
         >
-          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-            Passo {index + 1} de {steps.length}
-          </p>
+          {/* XG24 — o contador sozinho bastava para 6 passos. Num roteiro que
+              cobre a obra inteira, "Passo 9 de 15" não diz se vale continuar;
+              o traço preenchido responde isso de relance. */}
+          <div className="flex items-center gap-3">
+            <p className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-primary">
+              Passo {index + 1} de {steps.length}
+            </p>
+            <div
+              className="h-1 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+              role="progressbar"
+              aria-valuenow={index + 1}
+              aria-valuemin={1}
+              aria-valuemax={steps.length}
+              aria-label="Progresso do tour"
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-300"
+                style={{ width: `${((index + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
           <h2
             id="guided-tour-title"
             className="mt-1 text-base font-extrabold text-gray-950 dark:text-white"

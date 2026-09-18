@@ -72,10 +72,9 @@ function formatDate(value: string): string {
 }
 
 /**
- * O botão do hero usa `data-tour="adicionar-atualizacao"`; este usa o sufixo
- * `-aba`. Alvos distintos porque o `querySelector` do tour pega o primeiro do
- * DOM — o do hero — e o passo precisa destacar o botão daqui, junto da lista
- * que ele alimenta.
+ * XG24 — o `data-tour` daqui saiu. Esta aba está oculta na obra própria desde
+ * a XG23, que é a única onde o tour roda; a âncora apontava para um botão que
+ * o roteiro nunca alcançaria. O `data-testid` fica: os specs usam.
  */
 function BotaoAdicionar({ onClick }: { onClick: () => void }) {
   return (
@@ -84,7 +83,6 @@ function BotaoAdicionar({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="inline-flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:shadow-md"
       data-testid="btn-adicionar-atualizacao"
-      data-tour="adicionar-atualizacao-aba"
     >
       <IconAddTask className="text-lg" />
       Adicionar atualização

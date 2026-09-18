@@ -412,4 +412,76 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(publica.locator("body")).toContainText("Reforma comercial");
     await anonima.close();
   });
+
+  /**
+   * XG24 — o teste que faltava. Até aqui os specs só dispensavam o tour para
+   * chegar na tela; nenhum percorria o roteiro. Foi assim que dois `data-tour`
+   * órfãos sobreviveram no código: passo com alvo inexistente não quebra nada,
+   * só centraliza o balão sem spotlight.
+   *
+   * A obra é criada vazia de propósito — sem etapas, sem contrato, sem
+   * lançamento. É o estado de quem acabou de entrar no produto, que é
+   * exatamente quem vê o tour, e o mais provável de deixar um passo sem alvo.
+   */
+  test("tour completo percorre todos os passos com spotlight, em obra vazia", async ({
+    page,
+    request,
+  }) => {
+    const email = await registrarEmpreiteiro(request);
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+
+    const obraResponse = await request.post("/api/xgestao/obras", {
+      data: { nome: `Obra tour ${Date.now()}`, endereco: "Rua do Tour, 24" },
+    });
+    expect(obraResponse.status(), await obraResponse.text()).toBe(201);
+    const obra = (await obraResponse.json()) as { id: string };
+    await logout(request);
+
+    const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(pageLogin.status(), await pageLogin.text()).toBe(200);
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
+
+    const tour = page.getByTestId("guided-tour");
+    await expect(tour).toBeVisible();
+
+    const contador = tour.getByText(/^Passo \d+ de \d+$/);
+    const total = Number((await contador.textContent())!.match(/de (\d+)/)![1]);
+    expect(total, "o roteiro cobre a obra inteira, não só as etapas").toBeGreaterThanOrEqual(12);
+
+    const vistos = new Set<number>();
+    for (let volta = 0; volta < total * 2; volta += 1) {
+      if (!(await tour.isVisible().catch(() => false))) break;
+
+      const atual = Number((await contador.textContent())!.match(/Passo (\d+)/)![1]);
+      vistos.add(atual);
+
+      // O spotlight é o ring desenhado sobre o alvo. Sem ele o passo é um
+      // balão órfão: o alvo não existe e a explicação não tem a que se referir.
+      // Um passo pulado por alvo ausente não chega a ser visto aqui — o
+      // componente avança sozinho —, então basta assertar o que está na tela.
+      await expect(
+        tour.locator(".ring-primary"),
+        `passo ${atual} de ${total} exibe spotlight sobre o alvo`,
+      ).toBeVisible();
+
+      await page.getByTestId("guided-tour-next").click();
+    }
+
+    // Concluir o último passo fecha o tour e grava a preferência.
+    await expect(tour).toHaveCount(0);
+    expect(vistos.size, "nenhum passo trava o roteiro no meio").toBeGreaterThanOrEqual(12);
+
+    // Concluído não reaparece no F5, e "Ajuda" reabre do começo.
+    await page.reload();
+    await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
+    await expect(tour).toHaveCount(0);
+
+    await page.getByTestId("botao-ajuda").click();
+    await expect(tour).toBeVisible();
+    await expect(contador).toHaveText(`Passo 1 de ${total}`);
+  });
 });

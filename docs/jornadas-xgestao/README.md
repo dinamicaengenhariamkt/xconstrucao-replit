@@ -34,6 +34,8 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG20](20-beneficiario-saida-e-datas.md) | Beneficiário da saída e data/hora nos registros | 3 | pronto | alta | baixo |
 | [XG21](21-checklist-recorrente-e-mapa.md) | Checklist com recorrência (diária/semanal) e correções do mapa | 5 | pronto (falta verificação visual) | alta | médio |
 | [XG22](22-valores-contrato-e-contrato-prestador.md) | Saldo a receber corrigido, PIX/contrato do prestador e prévia de gasto | 3 | pronto (falta verificação visual) | alta | médio |
+| [XG23](23-etapas-progresso-manual.md) | A etapa vira dona do próprio avanço (percentual manual) | 3 | pronto (falta verificação visual) | alta | médio |
+| [XG24](24-tour-guiado-completo.md) | O tour guiado passa pela obra inteira | 2 | pronto (falta verificação visual) | média | baixo |
 
 ## Contexto
 

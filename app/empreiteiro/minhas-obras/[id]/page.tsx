@@ -133,25 +133,37 @@ function tabsVisiveis(isObraPropria: boolean) {
 /**
  * Roteiro do console, na ordem do ciclo real de trabalho.
  *
- * XG12 — os passos 2 e 3 respondem juntos o relato que abriu a jornada
- * ("ficou confuso adicionar a atualização"): mostram, lado a lado, onde as
- * atualizações aparecem e onde se registra uma nova.
+ * XG24 — o roteiro passou a cobrir a obra inteira. Antes tinha 6 passos: batia
+ * na barra de abas por fora, entrava só em Etapas e deixava de lado Cronograma,
+ * Fotos, Diário, Ocorrências, Checklists, Documentos, Timeline, Financeiro,
+ * Equipe e Localização. O cliente reparou — "não passou por algumas abas, não
+ * passou por equipe nem edição de localização".
+ *
+ * Não foi descuido: o roteiro ENCOLHEU na XG23, quando três passos perderam o
+ * alvo de uma vez (a barra "Progresso geral" saiu da obra própria, a aba
+ * "Atualizações" foi removida) e entraram dois sobre Etapas. Ficou correto e
+ * curto, e ninguém o reavaliou contra a tela que sobrou.
+ *
+ * Os alvos miram a RAIZ de cada card, não o conteúdo: `gantt-svg` só existe
+ * com etapas datadas, `valores-do-contrato` depende de contrato. Obra
+ * recém-criada é exatamente quem vê o tour — alvo condicional a dados quebra
+ * para o público certo. Onde a raiz também é condicional (Localização só
+ * renderiza sob `obra.localizacao`), o `GuidedTour` pula o passo sozinho.
  */
 function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
   return [
-    /*
-     * XG23 — o roteiro perdeu três passos de uma vez: o da barra "Progresso
-     * geral" (que saiu da obra própria) e os dois de "Atualizações" (aba
-     * removida). Um passo que mira seletor inexistente não falha alto: ele
-     * ancora o balão num canto e o usuário vê uma explicação órfã.
-     *
-     * No lugar deles entram dois sobre Etapas, que é o novo centro da tela.
-     */
     {
       target: '[data-tour="abas-obra"]',
-      title: 'As etapas da obra',
+      title: 'Tudo da obra em um lugar',
       description:
-        'Cadastre as fases — fundação, alvenaria, acabamento — e acompanhe cada uma por aqui. É delas que sai o cronograma.',
+        'Cada aba guarda um tipo de registro. Vamos passar por todas — leva um minuto, e depois você sabe onde encontrar cada coisa.',
+      onEnter: () => irParaAba('etapas'),
+    },
+    {
+      target: '[data-testid="card-etapas-j06"]',
+      title: 'Etapas: as fases da obra',
+      description:
+        'Cadastre fundação, alvenaria, acabamento — o que fizer sentido para esta obra. É daqui que sai o cronograma.',
       onEnter: () => irParaAba('etapas'),
     },
     {
@@ -162,10 +174,68 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
       onEnter: () => irParaAba('etapas'),
     },
     {
-      target: '[data-tour="abas-obra"]',
-      title: 'O dia a dia da obra',
+      target: '[data-tour="aba-cronograma"]',
+      title: 'Cronograma',
       description:
-        'Cronograma, fotos, diário, ocorrências, checklists, documentos e financeiro. Cada aba guarda um tipo de registro — tudo em um lugar só.',
+        'As etapas que têm data viram uma linha do tempo, com o dia de hoje marcado. Serve para ver o que atrasou sem abrir planilha.',
+      onEnter: () => irParaAba('cronograma'),
+    },
+    {
+      target: '[data-testid="card-fotos-j06"]',
+      title: 'Fotos da obra',
+      description:
+        'O registro visual do andamento. As fotos daqui também alimentam a capa da obra e o link do cliente.',
+      onEnter: () => irParaAba('fotos'),
+    },
+    {
+      target: '[data-testid="card-diario-j06"]',
+      title: 'Diário de obra',
+      description:
+        'O que aconteceu no dia: clima, equipe em campo, o que avançou. Escreve e publica — fica registrado com data e autor.',
+      onEnter: () => irParaAba('diario'),
+    },
+    {
+      target: '[data-testid="card-ocorrencias-j06"]',
+      title: 'Ocorrências',
+      description:
+        'O que saiu do previsto: atraso de material, chuva, retrabalho. Registrar aqui é o que sustenta a conversa depois.',
+      onEnter: () => irParaAba('ocorrencias'),
+    },
+    {
+      target: '[data-tour="aba-checklists"]',
+      title: 'Checklists',
+      description:
+        'Segurança, conformidade e qualidade. Dá para criar checklists que se repetem sozinhos, todo dia ou toda semana.',
+      onEnter: () => irParaAba('checklists'),
+    },
+    {
+      target: '[data-tour="aba-documentos"]',
+      title: 'Documentos',
+      description:
+        'Projeto, ART, licença, contrato. Envie os arquivos da obra e encontre todos organizados por categoria.',
+      onEnter: () => irParaAba('documentos'),
+    },
+    {
+      target: '[data-tour="aba-timeline"]',
+      title: 'Timeline',
+      description:
+        'O histórico de tudo que aconteceu na obra, em ordem. Útil para lembrar quando algo foi feito e por quem.',
+      onEnter: () => irParaAba('timeline'),
+    },
+    {
+      // Painel da aba, não o card "Valores do contrato": aquele só existe com
+      // contrato lançado, e obra sem contrato é o caso comum aqui.
+      target: '[data-tour="painel-aba"]',
+      title: 'Financeiro',
+      description:
+        'Entradas, saídas e o saldo a receber. Lance o que entrou e o que saiu para acompanhar o lucro da obra de verdade.',
+      onEnter: () => irParaAba('financeiro'),
+    },
+    {
+      target: '[data-tour="equipe-obra"]',
+      title: 'Equipe e colaboradores',
+      description:
+        'Quem trabalha nesta obra. Cadastre o membro com o PIX e o valor combinado, e gere o contrato do prestador direto daqui.',
     },
     {
       target: '[data-tour="trocar-capa"]',
@@ -175,9 +245,15 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
     },
     {
       target: '[data-tour="detalhes-obra"]',
-      title: 'Detalhes e endereço',
+      title: 'Detalhes da obra',
       description:
-        'Descrição, tipo, área e prazos — o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela; o endereço se edita no card de localização, lá embaixo.',
+        'Descrição, tipo, área e prazos — o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela.',
+    },
+    {
+      target: '[data-tour="localizacao-obra"]',
+      title: 'Endereço e mapa',
+      description:
+        'O endereço do terreno, com mapa. Use "Editar endereço" para corrigir — o cliente vê a região no link, nunca o endereço exato.',
     },
     {
       // XG18 — aponta para o bloco dentro do card de detalhes: o botão que
@@ -538,7 +614,10 @@ export function ObraConsoleView({
   // nova reexibe o tour uma vez, e é o custo certo de uma tela reorganizada.
   // XG23 — `console-v3` pelo mesmo motivo: a barra de progresso e duas abas
   // saíram, e três passos do roteiro apontavam para o que não existe mais.
-  const tour = useGuidedTour('console-v3', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
+  // XG24 — `console-v4`: o roteiro passou de 6 para 16 passos e agora cobre a
+  // obra inteira. Sem chave nova, quem já usa o produto nunca veria o que foi
+  // acrescentado — que é justamente o ponto da mudança.
+  const tour = useGuidedTour('console-v4', Boolean(allowOwnWorkEdit && obra?.isObraPropria));
   // `useMemo` mantém a identidade dos passos estável: o `useLayoutEffect` do
   // tour depende de `step`, e um array recriado a cada render remediria o
   // alvo em loop.
@@ -825,7 +904,7 @@ export function ObraConsoleView({
           aprovadas pelo contratante, e tem peso contratual.
         */}
         {!obra.isObraPropria && (
-          <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section" data-tour="progresso-geral">
+          <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="min-w-0">
                 <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
@@ -1093,12 +1172,18 @@ export function ObraConsoleView({
         {/* Tab content */}
         <div className="p-4 sm:p-6">
           <AnimatePresence mode="wait">
+            {/* XG24 — âncora do painel da aba corrente. Vale para a aba cujo
+                conteúdo é condicional a dados: o Financeiro só monta o card
+                "Valores do contrato" quando há contrato, e uma obra sem
+                contrato é o caso comum de quem está vendo o tour. O painel
+                monta sempre. */}
             <motion.div
               key={abaAtual}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
+              data-tour="painel-aba"
             >
               {abaAtual === 'atualizacoes' && (
                 <AtualizacoesTab

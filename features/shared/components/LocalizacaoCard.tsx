@@ -65,6 +65,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           ? 'luminous-section'
           : 'border border-gray-100 dark:border-gray-800 shadow-sm',
       )}
+      data-tour="localizacao-obra"
     >
       <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
