@@ -37,6 +37,8 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG23](23-etapas-progresso-manual.md) | A etapa vira dona do próprio avanço (percentual manual) | 3 | pronto (falta verificação visual) | alta | médio |
 | [XG24](24-tour-guiado-completo.md) | O tour guiado passa pela obra inteira | 2 | pronto (falta verificação visual) | média | baixo |
 | [XG25](25-cronograma-atraso-visivel.md) | A barra do cronograma mostra o atraso | 2 | pronto (falta verificação visual) | média | baixo |
+| [XG26](26-remocao-mapa-localizacao.md) | O mapa sai da Localização, o endereço fica | 1 | pronto (falta verificação visual) | média | baixo |
+| [XG27](27-dashboard-prazo-e-financeiro.md) | O dashboard mostra prazo e financeiro, não percentual | 2 | pronto (falta verificação visual) | alta | médio |
 
 ## Contexto
 

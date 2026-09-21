@@ -19,6 +19,7 @@ import {
   users,
 } from "@shared/db/schema";
 import { carregarMarcacoes, projetarChecklist } from "@features/obras/api/checklist-recorrencia";
+import { mediaProgressoEtapas, resolverProgressoObra } from "@features/obras/api/progresso-obra";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { formatDate } from "@shared/lib/formatters";
 import type {
@@ -141,6 +142,66 @@ export async function listMinhasObrasReal(
     for (const p of probs) problemMap.set(p.obraId, Number(p.n));
   }
 
+  /**
+   * XG27 — média das etapas por obra, em lote.
+   *
+   * Na obra própria é daqui que sai o avanço: `obras.progresso` não tem
+   * escritor desde a XG23, e era ela que o dashboard lia ao mostrar 0% para
+   * obra em andamento. Uma query por LISTA, no mesmo padrão do `problemMap`
+   * acima — trazer as etapas de todas as obras para somar em JS seria
+   * desperdício, e por obra seria N+1.
+   *
+   * `obra_etapas.progresso` é NOT NULL DEFAULT 0, então não há nulo dentro do
+   * AVG. Obra sem etapa simplesmente não aparece no `groupBy` — e essa
+   * ausência é o sinal que vira `progressoDisponivel: false`.
+   */
+  const mediaEtapasMap = new Map<string, number>();
+  if (obraIds.length > 0) {
+    const medias = await db
+      .select({
+        obraId: obraEtapas.obraId,
+        media: sql<number>`ROUND(AVG(${obraEtapas.progresso}))::int`,
+      })
+      .from(obraEtapas)
+      .where(inArray(obraEtapas.obraId, obraIds))
+      .groupBy(obraEtapas.obraId);
+    for (const m of medias) mediaEtapasMap.set(m.obraId, Number(m.media));
+  }
+
+  /**
+   * XG27 — custo real por obra, em lote.
+   *
+   * Mesma regra que a XG22 validou no detalhe (saída paga onde o dono é o
+   * pagador), agora agregada no Postgres. **Não** usa `obras.valor_pago`, que
+   * no xgestão nunca é escrita — foi o que levou a XG22 a derivar o saldo dos
+   * lançamentos.
+   *
+   * Sem o fallback de legado que o detalhe tem: lá ele classifica lançamento
+   * órfão como *receita*, e reusá-lo aqui inverteria o sinal. Verificado no
+   * banco de dev antes de escrever isto: nas obras próprias, as 40 saídas
+   * pagas têm `pagador_user_id` e as 33 entradas não têm — nenhuma saída
+   * órfã para recuperar.
+   */
+  const custoMap = new Map<string, number>();
+  if (obraIds.length > 0) {
+    const custos = await db
+      .select({
+        obraId: financeiro.obraId,
+        total: sql<string>`COALESCE(SUM(${financeiro.valor}), 0)`,
+      })
+      .from(financeiro)
+      .where(
+        and(
+          inArray(financeiro.obraId, obraIds),
+          eq(financeiro.status, "pago"),
+          eq(financeiro.escopo, "obra"),
+          eq(financeiro.pagadorUserId, userId),
+        ),
+      )
+      .groupBy(financeiro.obraId);
+    for (const c of custos) if (c.obraId) custoMap.set(c.obraId, Number(c.total));
+  }
+
   const capaIds = rows
     .map((row) => row.o.fotoCapaFileId)
     .filter((id): id is string => Boolean(id));
@@ -173,14 +234,30 @@ export async function listMinhasObrasReal(
     const enderecoFull = [o.endereco, o.cidade && o.uf ? `${o.cidade}, ${o.uf}` : null]
       .filter(Boolean)
       .join(" - ");
+    // XG27 — na obra própria o avanço vem das etapas; no marketplace, da
+    // coluna. `null` significa "não há cronograma", não "não avançou".
+    const progressoResolvido = resolverProgressoObra({
+      clienteId: o.clienteId,
+      progressoColuna: o.progresso,
+      mediaEtapas: mediaEtapasMap.get(o.id) ?? null,
+    });
+    const orcamento = Number(o.valorTotal ?? 0);
+    const custoReal = custoMap.get(o.id) ?? 0;
     return {
       id: o.id,
       titulo: o.nome,
       endereco: enderecoFull || o.endereco,
       imagemUrl: o.fotoCapaFileId ? (capaUrlMap.get(o.fotoCapaFileId) ?? "") : "",
       status,
-      progresso: o.progresso ?? 0,
-      orcamento: Number(o.valorTotal ?? 0),
+      progresso: progressoResolvido ?? 0,
+      progressoDisponivel: progressoResolvido !== null,
+      orcamento,
+      diasAtraso: dias,
+      custoReal,
+      // Sem orçamento não há denominador: `null` em vez de um 0% que pareceria
+      // folga total.
+      consumoOrcamento: orcamento > 0 ? Math.round((custoReal / orcamento) * 100) : null,
+      ocorrenciasAbertas: problemas,
       dataInicio: fmtBrDate(o.dataInicio),
       dataPrevisaoFim: fmtBrDate(o.dataPrevisao),
       contratante: {
@@ -572,7 +649,22 @@ export async function buildMinhaObraDetalheReal(
   const valorPagoNum = receitaTotal;
   const saldoReceber = Math.max(0, valorTotal - valorPagoNum);
   const percentualRecebido = valorTotal > 0 ? Math.round((valorPagoNum / valorTotal) * 100) : 0;
-  const progresso = obra.progresso ?? 0;
+  /**
+   * XG27 — mesma regra da lista, sem query nova: `etapasRows` já está em
+   * memória. Sem isto, o "Percentual executado" da aba Financeiro mostrava 0%
+   * na obra própria pelo mesmo motivo que o dashboard mostrava.
+   *
+   * A política (qual fonte, o que fazer sem etapa) mora em
+   * `resolverProgressoObra`; aqui só muda como a média é somada — em JS
+   * porque os dados já estão carregados, contra o `AVG` do Postgres na lista,
+   * onde são muitas obras.
+   */
+  const progressoResolvido = resolverProgressoObra({
+    clienteId: obra.clienteId,
+    progressoColuna: obra.progresso,
+    mediaEtapas: mediaProgressoEtapas(etapasRows),
+  });
+  const progresso = progressoResolvido ?? 0;
 
   const financeiroOut: ObraFinanceiro = {
     valorContratado,
@@ -784,7 +876,14 @@ export async function buildMinhaObraDetalheReal(
     descricao: obra.descricao ?? undefined,
     areaM2: obra.areaM2 ?? undefined,
     progresso,
+    progressoDisponivel: progressoResolvido !== null,
     orcamento: valorTotal,
+    // XG27 — os mesmos indicadores da lista, para o detalhe não divergir dela.
+    // `custoTotal` aqui é o equivalente do `custoReal` agregado na listagem:
+    // as duas leituras varrem os mesmos lançamentos.
+    custoReal: custoTotal,
+    consumoOrcamento: valorTotal > 0 ? Math.round((custoTotal / valorTotal) * 100) : null,
+    ocorrenciasAbertas: problemasAbertos,
     dataInicio: fmtBrDate(obra.dataInicio),
     dataPrevisaoFim: fmtBrDate(obra.dataPrevisao),
     contratante: {

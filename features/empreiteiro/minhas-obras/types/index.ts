@@ -7,7 +7,37 @@ export interface MinhaObra {
   imagemUrl: string;
   status: ObraStatus;
   progresso: number;
+  /**
+   * XG27 — o `progresso` acima é confiável para esta obra?
+   *
+   * `false` na obra própria sem nenhuma etapa cadastrada: não há cronograma
+   * para medir, e o `0` do campo acima é só o valor de fallback. Quem exibe
+   * deve dizer "cronograma não iniciado" em vez de "0%" — foi exatamente o
+   * "0%" sem lastro que gerou o relato desta jornada.
+   */
+  progressoDisponivel: boolean;
   orcamento: number;
+  /**
+   * XG27 — dias além da data prevista (0 quando no prazo, sem prazo ou
+   * concluída). `listMinhasObrasReal` já calculava isto para derivar o
+   * `status`; passou a expor porque o dashboard mostra prazo no lugar do
+   * percentual de execução.
+   */
+  diasAtraso: number;
+  /**
+   * XG27 — custo real da obra: saídas pagas onde o dono é o pagador. Vem dos
+   * lançamentos, **não** de `obras.valor_pago` — coluna que a XG22 já havia
+   * abandonado no detalhe por nunca ser escrita no xgestão.
+   */
+  custoReal: number;
+  /**
+   * XG27 — `custoReal` sobre o orçamento, em %. `null` quando a obra não tem
+   * orçamento lançado: sem denominador não há percentual, e exibir verde
+   * afirmaria uma folga que ninguém verificou.
+   */
+  consumoOrcamento: number | null;
+  /** XG27 — ocorrências com status 'aberta'; já era contado, só não era exposto. */
+  ocorrenciasAbertas: number;
   dataInicio: string;
   dataPrevisaoFim: string;
   contratante: {
@@ -36,7 +66,9 @@ export interface MinhaObraDetalhe extends MinhaObra {
   areaM2?: string;
   valorPago: number;
   aReceber: number;
-  diasAtraso: number;
+  // XG27 — `diasAtraso` subiu para `MinhaObra`: a lista passou a expor o mesmo
+  // número que o detalhe já entregava. Redeclarar aqui era inofensivo para o
+  // compilador e um convite a divergirem.
   tarefasPendentes: number;
   /** XG10 — só as `em_andamento`; `tarefasPendentes` conta tudo que não fechou. */
   tarefasEmAndamento?: number;
