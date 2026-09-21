@@ -2,6 +2,8 @@
  * Função para determinar a rota de redirecionamento baseada no role do usuário
  */
 
+import { XGESTAO_HOME } from '@features/xgestao/routes';
+
 export type UserRole = 'superadmin' | 'admin' | 'contratante' | 'empreiteiro' | 'anunciante' | 'xgestao';
 export type LoginContext = 'xgestao';
 
@@ -10,8 +12,10 @@ export function getRedirectPathByRole(
   roles: string[] = [],
   adminEscopo?: string,
 ): string {
+  // XG28 — passou a ser o dashboard, que até aqui só era alcançável pelo menu.
+  // A constante existe porque este destino estava repetido em onze arquivos.
   if (role === 'empreiteiro' && roles.includes('xgestao')) {
-    return '/xgestao/obras';
+    return XGESTAO_HOME;
   }
 
   switch (role) {

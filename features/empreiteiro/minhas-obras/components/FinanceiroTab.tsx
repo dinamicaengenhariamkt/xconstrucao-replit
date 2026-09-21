@@ -70,6 +70,13 @@ interface FinanceiroTabProps {
   metrics: ProfitMetrics;
   /** Obra de marketplace é read-only aqui: o dinheiro é do contratante. */
   podeLancar?: boolean;
+  /**
+   * XG29 — obra própria do xgestão. Distinto de `podeLancar`, que hoje carrega
+   * o mesmo valor mas significa outra coisa (permissão de escrita): misturar os
+   * dois faria "quem pode lançar" decidir "o que se exibe", e um dia que a
+   * permissão mudasse a barra reapareceria sem ninguém relacionar as coisas.
+   */
+  isObraPropria?: boolean;
   /** XG20 — equipe da obra, para o modal oferecer quem recebeu a saída. */
   equipe?: MembroEquipe[];
   /**
@@ -106,11 +113,14 @@ function ValoresDoContrato({
   financeiro,
   luminous = false,
   recalculando = false,
+  isObraPropria = false,
 }: {
   financeiro: ObraFinanceiro;
   luminous?: boolean;
   /** Detalhe da obra em refetch: os números abaixo ainda são os de antes. */
   recalculando?: boolean;
+  /** XG29 — na obra própria a barra "Percentual executado" não é exibida. */
+  isObraPropria?: boolean;
 }) {
   const percentualAditivo =
     financeiro.valorContratado > 0
@@ -192,7 +202,15 @@ function ValoresDoContrato({
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* XG29 — "Percentual executado" é `financeiro.percentualExecutado`, que
+            no servidor é **literalmente** `progresso` (build-detalhe-server.ts).
+            Ou seja: o mesmo número que o cliente mandou remover das telas do
+            xgestão, sobrevivendo com outro rótulo numa aba que ele alcança. Sai
+            na obra própria.
+
+            "Percentual recebido" fica nos dois produtos — aquele é financeiro de
+            verdade: quanto do contrato já foi pago. */}
+        <div className={cn('grid grid-cols-1 gap-6', !isObraPropria && 'md:grid-cols-2')}>
           {[
             {
               label: 'Percentual recebido',
@@ -200,12 +218,16 @@ function ValoresDoContrato({
               cor: 'bg-success',
               texto: 'text-success',
             },
-            {
-              label: 'Percentual executado',
-              valor: financeiro.percentualExecutado,
-              cor: 'bg-primary',
-              texto: 'text-primary',
-            },
+            ...(isObraPropria
+              ? []
+              : [
+                  {
+                    label: 'Percentual executado',
+                    valor: financeiro.percentualExecutado,
+                    cor: 'bg-primary',
+                    texto: 'text-primary',
+                  },
+                ]),
           ].map((barra) => (
             <div key={barra.label}>
               <div className="mb-2 flex items-end justify-between">
@@ -314,6 +336,7 @@ export function FinanceiroTab({
   obraId,
   metrics,
   podeLancar = true,
+  isObraPropria = false,
   financeiro,
   equipe = [],
   luminous = false,
@@ -433,6 +456,7 @@ export function FinanceiroTab({
           financeiro={financeiro}
           luminous={luminous}
           recalculando={recalculando}
+          isObraPropria={isObraPropria}
         />
       )}
 

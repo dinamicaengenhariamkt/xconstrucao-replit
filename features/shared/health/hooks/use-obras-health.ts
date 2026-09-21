@@ -6,9 +6,15 @@ import type { ObraHealth, HealthSummaryData } from '../types';
  * por obra e `getMockHealthSummary` agregado nas listas de obra.
  *
  * @param persona define o endpoint (`/api/<persona>/obras-health`).
+ * @param options.enabled XG29 — permite não buscar. A XG17 tirou a Saúde das
+ *   telas do xgestão, mas a listagem continuou chamando este hook e jogando o
+ *   resultado fora: um request de rede e um `computeHealthMapForObras` sobre
+ *   todas as obras da empreiteira, por nada. Como a regra dos hooks proíbe
+ *   chamar condicionalmente, o desligamento é aqui, via `enabled`.
  */
 export function useObrasHealthMap(
   persona: 'contratante' | 'empreiteiro' | 'admin',
+  options?: { enabled?: boolean },
 ): UseQueryResult<Record<string, ObraHealth>, Error> {
   return useQuery({
     queryKey: [persona, 'obras-health'],
@@ -19,6 +25,7 @@ export function useObrasHealthMap(
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

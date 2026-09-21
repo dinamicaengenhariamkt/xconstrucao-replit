@@ -8,6 +8,7 @@ import { RiMenuLine } from 'react-icons/ri';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@shared/components/ui/sheet";
 import type { GlassNavProps } from '../types';
 import { usePublicConfig } from '@features/shared/hooks/use-public-config';
+import { XGESTAO_LOGIN_HREF } from '@features/xgestao/routes';
 
 /**
  * XG16 — a prop `showAdminButton` foi aposentada: o link público para a área
@@ -22,7 +23,7 @@ export function GlassNav({ showAccessButton = true }: GlassNavProps) {
   const { config, isLoading } = usePublicConfig();
   const accessHref = config.marketplaceVisivel
     ? "/acesso-plataforma"
-    : "/login?perfil=xgestao&next=%2Fxgestao%2Fobras";
+    : XGESTAO_LOGIN_HREF;
   const accessLabel = config.marketplaceVisivel ? "Acesso à Plataforma" : "Acessar xgestão";
 
   useEffect(() => {

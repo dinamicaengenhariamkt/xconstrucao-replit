@@ -38,6 +38,19 @@ export interface MinhaObra {
   consumoOrcamento: number | null;
   /** XG27 — ocorrências com status 'aberta'; já era contado, só não era exposto. */
   ocorrenciasAbertas: number;
+  /**
+   * Status cru do enum `obra_status`. Convive com `status` (derivado da UI do
+   * marketplace): a obra própria do xgestão exibe o que o dono escolheu, o
+   * marketplace segue exibindo o derivado.
+   *
+   * XG28 — subiu do `MinhaObraDetalhe` para cá, como a XG27 fez com
+   * `diasAtraso`. A tabela do dashboard precisa do estado que o dono escolheu
+   * (pausada, concluída), e o `status` acima não serve: ele **mistura** atraso
+   * e pendências, que agora têm coluna própria — uma obra pausada apareceria
+   * como "com atraso" ali. Custo zero: a query já traz a linha inteira de
+   * `obras`.
+   */
+  statusObra?: 'planejamento' | 'em_andamento' | 'pausada' | 'concluida';
   dataInicio: string;
   dataPrevisaoFim: string;
   contratante: {
@@ -55,12 +68,9 @@ export interface MinhaObra {
 }
 
 export interface MinhaObraDetalhe extends MinhaObra {
-  /**
-   * Status cru do enum `obra_status`. Convive com `status` (derivado da UI do
-   * marketplace): a obra própria do xgestão exibe o que o dono escolheu, o
-   * marketplace segue exibindo o derivado.
-   */
-  statusObra?: 'planejamento' | 'em_andamento' | 'pausada' | 'concluida';
+  // XG28 — `statusObra` subiu para `MinhaObra`, mesmo motivo que levou
+  // `diasAtraso` para lá na XG27: a lista passou a entregar o campo que só o
+  // detalhe entregava, e redeclarar aqui era um convite a divergirem.
   /** Editáveis no xgestão e visíveis no link público; o marketplace não usa. */
   descricao?: string;
   areaM2?: string;
@@ -288,6 +298,15 @@ export interface MinhaObraCardProps {
 export interface MinhasObrasGridProps {
   obras: MinhaObra[];
   basePath?: string;
+  /**
+   * XG29 — a listagem está servindo o xgestão?
+   *
+   * A flag existia em `MinhasObrasView` e **morria lá**: a grid era chamada sem
+   * ela, e por isso o card não tinha como saber em que produto estava. Foi essa
+   * lacuna que deixou o percentual de execução e o badge de saúde na tela do
+   * xgestão depois de três jornadas que os removeram de todo o resto.
+   */
+  xgestao?: boolean;
 }
 
 export interface MinhasObrasFilterProps {

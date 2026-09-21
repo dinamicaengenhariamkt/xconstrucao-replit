@@ -13,6 +13,7 @@ import { useAuth } from '@features/auth/hooks/use-auth';
 import { usePerfilPlano } from '@features/planos/ui/use-planos';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
+import { XGESTAO_HOME } from '@features/xgestao/routes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,7 +29,7 @@ export function XGestaoTopbar() {
   const { data: plano } = usePerfilPlano('xgestao');
 
   const handleLogout = useCallback(async () => {
-    const { redirect } = await logout({ persona: 'xgestao', next: '/xgestao/obras' });
+    const { redirect } = await logout({ persona: 'xgestao', next: XGESTAO_HOME });
     router.push(redirect);
   }, [logout, router]);
 

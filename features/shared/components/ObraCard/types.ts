@@ -38,4 +38,18 @@ export interface ObraCardProps {
   /** Saúde real da obra (J17). Quando informada, renderiza o HealthBadge.
    *  Vem do mapa `useObrasHealthMap` carregado pela grid. Ausente → sem badge. */
   healthStatus?: HealthStatus;
+  /**
+   * XG29 — substitui a barra de progresso por outro conteúdo.
+   *
+   * Existe porque o percentual de execução saiu das telas do xgestão (o dono da
+   * obra não o controla: *"independente da informação que você coloque lá, ele
+   * não tá modificando essa porcentagem"*), mas continua válido no marketplace
+   * e no contratante, onde é a soma das medições aprovadas e tem peso
+   * contratual.
+   *
+   * É um **slot**, e não uma flag `isObraPropria`, para este componente
+   * compartilhado não precisar saber que o xgestão existe: quem conhece o
+   * produto é o card que o envolve. Ausente → a barra de progresso de sempre.
+   */
+  indicadores?: React.ReactNode;
 }

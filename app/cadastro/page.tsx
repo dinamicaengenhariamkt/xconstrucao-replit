@@ -21,6 +21,7 @@ import { HoneypotField } from "@features/auth/components/HoneypotField";
 import { PasswordStrengthMeter } from "@features/auth/components/PasswordStrengthMeter";
 import { PasswordInput } from "@features/auth/components/PasswordInput";
 import { RegistrationRateLimitError } from "@features/auth/utils/register-error";
+import { XGESTAO_HOME_ENCODED } from "@features/xgestao/routes";
 import {
   IconPerson,
   IconMail,
@@ -64,8 +65,9 @@ export default function CadastroPage() {
   const { register: registerUser } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
+  // XG28 — quem se cadastra pelo xgestão chega no dashboard.
   const oauthCallbackUrl = perfil === "xgestao"
-    ? "/auth/oauth-success?next=%2Fxgestao%2Fobras"
+    ? `/auth/oauth-success?next=${XGESTAO_HOME_ENCODED}`
     : "/auth/oauth-success";
 
   useEffect(() => {

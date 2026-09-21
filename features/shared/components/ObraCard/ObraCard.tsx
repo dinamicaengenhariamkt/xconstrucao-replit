@@ -39,6 +39,7 @@ export function ObraCard({
   statusModeracao,
   motivoModeracao,
   healthStatus,
+  indicadores,
 }: ObraCardProps) {
   // Só faz sentido sinalizar moderação em obras publicadas (Task #86).
   // Aprovadas não recebem badge extra (o status "publicada" já comunica isso).
@@ -152,15 +153,30 @@ export function ObraCard({
             </p>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-gray-500">Progresso</span>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                {progresso}%
-              </span>
+          {/* XG29 — o percentual de execução sai na obra própria do xgestão. O
+              cliente: "a gente não tem controle sobre essa quantidade (...)
+              independente da informação que você coloque lá, ele não tá
+              modificando essa porcentagem".
+
+              No marketplace e no contratante o bloco fica: lá `progresso` é a
+              soma das medições aprovadas pelo contratante e tem peso contratual.
+
+              `indicadores` é um slot, e não um `if` por produto aqui dentro,
+              para este componente compartilhado não precisar conhecer o xgestão
+              — quem monta o conteúdo é o card do produto. Os sinais que entram
+              ali não repetem a linha "Orçamento / Prazo" logo abaixo: eles dizem
+              como está (no prazo? estourou?), ela diz quanto é. */}
+          {indicadores ?? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-gray-500">Progresso</span>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  {progresso}%
+                </span>
+              </div>
+              <ProgressBar value={progresso} color={progressColor} size="sm" />
             </div>
-            <ProgressBar value={progresso} color={progressColor} size="sm" />
-          </div>
+          )}
 
           <div className="flex items-center justify-between gap-2 text-sm">
             <div>

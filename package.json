@@ -19,6 +19,7 @@
     "test:checklist:periodo": "tsx --test features/empreiteiro/minhas-obras/lib/checklist-periodo.test.ts",
     "test:checklist:projecao": "tsx --test features/empreiteiro/minhas-obras/lib/checklist-projecao.test.ts",
     "test:xgestao:indicadores": "tsx --test features/obras/api/progresso-obra.test.ts features/xgestao/lib/indicadores-obra.test.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts tests/unit/*.test.tsx",
     "clean": "rm -rf .next",
     "test:e2e": "playwright test --project=api",
     "test:e2e:browser": "E2E_BROWSER=1 playwright test --project=browser",

@@ -19,6 +19,7 @@ import {
   getExpectedRoleForLogin,
   getLoginContext,
 } from "@features/auth/utils/login-context";
+import { XGESTAO_HOME } from "@features/xgestao/routes";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
@@ -57,7 +58,9 @@ export default function LoginPage() {
   const { login, verifyTwoFactor } = useAuth();
   const { toast } = useToast();
   const antiBot = useAntiBotPayload();
-  const oauthNext = searchParams.get("next") ?? (perfil === "xgestao" ? "/xgestao/obras" : null);
+  // XG28 — quem entra pelo OAuth do xgestão sem `next` explícito cai no
+  // dashboard, igual a quem entra pelo formulário (`getRedirectPathByRole`).
+  const oauthNext = searchParams.get("next") ?? (perfil === "xgestao" ? XGESTAO_HOME : null);
   const oauthCallbackUrl = buildOAuthSuccessCallback(oauthNext, loginContext);
 
   // 2FA (J22): quando o login pede segundo fator, guardamos o challengeToken e

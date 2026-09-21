@@ -20,6 +20,7 @@ import {
 } from '@shared/components/ui/sidebar';
 import { Separator } from '@shared/components/ui/separator';
 import { XGESTAO_BOTTOM_NAV_ITEMS, XGESTAO_NAV_ITEMS } from '../constants';
+import { XGESTAO_HOME } from '@features/xgestao/routes';
 
 export function XGestaoSidebar() {
   const pathname = usePathname();
@@ -28,7 +29,7 @@ export function XGestaoSidebar() {
   const { data: plano } = usePerfilPlano('xgestao');
 
   const handleLogout = useCallback(async () => {
-    const { redirect } = await logout({ persona: 'xgestao', next: '/xgestao/obras' });
+    const { redirect } = await logout({ persona: 'xgestao', next: XGESTAO_HOME });
     router.push(redirect);
   }, [logout, router]);
 

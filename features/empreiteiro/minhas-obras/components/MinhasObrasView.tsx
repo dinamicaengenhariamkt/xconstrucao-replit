@@ -42,7 +42,9 @@ type MinhasObrasViewProps = {
 
 export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewProps) {
   const { data: obras, isLoading } = useMinhasObras();
-  const { data: healthMap } = useObrasHealthMap('empreiteiro');
+  // XG29 — no xgestão o único consumidor deste mapa (o `HealthFilterSelect`)
+  // está oculto desde a XG17, então o request era desperdício puro.
+  const { data: healthMap } = useObrasHealthMap('empreiteiro', { enabled: !xgestao });
   const searchParams = useSearchParams();
   const saude = useSaudeFilter();
   const [statusSelected, setStatusSelected] = useState<string[]>(() => {
@@ -111,8 +113,12 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
     }
     if (orcMinNum !== undefined) result = result.filter((o) => o.orcamento >= orcMinNum);
     if (orcMaxNum !== undefined) result = result.filter((o) => o.orcamento <= orcMaxNum);
-    if (progMinNum !== undefined) result = result.filter((o) => o.progresso >= progMinNum);
-    if (progMaxNum !== undefined) result = result.filter((o) => o.progresso <= progMaxNum);
+    // XG29 — mesmo tratamento que a XG17 deu ao filtro de saúde, e pelo mesmo
+    // motivo: o percentual de execução saiu do card do xgestão, então filtrar
+    // por ele encolheria a lista com base num número que não está em lugar
+    // nenhum da tela.
+    if (!xgestao && progMinNum !== undefined) result = result.filter((o) => o.progresso >= progMinNum);
+    if (!xgestao && progMaxNum !== undefined) result = result.filter((o) => o.progresso <= progMaxNum);
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -155,7 +161,8 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
     (tipoSelected.length > 0 ? 1 : 0) +
     (!xgestao && contratanteSelected.length > 0 ? 1 : 0) +
     (orcMinNum !== undefined || orcMaxNum !== undefined ? 1 : 0) +
-    (progMinNum !== undefined || progMaxNum !== undefined ? 1 : 0);
+    // XG29 — sem controle na tela no xgestão, não conta como filtro ativo.
+    (!xgestao && (progMinNum !== undefined || progMaxNum !== undefined) ? 1 : 0);
 
   const clearAllAdvanced = () => {
     setStatusSelected([]);
@@ -240,16 +247,21 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                 placeholderMax="5.000.000"
                 testIdPrefix="filter-orcamento"
               />
-              <RangeNumberInput
-                label="Progresso (%)"
-                min={progressoMin}
-                max={progressoMax}
-                onMinChange={onFilterChange(setProgressoMin)}
-                onMaxChange={onFilterChange(setProgressoMax)}
-                placeholderMin="0"
-                placeholderMax="100"
-                testIdPrefix="filter-progresso"
-              />
+              {/* XG29 — o percentual de execução saiu das telas do xgestão, e o
+                  filtro sai com ele: filtrar por um número invisível esconderia
+                  obras sem nada na tela explicando por quê. */}
+              {!xgestao && (
+                <RangeNumberInput
+                  label="Progresso (%)"
+                  min={progressoMin}
+                  max={progressoMax}
+                  onMinChange={onFilterChange(setProgressoMin)}
+                  onMaxChange={onFilterChange(setProgressoMax)}
+                  placeholderMin="0"
+                  placeholderMax="100"
+                  testIdPrefix="filter-progresso"
+                />
+              )}
             </AdvancedFiltersPopover>
 
             <div className="relative w-full sm:ml-auto sm:max-w-md sm:flex-1">
@@ -276,7 +288,10 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                   testId={`active-chip-status-${status}`}
                 />
               ))}
-              {saude.value && (
+              {/* XG29 — faltava o guard: a XG17 tirou o controle e a filtragem,
+                  mas não o chip. Com `?saude=risco` na URL ele aparecia no
+                  xgestão anunciando um filtro que não filtrava nada. */}
+              {!xgestao && saude.value && (
                 <ActiveFilterChip
                   label={`Saúde: ${HEALTH_LABELS[saude.value]}`}
                   onRemove={() => onFilterChange(saude.setValue)(undefined)}
@@ -316,7 +331,7 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
                   testId="active-chip-orcamento"
                 />
               )}
-              {(progMinNum !== undefined || progMaxNum !== undefined) && (
+              {!xgestao && (progMinNum !== undefined || progMaxNum !== undefined) && (
                 <ActiveFilterChip
                   label={`Progresso: ${formatRange(progressoMin, progressoMax, { suffix: '%' })}`}
                   onRemove={() => {
@@ -331,7 +346,10 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
         </div>
       </div>
 
-      <MinhasObrasGrid obras={paginatedObras} basePath={basePath} />
+      {/* XG29 — a flag parava aqui: a grid era chamada sem ela, e por isso o
+          card não sabia em que produto estava. Foi essa lacuna que manteve o
+          percentual de execução e o badge de saúde na tela do xgestão. */}
+      <MinhasObrasGrid obras={paginatedObras} basePath={basePath} xgestao={xgestao} />
 
       {totalPages > 1 && (
         <Pagination>

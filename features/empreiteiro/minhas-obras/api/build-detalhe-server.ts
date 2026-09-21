@@ -258,6 +258,9 @@ export async function listMinhasObrasReal(
       // folga total.
       consumoOrcamento: orcamento > 0 ? Math.round((custoReal / orcamento) * 100) : null,
       ocorrenciasAbertas: problemas,
+      // XG28 — o estado que o dono escolheu, cru do enum. Já estava em memória
+      // (`o: obras` traz a linha inteira): nenhuma query nova.
+      statusObra: o.status,
       dataInicio: fmtBrDate(o.dataInicio),
       dataPrevisaoFim: fmtBrDate(o.dataPrevisao),
       contratante: {

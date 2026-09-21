@@ -1248,6 +1248,10 @@ export function ObraConsoleView({
                   // Marketplace: o dinheiro da obra é do contratante, então o
                   // empreiteiro atribuído lê mas não lança.
                   podeLancar={obra.isObraPropria}
+                  // XG29 — mesmo valor, propósito distinto: este decide o que a
+                  // aba **exibe** (a barra "Percentual executado" sai na obra
+                  // própria), aquele decide o que ela deixa **escrever**.
+                  isObraPropria={obra.isObraPropria}
                   // XG20 — a mesma equipe do bloco abaixo, para o modal de saída
                   // oferecer quem recebeu. Já vem no detalhe, sem fetch novo.
                   equipe={obra.equipe}

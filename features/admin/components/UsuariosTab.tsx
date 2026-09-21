@@ -19,6 +19,7 @@ import {
 import { useToast } from '@shared/hooks/use-toast';
 import { apiRequest } from '@shared/lib/queryClient';
 import { useUser } from '@features/auth/store/auth-store';
+import { getRedirectPathByRole } from '@features/auth/utils/redirect-by-role';
 import {
   RiUserAddLine, RiKeyLine, RiUserUnfollowLine, RiUserFollowLine,
   RiEyeLine, RiCheckLine, RiFileCopyLine, RiSearchLine, RiEditLine,
@@ -102,12 +103,15 @@ export function UsuariosTab() {
       toast({ title: 'Modo "Ver como" ativado', description: 'Você está visualizando em modo somente leitura.' });
       const role = data?.target?.role as Role | undefined;
       const roles = (data?.target?.roles ?? []) as string[];
-      const dest =
-        role === 'empreiteiro' && roles.includes('xgestao') ? '/xgestao/obras'
-        : role === 'empreiteiro' ? '/empreiteiro/dashboard'
-        : role === 'admin' || role === 'superadmin' ? '/admin/financeiro'
-        : '/contratante/dashboard';
-      window.location.href = dest;
+      // XG28 — isto era a mesma cadeia de `if` reescrita à mão, e já divergia:
+      // quando o destino do xgestão mudou, só a cópia canônica acompanhou.
+      // Agora chama a função que o login usa.
+      //
+      // O fallback continua sendo o painel do contratante, não o `/login` que a
+      // função devolve para role desconhecida: aqui já existe uma sessão de
+      // admin ativa, e mandá-la para a tela de login seria um beco sem saída.
+      const dest = role ? getRedirectPathByRole(role, roles) : '/contratante/dashboard';
+      window.location.href = dest === '/login' ? '/contratante/dashboard' : dest;
     },
     onError: (e: unknown) => toast({ title: 'Erro', description: e instanceof Error ? e.message : '', variant: 'destructive' }),
   });

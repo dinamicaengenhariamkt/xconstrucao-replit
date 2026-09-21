@@ -5,6 +5,7 @@ import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { IconBusiness, IconConstruction } from "@shared/components/icons";
 import { usePublicConfig } from "@features/shared/hooks/use-public-config";
+import { XGESTAO_LOGIN_HREF } from "@features/xgestao/routes";
 
 export default function AcessoPlataformaPage() {
   const { config, isLoading } = usePublicConfig();
@@ -106,7 +107,7 @@ export default function AcessoPlataformaPage() {
                   </p>
                   <div className="w-full space-y-3">
                     <Link
-                      href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
+                      href={XGESTAO_LOGIN_HREF}
                       className="w-full bg-[#333333] text-white font-bold py-4 rounded-full hover:scale-105 transition-transform text-sm leading-tight inline-flex items-center justify-center"
                       data-testid="link-login-xgestao"
                     >

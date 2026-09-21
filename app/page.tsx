@@ -12,6 +12,7 @@ import { ObrasDestaqueCarousel } from "@features/landing/components/ObrasDestaqu
 import { MercadoEmFoco } from "@features/landing/components/MercadoEmFoco";
 import { AnuncieAqui } from "@features/landing/components/AnuncieAqui";
 import { usePublicConfig } from "@features/shared/hooks/use-public-config";
+import { XGESTAO_LOGIN_HREF } from "@features/xgestao/routes";
 
 export default function HomePage() {
   const { config, isLoading } = usePublicConfig();
@@ -93,7 +94,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <Link
-                    href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
+                    href={XGESTAO_LOGIN_HREF}
                     prefetch={false}
                     className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                     data-testid="link-acessar-xgestao"

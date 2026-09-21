@@ -4,6 +4,7 @@ import {
   getRedirectPathByRole,
   resolvePostLoginRedirect,
 } from "@features/auth/utils/redirect-by-role";
+import { XGESTAO_HOME, XGESTAO_OBRAS } from "@features/xgestao/routes";
 
 describe("redirecionamento do administrador xgestão", () => {
   it("envia o administrador restrito diretamente ao painel xgestão", () => {
@@ -83,6 +84,48 @@ describe("redirecionamento do administrador xgestão", () => {
         "xgestao",
       ),
       "/contratante/dashboard",
+    );
+  });
+
+  /**
+   * XG28 — o caso que faltava, e que é a porta de entrada do produto.
+   *
+   * Os testes acima passam `/xgestao/obras` como `next` **explícito**: provam
+   * que a allowlist preserva um destino pedido, não qual destino o produto
+   * escolhe sozinho. O default — o que acontece quando alguém simplesmente
+   * loga — não tinha nenhuma asserção, e foi justamente o que esta jornada
+   * mudou.
+   */
+  it("leva o empreiteiro do xgestão ao dashboard quando não há next", () => {
+    assert.equal(
+      getRedirectPathByRole("empreiteiro", ["empreiteiro", "xgestao"]),
+      XGESTAO_HOME,
+    );
+    assert.equal(
+      resolvePostLoginRedirect("empreiteiro", null, ["empreiteiro", "xgestao"]),
+      XGESTAO_HOME,
+    );
+  });
+
+  it("não leva ao xgestão quem não tem o produto", () => {
+    // O contraste que dá sentido ao teste acima: é o entitlement em `roles`
+    // que decide, não a role de empreiteiro.
+    assert.equal(
+      getRedirectPathByRole("empreiteiro", ["empreiteiro"]),
+      "/empreiteiro/dashboard",
+    );
+  });
+
+  it("continua respeitando um next explícito dentro do xgestão", () => {
+    // A lista segue alcançável por link direto — mudou o default, não a
+    // allowlist.
+    assert.equal(
+      resolvePostLoginRedirect(
+        "empreiteiro",
+        XGESTAO_OBRAS,
+        ["empreiteiro", "xgestao"],
+      ),
+      XGESTAO_OBRAS,
     );
   });
 });

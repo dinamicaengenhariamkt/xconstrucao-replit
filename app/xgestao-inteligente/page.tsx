@@ -6,6 +6,7 @@ import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
 import { IconDashboardCustomize, IconPrecisionManufacturing, IconMonitoring, IconPayments, IconGroups, IconDescription, IconAnalytics, IconTableChart, IconSmartToy, IconSecurity, IconDevices } from '@shared/components/icons';
+import { XGESTAO_LOGIN_HREF } from '@features/xgestao/routes';
 
 const features = [
   {
@@ -126,7 +127,7 @@ export default function XGestaoInteligentePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
+                href={XGESTAO_LOGIN_HREF}
                 className="bg-[#333333] text-white font-bold h-14 px-10 rounded-full hover:brightness-110 transition-all inline-flex items-center justify-center"
                 data-testid="link-testar-gratis"
               >
@@ -231,7 +232,7 @@ export default function XGestaoInteligentePage() {
             </p>
             <div className="flex justify-center">
               <Link
-                href="/login?perfil=xgestao&next=%2Fxgestao%2Fobras"
+                href={XGESTAO_LOGIN_HREF}
                 className="bg-white text-[#333333] font-bold h-14 px-10 rounded-full hover:scale-105 transition-transform inline-flex items-center justify-center"
                 data-testid="link-cta-teste"
               >
