@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import { cookies } from "next/headers";
 import { storage } from "@/server/storage";
 import { ensureProfileRow, getUserByEmail } from "@features/auth/api/auth-storage";
+import { isTotpEnabled } from "@features/auth/api/totp-storage";
 
 const PERSONA_COOKIE = "x_signup_persona";
 
@@ -16,18 +17,26 @@ export default {
   ],
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Após login OAuth, redireciona para conversão JWT
-      if (url.includes("/api/auth/callback")) {
-        return `${baseUrl}/auth/oauth-success`;
+      try {
+        const destination = new URL(url, baseUrl);
+        return destination.origin === new URL(baseUrl).origin
+          ? destination.toString()
+          : baseUrl;
+      } catch {
+        return baseUrl;
       }
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (url.startsWith(baseUrl)) return url;
-      return baseUrl;
     },
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider !== "google") return true;
+      // Email linking is enabled for password accounts. Only trust an address
+      // that Google explicitly verified before linking it or marking it verified.
+      if (!user.email || profile?.email_verified !== true) return false;
 
-      const existingUser = await getUserByEmail(user.email!);
+      const existingUser = await getUserByEmail(user.email);
+      if (existingUser && !existingUser.ativo) return false;
+      // A autenticação Google não executa o desafio TOTP da aplicação.
+      // Estas contas continuam acessíveis pelo login com senha + segundo fator.
+      if (existingUser && await isTotpEnabled(existingUser.id)) return false;
 
       // Lê a persona escolhida na landing (cookie curto setado antes do signIn).
       // Default seguro = contratante.
@@ -83,7 +92,6 @@ export default {
   pages: {
     signIn: "/login",
     error: "/login",
-    newUser: "/auth/oauth-success",
   },
   session: {
     strategy: "jwt",

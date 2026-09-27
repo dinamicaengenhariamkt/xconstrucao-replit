@@ -197,6 +197,7 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     page,
     context,
   }) => {
+    test.skip(!test.info().project.use.baseURL?.startsWith("https://"), "Cookie Secure requer HTTPS");
     const request = page.request; // compartilha cookie jar (x_signup_persona)
 
     await page.goto("/cadastro?perfil=empreiteiro");
@@ -235,6 +236,7 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     page,
     context,
   }) => {
+    test.skip(!test.info().project.use.baseURL?.startsWith("https://"), "Cookie Secure requer HTTPS");
     const request = page.request;
 
     await page.goto("/cadastro?perfil=contratante");
@@ -262,6 +264,37 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     expect(convertBody.user.email).toBe(email);
 
     await request.delete(`/api/test/oauth-simulate?email=${encodeURIComponent(email)}`);
+  });
+
+  test("OAuth Google: cadastro xgestão dá acesso só no primeiro login", async ({
+    page,
+    context,
+  }) => {
+    test.skip(!test.info().project.use.baseURL?.startsWith("https://"), "Cookie Secure requer HTTPS");
+    const request = page.request;
+    await page.goto("/cadastro?perfil=xgestao");
+    await page.route("**/api/auth/signin/google**", (route) =>
+      route.fulfill({ status: 200, body: "intercepted" }),
+    );
+    await page.getByTestId("button-google-register").click();
+    await expect.poll(async () =>
+      (await context.cookies()).find((c) => c.name === "x_signup_persona")?.value
+    ).toBe("xgestao");
+
+    const email = uniqueEmail("oauth-xgestao");
+    try {
+      const simulated = await request.post("/api/test/oauth-simulate", {
+        data: { email, name: "OAuth xgestão" },
+      });
+      expect(simulated.ok()).toBeTruthy();
+      const converted = await request.post("/api/auth/oauth-convert");
+      expect(converted.ok()).toBeTruthy();
+      expect((await converted.json()).user.role).toBe("empreiteiro");
+      const me = await (await request.get("/api/auth/me")).json();
+      expect(me.roles).toContain("xgestao");
+    } finally {
+      await request.delete(`/api/test/oauth-simulate?email=${encodeURIComponent(email)}`);
+    }
   });
 
   test("OAuth: retorno com next válido encaminha para o destino seguro", async ({ page }) => {

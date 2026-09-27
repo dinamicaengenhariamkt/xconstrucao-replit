@@ -6,6 +6,7 @@ import {
   getLoginContext,
 } from "@features/auth/utils/login-context";
 import { canApplySignupPersonaToRole } from "@features/auth/utils/oauth-persona";
+import authConfig from "../../auth.config";
 
 describe("contexto do login xgestão", () => {
   it("não restringe a entrada xgestão à role empreiteiro", () => {
@@ -37,5 +38,20 @@ describe("contexto do login xgestão", () => {
     assert.equal(canApplySignupPersonaToRole("superadmin"), false);
     assert.equal(canApplySignupPersonaToRole("contratante"), true);
     assert.equal(canApplySignupPersonaToRole("empreiteiro"), true);
+    assert.equal(canApplySignupPersonaToRole("anunciante"), false);
+  });
+
+  it("mantém destino e contexto no mesmo domínio e impede redirecionamento externo", async () => {
+    const redirect = authConfig.callbacks.redirect;
+    const baseUrl = "https://dinamicareforma.com.br";
+    assert.equal(
+      await redirect({ url: "/auth/oauth-success?next=%2Fxgestao&context=xgestao", baseUrl }),
+      `${baseUrl}/auth/oauth-success?next=%2Fxgestao&context=xgestao`,
+    );
+    assert.equal(
+      await redirect({ url: `${baseUrl}.evil.test/auth/oauth-success`, baseUrl }),
+      baseUrl,
+    );
+    assert.equal(await redirect({ url: "//evil.test/steal", baseUrl }), baseUrl);
   });
 });

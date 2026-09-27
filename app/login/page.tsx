@@ -48,6 +48,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const oauthError = searchParams.get("error");
   const perfilParam = searchParams.get("perfil");
   const perfil = perfilParam || "contratante";
   const config = perfilConfig[perfil] || perfilConfig.contratante;
@@ -191,6 +192,13 @@ export default function LoginPage() {
                 ? "Digite o código de 6 dígitos do seu app autenticador."
                 : "Acesse sua conta para continuar"}
             </p>
+            {oauthError && (
+              <p role="alert" className="text-sm text-red-600 text-center mb-5">
+                {oauthError === "Configuration"
+                  ? "O acesso com Google está indisponível no momento. Você ainda pode entrar com email e senha."
+                  : "Não foi possível entrar com Google. Tente novamente ou use seu email e senha."}
+              </p>
+            )}
 
             {/* Segundo passo do 2FA */}
             {challengeToken ? (

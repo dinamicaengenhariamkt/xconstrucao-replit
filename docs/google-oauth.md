@@ -1,0 +1,17 @@
+# Acesso com Google
+
+O login/cadastro Google usa NextAuth v5 com o adaptador Drizzle ligado às tabelas de usuários existentes. Após a autorização, `/auth/oauth-success` converte a sessão NextAuth em cookies da autenticação própria. O login por email e senha não depende do Google.
+
+## Configuração necessária
+
+1. No Google Cloud Console, configure a tela de consentimento (marca, domínio autorizado e público externo, se for atender contas Google fora da organização). Confira se o app está **Em teste** (somente usuários de teste cadastrados) ou **Em produção** e se há exigência de verificação para os escopos efetivamente solicitados. Não presuma que publicar o app no Replit publica a tela de consentimento no Google.
+2. Crie ou use um **cliente OAuth 2.0 do tipo Aplicativo da Web**. Em **URIs de redirecionamento autorizados**, adicione exatamente `https://dinamicareforma.com.br/api/auth/callback/google`. Se testar outro domínio publicado, adicione também a URI completa e exata dele. A rota `/auth/oauth-success` é interna e **não** é o callback registrado no Google. Esta integração é server-side; origem JavaScript não substitui a URI de redirecionamento.
+3. Armazene o ID e o segredo do cliente como **Secrets** `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` nos ambientes em que o botão deve funcionar. Não os coloque no repositório nem em mensagens. `NEXTAUTH_SECRET` já protege sessões; `NEXTAUTH_URL` em produção deve coincidir com a origem pública (sem o caminho de callback). Reinicie o servidor após alterar os segredos e publique novamente para que novas definições de produção entrem em vigor.
+4. Para testar no ambiente de desenvolvimento, use a origem HTTPS própria do preview apenas se o Console aceitar e o aplicativo estiver acessível. Adicione a URI dessa origem terminada em `/api/auth/callback/google` ao mesmo cliente ou use um cliente separado; evite misturar URLs de desenvolvimento no cliente de produção.
+
+## Validação
+
+- Com uma conta Google autorizada pelo público/tela de consentimento, teste cadastro novo de contratante, empreiteiro e xgestão (role primária empreiteiro + acesso adicional xgestão), onboarding e retorno ao destino esperado. Depois teste login de conta existente, inclusive conta previamente criada com senha; a role e os dados dessa conta não podem ser substituídos.
+- Teste também o botão com conta desativada (deve recusar) e conta com verificação em duas etapas da aplicação (use senha + código TOTP; Google não substitui esse desafio). Confirme que login por senha continua funcionando. Nunca faça testes criando contas descartáveis diretamente na base de produção sem combinar a limpeza.
+- `redirect_uri_mismatch` indica URI diferente da que foi cadastrada no Google; `access_denied` pode indicar usuário fora da lista de testes ou recusa de consentimento. Um erro `Configuration` na página de login indica que a configuração do provedor/servidor precisa ser conferida. Use logs sem registrar códigos OAuth, tokens, cookies ou segredos.
+- Os testes automatizados que simulam a sessão Google **não** testam a tela de consentimento nem a troca real de código com o Google. Não declare a integração externa validada sem a execução manual acima em um ambiente configurado.

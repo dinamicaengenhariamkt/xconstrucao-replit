@@ -16,6 +16,7 @@ import { storage } from "@/server/storage";
 import { db } from "@shared/db/db";
 import { userRoles } from "@shared/db/schema";
 import { canApplySignupPersonaToRole } from "@features/auth/utils/oauth-persona";
+import { isTotpEnabled } from "@features/auth/api/totp-storage";
 
 const VALID_PERSONAS = new Set(["contratante", "empreiteiro", "xgestao"]);
 
@@ -50,6 +51,22 @@ export async function POST(request: NextRequest) {
       setNoCacheHeaders(response);
       return response;
     }
+    if (!dbUser.ativo) {
+      const response = NextResponse.json(
+        { error: "Conta desativada" },
+        { status: 403 }
+      );
+      setNoCacheHeaders(response);
+      return response;
+    }
+    if (await isTotpEnabled(dbUser.id)) {
+      const response = NextResponse.json(
+        { error: "Use o login com senha e verificação em duas etapas" },
+        { status: 403 }
+      );
+      setNoCacheHeaders(response);
+      return response;
+    }
 
     // Aplicar persona escolhida na landing: se for um primeiro login
     // (sem nenhuma row de domínio ainda) e veio cookie x_signup_persona
@@ -58,21 +75,23 @@ export async function POST(request: NextRequest) {
     const personaCookie = request.cookies.get("x_signup_persona")?.value;
     const xgestaoSignup = personaCookie === "xgestao";
     const roleEscolhida = xgestaoSignup ? "empreiteiro" : personaCookie;
-    let isFirstLogin = false;
+    // A nova conta pode já ter a role empreiteiro: com o adapter apontando
+    // para users, o callback de signIn persiste a role escolhida. Não usar
+    // divergência de role para decidir se o xgestão deve ser concedido.
+    const isFirstLogin =
+      canApplySignupPersonaToRole(dbUser.role) &&
+      !(await hasAnyProfileRow(dbUser.id));
     if (
       personaCookie &&
       VALID_PERSONAS.has(personaCookie) &&
       roleEscolhida !== dbUser.role &&
-      canApplySignupPersonaToRole(dbUser.role)
+      isFirstLogin
     ) {
-      isFirstLogin = !(await hasAnyProfileRow(dbUser.id));
-      if (isFirstLogin) {
-        const updated = await updateUserRole(
-          dbUser.id,
-          roleEscolhida as "contratante" | "empreiteiro"
-        );
-        if (updated) dbUser = updated;
-      }
+      const updated = await updateUserRole(
+        dbUser.id,
+        roleEscolhida as "contratante" | "empreiteiro"
+      );
+      if (updated) dbUser = updated;
     }
 
     // Garante email verificado (OAuth Google) e row de domínio
