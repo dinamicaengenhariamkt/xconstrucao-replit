@@ -239,6 +239,40 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       expect(revogarLink.status()).toBe(404);
       const linkPreservado = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
       expect(await linkPreservado.json()).toMatchObject({ shares: [{ id: linkB.share.id }] });
+
+       // Retirar apenas Links mantém a concessão visualizar para a obra B e
+       // não revoga a capability pública já entregue ao cliente.
+       await page.getByRole("button", { name: "Permissões" }).click();
+       const dialogLinks = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+       await expect(dialogLinks.locator("#member-access-preset")).toHaveValue("completo");
+       await expect(dialogLinks.getByRole("checkbox", { name: "Links públicos" })).toBeChecked();
+       await dialogLinks.getByRole("checkbox", { name: "Links públicos" }).uncheck();
+       await expect(dialogLinks.getByRole("checkbox", { name: "Financeiro" })).toBeChecked();
+       const salvoSemLinks = page.waitForResponse((res) =>
+         res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+       await dialogLinks.getByRole("button", { name: "Salvar permissões" }).click();
+       expect((await salvoSemLinks).status()).toBe(200);
+       await expect(dialogLinks).toHaveCount(0);
+
+       // A mesma sessão perde a leitura da lista antes de qualquer reload.
+       const listaSemLinks = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+       expect(listaSemLinks.status(), await listaSemLinks.text()).toBe(404);
+       await membro.reload();
+       await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+       if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+       await expect(abas.getByRole("button", { name: "Financeiro" })).toBeVisible();
+       await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
+
+       const destinatarioContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+       try {
+         const destinatario = await destinatarioContext.newPage();
+         const publica = await destinatario.goto(linkB.share.path);
+         expect(publica?.status()).toBe(200);
+         await expect(destinatario.getByTestId("obra-publica-shell")).toBeVisible();
+         await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeB);
+       } finally {
+         await destinatarioContext.close();
+       }
     } finally {
       await membroContext.close();
     }
