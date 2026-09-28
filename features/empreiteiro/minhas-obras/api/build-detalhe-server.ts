@@ -35,6 +35,7 @@ import type {
   ObraOcorrencia as ObraOcorrenciaUI,
   TimelineEvent,
 } from "../types";
+import { ladoDoLancamento } from "../lib/lado-lancamento";
 
 type UiStatus =
   | "em_execucao"
@@ -599,25 +600,10 @@ export async function buildMinhaObraDetalheReal(
   let custoTotal = 0;
   for (const f of finRows) {
     if (f.status !== "pago") continue;
-    const valor = Number(f.valor ?? 0);
-    if (empreiteiroUserId && f.recebedorUserId === empreiteiroUserId) {
-      receitaTotal += valor;
-      continue;
-    }
-    if (empreiteiroUserId && f.pagadorUserId === empreiteiroUserId) {
-      custoTotal += valor;
-      continue;
-    }
-    // Legados sem recebedor/pagador definidos: tipo=saida (do contratante)
-    // significa entrada pro empreiteiro vinculado.
-    if (
-      empreiteiroUserId &&
-      f.recebedorUserId == null &&
-      f.pagadorUserId == null &&
-      f.tipo === "saida"
-    ) {
-      receitaTotal += valor;
-    }
+    // XG30 — regra compartilhada com o link público (`lado-lancamento.ts`).
+    const lado = ladoDoLancamento(f, empreiteiroUserId);
+    if (lado === "receita") receitaTotal += Number(f.valor ?? 0);
+    else if (lado === "custo") custoTotal += Number(f.valor ?? 0);
   }
 
   const valorContratado = Number(obra.valorTotal ?? 0);

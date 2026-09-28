@@ -275,7 +275,12 @@ export const obras = pgTable("obras", {
  *
  * O token é armazenado em claro intencionalmente: o dono precisa recuperar o
  * mesmo link depois de compartilhá-lo. A capacidade do token é limitada pela
- * projeção pública, que não inclui finanças, documentos ou dados pessoais.
+ * projeção pública, que não inclui custos, documentos ou dados pessoais — o
+ * único bloco financeiro é o de recebimentos, opt-in por link (XG30).
+ *
+ * XG30 — uma obra pode ter vários links ativos, um por público ("Cliente",
+ * "Arquiteto"…), cada um com as próprias seções. O teto de links ativos é
+ * aplicado no servidor (`LIMITE_LINKS_ATIVOS` em `obra-publica/server/token.ts`).
  */
 export const obraShareLinks = pgTable(
   "obra_share_links",
@@ -283,6 +288,8 @@ export const obraShareLinks = pgTable(
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
     token: text("token").notNull(),
+    // Para quem o link foi feito. Só o dono vê; não aparece na página pública.
+    nome: text("nome").notNull().default("Cliente"),
     criadoPor: varchar("criado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
     ativo: boolean("ativo").notNull().default(true),
     expiraEm: timestamp("expira_em"),
@@ -296,12 +303,9 @@ export const obraShareLinks = pgTable(
   },
   (t) => ({
     uniqToken: uniqueIndex("obra_share_links_token_uniq").on(t.token),
+    // Links revogados continuam preservados para auditoria e histórico. O
+    // índice único de "um ativo por obra" saiu na XG30.
     idxObraAtivo: index("obra_share_links_obra_ativo_idx").on(t.obraId, t.ativo),
-    // Cada obra tem no máximo uma capability ativa; links revogados continuam
-    // preservados para auditoria e histórico.
-    uniqActiveObra: uniqueIndex("obra_share_links_one_active_obra_uniq")
-      .on(t.obraId)
-      .where(sql`${t.ativo} = true`),
   }),
 );
 

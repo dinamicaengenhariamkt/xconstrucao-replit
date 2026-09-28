@@ -17,6 +17,9 @@ export interface ObraPublicaEtapa {
   descricao: string | null;
   progresso: number;
   status: 'pendente' | 'em_andamento' | 'bloqueado' | 'concluido';
+  /** XG30 — par de datas do cronograma. Só vem com a seção `cronograma` ligada. */
+  dataInicio: string | null;
+  prazo: string | null;
 }
 
 export interface ObraPublicaDiario {
@@ -45,30 +48,35 @@ export interface ObraPublicaFoto {
   createdAt: string;
 }
 
-export interface ObraPublicaAtualizacao {
-  id: string;
-  etapa: string;
-  descricao: string | null;
-  percentual: number;
-  createdAt: string;
-  fotosCount: number;
-}
-
-export interface ObraPublicaChecklist {
-  id: string;
-  nome: string;
-  descricao: string;
-  tipo: 'seguranca' | 'diario' | 'etapa';
-  status: 'pendente' | 'completo' | 'em_andamento';
-  itens: Array<{ id: string; titulo: string; concluida: boolean }>;
-  completadoEm?: string;
+/**
+ * XG30 — recebimento da obra, e só ele. Existe apenas com a seção `pagamentos`
+ * ligada no link. Os números seguem a regra da aba Financeiro (XG22): o
+ * recebido sai dos lançamentos pagos em que o empreiteiro é recebedor.
+ */
+export interface ObraPublicaPagamentos {
+  /** Contrato + aditivos. */
+  valorTotal: number;
+  recebido: number;
+  saldo: number;
+  parcelas: Array<{
+    id: string;
+    descricao: string;
+    valor: number;
+    vencimento: string | null;
+    pagoEm: string | null;
+    status: 'pago' | 'pendente' | 'atrasado';
+  }>;
 }
 
 /**
  * Contrato mínimo e deliberadamente anônimo do conteúdo compartilhável.
- * Não acrescente finanças, contato, identificadores pessoais ou chaves de
- * armazenamento. URLs de mídia já são capabilities temporárias resolvidas no
- * servidor apenas após validar o link da obra.
+ *
+ * Nunca entram: custos e despesas, fornecedor ou beneficiário de pagamento,
+ * lucro/resultado, método de pagamento, comprovantes, PIX, equipe, contato,
+ * identificadores pessoais ou chaves de armazenamento. O único bloco
+ * financeiro é `pagamentos` (XG30), que mostra o lado do recebimento e só
+ * existe no link em que o dono ligou a seção. URLs de mídia já são
+ * capabilities temporárias resolvidas no servidor apenas após validar o link.
  */
 export interface ObraPublicaView {
   obra: {
@@ -82,7 +90,6 @@ export interface ObraPublicaView {
      * Tipar estreito é o que impede aplicar o dicionário errado na renderização.
      */
     status: ObraStatusDb;
-    progresso: number;
     cidade: string | null;
     uf: string | null;
     /**
@@ -100,9 +107,9 @@ export interface ObraPublicaView {
   diario: ObraPublicaDiario[];
   ocorrencias: ObraPublicaOcorrencia[];
   fotos: ObraPublicaFoto[];
-  atualizacoes: ObraPublicaAtualizacao[];
-  checklists: ObraPublicaChecklist[];
   tarefas: ObraPublicaTarefa[];
+  /** `null` quando a seção está desligada: nem a consulta roda. */
+  pagamentos: ObraPublicaPagamentos | null;
   /** O que este link expõe; o shell usa para montar só as abas liberadas. */
   secoes: SecoesPublicas;
 }

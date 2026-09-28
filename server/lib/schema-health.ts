@@ -160,6 +160,7 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: [
       "obra_id",
       "token",
+      "nome",
       "criado_por",
       "ativo",
       "expira_em",

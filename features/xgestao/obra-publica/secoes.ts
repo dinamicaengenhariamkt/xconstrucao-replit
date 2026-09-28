@@ -9,12 +9,17 @@
  * é registro operacional interno. Diário e ocorrências entram desligados por
  * conterem anotação de rotina e problema em aberto — conteúdo que o empreiteiro
  * deve escolher mostrar, não descobrir que mostrou.
+ *
+ * XG30 — `checklists` e `atualizacoes` saíram. O checklist é controle interno
+ * da equipe ("não tem porquê aparecer"), e as atualizações perderam a fonte na
+ * obra própria desde a XG23. Chaves antigas salvas no jsonb dos links são
+ * ignoradas por `normalizarSecoes`, então não há migration de dados.
  */
 export const SECOES_PUBLICAS = [
   'etapas',
-  'atualizacoes',
+  'cronograma',
   'fotos',
-  'checklists',
+  'pagamentos',
   'diario',
   'ocorrencias',
   'tarefas',
@@ -39,9 +44,13 @@ export type SecoesPublicas = Record<SecaoPublica, boolean>;
  */
 export const SECOES_PADRAO: SecoesPublicas = {
   etapas: true,
-  atualizacoes: true,
+  // XG30 — evidência de andamento, pelo mesmo critério das etapas.
+  cronograma: true,
   fotos: true,
-  checklists: true,
+  // XG30 — valores só vão para quem o dono escolher, link a link. Nasce
+  // desligado em todo link, inclusive nos antigos: o arquiteto não pode
+  // descobrir o contrato porque alguém esqueceu de desmarcar.
+  pagamentos: false,
   // Registro operacional: opt-in explícito.
   diario: false,
   ocorrencias: false,
@@ -55,13 +64,14 @@ export const SECOES_PADRAO: SecoesPublicas = {
 /** Rótulos e explicações usados nos toggles da tela de edição. */
 export const SECAO_LABELS: Record<SecaoPublica, { titulo: string; descricao: string }> = {
   etapas: { titulo: 'Etapas', descricao: 'Fases da obra com percentual concluído.' },
-  // XG16 — "aprovados" era vocabulário de marketplace, onde existe um contratante
-  // para aprovar. Em obra própria o avanço é registrado, não aprovado (XG15).
-  atualizacoes: { titulo: 'Atualizações', descricao: 'Avanços registrados, com data e percentual.' },
+  cronograma: { titulo: 'Cronograma', descricao: 'Linha do tempo das etapas, com início, prazo e atrasos.' },
   // A capa não entra aqui: ela identifica a obra no topo da página e segue
   // visível mesmo com a galeria desligada.
   fotos: { titulo: 'Galeria de fotos', descricao: 'Somente as fotos marcadas para o cliente. Não afeta a capa.' },
-  checklists: { titulo: 'Checklists', descricao: 'Listas de verificação e itens concluídos.' },
+  pagamentos: {
+    titulo: 'Pagamentos',
+    descricao: 'Mostra valores do contrato e parcelas. Ligue só no link de quem paga a obra.',
+  },
   diario: { titulo: 'Diário de obra', descricao: 'Anotações do dia a dia. Reveja antes de publicar.' },
   ocorrencias: { titulo: 'Ocorrências', descricao: 'Problemas registrados, inclusive os em aberto.' },
   tarefas: { titulo: 'Tarefas', descricao: 'Pendências da equipe, com prazo e situação.' },

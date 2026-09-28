@@ -41,6 +41,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG27](27-dashboard-prazo-e-financeiro.md) | O dashboard mostra prazo e financeiro, não percentual | 2 | pronto (falta verificação visual) | alta | médio |
 | [XG28](28-dashboard-tabela-e-entrada.md) | Tabela de visão geral e o dashboard como porta de entrada | 3 | pronto (falta verificação visual) | alta | médio |
 | [XG29](29-remocao-total-do-percentual.md) | O percentual de execução sai das telas do xgestão, por inteiro | 2 | pronto (falta verificação visual) | alta | médio |
+| [XG30](30-link-cliente-publicos-e-cronograma.md) | Um link por público (pagamentos só no do cliente), cronograma no link, checklist e atualizações fora | 4 | pronto (falta verificação visual) | alta | médio |
 
 ## Contexto
 

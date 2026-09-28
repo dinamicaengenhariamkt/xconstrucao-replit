@@ -30,9 +30,21 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     ]);
 
     expect(types).toContain('export interface ObraPublicaView');
-    expect(apenasCodigo(types)).not.toMatch(/valorPago|valorTotal|orcamento|telefone|email|numero|complemento|cep|autorNome|autorId|registroProfissional|assinadoPor/);
+    // XG30 — `valorTotal` saiu desta lista: o bloco `pagamentos` expõe o
+    // contrato ao link em que o dono ligou a seção. O lado do custo segue
+    // proibido logo abaixo.
+    expect(apenasCodigo(types)).not.toMatch(/valorPago|orcamento|telefone|email|numero|complemento|cep|autorNome|autorId|registroProfissional|assinadoPor/);
     expect(projection).toContain("import 'server-only';");
-    expect(apenasCodigo(projection)).not.toMatch(/\busers\b|valorPago|valorTotal|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
+    expect(apenasCodigo(projection)).not.toMatch(/\busers\b|valorPago|numero|complemento|cep|autorId|autorNome|resolvidoPorId/);
+
+    // XG30 — pagamentos mostram só o recebimento. Custos, fornecedor,
+    // beneficiário, método e comprovante nunca saem do banco.
+    const pagamentosProibidos = /custo|fornecedor|metodoPagamento|comprovante|lucro|categoria|pagamentosSplit/i;
+    expect(apenasCodigo(types)).not.toMatch(pagamentosProibidos);
+    expect(apenasCodigo(projection)).not.toMatch(pagamentosProibidos);
+    expect(projection).toContain('secoes.pagamentos ? buildPagamentos(obraId) : null');
+    expect(projection).toContain("ladoDoLancamento(l, empreiteiroUserId) === 'receita'");
+    expect(projection).toContain("ne(financeiro.status, 'cancelado')");
 
     // XG22 — a chave PIX, o valor de contrato e o contrato assinado do prestador
     // são dados financeiros de terceiro. A equipe inteira já fica fora do link
@@ -52,16 +64,20 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
 
     // Seção desligada não é filtrada na renderização: a query nem roda.
     for (const guarda of [
-      '!secoes.etapas ? []',
+      '!secoes.etapas && !secoes.cronograma ? []',
       '!secoes.diario ? []',
       '!secoes.ocorrencias ? []',
       '!secoes.fotos ? []',
-      '!secoes.checklists ? []',
-      '!secoes.atualizacoes ? []',
       '!secoes.tarefas ? []',
     ]) {
       expect(projection).toContain(guarda);
     }
+    // As datas das etapas só saem com o cronograma ligado.
+    expect(projection).toContain('dataInicio: secoes.cronograma ? toIso(etapa.dataInicio) : null');
+
+    // XG30 — checklist é controle interno e as atualizações perderam a fonte:
+    // nenhum dos dois é lido pela projeção.
+    expect(apenasCodigo(projection)).not.toMatch(/obraChecklists|obraChecklistItens|\bmedicoes\b/);
 
     // Tarefas entram sem o responsável, que é nome de pessoa da equipe.
     expect(projection).not.toContain('obraTarefas.responsavel');
@@ -89,6 +105,13 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     expect(SECOES_PADRAO.ocorrencias).toBe(false);
     expect(SECOES_PADRAO.tarefas).toBe(false);
     expect(SECOES_PADRAO.localizacao).toBe(false);
+    // XG30 — valores só vão para quem o dono escolher, link a link.
+    expect(SECOES_PADRAO.pagamentos).toBe(false);
+    expect(SECOES_PADRAO.cronograma).toBe(true);
+    expect(Object.keys(SECOES_PADRAO)).not.toContain('checklists');
+    expect(Object.keys(SECOES_PADRAO)).not.toContain('atualizacoes');
+    // Link salvo antes da XG30 com as chaves antigas ligadas: elas somem.
+    expect(normalizarSecoes({ checklists: true, atualizacoes: true })).toEqual(SECOES_PADRAO);
 
     // Dado corrompido ou ausente cai no padrão, nunca em "tudo ligado" — links
     // emitidos antes da coluna existir seguem esta mesma regra.
@@ -99,7 +122,30 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     expect(normalizarSecoes({ diario: true }).diario).toBe(true);
   });
 
+  test('pagamentos só contam o lado do recebimento', async () => {
+    const { ladoDoLancamento } = await import(
+      '../../../features/empreiteiro/minhas-obras/lib/lado-lancamento'
+    );
+    const dono = 'user-dono';
+    const base = { recebedorUserId: null, pagadorUserId: null };
+
+    expect(ladoDoLancamento({ ...base, tipo: 'entrada', recebedorUserId: dono }, dono)).toBe('receita');
+    // Despesa do xgestão: o empreiteiro paga. Nunca pode virar parcela no link.
+    expect(ladoDoLancamento({ ...base, tipo: 'saida', pagadorUserId: dono }, dono)).toBe('custo');
+    // Legado do marketplace sem as duas pontas: saída do contratante = entrada nossa.
+    expect(ladoDoLancamento({ ...base, tipo: 'saida' }, dono)).toBe('receita');
+    expect(ladoDoLancamento({ ...base, tipo: 'entrada' }, dono)).toBeNull();
+    // Sem dono conhecido, nada é classificado — e nada vai para o link.
+    expect(ladoDoLancamento({ ...base, tipo: 'saida' }, null)).toBeNull();
+  });
+
   test('wrappers públicos injetam dados e nunca habilitam escrita ou fetch autenticado', async () => {
+    const cronograma = await source('features/xgestao/obra-publica/components/TabCronogramaPublica.tsx');
+    expect(cronograma).toContain('data={etapas}');
+    expect(cronograma).toContain('readOnly');
+    expect(await source('features/empreiteiro/minhas-obras/components/CronogramaGanttCard.tsx'))
+      .toContain('useObraEtapas(obraId, !injected)');
+
     const wrappers = await Promise.all([
       source('features/xgestao/obra-publica/components/TabEtapasPublica.tsx'),
       source('features/xgestao/obra-publica/components/TabDiarioPublica.tsx'),

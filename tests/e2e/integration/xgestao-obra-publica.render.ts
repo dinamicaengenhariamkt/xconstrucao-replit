@@ -6,6 +6,7 @@ import { EtapasJ06Card } from '@features/obras/medicoes/components/EtapasJ06Card
 import { DiarioJ06Card } from '@features/obras/medicoes/components/DiarioJ06Card';
 import { OcorrenciasJ06Card } from '@features/obras/medicoes/components/OcorrenciasJ06Card';
 import { FotosJ06Card } from '@features/obras/medicoes/components/FotosJ06Card';
+import { CronogramaGanttCard } from '@features/empreiteiro/minhas-obras/components/CronogramaGanttCard';
 import { ObraPublicaShell } from '@features/xgestao/obra-publica/components/ObraPublicaShell';
 import { SECOES_PADRAO } from '@features/xgestao/obra-publica/secoes';
 
@@ -56,6 +57,20 @@ try {
             createdAt: '2026-08-21T12:00:00.000Z',
           }],
         }),
+        // XG30 — o Gantt do console, alimentado pela projeção pública.
+        createElement(CronogramaGanttCard, {
+          obraId: 'obra-publica-fixture',
+          readOnly: true,
+          data: [{
+            id: 'etapa-gantt',
+            nome: 'Alvenaria do Gantt',
+            descricao: null,
+            progresso: 50,
+            status: 'em_andamento',
+            dataInicio: '2026-09-01T00:00:00.000Z',
+            prazo: '2026-09-20T00:00:00.000Z',
+          }],
+        }),
       ),
     ),
   );
@@ -65,7 +80,10 @@ try {
   assert.match(markup, /Concretagem concluída/);
   assert.match(markup, /Aguardar liberação/);
   assert.match(markup, /https:\/\/cdn\.example\.com\/foto-publica\.jpg/);
+  assert.match(markup, /Alvenaria do Gantt/);
   assert.doesNotMatch(markup, /Nova etapa|Publicar|Nova ocorrência|Enviar foto|Resolver|Excluir/);
+  // Quem vê o link não tem aba Etapas para editar datas.
+  assert.doesNotMatch(markup, /aba Etapas|Informar datas|Cadastrar etapas/);
 
   const shellMarkup = renderToStaticMarkup(
     createElement(
@@ -80,7 +98,6 @@ try {
             descricao: 'Modernização dos ambientes.',
             areaM2: '84.50',
             status: 'em_andamento',
-            progresso: 35,
             cidade: 'São Paulo',
             uf: 'SP',
             logradouro: null,
@@ -93,9 +110,8 @@ try {
           diario: [],
           ocorrencias: [],
           fotos: [],
-          atualizacoes: [],
-          checklists: [],
           tarefas: [],
+          pagamentos: null,
           secoes: SECOES_PADRAO,
         },
       }),
@@ -108,6 +124,56 @@ try {
   assert.match(shellMarkup, /10\/09\/2026/);
   assert.match(shellMarkup, /20\/02\/2027/);
   assert.doesNotMatch(shellMarkup, /Orçamento|Endereço|Equipe|Documento/);
+  // XG30 — Atualizações e Checklists saíram do link; Cronograma entrou;
+  // Pagamentos não aparece sem a seção ligada.
+  assert.doesNotMatch(shellMarkup, /Atualizações|Checklists|Pagamentos/);
+  assert.match(shellMarkup, /Cronograma/);
+
+  const pagamentosMarkup = renderToStaticMarkup(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(ObraPublicaShell, {
+        view: {
+          obra: {
+            id: 'obra-publica-pagamentos',
+            titulo: 'Obra com pagamentos',
+            tipo: null,
+            descricao: null,
+            areaM2: null,
+            status: 'em_andamento',
+            cidade: null,
+            uf: null,
+            logradouro: null,
+            dataInicio: null,
+            dataPrevisao: null,
+            imagemUrl: null,
+            ultimaAtualizacao: null,
+          },
+          etapas: [],
+          diario: [],
+          ocorrencias: [],
+          fotos: [],
+          tarefas: [],
+          pagamentos: {
+            valorTotal: 100000,
+            recebido: 40000,
+            saldo: 60000,
+            parcelas: [
+              { id: 'p1', descricao: 'Entrada', valor: 40000, vencimento: '2026-09-01', pagoEm: '2026-09-01', status: 'pago' },
+            ],
+          },
+          // Só Pagamentos ligado: vira a aba inicial e renderiza no SSR.
+          secoes: Object.fromEntries(
+            Object.keys(SECOES_PADRAO).map((secao) => [secao, secao === 'pagamentos']),
+          ) as typeof SECOES_PADRAO,
+        },
+      }),
+    ),
+  );
+  assert.match(pagamentosMarkup, /Pagamentos/);
+  assert.match(pagamentosMarkup, /Entrada/);
+  assert.match(pagamentosMarkup, /60\.000,00/);
 
   const minimalShellMarkup = renderToStaticMarkup(
     createElement(
@@ -122,7 +188,6 @@ try {
             descricao: null,
             areaM2: null,
             status: 'planejamento',
-            progresso: 0,
             cidade: null,
             uf: null,
             logradouro: null,
@@ -135,9 +200,8 @@ try {
           diario: [],
           ocorrencias: [],
           fotos: [],
-          atualizacoes: [],
-          checklists: [],
           tarefas: [],
+          pagamentos: null,
           secoes: SECOES_PADRAO,
         },
       }),

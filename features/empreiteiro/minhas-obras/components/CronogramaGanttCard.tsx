@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shar
 import { cn } from '@shared/lib/utils';
 import { IconCalendarMonth } from '@shared/components/icons';
 import { useObraEtapas, type ObraEtapaApi } from '@features/obras/medicoes/hooks/use-obra-j06';
+import type { EtapaJ06Data, J06DataSource } from '@features/obras/medicoes/components/types';
 
 /**
  * XG10 — cronograma da obra em gráfico de Gantt.
@@ -59,7 +60,7 @@ const COR_ATRASADA = '#b91c1c';
 const COR_ATRASADA_BORDA = '#7f1d1d';
 
 interface EtapaComDatas {
-  etapa: ObraEtapaApi;
+  etapa: EtapaJ06Data;
   inicio: Date;
   fim: Date;
 }
@@ -87,7 +88,7 @@ function formatarDiaMes(d: Date): string {
  * `fim` e `hoje` já chegam à meia-noite. A comparação é estrita porque a barra
  * cobre o dia final inteiro: uma etapa que vence hoje ainda está no prazo.
  */
-function estaAtrasada(etapa: ObraEtapaApi, fim: Date, hoje: Date): boolean {
+function estaAtrasada(etapa: EtapaJ06Data, fim: Date, hoje: Date): boolean {
   return etapa.status !== 'concluido' && fim < hoje;
 }
 
@@ -96,7 +97,7 @@ function estaAtrasada(etapa: ObraEtapaApi, fim: Date, hoje: Date): boolean {
  * fim não tem barra que a represente honestamente — inventar uma data (hoje,
  * ou +30 dias) desenharia um cronograma que ninguém planejou.
  */
-function comDatas(etapas: ObraEtapaApi[]): EtapaComDatas[] {
+function comDatas(etapas: EtapaJ06Data[]): EtapaComDatas[] {
   return etapas
     .flatMap((etapa) => {
       if (!etapa.dataInicio || !etapa.prazo) return [];
@@ -112,8 +113,16 @@ function comDatas(etapas: ObraEtapaApi[]): EtapaComDatas[] {
 export function CronogramaGanttCard({
   obraId,
   onIrParaEtapas,
-}: {
+  data,
+  isLoading: isLoadingProp,
+  readOnly = false,
+}: J06DataSource<EtapaJ06Data> & {
   obraId: string;
+  /**
+   * XG30 — no link público não existe aba Etapas para editar: some a instrução
+   * de "informe as datas na aba Etapas", que falaria com quem não pode agir.
+   */
+  readOnly?: boolean;
   /**
    * XG14 — leva à aba Etapas a partir do estado vazio. O texto já dizia onde
    * informar as datas; faltava poder ir até lá. Opcional porque o card também
@@ -121,7 +130,12 @@ export function CronogramaGanttCard({
    */
   onIrParaEtapas?: () => void;
 }) {
-  const { data: etapas = [], isLoading } = useObraEtapas(obraId);
+  // XG30 — mesmo contrato dos cards J06: com `data` injetado (link público) a
+  // rota autenticada nem é chamada.
+  const injected = data !== undefined;
+  const query = useObraEtapas(obraId, !injected);
+  const etapas = (injected ? data : query.data) ?? [];
+  const isLoading = injected ? (isLoadingProp ?? false) : query.isLoading;
 
   const plotadas = useMemo(() => comDatas(etapas), [etapas]);
   const semDatas = etapas.length - plotadas.length;
@@ -169,7 +183,9 @@ export function CronogramaGanttCard({
             Cronograma
           </CardTitle>
           <CardDescription>
-            Linha do tempo das etapas. As datas são definidas na aba Etapas.
+            {readOnly
+              ? 'Linha do tempo das etapas, com início e prazo previstos.'
+              : 'Linha do tempo das etapas. As datas são definidas na aba Etapas.'}
           </CardDescription>
         </CardHeader>
 
@@ -183,10 +199,12 @@ export function CronogramaGanttCard({
                   ? 'Nenhuma etapa cadastrada ainda.'
                   : 'Nenhuma etapa tem início e fim previstos.'}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Informe as duas datas na aba Etapas para a etapa aparecer no cronograma.
-              </p>
-              {onIrParaEtapas && (
+              {!readOnly && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Informe as duas datas na aba Etapas para a etapa aparecer no cronograma.
+                </p>
+              )}
+              {onIrParaEtapas && !readOnly && (
                 <button
                   type="button"
                   onClick={onIrParaEtapas}

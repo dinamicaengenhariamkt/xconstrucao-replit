@@ -21,12 +21,12 @@ export async function bootstrapObraShareLinksSchema(): Promise<void> {
     // antes desta coluna segue válido e adota os padrões da aplicação — que são
     // mais restritivos que o comportamento anterior. Sem backfill, por decisão.
     await db.execute(sql`ALTER TABLE obra_share_links ADD COLUMN IF NOT EXISTS secoes JSONB`);
+    // XG30 — um link por público. Links existentes viram "Cliente".
+    await db.execute(sql`ALTER TABLE obra_share_links ADD COLUMN IF NOT EXISTS nome TEXT NOT NULL DEFAULT 'Cliente'`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS obra_share_links_token_uniq ON obra_share_links(token)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS obra_share_links_obra_ativo_idx ON obra_share_links(obra_id, ativo)`);
-    await db.execute(sql`
-      CREATE UNIQUE INDEX IF NOT EXISTS obra_share_links_one_active_obra_uniq
-      ON obra_share_links(obra_id) WHERE ativo = TRUE
-    `);
+    // XG30 — a obra passa a ter vários links ativos; o teto vive no servidor.
+    await db.execute(sql`DROP INDEX IF EXISTS obra_share_links_one_active_obra_uniq`);
     console.info("[bootstrap-obra-share-links] schema ready");
   } catch (err) {
     console.error("[bootstrap-obra-share-links] failed:", err);

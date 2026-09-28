@@ -3,26 +3,28 @@
 import { useState } from 'react';
 import { cn } from '@shared/lib/utils';
 import { OBRA_STATUS_DB_BADGE_CLASSES, obraStatusDbLabel } from '@shared/constants/status';
-import { TabChecklists } from '@features/contratante/minhas-obras/components/TabChecklists';
 import {
   IconCalendarMonth,
   IconChecklist,
-  IconFactCheck,
+  IconEvent,
+  IconPayments,
   IconPhotoLibrary,
   IconTaskAlt,
   IconTimeline,
-  IconTrendingUp,
   IconWarning,
 } from '@shared/components/icons';
 import type { ObraPublicaView } from '../types';
+import { TabCronogramaPublica } from './TabCronogramaPublica';
 import { TabDiarioPublica } from './TabDiarioPublica';
 import { TabEtapasPublica } from './TabEtapasPublica';
 import { TabFotosPublica } from './TabFotosPublica';
 import { TabOcorrenciasPublica } from './TabOcorrenciasPublica';
-import { TabAtualizacoesPublica } from './TabAtualizacoesPublica';
+import { TabPagamentosPublica } from './TabPagamentosPublica';
 import { TabTarefasPublica } from './TabTarefasPublica';
 
-type PublicTab = 'atualizacoes' | 'etapas' | 'diario' | 'ocorrencias' | 'fotos' | 'checklists' | 'tarefas';
+// XG30 — Atualizações e Checklists saíram: a primeira ficou sem fonte na obra
+// própria desde a XG23, e o checklist é controle interno da equipe.
+type PublicTab = 'etapas' | 'cronograma' | 'diario' | 'ocorrencias' | 'fotos' | 'tarefas' | 'pagamentos';
 
 /** `key` casa com a seção correspondente em `SecoesPublicas`. */
 const TABS: Array<{
@@ -30,13 +32,13 @@ const TABS: Array<{
   label: string;
   Icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { key: 'atualizacoes', label: 'Atualizações', Icon: IconTrendingUp },
   { key: 'etapas', label: 'Etapas', Icon: IconTaskAlt },
+  { key: 'cronograma', label: 'Cronograma', Icon: IconEvent },
   { key: 'tarefas', label: 'Tarefas', Icon: IconChecklist },
   { key: 'diario', label: 'Diário', Icon: IconTimeline },
   { key: 'ocorrencias', label: 'Ocorrências', Icon: IconWarning },
   { key: 'fotos', label: 'Fotos', Icon: IconPhotoLibrary },
-  { key: 'checklists', label: 'Checklists', Icon: IconFactCheck },
+  { key: 'pagamentos', label: 'Pagamentos', Icon: IconPayments },
 ];
 
 function formatDate(value: string | null): string {
@@ -127,8 +129,8 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             com o percentual que o dono da obra digitou — que é onde o próprio
             cliente pediu para concentrar: "deixa só a etapas".
 
-            A data da última atualização fica: ela vem do diário/medições e
-            segue verdadeira.
+            A data da última atualização fica: ela vem do diário, das fotos e,
+            desde a XG30, da última edição de etapa.
           */}
           {view.obra.ultimaAtualizacao && (
             <div className="bg-gray-50 p-6 dark:bg-gray-800/50">
@@ -208,13 +210,15 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             ))}
           </div>
           <div className="p-4 sm:p-6">
-            {activeTab === 'atualizacoes' && <TabAtualizacoesPublica atualizacoes={view.atualizacoes} />}
             {activeTab === 'etapas' && <TabEtapasPublica obraId={view.obra.id} etapas={view.etapas} />}
+            {activeTab === 'cronograma' && <TabCronogramaPublica obraId={view.obra.id} etapas={view.etapas} />}
             {activeTab === 'diario' && <TabDiarioPublica obraId={view.obra.id} diario={view.diario} />}
             {activeTab === 'ocorrencias' && <TabOcorrenciasPublica obraId={view.obra.id} ocorrencias={view.ocorrencias} />}
             {activeTab === 'fotos' && <TabFotosPublica obraId={view.obra.id} fotos={view.fotos} />}
-            {activeTab === 'checklists' && <TabChecklists checklists={view.checklists} />}
             {activeTab === 'tarefas' && <TabTarefasPublica tarefas={view.tarefas} />}
+            {activeTab === 'pagamentos' && view.pagamentos && (
+              <TabPagamentosPublica pagamentos={view.pagamentos} />
+            )}
           </div>
         </section>
         )}

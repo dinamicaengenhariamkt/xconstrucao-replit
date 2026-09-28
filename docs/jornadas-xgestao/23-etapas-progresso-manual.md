@@ -112,4 +112,5 @@ exige restaurar junto o que o alimentava — senão a etapa fica sem forma nenhu
 - **Seção "Atualizações" do link público fica sempre vazia** em obra própria
   (`SECOES_PADRAO.atualizacoes = true`). Não mexemos no padrão porque isso alteraria links já
   emitidos.
+  ✅ **Resolvida na [XG30](30-link-cliente-publicos-e-cronograma.md)**: a seção saiu do link.
 - **`shared/components/ui/slider.tsx` continua sem nenhum uso** no projeto.

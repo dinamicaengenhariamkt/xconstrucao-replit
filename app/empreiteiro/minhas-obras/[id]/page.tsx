@@ -43,7 +43,7 @@ import { EditarLocalizacaoModal } from '@features/xgestao/components/EditarLocal
 import { ExcluirObraDialog } from '@features/xgestao/components/ExcluirObraDialog';
 import { GuidedTour, type TourStep } from '@features/xgestao/components/GuidedTour';
 import { useGuidedTour } from '@features/xgestao/hooks/use-guided-tour';
-import { useObraShare, toAbsoluteShareUrl } from '@features/xgestao/obra-publica/hooks/use-obra-share';
+import { useObraShares, toAbsoluteShareUrl } from '@features/xgestao/obra-publica/hooks/use-obra-share';
 import { useToast } from '@shared/hooks/use-toast';
 
 const STATUS_BG: Record<string, string> = {
@@ -361,8 +361,11 @@ function kpiIconClasses(luminous: boolean, cor: string) {
  * dela com uma melhora: lá a URL era texto puro e copiar exigia selecionar na
  * mão; aqui usa o `Input readOnly` + botão "Copiar" do `CompartilharModal`.
  *
- * Lê a mesma query (`useObraShare`) que o modal e a edição consomem, então
- * gerar ou revogar em qualquer um dos três reflete nos outros sem callback.
+ * Lê a mesma query (`useObraShares`) que o modal consome, então criar ou
+ * revogar em qualquer um dos dois reflete no outro sem callback.
+ *
+ * XG30 — a obra pode ter um link por público; o bloco lista todos, cada um
+ * com o próprio botão de copiar. Escolher o que cada um mostra fica no modal.
  */
 function LinkPublicoBloco({
   obraId,
@@ -371,17 +374,17 @@ function LinkPublicoBloco({
   obraId: string;
   onGerenciar: () => void;
 }) {
-  const { data: share, isLoading } = useObraShare(obraId);
+  const { data, isLoading } = useObraShares(obraId);
+  const shares = data?.shares ?? [];
   const { toast } = useToast();
-  const [copiado, setCopiado] = useState(false);
-  const url = toAbsoluteShareUrl(share);
+  const [copiado, setCopiado] = useState<string | null>(null);
 
-  const copiar = async () => {
+  const copiar = async (linkId: string, url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      setCopiado(true);
+      setCopiado(linkId);
       toast({ title: 'Link copiado!', description: 'URL copiada para a área de transferência.' });
-      setTimeout(() => setCopiado(false), 2500);
+      setTimeout(() => setCopiado(null), 2500);
     } catch {
       toast({ title: 'Erro', description: 'Não foi possível copiar o link.', variant: 'destructive' });
     }
@@ -397,46 +400,66 @@ function LinkPublicoBloco({
         <span
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
-            share
+            shares.length > 0
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
               : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
           )}
           data-testid="detalhes-link-status"
         >
-          {isLoading ? 'Consultando…' : share ? 'Link ativo' : 'Nenhum link gerado'}
+          {isLoading
+            ? 'Consultando…'
+            : shares.length === 0
+              ? 'Nenhum link gerado'
+              : shares.length === 1
+                ? '1 link ativo'
+                : `${shares.length} links ativos`}
         </span>
-        {share && (
-          <span className="text-xs text-gray-500" data-testid="detalhes-link-metricas">
-            {share.visualizacoes === 0
-              ? 'Ainda não foi aberto'
-              : `${share.visualizacoes} ${share.visualizacoes === 1 ? 'visualização' : 'visualizações'}`}
-          </span>
-        )}
       </div>
 
-      {share && url && (
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input
-            readOnly
-            value={url}
-            onClick={(e) => e.currentTarget.select()}
-            className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            data-testid="detalhes-link-url"
-          />
-          <button
-            type="button"
-            onClick={copiar}
-            className="shrink-0 cursor-pointer rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
-            data-testid="detalhes-link-copiar"
-          >
-            {copiado ? 'Copiado' : 'Copiar'}
-          </button>
-        </div>
+      {shares.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-2">
+          {shares.map((share) => {
+            const url = toAbsoluteShareUrl(share);
+            return (
+              <li
+                key={share.id}
+                className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                data-testid={`detalhes-link-${share.id}`}
+              >
+                <div className="flex min-w-0 items-baseline gap-2 sm:w-40 sm:shrink-0 sm:flex-col sm:gap-0">
+                  <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{share.nome}</span>
+                  <span className="text-[11px] text-gray-500" data-testid="detalhes-link-metricas">
+                    {share.visualizacoes === 0
+                      ? 'Ainda não foi aberto'
+                      : `${share.visualizacoes} ${share.visualizacoes === 1 ? 'visualização' : 'visualizações'}`}
+                    {share.secoes.pagamentos ? ' · mostra pagamentos' : ''}
+                  </span>
+                </div>
+                <input
+                  readOnly
+                  value={url}
+                  onClick={(e) => e.currentTarget.select()}
+                  className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  data-testid="detalhes-link-url"
+                />
+                <button
+                  type="button"
+                  onClick={() => copiar(share.id, url)}
+                  className="shrink-0 cursor-pointer rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+                  data-testid="detalhes-link-copiar"
+                >
+                  {copiado === share.id ? 'Copiado' : 'Copiar'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
       <p className="mt-3 text-xs text-gray-500">
-        O cliente acompanha a obra somente leitura, sem criar conta. Valores, lucro, equipe e o
-        endereço exato nunca são compartilhados.
+        Quem recebe acompanha a obra somente leitura, sem criar conta. Crie um link por pessoa
+        (cliente, arquiteto…) para escolher o que cada uma vê. Valores só aparecem no link com
+        Pagamentos ligado; custos, lucro, equipe e o endereço exato nunca são compartilhados.
       </p>
       <button
         type="button"
@@ -444,7 +467,7 @@ function LinkPublicoBloco({
         className="mt-3 cursor-pointer text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
         data-testid="detalhes-link-gerenciar"
       >
-        {share ? 'Gerenciar link público' : 'Gerar link público'}
+        {shares.length > 0 ? 'Gerenciar links públicos' : 'Gerar link público'}
       </button>
     </div>
   );

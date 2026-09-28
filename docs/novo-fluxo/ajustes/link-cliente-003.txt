@@ -1,0 +1,3 @@
+Fala Ramon, tudo bem? Bom dia. Ramon, no link do cliente, aquele link que a gente consegue gerar para o cliente acompanhar, tem essa aba de atualizações.
+Essa aba de atualizações não está puxando nada. E na parte do nosso de preenchimento não tem como eu pôr nada nessa aba também, não tem essa aba para a gente.
+Então, ou coloca alguma coisa para ela puxar alguma informação, ou ela puxa alguma coisa do tipo da timeline, alguma informação da timeline, alguma coisa, não sei o que ela vai puxar, ou tira, porque não está puxando nada, tá?
