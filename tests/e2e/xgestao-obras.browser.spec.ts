@@ -91,6 +91,11 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     };
     const obraA = await criar(nomeA);
     const obraB = await criar(nomeB);
+    const linkResponse = await request.post(`/api/xgestao/obras/${obraB}/share`, {
+      data: { nome: "Cliente leitura" },
+    });
+    expect(linkResponse.status(), await linkResponse.text()).toBe(201);
+    const linkB = (await linkResponse.json()) as { share: { id: string; path: string } };
     const etapa = await request.post(`/api/obras/${obraB}/etapas`, {
       data: { nome: "Etapa visível somente para leitura" },
     });
@@ -173,6 +178,11 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       await expect(membro.getByTestId("button-nova-entrada")).toHaveCount(0);
       await expect(membro.getByTestId("button-nova-saida")).toBeVisible();
       await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
+      // A navegação pode renovar a sessão com cookie Secure; reemita o cookie
+      // HTTP de teste antes das chamadas diretas pelo APIRequestContext.
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const linksRestritos = await membro.request.get(`/api/xgestao/obras/${obraA}/share`);
+      expect(linksRestritos.status()).toBe(404);
 
       // O membro mantém a mesma sessão; a próxima navegação deve ler o preset salvo.
       await editarPermissoes("encarregado");
@@ -204,6 +214,31 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       await expect(membro.getByTestId("button-nova-saida")).toHaveCount(0);
       await expect(membro.getByTestId("detalhes-editar-informacoes")).toHaveCount(0);
       await expect(membro.getByTestId("detalhes-excluir-obra")).toHaveCount(0);
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const lista = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(lista.status(), await lista.text()).toBe(200);
+      expect(await lista.json()).toMatchObject({
+        shares: [{ id: linkB.share.id, path: linkB.share.path }],
+      });
+      await expect(membro.getByTestId("detalhes-link-publico")).toBeVisible();
+      await expect(membro.getByTestId(`detalhes-link-${linkB.share.id}`)).toContainText("Cliente leitura");
+      await expect(membro.getByTestId("detalhes-link-url")).toHaveValue(
+        new RegExp(`${linkB.share.path}$`),
+      );
+      await expect(membro.getByTestId("detalhes-link-gerenciar")).toHaveCount(0);
+
+      const criarLink = await membro.request.post(`/api/xgestao/obras/${obraB}/share`, {
+        data: { nome: "Não permitido" },
+      });
+      expect(criarLink.status()).toBe(404);
+      const alterarLink = await membro.request.patch(`/api/xgestao/obras/${obraB}/share/${linkB.share.id}`, {
+        data: { nome: "Não permitido" },
+      });
+      expect(alterarLink.status()).toBe(404);
+      const revogarLink = await membro.request.delete(`/api/xgestao/obras/${obraB}/share/${linkB.share.id}`);
+      expect(revogarLink.status()).toBe(404);
+      const linkPreservado = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(await linkPreservado.json()).toMatchObject({ shares: [{ id: linkB.share.id }] });
     } finally {
       await membroContext.close();
     }

@@ -488,8 +488,9 @@ function LinkPublicoBloco({
       )}
 
       <p className="mt-3 text-xs text-gray-500">
-        Quem recebe acompanha a obra somente leitura, sem criar conta. Crie um link por pessoa
-        (cliente, arquiteto…) para escolher o que cada uma vê. Valores só aparecem no link com
+        Quem recebe acompanha a obra somente leitura, sem criar conta. {onGerenciar
+          ? 'Crie um link por pessoa (cliente, arquiteto…) para escolher o que cada uma vê.'
+          : 'Cada link pode mostrar informações diferentes para seu destinatário.'} Valores só aparecem no link com
         Pagamentos ligado; custos, lucro, equipe e o endereço exato nunca são compartilhados.
       </p>
       {onGerenciar && <button
@@ -507,11 +508,13 @@ function LinkPublicoBloco({
 function DetalhesObraCard({
   obra,
   onEditar,
+  mostrarLinks,
   onGerenciarLink,
   onExcluir,
 }: {
   obra: MinhaObraDetalhe;
   onEditar?: () => void;
+  mostrarLinks?: boolean;
   onGerenciarLink?: () => void;
   onExcluir?: () => void;
 }) {
@@ -597,7 +600,7 @@ function DetalhesObraCard({
 
       {/* Fica fora do `vazio`: o link público independe de a obra ter
           descrição ou prazos preenchidos. */}
-      {onGerenciarLink && <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />}
+      {mostrarLinks && <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />}
 
       {/*
         XG18 — a exclusão desce para cá junto com o fim da tela `/editar`, que
@@ -1011,6 +1014,7 @@ export function ObraConsoleView({
         <DetalhesObraCard
           obra={obra}
           onEditar={allowOwnWorkEdit ? () => setShowInfo(true) : undefined}
+          mostrarLinks={linksAreaPermitida}
           onGerenciarLink={linksAreaPermitida ? (allowOwnWorkEdit ? () => setShowShare(true) : undefined) : undefined}
           onExcluir={allowOwnWorkEdit ? () => setShowExcluir(true) : undefined}
         />

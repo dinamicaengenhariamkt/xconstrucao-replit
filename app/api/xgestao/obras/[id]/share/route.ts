@@ -10,6 +10,7 @@ import {
 import {
   nomeLinkSchema,
   requireXgestaoObraAccess,
+  requireXgestaoObraReadAccess,
   secoesSchema,
   shareResponse,
   sharePayload,
@@ -28,7 +29,7 @@ const createShareSchema = z.object({
 /** GET lista os links ativos da obra, sem girar nenhum (XG30: um por público). */
 export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const access = await requireXgestaoObraAccess(request, id);
+  const access = await requireXgestaoObraReadAccess(request, id);
   if (access.error) return access.error;
 
   const links = await listActiveObraShareLinks(id);

@@ -46,10 +46,10 @@ export function sharePayload(link: ObraShareLink) {
 }
 
 /**
- * Garante que a mutação é feita exclusivamente pelo empreiteiro xgestão dono
- * de uma obra própria; obra de marketplace nunca ganha link por esta API.
+ * Garante acesso à área Links de uma obra própria xgestão. Listar aceita
+ * concessão de leitura; criar, alterar e revogar exigem escrita.
  */
-export async function requireXgestaoObraAccess(request: NextRequest, obraId: string) {
+async function requireShareAccess(request: NextRequest, obraId: string, write: boolean) {
   const guard = await requireVerifiedUser(request);
   if (guard.error) return { error: guard.error, user: null };
   if (guard.user.role !== 'empreiteiro') {
@@ -64,7 +64,7 @@ export async function requireXgestaoObraAccess(request: NextRequest, obraId: str
   const access = await findObraAccess(obraId, guard.user);
   if (
     !access ||
-    !canWriteObraContent(access) ||
+    (write && !canWriteObraContent(access)) ||
     !canAccessObraArea(access, 'links') ||
     access.obra.clienteId !== null ||
     access.obra.empreiteiraId !== entitlement.empreiteiraId
@@ -72,4 +72,12 @@ export async function requireXgestaoObraAccess(request: NextRequest, obraId: str
     return { error: shareResponse({ message: 'Obra não encontrada.' }, 404), user: null };
   }
   return { error: null, user: guard.user };
+}
+
+export function requireXgestaoObraReadAccess(request: NextRequest, obraId: string) {
+  return requireShareAccess(request, obraId, false);
+}
+
+export function requireXgestaoObraAccess(request: NextRequest, obraId: string) {
+  return requireShareAccess(request, obraId, true);
 }

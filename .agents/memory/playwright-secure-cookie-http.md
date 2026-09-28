@@ -8,3 +8,5 @@ Protected browser navigation must not be added to the Playwright `api` project w
 **Why:** API requests can authenticate while Chromium correctly refuses to send the Secure session cookie over HTTP page navigation, making protected page tests unreliable in that project.
 
 **How to apply:** For protected UI, use the browser project in a compatible runner. In the API project, test the endpoint contract and use deterministic component or structural checks for render branches.
+
+When a browser test uses `page.request` for direct API assertions after protected navigation, the navigation may have renewed the session with Secure cookies that the HTTP API request context does not send. Reissue the test-only login cookie immediately before those API calls; otherwise an expected permission denial (404) may instead be an unauthenticated 401. Keep this workaround inside E2E tests, not production authentication.
