@@ -239,15 +239,18 @@ test.describe('xgestão — link público de obra', () => {
     const invalido = await request.get('/publico/obra/token-invalido');
     expect(invalido.status()).toBe(404);
 
-    // Outra conta não pode criar nem revogar a capability da obra de terceiro.
+    // Outra empresa não pode listar endereços, criar nem revogar links da obra.
     const otherEmail = await registrarEmpreiteiro(request, 'xgestao-share-other');
     await loginAs(request, otherEmail);
     await completarPerfilOperacional(request, 'empreiteiro');
     await logout(request);
     await concederXGestao(request, otherEmail);
     await loginAs(request, otherEmail);
+    const outroGet = await request.get(`/api/xgestao/obras/${obra.id}/share`);
     const outroPost = await request.post(`/api/xgestao/obras/${obra.id}/share`, { data: {} });
     const outroDelete = await request.delete(`/api/xgestao/obras/${obra.id}/share/${first.share.id}`);
+    expect(outroGet.status()).toBe(404);
+    expect(await outroGet.text()).not.toContain(tokenFromPath(first.share.path));
     expect(outroPost.status()).toBe(404);
     expect(outroDelete.status()).toBe(404);
     await logout(request);
