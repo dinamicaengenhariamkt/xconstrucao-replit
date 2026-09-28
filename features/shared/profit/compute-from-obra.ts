@@ -15,9 +15,11 @@ export interface ProfitObraInput {
 }
 
 export function computeProfitFromObra(obra: ProfitObraInput): ProfitMetrics {
-  const receitaTotal = Math.round(obra.financeiro.receitaTotal || 0);
-  const custoTotal = Math.round(obra.financeiro.custoTotal || 0);
-  const lucroEstimado = receitaTotal - custoTotal;
+  const receitaCentavos = Math.round((obra.financeiro.receitaTotal || 0) * 100);
+  const custoCentavos = Math.round((obra.financeiro.custoTotal || 0) * 100);
+  const receitaTotal = receitaCentavos / 100;
+  const custoTotal = custoCentavos / 100;
+  const lucroEstimado = (receitaCentavos - custoCentavos) / 100;
   const margem = receitaTotal > 0 ? Number(((lucroEstimado / receitaTotal) * 100).toFixed(1)) : 0;
   return { receitaTotal, custoTotal, lucroEstimado, margem };
 }

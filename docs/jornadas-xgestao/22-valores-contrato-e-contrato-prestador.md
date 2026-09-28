@@ -82,6 +82,30 @@ Jefferson" era computável. Faltava o **previsto** para contrapor ao realizado.
   como entradas virtuais, que não têm linha no banco nem contrato. Inativos ficam de fora: quem
   saiu da obra não deve continuar pesando no custo previsto.
 
+### Revisão posterior — custo da obra não é pagamento dos contratos da equipe
+
+O custo realizado da obra (`custoTotal`) continua somando as saídas **pagas** pelo
+empreiteiro: mão de obra, material e outras despesas. A receita recebida continua
+somando apenas entradas pagas; saídas não reduzem o saldo a receber do cliente.
+As somas e o card de resultado conservam centavos (em vez de arredondar cada
+total para reais inteiros).
+
+O card "Prévia de gasto com a equipe" não pode usar `custoTotal` como "pago à
+equipe": uma compra de material de fornecedor externo é custo da obra, mas não
+quita o contrato de nenhum prestador. O comparativo soma apenas saídas pagas de
+`mao_de_obra` vinculadas pelo ID a membros ativos com contrato positivo. O
+restante é a soma de `max(0, contrato − pago)` **por membro**, de modo que um
+excedente pago a um prestador não quite outro. O excedente aparece separado.
+Mão de obra avulsa ou de membros sem contrato ativo também segue no custo
+realizado da obra, mas é indicada à parte do comparativo contratual. Material
+não entra no card mesmo se o beneficiário for um membro cadastrado.
+
+O total no rodapé da listagem é outra medida: soma algébrica de **todas as
+linhas exibidas pelo filtro**, inclusive pendentes/canceladas; a tela agora
+identifica isso e mostra o status dessas linhas. Os KPIs de resultado e equipe
+consideram somente pagamentos efetivos. Lançamentos manuais nascem pagos, e
+os status pendente/cancelado não são editáveis no formulário dessa aba.
+
 ## 4. Checklist de execução
 
 ### Parte 1 — A matemática do contrato

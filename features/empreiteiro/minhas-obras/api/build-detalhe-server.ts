@@ -36,6 +36,7 @@ import type {
   TimelineEvent,
 } from "../types";
 import { ladoDoLancamento } from "../lib/lado-lancamento";
+import { resumirCustosEquipe } from "../lib/resumo-custos-equipe";
 import { resolverEscopoObrasEmpreiteiro } from "@features/empreiteiro/api/escopo-obras";
 
 type UiStatus =
@@ -600,15 +601,18 @@ export async function buildMinhaObraDetalheReal(
   // XG22 — este loop subiu para ANTES do bloco de contrato porque o saldo a
   // receber agora deriva dele. Ver a nota sobre `valor_pago` logo abaixo.
   const empreiteiroUserId = empreiteiraRow?.userId ?? null;
-  let receitaTotal = 0;
-  let custoTotal = 0;
+  let receitaCentavos = 0;
+  let custoCentavos = 0;
   for (const f of finRows) {
     if (f.status !== "pago") continue;
     // XG30 — regra compartilhada com o link público (`lado-lancamento.ts`).
     const lado = ladoDoLancamento(f, empreiteiroUserId);
-    if (lado === "receita") receitaTotal += Number(f.valor ?? 0);
-    else if (lado === "custo") custoTotal += Number(f.valor ?? 0);
+    const valorCentavos = Math.round(Number(f.valor ?? 0) * 100);
+    if (lado === "receita") receitaCentavos += valorCentavos;
+    else if (lado === "custo") custoCentavos += valorCentavos;
   }
+  const receitaTotal = receitaCentavos / 100;
+  const custoTotal = custoCentavos / 100;
 
   const valorContratado = Number(obra.valorTotal ?? 0);
   // XG10 — soma real dos aditivos (antes era `0` fixo, com o card já na tela).
@@ -670,6 +674,10 @@ export async function buildMinhaObraDetalheReal(
     custoTotal,
     // Preenchido logo abaixo, quando a equipe é carregada.
     custoPrevistoEquipe: 0,
+    custoPagoEquipeContratada: 0,
+    custoAindaDesembolsarEquipe: 0,
+    custoExcedenteEquipe: 0,
+    custoMaoDeObraForaContratos: 0,
     medicoes: finRows.map((f, i) => ({
       id: f.id,
       numero: i + 1,
@@ -713,10 +721,7 @@ export async function buildMinhaObraDetalheReal(
    * tabela, logo nunca têm contrato. Inativos ficam de fora: quem saiu da obra
    * não deve continuar pesando no custo previsto.
    */
-  financeiroOut.custoPrevistoEquipe = equipeRows.reduce(
-    (soma, m) => (m.ativo && m.valorContrato != null ? soma + Number(m.valorContrato) : soma),
-    0,
-  );
+  Object.assign(financeiroOut, resumirCustosEquipe(equipeRows, finRows, empreiteiroUserId));
 
   const equipe: MembroEquipe[] = [];
   if (temContratante) {

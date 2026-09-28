@@ -260,10 +260,18 @@ export interface ObraFinanceiro {
   custoTotal: number;
   /**
    * XG22 — soma dos valores de contrato dos prestadores da equipe ("prévia de
-   * gasto da obra"). É **previsto**, não realizado: contrapõe-se a `custoTotal`,
-   * que só existe depois que o dinheiro saiu. Só conta membros reais e ativos.
+    * gasto da obra"). É **previsto**, não realizado; só membros reais e ativos
+    * com contrato positivo. Não comparar diretamente com `custoTotal` da obra.
    */
   custoPrevistoEquipe: number;
+  /** Mão de obra paga e vinculada aos contratos ativos acima; não inclui material. */
+  custoPagoEquipeContratada: number;
+  /** Soma das diferenças positivas por contrato; excedente de um não quita outro. */
+  custoAindaDesembolsarEquipe: number;
+  /** Pagamentos acima do valor contratado, somados por prestador. */
+  custoExcedenteEquipe: number;
+  /** Mão de obra paga sem contrato ativo correspondente; ainda entra em custoTotal. */
+  custoMaoDeObraForaContratos: number;
 }
 
 export interface MembroEquipe {

@@ -259,15 +259,15 @@ function ValoresDoContrato({
  * como prévia de gasto da obra (...) ele já vai conseguir mensurar meu custo de
  * obra, não vai ser 100%, mas vai misturar uma boa parte".
  *
- * Fica ao lado do custo realizado de propósito: sozinho, o previsto é só um
- * número; contra o que já saiu, vira "quanto ainda falta desembolsar".
+ * Compara contratos ativos somente com pagamentos vinculados a esses
+ * contratos; materiais e outras despesas ficam no resultado total da obra.
  *
  * O rótulo diz de onde o número vem ("soma dos contratos"), pela mesma razão
  * que o lucro estimado foi retirado desta tela — o console não inventa projeção,
  * só soma o que foi combinado. Por isso o card some quando não há contrato: zero
  * aqui não significa "obra barata", significa "ninguém preencheu ainda".
  */
-function CustoPrevistoEquipe({
+export function CustoPrevistoEquipe({
   financeiro,
   luminous = false,
 }: {
@@ -275,25 +275,27 @@ function CustoPrevistoEquipe({
   luminous?: boolean;
 }) {
   const previsto = financeiro.custoPrevistoEquipe;
-  const realizado = financeiro.custoTotal;
-  const aDesembolsar = Math.max(0, previsto - realizado);
-  const pctPago = previsto > 0 ? Math.min(100, Math.round((realizado / previsto) * 100)) : 0;
+  const realizado = financeiro.custoPagoEquipeContratada;
+  const aDesembolsar = financeiro.custoAindaDesembolsarEquipe;
+  const pctPago = previsto > 0
+    ? Math.round(((previsto - aDesembolsar) / previsto) * 100)
+    : 0;
 
   return (
     <Card data-testid="custo-previsto-equipe">
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Prévia de gasto com a equipe</CardTitle>
         <CardDescription>
-          Soma dos contratos dos prestadores cadastrados na obra — não inclui material nem
-          despesas avulsas.
+          Contratos ativos da equipe comparados apenas com pagamentos de mão de obra
+          vinculados a eles. Material e outras despesas entram no custo da obra, não nesta prévia.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { label: 'Custo previsto', valor: previsto, accent: 'border-amber-500', destaque: false },
-            { label: 'Já pago à equipe', valor: realizado, accent: 'border-gray-400', destaque: false },
-            { label: 'Ainda a desembolsar', valor: aDesembolsar, accent: 'border-primary', destaque: true },
+            { id: 'previsto', label: 'Contratos da equipe', valor: previsto, accent: 'border-amber-500', destaque: false },
+            { id: 'pago', label: 'Pago nesses contratos', valor: realizado, accent: 'border-gray-400', destaque: false },
+            { id: 'restante', label: 'Restante dos contratos', valor: aDesembolsar, accent: 'border-primary', destaque: true },
           ].map((kpi) => (
             <div
               key={kpi.label}
@@ -311,6 +313,7 @@ function CustoPrevistoEquipe({
                   'mt-2 text-2xl font-extrabold',
                   kpi.destaque ? 'text-primary' : 'text-gray-900 dark:text-white',
                 )}
+                data-testid={`custo-equipe-${kpi.id}`}
               >
                 {formatCurrency(kpi.valor)}
               </p>
@@ -321,7 +324,7 @@ function CustoPrevistoEquipe({
         <div>
           <div className="mb-2 flex items-end justify-between">
             <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Pago do previsto
+              Quitado nos contratos
             </p>
             <p className="text-lg font-bold text-primary">{pctPago}%</p>
           </div>
@@ -329,6 +332,18 @@ function CustoPrevistoEquipe({
             <div className="h-full rounded-full bg-primary" style={{ width: `${pctPago}%` }} />
           </div>
         </div>
+        {financeiro.custoExcedenteEquipe > 0 && (
+          <p className="text-sm text-amber-700 dark:text-amber-300" data-testid="custo-equipe-excedente">
+            {formatCurrency(financeiro.custoExcedenteEquipe)} pagos além do valor combinado
+            com prestadores. O excedente não quita o contrato de outra pessoa.
+          </p>
+        )}
+        {financeiro.custoMaoDeObraForaContratos > 0 && (
+          <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="custo-equipe-avulso">
+            {formatCurrency(financeiro.custoMaoDeObraForaContratos)} de mão de obra paga
+            fora dos contratos ativos. Esse valor está no custo da obra, não reduz o restante acima.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -399,8 +414,7 @@ export function FinanceiroTab({
     });
   }, [lancamentosVisiveis, filtroTipo, filtroCategoria, filtroPessoa, somenteMaoDeObra]);
 
-  // Total do que está em tela: com filtro de mão de obra aplicado, responde
-  // direto "quanto já gastei com isso".
+  // Total da lista, inclusive pendentes/cancelados, diferente dos KPIs pagos.
   const totalFiltrado = useMemo(
     () =>
       filtrados.reduce(
@@ -487,7 +501,7 @@ export function FinanceiroTab({
           description={
             recalculando
               ? 'Atualizando com o lançamento…'
-              : 'Receita e custo somam os lançamentos registrados abaixo.'
+              : 'Receita recebida e custo pago da obra (mão de obra, material e outras despesas).'
           }
           mostrarLucroEstimado={false}
           luminous={luminous}
@@ -663,6 +677,11 @@ export function FinanceiroTab({
                                 {l.fornecedorNome}
                               </Badge>
                             )}
+                            {l.status !== 'pago' && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {l.status === 'cancelado' ? 'Cancelado' : l.status === 'atrasado' ? 'Atrasado' : 'Pendente'}
+                              </Badge>
+                            )}
                             {automatico && (
                               <Badge variant="outline" className="text-[10px]">
                                 Automático
@@ -728,9 +747,9 @@ export function FinanceiroTab({
                   })}
                 </ul>
 
-                <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
                   <span className="text-xs text-gray-500">
-                    {somenteMaoDeObra ? 'Total mão de obra' : `${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`}
+                    {somenteMaoDeObra ? 'Total listado de mão de obra' : `Saldo listado · ${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`}
                   </span>
                   <span
                     className={cn(
@@ -742,6 +761,9 @@ export function FinanceiroTab({
                     {formatCurrency(totalFiltrado)}
                   </span>
                 </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Total das linhas exibidas, inclusive pendentes e canceladas. Os indicadores da obra consideram apenas valores pagos.
+                </p>
               </>
             )}
           </CardContent>

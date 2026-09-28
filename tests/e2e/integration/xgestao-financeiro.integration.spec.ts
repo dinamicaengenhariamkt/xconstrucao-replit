@@ -474,3 +474,113 @@ test.describe('XG22 — saldo a receber e percentual recebido', () => {
     await logout(request);
   });
 });
+
+test.describe('xgestão — custo da obra separado dos contratos da equipe', () => {
+  test('material e mão de obra avulsa não quitam prestadores; edição e exclusão recalculam', async ({ request }) => {
+    const { obraId } = await criarAssinanteComObra(request, 'xg-custo-contratos');
+    const definirContratoCliente = await request.patch(`/api/obras/${obraId}`, {
+      data: { valorTotal: '40000' },
+    });
+    expect(definirContratoCliente.status(), await definirContratoCliente.text()).toBeLessThan(300);
+
+    async function membro(nome: string, valorContrato: number) {
+      const response = await request.post(`/api/obras/${obraId}/equipe`, {
+        data: { nome, papel: 'Prestador', tipo: 'equipe', valorContrato },
+      });
+      expect(response.status(), await response.text()).toBe(201);
+      return ((await response.json()) as { id: string }).id;
+    }
+    async function lancar(
+      tipo: 'entrada' | 'saida',
+      valor: number,
+      categoria?: 'mao_de_obra' | 'material' | 'outras_despesas',
+      fornecedorId?: string,
+    ) {
+      const response = await request.post(`/api/obras/${obraId}/financeiro`, {
+        data: {
+          tipo, valor, categoria, fornecedorId,
+          descricao: `${tipo} ${categoria ?? 'recebimento'}`,
+          data: HOJE,
+        },
+      });
+      expect(response.status(), await response.text()).toBe(201);
+      return ((await response.json()) as { id: string }).id;
+    }
+    async function ler() {
+      const response = await request.get(`/api/empreiteiro/minhas-obras/${obraId}`);
+      expect(response.status(), await response.text()).toBe(200);
+      return (await response.json()).financeiro as {
+        receitaTotal: number;
+        custoTotal: number;
+        saldoReceber: number;
+        custoPrevistoEquipe: number;
+        custoPagoEquipeContratada: number;
+        custoAindaDesembolsarEquipe: number;
+        custoExcedenteEquipe: number;
+        custoMaoDeObraForaContratos: number;
+      };
+    }
+
+    const ana = await membro('Ana', 1000.01);
+    const bia = await membro('Bia', 500);
+    const saiu = await membro('Prestador inativo', 2000);
+    expect((await ler()).custoPrevistoEquipe).toBe(3500.01);
+
+    await lancar('saida', 1000.02, 'mao_de_obra', ana);
+    await lancar('saida', 10, 'mao_de_obra', bia);
+    const material = await lancar('saida', 35000, 'material', ana);
+    await lancar('saida', 7.03, 'outras_despesas', bia);
+    await lancar('saida', 50.02, 'mao_de_obra');
+    const historico = await lancar('saida', 19.01, 'mao_de_obra', saiu);
+    await lancar('entrada', 100.99);
+    const pendente = await lancar('saida', 200, 'mao_de_obra', bia);
+    const cancelado = await lancar('saida', 99, 'material', ana);
+    await db.update(financeiro).set({ status: 'pendente' }).where(eq(financeiro.id, pendente));
+    await db.update(financeiro).set({ status: 'cancelado' }).where(eq(financeiro.id, cancelado));
+    const desativado = await request.patch(`/api/obras/${obraId}/equipe/${saiu}`, {
+      data: { ativo: false },
+    });
+    expect(desativado.status(), await desativado.text()).toBe(200);
+
+    const inicial = await ler();
+    expect(inicial).toMatchObject({
+      receitaTotal: 100.99,
+      custoTotal: 36086.08,
+      saldoReceber: 39899.01,
+      custoPrevistoEquipe: 1500.01,
+      custoPagoEquipeContratada: 1010.02,
+      custoAindaDesembolsarEquipe: 490,
+      custoExcedenteEquipe: 0.01,
+      custoMaoDeObraForaContratos: 69.03,
+    });
+
+    const editar = await request.patch(`/api/obras/${obraId}/financeiro/${material}`, {
+      data: { categoria: 'mao_de_obra', valor: 5 },
+    });
+    expect(editar.status(), await editar.text()).toBe(200);
+    expect(await ler()).toMatchObject({
+      custoTotal: 1091.08,
+      custoPagoEquipeContratada: 1015.02,
+      custoAindaDesembolsarEquipe: 490,
+      custoExcedenteEquipe: 5.01,
+      custoMaoDeObraForaContratos: 69.03,
+    });
+
+    const excluir = await request.delete(`/api/obras/${obraId}/financeiro/${material}`);
+    expect(excluir.status(), await excluir.text()).toBe(200);
+    expect(await ler()).toMatchObject({
+      custoTotal: 1086.08,
+      custoPagoEquipeContratada: 1010.02,
+      custoAindaDesembolsarEquipe: 490,
+    });
+
+    // Remover o vínculo transforma a mão de obra histórica em avulsa, mas não
+    // apaga esse custo do resultado da obra.
+    const tirarVinculo = await request.patch(`/api/obras/${obraId}/financeiro/${historico}`, {
+      data: { fornecedorId: null, fornecedorNome: null },
+    });
+    expect(tirarVinculo.status(), await tirarVinculo.text()).toBe(200);
+    expect((await ler()).custoMaoDeObraForaContratos).toBe(69.03);
+    await logout(request);
+  });
+});
