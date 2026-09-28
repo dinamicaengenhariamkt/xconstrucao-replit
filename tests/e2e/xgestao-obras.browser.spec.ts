@@ -82,6 +82,7 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
 
     const nomeA = `Obra editável ${Date.now()}`;
     const nomeB = `Obra leitura ${Date.now()}`;
+    const nomeC = `Obra sem concessão ${Date.now()}`;
     const criar = async (nome: string) => {
       const response = await request.post("/api/xgestao/obras", {
         data: { nome, endereco: "Rua das Permissões, 10" },
@@ -91,6 +92,7 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     };
     const obraA = await criar(nomeA);
     const obraB = await criar(nomeB);
+    const obraC = await criar(nomeC);
     const linkResponse = await request.post(`/api/xgestao/obras/${obraB}/share`, {
       data: { nome: "Cliente leitura" },
     });
@@ -120,6 +122,7 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await convite.locator("#member-email").fill(membroEmail);
     await convite.getByText(nomeA, { exact: true }).click();
     await convite.getByText(nomeB, { exact: true }).click();
+    await expect(convite.getByRole("checkbox", { name: nomeC, exact: true })).not.toBeChecked();
     await convite.getByRole("combobox", { name: `Permissão para ${nomeA}` }).selectOption("editar");
     const enviado = page.waitForResponse((res) => res.url().endsWith("/api/xgestao/membros") && res.request().method() === "POST");
     await convite.getByRole("button", { name: "Enviar convite" }).click();
@@ -300,6 +303,39 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       expect(listaSemObra.status(), await listaSemObra.text()).toBe(404);
       const outraObraPreservada = await membro.request.get(`/api/xgestao/obras/${obraA}/share`);
       expect(outraObraPreservada.status(), await outraObraPreservada.text()).toBe(200);
+
+      // Links permanece habilitado: devolver somente a obra B ao mesmo membro
+      // deve restaurar a leitura na sessão existente, antes que um reload
+      // substitua o cookie HTTP de teste por um cookie Secure.
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialogRestauracao = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await expect(dialogRestauracao.getByRole("checkbox", { name: "Links públicos" })).toBeChecked();
+      await dialogRestauracao.getByRole("checkbox", { name: nomeB, exact: true }).check();
+      await expect(dialogRestauracao.getByRole("combobox", { name: `Permissão para ${nomeB}` })).toHaveValue("visualizar");
+      await expect(dialogRestauracao.getByRole("checkbox", { name: nomeC, exact: true })).not.toBeChecked();
+      const salvoComObra = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialogRestauracao.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvoComObra).status()).toBe(200);
+      await expect(dialogRestauracao).toHaveCount(0);
+
+      const listaDevolvida = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(listaDevolvida.status(), await listaDevolvida.text()).toBe(200);
+      expect(await listaDevolvida.json()).toMatchObject({
+        shares: [{ id: linkB.share.id, path: linkB.share.path }],
+      });
+      const listaNaoConcedida = await membro.request.get(`/api/xgestao/obras/${obraC}/share`);
+      expect(listaNaoConcedida.status(), await listaNaoConcedida.text()).toBe(404);
+
+      // Revogue novamente para manter a cobertura da navegação já bloqueada.
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialogRevogacaoFinal = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await dialogRevogacaoFinal.getByRole("checkbox", { name: nomeB, exact: true }).uncheck();
+      const salvoRevogacaoFinal = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialogRevogacaoFinal.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvoRevogacaoFinal).status()).toBe(200);
+      await expect(dialogRevogacaoFinal).toHaveCount(0);
       const obraRevogada = await membro.reload();
       expect(obraRevogada?.status()).toBe(404);
       await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
