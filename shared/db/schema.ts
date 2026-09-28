@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, bigint, numeric, timestamp, pgEnum, boolean, jsonb, uniqueIndex, index, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, bigint, numeric, timestamp, pgEnum, boolean, jsonb, unique, uniqueIndex, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -268,7 +268,11 @@ export const obras = pgTable("obras", {
   fotoCapaFileId: varchar("foto_capa_file_id").references(() => userFiles.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (t) => ({
+  // Required by the composite FK for xgestao_membro_obras. A standalone index
+  // created at boot is not reliably included in the publish schema diff.
+  uniqIdEmpresa: unique("obras_id_empresa_uniq").on(t.id, t.empreiteiraId),
+}));
 
 /**
  * Links de acompanhamento anônimo das obras próprias do xgestão.
