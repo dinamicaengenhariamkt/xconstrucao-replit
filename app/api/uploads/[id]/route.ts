@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { empreiteiroDocumentos, empreiteiroPortfolio, userFiles, users } from "@shared/db/schema";
+import { empreiteiroDocumentos, empreiteiroPortfolio, obraAnexos, obraFotos, obras, userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { deleteObject } from "@shared/lib/storage";
+import { canWriteObraContent, findObraAccess } from "@features/obras/api/access";
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -21,6 +22,23 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // Arquivos pessoais que já foram vinculados a conteúdo de obra não podem ser
+  // removidos por um membro somente-leitura apenas por serem seus uploads.
+  const [anexos, fotos, capas] = await Promise.all([
+    db.select({ obraId: obraAnexos.obraId }).from(obraAnexos).where(eq(obraAnexos.fileId, id)),
+    db.select({ obraId: obraFotos.obraId }).from(obraFotos).where(eq(obraFotos.fileId, id)),
+    db.select({ obraId: obras.id }).from(obras).where(eq(obras.fotoCapaFileId, id)),
+  ]);
+  const linkedObraIds = [...new Set([...anexos, ...fotos, ...capas].map((row) => row.obraId))];
+  for (const obraId of linkedObraIds) {
+    const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
+    if (!access || !canWriteObraContent(access)) {
+      const r = NextResponse.json({ message: "Sem permissão para remover arquivo desta obra." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   // Limpa denormalizações.

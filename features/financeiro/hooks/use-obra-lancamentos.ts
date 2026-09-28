@@ -30,6 +30,8 @@ export interface ObraLancamentoApi {
   /** Nome de quem recebeu: do membro, ou digitado à mão. Sobrevive à saída dele da equipe. */
   fornecedorNome: string | null;
   createdAt: string | null;
+  /** Ator da atividade associada, quando o servidor consegue identificá-lo. */
+  actorName?: string | null;
 }
 
 export interface NovoLancamentoInput {
@@ -141,7 +143,11 @@ export function useEditarLancamento(obraId: string) {
     },
     onSuccess: (atualizado) => {
       aplicarNaLista((rows) =>
-        rows.map((l) => (l.id === atualizado.id ? atualizado : l)),
+        rows.map((l) =>
+          l.id === atualizado.id
+            ? { ...atualizado, actorName: atualizado.actorName ?? l.actorName }
+            : l,
+        ),
       );
       invalidar();
     },

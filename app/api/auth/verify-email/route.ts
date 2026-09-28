@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logError } from "@/server/lib/logger";
 import { verifyEmailVerificationToken } from "@features/auth/api/auth-service";
-import { getUser, updateUserEmailVerified, ensureProfileRow } from "@features/auth/api/auth-storage";
+import { getUser, updateUserEmailVerified, ensureProfileRow, isXgestaoMember } from "@features/auth/api/auth-storage";
 import { sendWelcomeEmail } from "@shared/lib/email";
 import { getBaseUrl } from "@features/auth/api/auth-utils";
 
@@ -47,10 +47,11 @@ export async function GET(request: NextRequest) {
 
     // Atualizar emailVerified
     await updateUserEmailVerified(result.userId, new Date());
+    const isMember = await isXgestaoMember(user.id);
 
     // Garantir que a row de domínio existe (rede de segurança para usuários
     // antigos cadastrados antes desta jornada). Idempotente.
-    if (user.role === "contratante" || user.role === "empreiteiro") {
+    if (!isMember && (user.role === "contratante" || user.role === "empreiteiro")) {
       try {
         await ensureProfileRow({ ...user, emailVerified: new Date() });
       } catch (profileErr) {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Email de boas-vindas (best-effort, não quebra o redirect)
-    if (user.role === "contratante" || user.role === "empreiteiro") {
+    if (!isMember && (user.role === "contratante" || user.role === "empreiteiro")) {
       try {
         await sendWelcomeEmail(user.email, user.name, user.role);
       } catch (welcomeErr) {

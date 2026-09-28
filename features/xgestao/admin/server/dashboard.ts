@@ -11,14 +11,19 @@ import {
   planos,
   userRoles,
   users,
+  xgestaoMembros,
 } from '@shared/db/schema';
+import { listarMembrosEmpreiteirasXgestao, type XgestaoMembroEmpresa } from './escopo';
 
 export type XgestaoTier = 'free' | 'pro' | 'enterprise';
 
 export interface XgestaoAdminAssinante {
   id: string;
   empreiteira: string;
+  responsavel: string | null;
   email: string;
+  /** Membros da equipe vinculados à empresa; não são assinantes. */
+  membros: Array<Pick<XgestaoMembroEmpresa, 'userId' | 'nome' | 'email' | 'papel' | 'status' | 'obras'>>;
   obrasGerenciadas: number;
   plano: { tier: XgestaoTier; nome: string };
   /**
@@ -63,6 +68,7 @@ export interface XgestaoAdminDashboard {
   indicadores: {
     assinantes: number;
     empreiteirasComPerfil: number;
+    membrosEquipe: number;
     obrasGerenciadas: number;
     obrasAtivas: number;
     progressoMedio: number;
@@ -114,13 +120,17 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         userId: userRoles.userId,
         entradaEm: userRoles.criadoEm,
         email: users.email,
+        responsavel: users.name,
         empreiteiraId: empreiteiras.id,
         empreiteiraNome: empreiteiras.nome,
       })
       .from(userRoles)
       .innerJoin(users, eq(users.id, userRoles.userId))
+      // O convite de equipe concede role xgestao para autenticar o membro, mas
+      // esse entitlement técnico não é uma assinatura/empresa independente.
+      .leftJoin(xgestaoMembros, eq(xgestaoMembros.userId, userRoles.userId))
       .leftJoin(empreiteiras, eq(empreiteiras.userId, users.id))
-      .where(eq(userRoles.role, 'xgestao'))
+      .where(and(eq(userRoles.role, 'xgestao'), isNull(xgestaoMembros.id)))
       .orderBy(desc(userRoles.criadoEm)),
     db
       .select({ nome: planos.nome })
@@ -130,7 +140,14 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
   ]);
 
   const userIds = entitlements.map((item) => item.userId);
-  const empreiteiraIds = entitlements.flatMap((item) => item.empreiteiraId ? [item.empreiteiraId] : []);
+  const empreiteiraIds = [...new Set(entitlements.flatMap((item) => item.empreiteiraId ? [item.empreiteiraId] : []))];
+  const membros = await listarMembrosEmpreiteirasXgestao(empreiteiraIds);
+  const membrosPorEmpreiteira = new Map<string, XgestaoMembroEmpresa[]>();
+  for (const membro of membros) {
+    const lista = membrosPorEmpreiteira.get(membro.empreiteiraId) ?? [];
+    lista.push(membro);
+    membrosPorEmpreiteira.set(membro.empreiteiraId, lista);
+  }
   // Uma assinatura ativa pode anteceder a conclusão do perfil da empreiteira.
   // Resolver os planos antes do retorno sem obras evita classificar todos como free.
   const subscriptionRows = userIds.length === 0
@@ -164,7 +181,9 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       return {
         id: entitlement.userId,
         empreiteira: 'Perfil ainda não concluído',
+        responsavel: entitlement.responsavel,
         email: entitlement.email,
+        membros: [],
         obrasGerenciadas: 0,
         plano: { tier, nome: subscription?.planoNome ?? freePlan[0]?.nome ?? 'Freemium' },
         fimTeste: null,
@@ -175,6 +194,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       indicadores: {
         assinantes: entitlements.length,
         empreiteirasComPerfil: 0,
+        membrosEquipe: 0,
         obrasGerenciadas: 0,
         obrasAtivas: 0,
         progressoMedio: 0,
@@ -349,7 +369,11 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     return {
       id: entitlement.userId,
       empreiteira: entitlement.empreiteiraNome ?? 'Perfil ainda não concluído',
+      responsavel: entitlement.responsavel,
       email: entitlement.email,
+      membros: (entitlement.empreiteiraId
+        ? membrosPorEmpreiteira.get(entitlement.empreiteiraId) ?? []
+        : []).map(({ userId, nome, email, papel, status, obras }) => ({ userId, nome, email, papel, status, obras })),
       obrasGerenciadas: entitlement.empreiteiraId
         ? obrasPorEmpreiteira.get(entitlement.empreiteiraId) ?? 0
         : 0,
@@ -421,6 +445,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     indicadores: {
       assinantes: assinantes.length,
       empreiteirasComPerfil: empreiteiraIds.length,
+      membrosEquipe: membros.length,
       obrasGerenciadas: totalObras,
       obrasAtivas: distribuicaoStatus.em_andamento,
       progressoMedio: Number(obrasAggregate[0]?.progressoMedio) || 0,

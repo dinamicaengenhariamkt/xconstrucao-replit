@@ -137,6 +137,11 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canWriteObraContent(access)) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (access.role === "empreiteiro" && access.obra.clienteId !== null) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);

@@ -9,7 +9,7 @@ import { insertObraSchemaStrict } from "@features/obras/schemas";
 
 export type DonoObra =
   | { kind: "contratante"; clienteId: string }
-  | { kind: "xgestao"; empreiteiraId: string };
+  | { kind: "xgestao"; empreiteiraId: string; donoUserId?: string };
 
 export type CreateObraResult =
   | { ok: true; obra: typeof obras.$inferSelect }
@@ -94,7 +94,7 @@ export async function createObra(
           : and(eq(obras.empreiteiraId, owner.empreiteiraId), isNull(obras.clienteId));
       const limiteObras =
         owner.kind === "xgestao"
-          ? await getLimiteRecurso(userId, "obrasAtivas", tx, "xgestao")
+          ? await getLimiteRecurso(owner.donoUserId ?? userId, "obrasAtivas", tx, "xgestao")
           : limiteMarketplace;
       if (limiteObras != null && limiteObras < 9999) {
         const [{ abertas }] = await tx

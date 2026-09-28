@@ -56,7 +56,8 @@ export default function AdminXgestaoPage() {
   const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0 };
   const saldoPrevisto = (indicadores?.orcamentoGerenciado ?? 0) - (indicadores?.valorPago ?? 0);
   const cards = [
-    { label: 'Acessos xgestão', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+    { label: 'Responsáveis com acesso', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+    { label: 'Vínculos de equipe', value: String(indicadores?.membrosEquipe ?? 0), icon: RiGroupLine, iconBgColor: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20' },
     { label: 'Obras ativas', value: String(indicadores?.obrasAtivas ?? 0), icon: RiHammerLine, iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' },
     { label: 'Progresso médio', value: `${indicadores?.progressoMedio ?? 0}%`, icon: RiLineChartLine, iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' },
     { label: 'Orçamento gerenciado', value: formatCurrency(indicadores?.orcamentoGerenciado ?? 0), icon: RiMoneyDollarCircleLine, iconBgColor: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' },
@@ -66,8 +67,8 @@ export default function AdminXgestaoPage() {
     return (
       <div className="p-6 md:p-10 space-y-8">
         <div><Skeleton className="h-8 w-52" /><Skeleton className="h-4 w-80 mt-2" /></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)}
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <Skeleton className="h-64 rounded-2xl" />
@@ -111,13 +112,13 @@ export default function AdminXgestaoPage() {
         </nav>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         {cards.map((card) => (
           <StatsCard key={card.label} {...card} luminous testId={`xgestao-kpi-${card.label.toLowerCase().replaceAll(' ', '-')}`} />
         ))}
       </div>
       <p className="-mt-5 text-sm text-muted-foreground">
-        {indicadores?.empreiteirasComPerfil ?? 0} empreiteiras com perfil concluído. Os acessos xgestão incluem quem ainda não concluiu o cadastro.
+        {indicadores?.empreiteirasComPerfil ?? 0} empresas com perfil; {indicadores?.assinantes ?? 0} responsáveis com acesso xgestão; {indicadores?.membrosEquipe ?? 0} vínculos de membros. Membros são exibidos dentro da empresa e não contam como empresa ou assinatura.
       </p>
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="border-gray-100 dark:border-gray-800 lg:col-span-2" data-testid="xgestao-operacao-resumo">
@@ -290,7 +291,7 @@ export default function AdminXgestaoPage() {
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Acessos xgestão</h2>
-          <p className="text-sm text-muted-foreground">Inclui perfis incompletos. Na lista de obras, apenas empreiteiras com perfil concluído; o marketplace não é alterado.</p>
+          <p className="text-sm text-muted-foreground">Uma linha por responsável/empresa com acesso xgestão; membros aparecem vinculados à empresa, sem criar assinatura própria. Na lista de obras, apenas empresas com perfil concluído; o marketplace não é alterado.</p>
         </div>
         {data?.assinantes.length ? (
           <div className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
@@ -298,7 +299,7 @@ export default function AdminXgestaoPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Empreiteira</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Empresa / responsável</th>
                     <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">E-mail</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
                     <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Plano</th>
@@ -311,9 +312,28 @@ export default function AdminXgestaoPage() {
                     <tr key={assinante.id} data-testid={`xgestao-assinante-${assinante.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
                       <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">
                         {assinante.empreiteira}
-                        {/* Reinjeta no mobile o conteúdo das colunas escondidas. */}
+                        <p className="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">Responsável: {assinante.responsavel || 'não informado'}</p>
                         <p className="mt-0.5 text-xs font-normal text-gray-400 lg:hidden">{assinante.email}</p>
                         <p className="mt-0.5 text-xs font-normal text-gray-400 md:hidden">{tierLabel(assinante.plano.tier)}</p>
+                        {assinante.membros.length > 0 && (
+                          <details className="mt-2 text-xs font-normal">
+                            <summary className="cursor-pointer text-primary">{assinante.membros.length} vínculo(s) de equipe</summary>
+                            <ul className="mt-2 space-y-1 pl-3 text-gray-500 dark:text-gray-400">
+                              {assinante.membros.map((membro) => (
+                                <li key={membro.userId}>
+                                  <span>{membro.nome} · {membro.email} · {membro.papel} · {membro.status}</span>
+                                  {membro.obras.length > 0 && (
+                                    <ul className="ml-3 mt-1 list-disc">
+                                      {membro.obras.map((obra) => (
+                                        <li key={obra.obraId}>{obra.nome} · {obra.permissao}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
                       </td>
                       <td className="hidden lg:table-cell px-4 py-3 text-gray-600 dark:text-gray-300">{assinante.email}</td>
                       <td className="px-4 py-3 text-right font-semibold">{assinante.obrasGerenciadas}</td>

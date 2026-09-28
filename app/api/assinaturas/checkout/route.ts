@@ -6,14 +6,22 @@ import { recordAudit } from "@features/auth/api/audit";
 import { iniciarCheckout } from "@features/planos/assinatura-service";
 import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
 import { db } from "@shared/db/db";
-import { planos } from "@shared/db/schema";
-import { eq } from "drizzle-orm";
+import { planos, xgestaoMembros } from "@shared/db/schema";
+import { and, eq } from "drizzle-orm";
 
 const bodySchema = z.object({
   planoId: z.string().min(1),
   ciclo: z.enum(["mensal", "anual"]).optional(),
   persona: z.enum(["xgestao"]).optional(),
 });
+
+async function isActiveXgestaoMember(userId: string): Promise<boolean> {
+  const [membership] = await db
+    .select({ id: xgestaoMembros.id })
+    .from(xgestaoMembros)
+    .where(and(eq(xgestaoMembros.userId, userId), eq(xgestaoMembros.status, "ativo")));
+  return membership?.id != null;
+}
 
 /** POST /api/assinaturas/checkout — inicia assinatura (ativa via adapter manual). */
 export async function POST(request: NextRequest) {
@@ -26,6 +34,11 @@ export async function POST(request: NextRequest) {
     return r;
   }
   if (parsed.data.persona === "xgestao") {
+    if (await isActiveXgestaoMember(guard.user.id)) {
+      const r = NextResponse.json({ message: "Somente o responsável da empresa pode contratar o plano xgestão." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const entitlement = await assertXgestaoUser(guard.user.id);
     if (!entitlement) {
       const r = NextResponse.json({ message: "Acesso xgestão não autorizado." }, { status: 403 });
@@ -50,6 +63,11 @@ export async function POST(request: NextRequest) {
 
   let personaCheckout: "empreiteiro" | "contratante" | "xgestao";
   if (plano.persona === "xgestao") {
+    if (await isActiveXgestaoMember(guard.user.id)) {
+      const r = NextResponse.json({ message: "Somente o responsável da empresa pode contratar o plano xgestão." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const entitlement = await assertXgestaoUser(guard.user.id);
     if (!entitlement) {
       const r = NextResponse.json({ message: "Acesso xgestão não autorizado." }, { status: 403 });

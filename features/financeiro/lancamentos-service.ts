@@ -1,6 +1,6 @@
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, financeiro, obras, userFiles } from "@shared/db/schema";
+import { atividades, clientes, empreiteiras, financeiro, obras, userFiles, users } from "@shared/db/schema";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 import { createSignedReadUrl } from "@shared/lib/storage";
@@ -23,6 +23,41 @@ export interface LancamentoRow {
   medicaoId: string | null;
   pagadorUserId: string | null;
   recebedorUserId: string | null;
+}
+
+/**
+ * Nomes conhecidos de quem criou lançamentos registrados no feed de atividades.
+ * Atividades antigas/automáticas, ou cujo usuário já não existe, não têm ator
+ * conhecido e por isso não entram no mapa.
+ */
+export async function getLancamentoCreatorNames(
+  lancamentoIds: string[],
+): Promise<Map<string, string>> {
+  if (lancamentoIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      lancamentoId: sql<string>`${atividades.payload}->>'lancamentoId'`,
+      actorName: users.name,
+    })
+    .from(atividades)
+    .leftJoin(users, eq(users.id, atividades.actorUserId))
+    .where(
+      and(
+        eq(atividades.tipo, "lancamento_criado"),
+        inArray(sql<string>`${atividades.payload}->>'lancamentoId'`, lancamentoIds),
+      ),
+    )
+    .orderBy(desc(atividades.createdAt));
+
+  const names = new Map<string, string>();
+  for (const row of rows) {
+    const name = row.actorName?.trim();
+    if (row.lancamentoId && name && !names.has(row.lancamentoId)) {
+      names.set(row.lancamentoId, name);
+    }
+  }
+  return names;
 }
 
 function rowFromJoin(r: any): LancamentoRow {

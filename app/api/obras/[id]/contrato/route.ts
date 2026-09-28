@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { clientes, empreiteiras, obras } from "@shared/db/schema";
+import { empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { montarContrato } from "@features/contratos/contrato-service";
+import { findObraAccess } from "@features/obras/api/access";
 
 /**
  * GET /api/obras/[id]/contrato  (J58)
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const { id: obraId } = await ctx.params;
 
   const [obra] = await db
-    .select({ clienteId: obras.clienteId, empreiteiraId: obras.empreiteiraId })
+    .select()
     .from(obras)
     .where(eq(obras.id, obraId));
   if (!obra) {
@@ -26,24 +27,23 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     return r;
   }
 
-  // Autorização + descobrir o papel do requester.
-  let papel: "contratante" | "empreiteiro" | null = null;
+  // Leitura de contrato respeita o mesmo escopo de obra, inclusive os grants
+  // por obra da equipe xgestão. Não liberar pela mera associação à empresa.
+  const access = await findObraAccess(obraId, guard.user);
+  if (!access) {
+    const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const admin = isAdminLike(guard.user.role);
-  if (!admin) {
-    if (obra.clienteId) {
-      const [cli] = await db.select({ userId: clientes.userId }).from(clientes).where(eq(clientes.id, obra.clienteId));
-      if (cli?.userId === guard.user.id) papel = "contratante";
-    }
-    if (!papel && obra.empreiteiraId) {
-      const [emp] = await db.select({ userId: empreiteiras.userId }).from(empreiteiras).where(eq(empreiteiras.id, obra.empreiteiraId));
-      if (emp?.userId === guard.user.id) papel = "empreiteiro";
-    }
-    if (!papel) {
-      // Anti-enumeração: 404 em vez de 403.
-      const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-      setNoCacheHeaders(r);
-      return r;
-    }
+  let papel: "contratante" | "empreiteiro" | null =
+    access.role === "contratante" ? "contratante" : null;
+  if (access.role === "empreiteiro" && obra.empreiteiraId) {
+    const [empresa] = await db
+      .select({ userId: empreiteiras.userId })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.id, obra.empreiteiraId));
+    if (empresa?.userId === guard.user.id) papel = "empreiteiro";
   }
 
   const contrato = await montarContrato(obraId);

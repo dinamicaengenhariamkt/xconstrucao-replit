@@ -36,6 +36,7 @@ import type {
   TimelineEvent,
 } from "../types";
 import { ladoDoLancamento } from "../lib/lado-lancamento";
+import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 type UiStatus =
   | "em_execucao"
@@ -110,11 +111,18 @@ export async function listMinhasObrasReal(
   userId: string,
   options: { includeXgestao?: boolean } = {},
 ): Promise<MinhaObra[]> {
-  const [emp] = await db
-    .select({ id: empreiteiras.id })
+  const company = await resolverEmpresaDoUsuario(userId);
+  const [ownerCompany] = company ? [] : await db
+    .select({ empreiteiraId: empreiteiras.id, donoUserId: empreiteiras.userId })
     .from(empreiteiras)
     .where(eq(empreiteiras.userId, userId));
-  if (!emp) return [];
+  const effectiveCompany = company ?? (ownerCompany?.donoUserId
+    ? { ...ownerCompany, papel: "dono" as const }
+    : null);
+  if (!effectiveCompany) return [];
+  const isMember = effectiveCompany.papel !== "dono";
+  const allowedIds = isMember ? await listarIdsObrasPermitidas(userId, effectiveCompany.empreiteiraId) : null;
+  if (allowedIds !== null && allowedIds.length === 0) return [];
 
   const rows = await db
     .select({
@@ -125,7 +133,11 @@ export async function listMinhasObrasReal(
     .from(obras)
     .leftJoin(clientes, eq(clientes.id, obras.clienteId))
     .leftJoin(users, eq(users.id, clientes.userId))
-    .where(eq(obras.empreiteiraId, emp.id))
+    .where(and(
+      eq(obras.empreiteiraId, effectiveCompany.empreiteiraId),
+      ...(isMember ? [isNull(obras.clienteId)] : []),
+      ...(allowedIds !== null ? [inArray(obras.id, allowedIds)] : []),
+    ))
     .orderBy(desc(obras.createdAt));
 
   // Resolver problemas abertos por obra (em lote).
@@ -196,7 +208,7 @@ export async function listMinhasObrasReal(
           inArray(financeiro.obraId, obraIds),
           eq(financeiro.status, "pago"),
           eq(financeiro.escopo, "obra"),
-          eq(financeiro.pagadorUserId, userId),
+           eq(financeiro.pagadorUserId, effectiveCompany.donoUserId ?? userId),
         ),
       )
       .groupBy(financeiro.obraId);

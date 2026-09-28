@@ -5,8 +5,10 @@ import { db } from '@shared/db/db';
 import { assinaturas, financeiro, obras, planos } from '@shared/db/schema';
 import {
   filtroObrasXgestao,
+  listarMembrosEmpreiteirasXgestao,
   listarAssinantesXgestao as listarBase,
   type XgestaoAssinanteBase,
+  type XgestaoMembroEmpresa,
 } from './escopo';
 
 export type XgestaoTier = 'free' | 'pro' | 'enterprise';
@@ -26,6 +28,8 @@ export interface XgestaoAssinanteDetalhe extends XgestaoAssinanteBase {
   };
   obrasGerenciadas: number;
   obrasAtivas: number;
+  /** Pessoas vinculadas à empresa; não entram na contagem de assinantes. */
+  membros: Array<Pick<XgestaoMembroEmpresa, 'userId' | 'nome' | 'email' | 'papel' | 'status' | 'obras'>>;
 }
 
 export interface XgestaoFaturamento {
@@ -64,7 +68,7 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
   const escopo = filtroObrasXgestao(empreiteiraIds);
   if (!escopo) return [];
 
-  const [assinaturaRows, obraRows, planoFree] = await Promise.all([
+  const [assinaturaRows, obraRows, planoFree, membros] = await Promise.all([
     db
       .select({
         userId: assinaturas.userId,
@@ -92,6 +96,7 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
       .from(planos)
       .where(and(eq(planos.persona, 'xgestao'), eq(planos.tier, 'free')))
       .limit(1),
+    listarMembrosEmpreiteirasXgestao([...new Set(empreiteiraIds)]),
   ]);
 
   // Só assinatura **ativa** define o tier, o mesmo critério de `dashboard.ts`.
@@ -104,6 +109,12 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
     if (!porUsuario.has(linha.userId)) porUsuario.set(linha.userId, linha);
   }
   const obrasPorEmpreiteira = new Map(obraRows.map((linha) => [linha.empreiteiraId, linha]));
+  const membrosPorEmpreiteira = new Map<string, XgestaoMembroEmpresa[]>();
+  for (const membro of membros) {
+    const lista = membrosPorEmpreiteira.get(membro.empreiteiraId) ?? [];
+    lista.push(membro);
+    membrosPorEmpreiteira.set(membro.empreiteiraId, lista);
+  }
 
   return base.map((assinante) => {
     const assinatura = porUsuario.get(assinante.userId);
@@ -119,6 +130,8 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
       },
       obrasGerenciadas: obrasDoAssinante?.total ?? 0,
       obrasAtivas: obrasDoAssinante?.ativas ?? 0,
+      membros: (membrosPorEmpreiteira.get(assinante.empreiteiraId) ?? [])
+        .map(({ userId, nome, email, papel, status, obras }) => ({ userId, nome, email, papel, status, obras })),
     };
   });
 }

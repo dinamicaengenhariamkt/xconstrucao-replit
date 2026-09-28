@@ -1,14 +1,16 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { medicoes, obras, empreiteiras, obraEtapas, obraFotos, obraTarefas, userFiles } from "@shared/db/schema";
+import { empreiteiras, medicoes, obras, obraEtapas, obraFotos, obraTarefas, userFiles, xgestaoMembros, xgestaoMembroObras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoMedicaoCriada } from "@features/notificacoes/medicao-dispatcher";
 import { publicUrlForKey } from "@shared/lib/storage";
+import { canWriteObraContent, findObraAccess } from "@features/obras/api/access";
+import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 const bodySchema = z.object({
   obraId: z.string().min(1),
@@ -32,6 +34,56 @@ export async function GET(request: NextRequest) {
     return r;
   }
 
+  const resolvedEmpresa = await resolverEmpresaDoUsuario(guard.user.id);
+  const [membershipRow] = await db
+    .select({
+      id: xgestaoMembros.id,
+      empreiteiraId: xgestaoMembros.empreiteiraId,
+      donoUserId: empreiteiras.userId,
+      papel: xgestaoMembros.papel,
+    })
+    .from(xgestaoMembros)
+    .innerJoin(empreiteiras, eq(empreiteiras.id, xgestaoMembros.empreiteiraId))
+    .where(and(eq(xgestaoMembros.userId, guard.user.id), eq(xgestaoMembros.status, "ativo")))
+    .limit(1);
+  const membership = resolvedEmpresa ? membershipRow : undefined;
+  const empresaXgestao = membership
+    ? {
+      empreiteiraId: membership.empreiteiraId,
+      donoUserId: membership.donoUserId ?? guard.user.id,
+      papel: membership.papel,
+    }
+    : resolvedEmpresa;
+  const permittedIds = membership
+    ? membership.papel === "gestor"
+      ? null
+      : (await db.select({ obraId: xgestaoMembroObras.obraId })
+        .from(xgestaoMembroObras)
+        .where(and(
+          eq(xgestaoMembroObras.membroId, membership.id),
+          eq(xgestaoMembroObras.empreiteiraId, membership.empreiteiraId),
+        ))).map((grant) => grant.obraId)
+    : empresaXgestao
+      ? await listarIdsObrasPermitidas(guard.user.id, empresaXgestao.empreiteiraId)
+      : null;
+  // Defesa local além de validar grants: só obras sem cliente podem fazer parte
+  // do escopo xgestão. Isso mantém grants contaminados com IDs de marketplace
+  // fora das listas desta rota.
+  const xgestaoWorkIds = empresaXgestao
+    ? (await db.select({ id: obras.id }).from(obras).where(and(
+      eq(obras.empreiteiraId, empresaXgestao.empreiteiraId),
+      isNull(obras.clienteId),
+      ...(permittedIds === null ? [] : [inArray(obras.id, permittedIds)]),
+    ))).map((obra) => obra.id)
+    : [];
+  const isTeamMember = Boolean(membership);
+  const obraScope = isTeamMember
+    ? xgestaoWorkIds.length ? inArray(medicoes.obraId, xgestaoWorkIds) : sql`false`
+    : empresaXgestao
+      ? xgestaoWorkIds.length
+        ? or(eq(medicoes.empreiteiroId, guard.user.id), inArray(medicoes.obraId, xgestaoWorkIds))
+        : eq(medicoes.empreiteiroId, guard.user.id)
+      : eq(medicoes.empreiteiroId, guard.user.id);
   const rows = await db
     .select({
       id: medicoes.id,
@@ -50,7 +102,7 @@ export async function GET(request: NextRequest) {
     })
     .from(medicoes)
     .innerJoin(obras, eq(obras.id, medicoes.obraId))
-    .where(eq(medicoes.empreiteiroId, guard.user.id))
+    .where(obraScope)
     .orderBy(desc(medicoes.createdAt));
 
   const r = NextResponse.json(rows);
@@ -92,19 +144,20 @@ export async function POST(request: NextRequest) {
 
   const { obraId, etapa, descricao, percentual, valor, fotos, fotoFileIds, tarefaId, tarefaProgresso, requestId } = parsed.data;
 
-  // Confirma que a obra existe e está atribuída a este empreiteiro.
-  const [obra] = await db.select().from(obras).where(eq(obras.id, obraId));
-  if (!obra) {
+  // O guard central aplica vínculo, acesso selecionado do colaborador e
+  // permissão de edição antes de aceitar qualquer conteúdo da medição.
+  const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
+  if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
     return r;
   }
-  const [emp] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, guard.user.id));
-  if (!emp || obra.empreiteiraId !== emp.id) {
-    const r = NextResponse.json({ message: "Você não está vinculado a esta obra." }, { status: 403 });
+  if (!canWriteObraContent(access)) {
+    const r = NextResponse.json({ message: "Sem permissão para registrar uma medição nesta obra." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
+  const obra = access.obra;
 
   if ((tarefaId && tarefaProgresso === undefined) || (!tarefaId && tarefaProgresso !== undefined)) {
     const r = NextResponse.json({ message: "Tarefa e progresso da tarefa devem ser enviados juntos." }, { status: 400 });

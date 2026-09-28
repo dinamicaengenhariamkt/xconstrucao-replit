@@ -7,6 +7,7 @@ import {
   RiMenuLine,
   RiPriceTag3Line,
   RiSettings3Line,
+  RiTeamLine,
   RiUserLine,
 } from 'react-icons/ri';
 import { useAuth } from '@features/auth/hooks/use-auth';
@@ -87,6 +88,10 @@ export function XGestaoTopbar() {
           <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes')}>
             <RiSettings3Line className="mr-2 size-4" />
             Configurações
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/xgestao/equipe')}>
+            <RiTeamLine className="mr-2 size-4" />
+            Equipe
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

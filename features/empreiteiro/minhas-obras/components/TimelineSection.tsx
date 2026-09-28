@@ -23,7 +23,10 @@ export function TimelineSection({ obraId, fallbackEvents = [] }: TimelineSection
           tipo: d.tipoTimeline,
           titulo: d.titulo,
           descricao: d.descricao,
-          autor: d.actorName,
+          // Work timeline shows attribution only for an actor the server
+          // actually resolved; the shared marketplace timeline keeps its
+          // existing display policy.
+          autor: item.actorName?.trim() || null,
           data: d.createdAt,
         };
       });

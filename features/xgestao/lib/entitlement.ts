@@ -1,9 +1,7 @@
 import 'server-only';
 
-import { eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
-import { db } from '@shared/db/db';
-import { empreiteiras } from '@shared/db/schema';
+import { resolverEmpresaDoUsuario } from '@features/xgestao/equipe/server/access';
 import { getUser } from '@features/auth/api/auth-storage';
 import {
   verifyAccessToken,
@@ -16,8 +14,11 @@ import {
 } from '@features/auth/api/impersonation';
 
 export type XGestaoEntitlement = {
+  userId: string;
   empreiteiraId: string;
   hasXgestao: true;
+  donoUserId: string;
+  papel: 'dono' | 'gestor' | 'colaborador';
 };
 
 /**
@@ -32,16 +33,12 @@ export async function assertXgestaoUser(userId: string): Promise<XGestaoEntitlem
     return null;
   }
 
-  const [empreiteira] = await db
-    .select({ id: empreiteiras.id })
-    .from(empreiteiras)
-    .where(eq(empreiteiras.userId, userId));
-
-  if (!empreiteira) {
+  const empresa = await resolverEmpresaDoUsuario(userId);
+  if (!empresa) {
     return null;
   }
 
-  return { empreiteiraId: empreiteira.id, hasXgestao: true };
+  return { userId, empreiteiraId: empresa.empreiteiraId, donoUserId: empresa.donoUserId, papel: empresa.papel, hasXgestao: true };
 }
 
 /**

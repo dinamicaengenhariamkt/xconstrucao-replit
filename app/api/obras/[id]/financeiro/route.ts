@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { getLancamentoCreatorNames } from "@features/financeiro/lancamentos-service";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
 import { resolverFornecedor } from "@features/financeiro/api/resolver-fornecedor";
 import {
@@ -88,7 +89,10 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     .where(and(eq(financeiro.obraId, id), eq(financeiro.escopo, "obra")))
     .orderBy(asc(financeiro.data));
 
-  const r = NextResponse.json({ rows });
+  const creatorNames = await getLancamentoCreatorNames(rows.map((row) => row.id));
+  const r = NextResponse.json({
+    rows: rows.map((row) => ({ ...row, actorName: creatorNames.get(row.id) ?? null })),
+  });
   setNoCacheHeaders(r);
   return r;
 }
@@ -178,14 +182,17 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     payload: { obraId: id, lancamentoId: created.id, tipo, valor },
     request,
   });
-  void registrarAtividade({
+  await registrarAtividade({
     tipo: "lancamento_criado",
     actorUserId: guard.user.id,
     obraId: id,
     payload: { lancamentoId: created.id, valor, tipo, origem: "manual" },
   });
 
-  const r = NextResponse.json(created, { status: 201 });
+  const r = NextResponse.json(
+    { ...created, actorName: guard.user.name?.trim() || null },
+    { status: 201 },
+  );
   setNoCacheHeaders(r);
   return r;
 }

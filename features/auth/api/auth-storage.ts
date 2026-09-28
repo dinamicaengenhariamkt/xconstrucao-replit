@@ -6,6 +6,7 @@ import {
   empreiteiras,
   anunciantes,
   userRoles,
+  xgestaoMembros,
   type User,
   type InsertUser,
 } from "@shared/db/schema";
@@ -57,6 +58,19 @@ export async function updateUserEmail(userId: string, email: string, verifiedAt:
 }
 
 /**
+ * A xgestão member account belongs to its invited company, not to a company
+ * profile of its own. Check all membership states, including invited/revoked:
+ * verification and profile recovery can run before setup or after revocation.
+ */
+export async function isXgestaoMember(userId: string): Promise<boolean> {
+  const [membership] = await db
+    .select({ id: xgestaoMembros.id })
+    .from(xgestaoMembros)
+    .where(eq(xgestaoMembros.userId, userId));
+  return membership != null;
+}
+
+/**
  * Cria a row de domínio (clientes / empreiteiras) vinculada a um usuário,
  * caso ainda não exista. Idempotente — pode ser chamado várias vezes para
  * o mesmo usuário sem efeitos colaterais.
@@ -84,6 +98,10 @@ export async function ensureProfileRow(user: User): Promise<void> {
   }
 
   if (user.role === "empreiteiro") {
+    // Invited xgestão accounts stay scoped to the invited company. In
+    // particular, email verification can happen before password setup, and a
+    // revoked member can still trigger profile recovery with an old session.
+    if (await isXgestaoMember(user.id)) return;
     await db
       .insert(empreiteiras)
       .values({

@@ -4,6 +4,7 @@ import { db } from '@shared/db/db';
 import { obras } from '@shared/db/schema';
 import { ObraConsoleView } from '@features/empreiteiro/minhas-obras/components/ObraConsoleView';
 import { getCurrentXGestaoEntitlement } from '@features/xgestao/lib/entitlement';
+import { resolverAcessoObraXgestao } from '@features/xgestao/equipe/server/access';
 
 export default async function XGestaoObraDetalhePage({
   params,
@@ -24,13 +25,14 @@ export default async function XGestaoObraDetalhePage({
     ))
     .limit(1);
 
-  if (!obraPropria) notFound();
+  const permission = obraPropria ? await resolverAcessoObraXgestao(entitlement.userId, id) : null;
+  if (!permission) notFound();
 
   return (
     <ObraConsoleView
       basePath="/xgestao/obras"
       showMarketplaceContact={false}
-      allowOwnWorkEdit
+      allowOwnWorkEdit={permission === 'editar'}
     />
   );
 }

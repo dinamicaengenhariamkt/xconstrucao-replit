@@ -2,7 +2,14 @@ import 'server-only';
 
 import { and, eq, inArray, isNotNull, isNull, type SQL } from 'drizzle-orm';
 import { db } from '@shared/db/db';
-import { empreiteiras, obras, userRoles, users } from '@shared/db/schema';
+import {
+  empreiteiras,
+  obras,
+  userRoles,
+  users,
+  xgestaoMembroObras,
+  xgestaoMembros,
+} from '@shared/db/schema';
 
 /**
  * O recorte do produto xgestão, num lugar só.
@@ -21,6 +28,76 @@ export interface XgestaoAssinanteBase {
   empreiteiraId: string;
   empreiteiraNome: string;
   entradaEm: Date;
+}
+
+/** Pessoa vinculada à empresa; não é uma assinatura nem uma empresa própria. */
+export interface XgestaoMembroEmpresa {
+  empreiteiraId: string;
+  membroId: string;
+  userId: string;
+  nome: string;
+  email: string;
+  papel: string;
+  status: string;
+  obras: Array<{ obraId: string; nome: string; permissao: string }>;
+}
+
+/**
+ * Leitura administrativa das pessoas vinculadas às empresas no recorte xgestão.
+ * Membros são apresentados dentro da empresa e nunca entram na base de
+ * assinantes/contagem de empresas.
+ */
+export async function listarMembrosEmpreiteirasXgestao(
+  empreiteiraIds: string[],
+): Promise<XgestaoMembroEmpresa[]> {
+  if (empreiteiraIds.length === 0) return [];
+
+  const rows = await db
+    .select({
+      empreiteiraId: xgestaoMembros.empreiteiraId,
+      membroId: xgestaoMembros.id,
+      userId: xgestaoMembros.userId,
+      nome: users.name,
+      email: users.email,
+      papel: xgestaoMembros.papel,
+      status: xgestaoMembros.status,
+      obraId: obras.id,
+      obra: obras.nome,
+      permissao: xgestaoMembroObras.permissao,
+    })
+    .from(xgestaoMembros)
+    .innerJoin(users, eq(users.id, xgestaoMembros.userId))
+    .leftJoin(xgestaoMembroObras, eq(xgestaoMembroObras.membroId, xgestaoMembros.id))
+    // A equipe pode receber acesso a obras de marketplace; a visão xgestão não
+    // as revela nem sequer por meio do nome do grant.
+    .leftJoin(obras, and(
+      eq(obras.id, xgestaoMembroObras.obraId),
+      XGESTAO_OBRA,
+    ))
+    .where(inArray(xgestaoMembros.empreiteiraId, empreiteiraIds))
+    .orderBy(xgestaoMembros.empreiteiraId, users.name, obras.nome);
+
+  const members = new Map<string, XgestaoMembroEmpresa>();
+  for (const row of rows) {
+    let member = members.get(row.membroId);
+    if (!member) {
+      member = {
+        empreiteiraId: row.empreiteiraId,
+        membroId: row.membroId,
+        userId: row.userId,
+        nome: row.nome,
+        email: row.email,
+        papel: row.papel,
+        status: row.status,
+        obras: [],
+      };
+      members.set(row.membroId, member);
+    }
+    if (row.obraId && row.obra && row.permissao) {
+      member.obras.push({ obraId: row.obraId, nome: row.obra, permissao: row.permissao });
+    }
+  }
+  return [...members.values()];
 }
 
 /**
@@ -43,8 +120,9 @@ export async function listarAssinantesXgestao(): Promise<XgestaoAssinanteBase[]>
     })
     .from(userRoles)
     .innerJoin(users, eq(users.id, userRoles.userId))
+    .leftJoin(xgestaoMembros, eq(xgestaoMembros.userId, userRoles.userId))
     .innerJoin(empreiteiras, eq(empreiteiras.userId, users.id))
-    .where(eq(userRoles.role, 'xgestao'));
+    .where(and(eq(userRoles.role, 'xgestao'), isNull(xgestaoMembros.id)));
 
   return rows.map((row) => ({
     userId: row.userId,

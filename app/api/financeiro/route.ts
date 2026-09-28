@@ -16,7 +16,20 @@ export async function GET(request: NextRequest) {
     const userId = payload.sub;
 
     const financeiros = await getFinanceiros();
-    return NextResponse.json(financeiros);
+    if (payload.role === "admin" || payload.role === "superadmin") {
+      return NextResponse.json(financeiros);
+    }
+
+    // A rota legada retornava a tabela financeira inteira para qualquer sessão
+    // autenticada. Limitar ao conjunto de obras efetivamente acessível também
+    // aplica os grants individuais do xgestão (incluindo somente leitura).
+    const workIds = [...new Set(financeiros.map((row) => row.obraId).filter((id): id is string => Boolean(id)))];
+    const accessEntries = await Promise.all(workIds.map(async (obraId) => [
+      obraId,
+      await findObraAccess(obraId, { id: userId, role: payload.role }),
+    ] as const));
+    const readable = new Set(accessEntries.filter(([, access]) => access).map(([obraId]) => obraId));
+    return NextResponse.json(financeiros.filter((row) => row.obraId && readable.has(row.obraId)));
   } catch (error) {
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
   }
@@ -50,6 +63,8 @@ export async function POST(request: NextRequest) {
         // que ela existe.
         return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
       }
+    } else if (payload.role !== "admin" && payload.role !== "superadmin") {
+      return NextResponse.json({ message: "Lançamentos precisam estar vinculados a uma obra autorizada." }, { status: 403 });
     }
 
     const financeiro = await createFinanceiro(parsed.data);

@@ -12,7 +12,7 @@ export interface TimelineItem {
   tipo: TimelineTipo;
   titulo: string;
   descricao: string;
-  autor: string;
+  autor: string | null;
   data: string;
 }
 
@@ -178,10 +178,12 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
                       </time>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.descricao}</p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <IconPerson className="text-[12px]" />
-                      {event.autor}
-                    </p>
+                    {event.autor && event.autor !== '—' && (
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <IconPerson className="text-[12px]" />
+                        {event.autor}
+                      </p>
+                    )}
                   </div>
                 </div>
               );

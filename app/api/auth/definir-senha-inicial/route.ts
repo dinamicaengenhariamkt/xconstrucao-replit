@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { users } from "@shared/db/schema";
+import { users, xgestaoMembros } from "@shared/db/schema";
 import { hashPassword } from "@features/auth/api/auth-service";
 import { evaluatePasswordPolicy } from "@features/auth/schemas/password";
 import { setNoCacheHeaders } from "@features/auth/api/auth-utils";
@@ -50,10 +50,21 @@ export async function POST(request: NextRequest) {
   if (!consumed) return jsonNoStore({ message: "Link inválido ou expirado. Solicite um novo link." }, 400);
 
   const hashed = await hashPassword(password);
-  await db
-    .update(users)
-    .set({ password: hashed, mustChangePassword: false, emailVerified: user.emailVerified ?? new Date() })
-    .where(eq(users.id, user.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ password: hashed, mustChangePassword: false, emailVerified: user.emailVerified ?? new Date() })
+      .where(eq(users.id, user.id));
+    // XG31 convites passam a conceder acesso apenas após o setup da senha.
+    // Não reativa uma associação que o dono revogou enquanto o link era válido.
+    await tx
+      .update(xgestaoMembros)
+      .set({ status: "ativo", atualizadoEm: new Date() })
+      .where(and(
+        eq(xgestaoMembros.userId, user.id),
+        eq(xgestaoMembros.status, "convidado"),
+      ));
+  });
 
   await recordAudit({
     actorId: user.id,

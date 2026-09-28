@@ -1,6 +1,7 @@
 import {
   RiBuilding4Line,
   RiDashboardLine,
+  RiTeamLine,
   RiSettings3Line,
 } from 'react-icons/ri';
 import type { IconType } from 'react-icons';
@@ -28,6 +29,12 @@ export const XGESTAO_NAV_ITEMS: XGestaoNavItem[] = [
     url: '/xgestao/obras',
     icon: RiBuilding4Line,
     description: 'Obras e frentes de trabalho',
+  },
+  {
+    title: 'Equipe',
+    url: '/xgestao/equipe',
+    icon: RiTeamLine,
+    description: 'Acessos da equipe da empresa',
   },
 ];
 

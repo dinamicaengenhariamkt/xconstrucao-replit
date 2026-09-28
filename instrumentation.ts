@@ -129,6 +129,9 @@ async function initializeNodeRuntime() {
     const { bootstrapObraShareLinksSchema } = await import("./server/bootstrap-obra-share-links");
     await runBootstrap("obra-share-links", bootstrapObraShareLinksSchema);
 
+    const { bootstrapXgestaoMembrosSchema } = await import("./server/bootstrap-xgestao-membros");
+    await runBootstrap("xgestao-membros", bootstrapXgestaoMembrosSchema);
+
     const { bootstrapNotificacoesSchema } = await import("./server/bootstrap-notificacoes");
     await runBootstrap("notificacoes", bootstrapNotificacoesSchema);
 

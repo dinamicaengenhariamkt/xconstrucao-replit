@@ -309,6 +309,43 @@ export const obraShareLinks = pgTable(
   }),
 );
 
+/** XG31 — empresa multiusuário. A ativação só ocorre após definir senha. */
+export const xgestaoMembros = pgTable(
+  "xgestao_membros",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    empreiteiraId: varchar("empreiteira_id").notNull().references(() => empreiteiras.id, { onDelete: "cascade" }),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    papel: text("papel").$type<"gestor" | "colaborador">().notNull(),
+    status: text("status").$type<"convidado" | "ativo" | "revogado">().notNull().default("convidado"),
+    convidadoPor: varchar("convidado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+    atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqUser: uniqueIndex("xgestao_membros_user_uniq").on(t.userId),
+    uniqCompanyUser: uniqueIndex("xgestao_membros_empresa_user_uniq").on(t.empreiteiraId, t.userId),
+    idxCompanyStatus: index("xgestao_membros_empresa_status_idx").on(t.empreiteiraId, t.status),
+  }),
+);
+
+/** XG31 — permission per obra; composite FKs are installed by the bootstrap. */
+export const xgestaoMembroObras = pgTable(
+  "xgestao_membro_obras",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    membroId: varchar("membro_id").notNull().references(() => xgestaoMembros.id, { onDelete: "cascade" }),
+    empreiteiraId: varchar("empreiteira_id").notNull().references(() => empreiteiras.id, { onDelete: "cascade" }),
+    obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),
+    permissao: text("permissao").$type<"visualizar" | "editar">().notNull(),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqMembroObra: uniqueIndex("xgestao_membro_obras_membro_obra_uniq").on(t.membroId, t.obraId),
+    idxObra: index("xgestao_membro_obras_empresa_obra_idx").on(t.empreiteiraId, t.obraId),
+  }),
+);
+
 export const obraAnexos = pgTable("obra_anexos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   obraId: varchar("obra_id").notNull().references(() => obras.id, { onDelete: "cascade" }),

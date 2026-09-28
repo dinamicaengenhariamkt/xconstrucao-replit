@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 const pageSource = readFileSync('app/admin/xgestao/page.tsx', 'utf8');
+const assinantesPageSource = readFileSync('app/admin/xgestao/assinantes/page.tsx', 'utf8');
+const dashboardServerSource = readFileSync('features/xgestao/admin/server/dashboard.ts', 'utf8');
+const escopoSource = readFileSync('features/xgestao/admin/server/escopo.ts', 'utf8');
 const sidebarSource = readFileSync('features/admin/components/AdminSidebar.tsx', 'utf8');
 const constantsSource = readFileSync('features/admin/constants.ts', 'utf8');
 
@@ -18,5 +21,14 @@ describe('estrutura do painel admin xgestão', () => {
     assert.doesNotMatch(sidebarSource, /Voltar ao marketplace/);
     assert.doesNotMatch(constantsSource, /Voltar ao marketplace/);
     assert.doesNotMatch(constantsSource, /ADMIN_MARKETPLACE_RETURN_ITEM/);
+  });
+
+  it('separa assinatura do responsável, empresa e vínculos de equipe', () => {
+    assert.match(dashboardServerSource, /isNull\(xgestaoMembros\.id\)/);
+    assert.match(dashboardServerSource, /membrosEquipe/);
+    assert.match(escopoSource, /xgestaoMembroObras/);
+    assert.match(pageSource, /Responsáveis com acesso/);
+    assert.match(pageSource, /Vínculos de equipe/);
+    assert.match(assinantesPageSource, /não contam como nova empresa ou assinatura/);
   });
 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, exists, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, exists, gte, inArray, isNull, lte, lt, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
   atividades,
@@ -10,6 +10,7 @@ import {
   type AtividadeTipo,
 } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
   // ---- Visibilidade por persona ----
   const role = guard.user.role;
   const userId = guard.user.id;
+  const empresaXgestao = role === "empreiteiro" ? await resolverEmpresaDoUsuario(userId) : null;
 
   if (!isAdminLike(role)) {
     if (role === "contratante") {
@@ -96,21 +98,34 @@ export async function GET(request: NextRequest) {
         ),
       );
     } else if (role === "empreiteiro") {
-      // Inclui target_user_id pra cobrir candidaturas decididas em obras
-      // ainda não atribuídas (rejeitada/aceita antes do bind à empreiteira).
-      conditions.push(
-        or(
+      if (empresaXgestao && empresaXgestao.papel !== "dono") {
+        // Para a equipe, o vínculo à obra (e não quem praticou a ação) define
+        // a visibilidade. Caso contrário, os lançamentos de colegas somem da
+        // timeline. Eventos sem obra seguem privados ao próprio usuário.
+        const permitidas = await listarIdsObrasPermitidas(userId, empresaXgestao.empreiteiraId);
+        conditions.push(or(
+          exists(db.select({ x: sql`1` }).from(obras).where(and(
+            eq(obras.id, atividades.obraId),
+            eq(obras.empreiteiraId, empresaXgestao.empreiteiraId),
+            isNull(obras.clienteId),
+            ...(permitidas === null ? [] : [inArray(obras.id, permitidas)]),
+          ))),
+          and(isNull(atividades.obraId), or(
+            eq(atividades.actorUserId, userId),
+            eq(atividades.targetUserId, userId),
+          )),
+        ));
+      } else {
+        // O responsável mantém o escopo anterior, inclusive obras marketplace
+        // atribuídas e candidaturas próprias fora das obras xgestão.
+        conditions.push(or(
           eq(atividades.actorUserId, userId),
           eq(atividades.targetUserId, userId),
-          exists(
-            db
-              .select({ x: sql`1` })
-              .from(obras)
-              .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
-              .where(and(eq(obras.id, atividades.obraId), eq(empreiteiras.userId, userId))),
-          ),
-        ),
-      );
+          exists(db.select({ x: sql`1` }).from(obras)
+            .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+            .where(and(eq(obras.id, atividades.obraId), eq(empreiteiras.userId, userId)))),
+        ));
+      }
     } else {
       const r = NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
       setNoCacheHeaders(r);

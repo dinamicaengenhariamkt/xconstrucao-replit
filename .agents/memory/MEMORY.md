@@ -14,3 +14,4 @@
 - [Playwright secure cookie on HTTP](playwright-secure-cookie-http.md) — protected browser navigation is unreliable in the API project because Secure auth cookies are not sent over HTTP.
 - [Progress semantics by work type](progress-semantics.md) — xgestão-owned work advances immediately; marketplace task/work changes remain deferred until customer approval.
 - [Replit Playwright Chromium](replit-playwright-chromium.md) — use the workspace-provided Chromium executable instead of requiring a manual Playwright browser download.
+- [Provisionamento de membros xgestão](xgestao-member-provisioning.md) — convidados não podem ganhar empresa própria pelo provisionamento automático, inclusive antes de aceitar o convite.

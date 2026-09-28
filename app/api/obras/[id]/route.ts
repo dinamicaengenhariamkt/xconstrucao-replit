@@ -28,7 +28,8 @@ import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararSurveyObraConcluida } from "@features/surveys/triggers";
-import { findObraAccess } from "@features/obras/api/access";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -306,6 +307,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canWriteObraContent(access)) {
+    const r = NextResponse.json({ message: "Sem permissão para editar." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   // O empreiteiro só altera a própria obra xgestão: sem contratante e vinculada
   // à sua empreiteira (findObraWithAccess já garantiu este último vínculo).
   const isObraPropriaXGestao =
@@ -578,12 +584,26 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canWriteObraContent(access)) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   // XG10 — o empreiteiro pode excluir a PRÓPRIA obra do xgestão (sem
   // contratante), mas segue barrado em obra de marketplace: lá a obra é do
   // contratante, e apagá-la destruiria o histórico da outra parte.
   if (guard.user.role === "empreiteiro") {
-    const obraPropria = access.obra.clienteId === null && access.empreiteiraId !== null;
-    if (!obraPropria || access.isDiscoveryOnly) {
+    const empresa = access.obra.clienteId === null
+      ? await resolverEmpresaDoUsuario(guard.user.id)
+      : null;
+    // Exclusão é deliberadamente mais restrita que edição: somente o dono da
+    // empresa pode apagar uma obra própria, mesmo que gestor/colaborador tenha
+    // permissão "editar" no escopo daquela obra.
+    const obraPropriaDoDono =
+      empresa?.papel === "dono" &&
+      empresa.empreiteiraId === access.obra.empreiteiraId &&
+      access.empreiteiraId === empresa.empreiteiraId;
+    if (!obraPropriaDoDono || access.isDiscoveryOnly) {
       const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
       setNoCacheHeaders(r);
       return r;

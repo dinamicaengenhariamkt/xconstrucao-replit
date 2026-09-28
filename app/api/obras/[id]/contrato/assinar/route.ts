@@ -3,6 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { candidaturas, clientes, empreiteiras, obras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
+import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
 import { recordAudit } from "@features/auth/api/audit";
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { assinarContrato, montarContrato } from "@features/contratos/contrato-service";
@@ -28,6 +29,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     .where(eq(obras.id, obraId));
   if (!obra) {
     const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const workAccess = await findObraAccess(obraId, guard.user);
+  if (!workAccess || !canWriteObraContent(workAccess)) {
+    const r = NextResponse.json({ error: "FORBIDDEN", message: "Sem permissão para assinar este contrato." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }

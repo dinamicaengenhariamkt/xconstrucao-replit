@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
-import { empreiteiras, users } from "@shared/db/schema";
+import { empreiteiras, users, xgestaoMembros } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { ensureProfileRow } from "@features/auth/api/auth-storage";
 import { findMunicipio, loadMunicipios } from "@shared/lib/ibge-municipios";
@@ -135,6 +135,14 @@ async function loadUser(userId: string) {
   return u ?? null;
 }
 
+async function isActiveXgestaoMember(userId: string): Promise<boolean> {
+  const [membership] = await db
+    .select({ id: xgestaoMembros.id })
+    .from(xgestaoMembros)
+    .where(and(eq(xgestaoMembros.userId, userId), eq(xgestaoMembros.status, "ativo")));
+  return membership?.id != null;
+}
+
 function withUserFields(row: typeof empreiteiras.$inferSelect, u: typeof users.$inferSelect | null) {
   return {
     ...row,
@@ -149,6 +157,12 @@ export async function GET(request: NextRequest) {
   const payload = token ? verifyAccessToken(token) : null;
   if (!payload?.sub) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
   if (payload.role !== "empreiteiro") return NextResponse.json({ message: "Acesso negado" }, { status: 403 });
+  if (await isActiveXgestaoMember(payload.sub)) {
+    return NextResponse.json(
+      { message: "O perfil da empresa só pode ser acessado pelo responsável da empresa." },
+      { status: 403 },
+    );
+  }
 
   const row = await loadOrCreate(payload.sub);
   if (!row) return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 });
@@ -161,6 +175,12 @@ export async function PATCH(request: NextRequest) {
   const payload = token ? verifyAccessToken(token) : null;
   if (!payload?.sub) return NextResponse.json({ message: "Não autenticado" }, { status: 401 });
   if (payload.role !== "empreiteiro") return NextResponse.json({ message: "Acesso negado" }, { status: 403 });
+  if (await isActiveXgestaoMember(payload.sub)) {
+    return NextResponse.json(
+      { message: "O perfil da empresa só pode ser alterado pelo responsável da empresa." },
+      { status: 403 },
+    );
+  }
 
   const body = await request.json().catch(() => ({}));
   const parsed = updateSchema.safeParse(body);

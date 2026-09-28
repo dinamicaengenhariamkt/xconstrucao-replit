@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, userHasRole } from "@features/auth/api/auth-utils";
+import { resolverAcessoObraXgestao, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 /**
  * Resolve acesso de leitura/escrita a uma obra para qualquer persona.
@@ -21,6 +22,8 @@ export type ObraAccess = {
   empreiteiraId: string | null;
   /** Empreiteiro que apenas descobriu a obra (publicada/sem vínculo). */
   isDiscoveryOnly: boolean;
+  /** Obra própria xgestão: concessão específica (ou acesso integral do dono/gestor). */
+  xgestaoPermission?: "visualizar" | "editar";
 };
 
 /**
@@ -59,7 +62,14 @@ export async function findObraAccess(
 
   if (user.role === "empreiteiro") {
     const [emp] = await db.select({ id: empreiteiras.id }).from(empreiteiras).where(eq(empreiteiras.userId, user.id));
-    const isAssigned = !!(emp && obra.empreiteiraId === emp.id);
+    const isXgestao = obra.clienteId === null && obra.empreiteiraId !== null;
+    const company = isXgestao ? await resolverEmpresaDoUsuario(user.id) : null;
+    const xgestaoPermission = isXgestao && company?.empreiteiraId === obra.empreiteiraId
+      ? await resolverAcessoObraXgestao(user.id, obraId)
+      : null;
+    const isAssigned = isXgestao
+      ? xgestaoPermission !== null
+      : !!(emp && obra.empreiteiraId === emp.id);
     const isPublica =
       obra.visibilidade === "publicada" &&
       obra.empreiteiraId === null &&
@@ -70,15 +80,16 @@ export async function findObraAccess(
     // Uma obra sem contratante pertence ao xgestão. Mantemos o entitlement no
     // caminho de conteúdo para que revogar o produto também revogue operação,
     // sem alterar o acesso a obras marketplace atribuídas.
-    if (isAssigned && obra.clienteId === null && !(await userHasRole(user.id, "xgestao"))) {
+    if (isAssigned && isXgestao && !(await userHasRole(user.id, "xgestao"))) {
       return null;
     }
     return {
       obra,
       role: "empreiteiro",
       clienteId: null,
-      empreiteiraId: emp?.id ?? null,
+      empreiteiraId: isXgestao ? company?.empreiteiraId ?? null : emp?.id ?? null,
       isDiscoveryOnly: !isAssigned,
+      ...(isXgestao && xgestaoPermission ? { xgestaoPermission } : {}),
     };
   }
 
@@ -95,6 +106,8 @@ export async function findObraAccess(
 export function canWriteObraContent(access: ObraAccess): boolean {
   if (access.role === "admin" || access.role === "superadmin") return true;
   if (access.role === "contratante") return true;
-  if (access.role === "empreiteiro" && !access.isDiscoveryOnly) return true;
+  if (access.role === "empreiteiro" && !access.isDiscoveryOnly) {
+    return access.xgestaoPermission !== "visualizar";
+  }
   return false;
 }

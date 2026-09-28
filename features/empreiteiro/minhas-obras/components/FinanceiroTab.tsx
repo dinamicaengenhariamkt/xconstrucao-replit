@@ -643,6 +643,14 @@ export function FinanceiroTab({
                             )}
                           </div>
                           <p className="text-xs text-gray-500 mt-0.5">{formatarDataBr(l.data)}</p>
+                          {isObraPropria && l.actorName && (
+                            <p
+                              className="text-xs text-gray-500 mt-0.5"
+                              data-testid={`lancamento-ator-${l.id}`}
+                            >
+                              Registrado por {l.actorName}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">

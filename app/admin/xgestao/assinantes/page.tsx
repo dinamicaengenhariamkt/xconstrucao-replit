@@ -40,7 +40,7 @@ export default function AdminXgestaoAssinantesPage() {
         </Link>
         <h1 className="text-2xl font-extrabold tracking-tight">Assinantes do xgestão</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Quem mantém o acesso ao produto, com plano e obras gerenciadas.
+          Cada linha representa uma empresa e seu responsável com acesso xgestão. Membros aparecem apenas como vínculos da equipe e não contam como nova empresa ou assinatura.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export default function AdminXgestaoAssinantesPage() {
         </div>
       ) : !data || data.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800">
-          Ainda não há assinantes xgestão.
+          Ainda não há empresas com responsáveis assinantes xgestão.
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
@@ -58,7 +58,7 @@ export default function AdminXgestaoAssinantesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Empreiteira</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Empresa / responsável</th>
                   <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">E-mail</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
                   <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Plano</th>
@@ -80,12 +80,36 @@ export default function AdminXgestaoAssinantesPage() {
                       >
                         {assinante.empreiteiraNome}
                       </Link>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Responsável: {assinante.nome || 'não informado'}
+                      </p>
                       {/* Reinjeta no mobile o que as colunas escondidas mostram. */}
                       <p className="mt-0.5 text-xs text-gray-400 lg:hidden">{assinante.email}</p>
                       <p className="mt-0.5 text-xs text-gray-400 md:hidden">
                         {TIER_LABEL[assinante.plano.tier] ?? assinante.plano.tier}
                         {assinante.plano.valorMensal > 0 && ` · ${formatCurrency(assinante.plano.valorMensal)}/mês`}
                       </p>
+                      {assinante.membros.length > 0 && (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer font-medium text-primary">
+                            {assinante.membros.length} vínculo(s) de equipe
+                          </summary>
+                          <ul className="mt-2 space-y-1 pl-3 text-gray-500 dark:text-gray-400">
+                            {assinante.membros.map((membro) => (
+                              <li key={membro.userId}>
+                                <span>{membro.nome} · {membro.email} · {membro.papel} · {membro.status}</span>
+                                {membro.obras.length > 0 && (
+                                  <ul className="ml-3 mt-1 list-disc">
+                                    {membro.obras.map((obra) => (
+                                      <li key={obra.obraId}>{obra.nome} · {obra.permissao}</li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
                     </td>
                     <td className="hidden px-4 py-3 text-gray-600 dark:text-gray-300 lg:table-cell">{assinante.email}</td>
                     <td className="px-4 py-3 text-right font-semibold">

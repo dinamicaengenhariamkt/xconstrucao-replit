@@ -39,6 +39,11 @@ export async function POST(request: NextRequest) {
     setNoCacheHeaders(r);
     return r;
   }
+  if (entitlement.papel === "colaborador") {
+    const r = NextResponse.json({ message: "Somente dono ou gestor pode criar obras." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
 
   const [empreiteira] = await db
     .select({
@@ -75,7 +80,7 @@ export async function POST(request: NextRequest) {
   const result = await createObra(
     request,
     guard.user.id,
-    { kind: "xgestao", empreiteiraId: entitlement.empreiteiraId },
+    { kind: "xgestao", empreiteiraId: entitlement.empreiteiraId, donoUserId: entitlement.donoUserId },
     body,
   );
   const r = result.ok

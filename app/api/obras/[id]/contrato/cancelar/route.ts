@@ -6,6 +6,7 @@ import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { cancelarContrato } from "@features/contratos/contrato-service";
 import { dispararNotificacaoContratoCancelado } from "@features/notificacoes/contrato-dispatcher";
+import { canWriteObraContent, findObraAccess } from "@features/obras/api/access";
 
 /**
  * POST /api/obras/[id]/contrato/cancelar  (J58)
@@ -20,6 +21,12 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const [obra] = await db.select({ clienteId: obras.clienteId }).from(obras).where(eq(obras.id, obraId));
   if (!obra) {
     const r = NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const workAccess = await findObraAccess(obraId, guard.user);
+  if (!workAccess || !canWriteObraContent(workAccess)) {
+    const r = NextResponse.json({ error: "FORBIDDEN", message: "Sem permissão para alterar este contrato." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }

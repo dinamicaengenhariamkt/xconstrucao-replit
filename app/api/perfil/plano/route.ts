@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { users, empreiteiras, clientes, obras, candidaturas, assinaturas, planos } from "@shared/db/schema";
+import { users, empreiteiras, clientes, obras, candidaturas, assinaturas, planos, xgestaoMembros } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import {
   getPlanCatalog,
@@ -109,6 +109,15 @@ export async function GET(request: NextRequest) {
   const requestedPersona = request.nextUrl.searchParams.get("persona");
   let persona: "empreiteiro" | "contratante" | "xgestao";
   if (requestedPersona === "xgestao") {
+    const [membership] = await db
+      .select({ id: xgestaoMembros.id })
+      .from(xgestaoMembros)
+      .where(and(eq(xgestaoMembros.userId, user.id), eq(xgestaoMembros.status, "ativo")));
+    if (membership) {
+      const r = NextResponse.json({ message: "O plano do xgestão é gerenciado pelo responsável da empresa." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const entitlement = await assertXgestaoUser(user.id);
     if (!entitlement) {
       const r = NextResponse.json({ message: "Acesso xgestão não autorizado." }, { status: 403 });

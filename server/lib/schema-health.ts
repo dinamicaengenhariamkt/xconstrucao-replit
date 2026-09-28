@@ -170,6 +170,16 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     ],
     label: "obra_share_links (xgestão public links)",
   },
+  {
+    table: "xgestao_membros",
+    columns: ["empreiteira_id", "user_id", "papel", "status", "convidado_por", "atualizado_em"],
+    label: "xgestao_membros (XG31 membership)",
+  },
+  {
+    table: "xgestao_membro_obras",
+    columns: ["membro_id", "empreiteira_id", "obra_id", "permissao"],
+    label: "xgestao_membro_obras (XG31 grants)",
+  },
   // Chat file attachment columns (bootstrap-chat) — root cause of the incident
   {
     table: "chat_mensagens",

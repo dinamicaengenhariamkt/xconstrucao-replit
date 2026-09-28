@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { empreiteiras, financeiro, obras } from '@shared/db/schema';
 import { computeHealthSummaryForObras } from '@features/shared/health/summary-server';
@@ -7,6 +7,7 @@ import type { HealthSummaryData } from '@features/shared/health';
 import type { ProfitSummaryData } from '@features/shared/profit';
 import { resolverIntervalo } from '@features/admin/financeiro/api/caixa-service';
 import type { DashboardPeriodo, DashboardStats, FinancialOverview } from '../types';
+import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from '@features/xgestao/equipe/server/access';
 
 /**
  * Service SERVER-SIDE do dashboard do empreiteiro (J17). Agrega obras +
@@ -33,16 +34,26 @@ function periodoLabel(periodo: DashboardPeriodo): string {
 
 /** Resolve os ids das obras da empreiteira do usuário. */
 async function resolveObraIds(userId: string): Promise<string[]> {
-  const [emp] = await db
-    .select({ id: empreiteiras.id })
+  const company = await resolverEmpresaDoUsuario(userId);
+  const [ownerCompany] = company ? [] : await db
+    .select({ empreiteiraId: empreiteiras.id, donoUserId: empreiteiras.userId })
     .from(empreiteiras)
-    .where(eq(empreiteiras.userId, userId))
-    .limit(1);
-  if (!emp) return [];
+    .where(eq(empreiteiras.userId, userId));
+  const effectiveCompany = company ?? (ownerCompany?.donoUserId
+    ? { ...ownerCompany, papel: 'dono' as const }
+    : null);
+  if (!effectiveCompany) return [];
+  const isMember = effectiveCompany.papel !== 'dono';
+  const allowedIds = isMember ? await listarIdsObrasPermitidas(userId, effectiveCompany.empreiteiraId) : null;
+  if (allowedIds !== null && allowedIds.length === 0) return [];
   const rows = await db
     .select({ id: obras.id })
     .from(obras)
-    .where(eq(obras.empreiteiraId, emp.id));
+    .where(and(
+      eq(obras.empreiteiraId, effectiveCompany.empreiteiraId),
+      ...(isMember ? [isNull(obras.clienteId)] : []),
+      ...(allowedIds !== null ? [inArray(obras.id, allowedIds)] : []),
+    ));
   return rows.map((r) => r.id);
 }
 

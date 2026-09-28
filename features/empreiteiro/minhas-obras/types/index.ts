@@ -165,7 +165,7 @@ export interface TimelineEvent {
   tipo: 'progresso' | 'tarefa' | 'documento' | 'problema' | 'nota';
   titulo: string;
   descricao: string;
-  autor: string;
+  autor: string | null;
   data: string;
 }
 
