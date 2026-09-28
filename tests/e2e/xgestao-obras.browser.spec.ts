@@ -240,39 +240,81 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       const linkPreservado = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
       expect(await linkPreservado.json()).toMatchObject({ shares: [{ id: linkB.share.id }] });
 
-       // Retirar apenas Links mantém a concessão visualizar para a obra B e
-       // não revoga a capability pública já entregue ao cliente.
-       await page.getByRole("button", { name: "Permissões" }).click();
-       const dialogLinks = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
-       await expect(dialogLinks.locator("#member-access-preset")).toHaveValue("completo");
-       await expect(dialogLinks.getByRole("checkbox", { name: "Links públicos" })).toBeChecked();
-       await dialogLinks.getByRole("checkbox", { name: "Links públicos" }).uncheck();
-       await expect(dialogLinks.getByRole("checkbox", { name: "Financeiro" })).toBeChecked();
-       const salvoSemLinks = page.waitForResponse((res) =>
-         res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
-       await dialogLinks.getByRole("button", { name: "Salvar permissões" }).click();
-       expect((await salvoSemLinks).status()).toBe(200);
-       await expect(dialogLinks).toHaveCount(0);
+      // Retirar apenas Links mantém a concessão visualizar para a obra B e
+      // não revoga a capability pública já entregue ao cliente.
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialogLinks = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await expect(dialogLinks.locator("#member-access-preset")).toHaveValue("completo");
+      await expect(dialogLinks.getByRole("checkbox", { name: "Links públicos" })).toBeChecked();
+      await dialogLinks.getByRole("checkbox", { name: "Links públicos" }).uncheck();
+      await expect(dialogLinks.getByRole("checkbox", { name: "Financeiro" })).toBeChecked();
+      const salvoSemLinks = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialogLinks.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvoSemLinks).status()).toBe(200);
+      await expect(dialogLinks).toHaveCount(0);
 
-       // A mesma sessão perde a leitura da lista antes de qualquer reload.
-       const listaSemLinks = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
-       expect(listaSemLinks.status(), await listaSemLinks.text()).toBe(404);
-       await membro.reload();
-       await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
-       if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
-       await expect(abas.getByRole("button", { name: "Financeiro" })).toBeVisible();
-       await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
+      // A mesma sessão perde a leitura da lista antes de qualquer reload.
+      const listaSemLinks = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(listaSemLinks.status(), await listaSemLinks.text()).toBe(404);
+      await membro.reload();
+      await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+      if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+      await expect(abas.getByRole("button", { name: "Financeiro" })).toBeVisible();
+      await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
 
-       const destinatarioContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
-       try {
-         const destinatario = await destinatarioContext.newPage();
-         const publica = await destinatario.goto(linkB.share.path);
-         expect(publica?.status()).toBe(200);
-         await expect(destinatario.getByTestId("obra-publica-shell")).toBeVisible();
-         await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeB);
-       } finally {
-         await destinatarioContext.close();
-       }
+      // Com Links restaurado, a revogação somente da obra B deve ser uma
+      // transição independente da permissão por área e da sessão do membro.
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialogObras = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await dialogObras.getByRole("checkbox", { name: "Links públicos" }).check();
+      const acessoA = dialogObras.getByRole("checkbox", { name: nomeA, exact: true });
+      const acessoB = dialogObras.getByRole("checkbox", { name: nomeB, exact: true });
+      await expect(acessoA).toBeChecked();
+      await expect(acessoB).toBeChecked();
+      await expect(dialogObras.getByRole("combobox", { name: `Permissão para ${nomeB}` })).toHaveValue("visualizar");
+      const salvoComLinks = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialogObras.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvoComLinks).status()).toBe(200);
+      await expect(dialogObras).toHaveCount(0);
+      // O reload anterior pode substituir o cookie HTTP de teste por um Secure.
+      // Reponha-o antes da transição sob teste; depois da revogação, não faça login novamente.
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const listaRestaurada = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(listaRestaurada.status(), await listaRestaurada.text()).toBe(200);
+      expect(await listaRestaurada.json()).toMatchObject({ shares: [{ id: linkB.share.id }] });
+
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialogRevogacao = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await expect(dialogRevogacao.getByRole("checkbox", { name: "Links públicos" })).toBeChecked();
+      await dialogRevogacao.getByRole("checkbox", { name: nomeB, exact: true }).uncheck();
+      await expect(dialogRevogacao.getByRole("checkbox", { name: nomeA, exact: true })).toBeChecked();
+      const salvoSemObra = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialogRevogacao.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvoSemObra).status()).toBe(200);
+      await expect(dialogRevogacao).toHaveCount(0);
+
+      const listaSemObra = await membro.request.get(`/api/xgestao/obras/${obraB}/share`);
+      expect(listaSemObra.status(), await listaSemObra.text()).toBe(404);
+      const outraObraPreservada = await membro.request.get(`/api/xgestao/obras/${obraA}/share`);
+      expect(outraObraPreservada.status(), await outraObraPreservada.text()).toBe(200);
+      const obraRevogada = await membro.reload();
+      expect(obraRevogada?.status()).toBe(404);
+      await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
+      await expect(membro.getByTestId(`detalhes-link-${linkB.share.id}`)).toHaveCount(0);
+
+      const destinatarioContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+      try {
+        const destinatario = await destinatarioContext.newPage();
+        const publica = await destinatario.goto(linkB.share.path);
+        expect(publica?.status()).toBe(200);
+        await expect(destinatario.getByTestId("obra-publica-shell")).toBeVisible();
+        await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeB);
+      } finally {
+        await destinatarioContext.close();
+      }
     } finally {
       await membroContext.close();
     }
