@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { empreiteiras } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { garantirChatThread, resolverParticipantesDaObra } from "@features/chat/service";
+import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 const bodySchema = z.object({
   obraId: z.string().min(1),
@@ -15,8 +16,8 @@ const bodySchema = z.object({
  *
  * Espelha a rota do contratante, mas com ownership INVERTIDO: garante a
  * chat_thread entre a empreiteira logada e o contratante da obra, e só
- * permite quando o empreiteiro logado é de fato a empreiteira contratada
- * da obra (`empreiteiras.userId == user.id` E `obra.empreiteiraId == empreiteira.id`).
+ * permite ao responsável pela empreiteira contratada (chat marketplace).
+ * Membros xgestão não são participantes do chat com o contratante.
  *
  * Casos de obra do marketplace onde o empreiteiro ainda NÃO foi aceito
  * retornam 422 `NAO_VINCULADO` (o chat só existe após o vínculo firmado — J05).
@@ -72,20 +73,19 @@ export async function POST(request: NextRequest) {
 
   const { participantes } = resolved;
 
-  // Ownership do empreiteiro (admin pula): o empreiteiro logado precisa ser a
-  // empreiteira vinculada à obra. Como o helper já resolveu `empreiteiroUserId`
-  // a partir de `obra.empreiteiraId`, basta comparar com o user logado.
+  // A thread do marketplace pertence ao dono da empreiteira contratada.
+  // Resolver o vínculo da equipe para distinguir membro ativo de um usuário
+  // sem empresa, sem trocar o participante da thread pelo membro.
   if (!isAdminLike(guard.user.role)) {
     if (participantes.empreiteiroUserId !== guard.user.id) {
-      // Confirma que o user logado é uma empreiteira (mensagem mais clara),
-      // mas em qualquer caso não é a contratada desta obra.
-      const [emp] = await db
+      const empresa = await resolverEmpresaDoUsuario(guard.user.id);
+      const [emp] = empresa ? [] : await db
         .select({ id: empreiteiras.id })
         .from(empreiteiras)
         .where(eq(empreiteiras.userId, guard.user.id))
         .limit(1);
 
-      if (!emp) {
+      if (!empresa && !emp) {
         const r = NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
         setNoCacheHeaders(r);
         return r;

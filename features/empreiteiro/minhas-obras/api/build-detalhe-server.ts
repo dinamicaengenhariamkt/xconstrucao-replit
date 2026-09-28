@@ -36,7 +36,7 @@ import type {
   TimelineEvent,
 } from "../types";
 import { ladoDoLancamento } from "../lib/lado-lancamento";
-import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import { resolverEscopoObrasEmpreiteiro } from "@features/empreiteiro/api/escopo-obras";
 
 type UiStatus =
   | "em_execucao"
@@ -106,22 +106,14 @@ function timelineRelativa(d: Date): string {
   return formatDate(d.toISOString());
 }
 
-/** Lista obras vinculadas a um empreiteiro (via empreiteiras.userId). */
+/** Lista obras do dono ou obras próprias permitidas à equipe xgestão. */
 export async function listMinhasObrasReal(
   userId: string,
   options: { includeXgestao?: boolean } = {},
 ): Promise<MinhaObra[]> {
-  const company = await resolverEmpresaDoUsuario(userId);
-  const [ownerCompany] = company ? [] : await db
-    .select({ empreiteiraId: empreiteiras.id, donoUserId: empreiteiras.userId })
-    .from(empreiteiras)
-    .where(eq(empreiteiras.userId, userId));
-  const effectiveCompany = company ?? (ownerCompany?.donoUserId
-    ? { ...ownerCompany, papel: "dono" as const }
-    : null);
-  if (!effectiveCompany) return [];
-  const isMember = effectiveCompany.papel !== "dono";
-  const allowedIds = isMember ? await listarIdsObrasPermitidas(userId, effectiveCompany.empreiteiraId) : null;
+  const scope = await resolverEscopoObrasEmpreiteiro(userId);
+  if (!scope) return [];
+  const { allowedIds, isMember } = scope;
   if (allowedIds !== null && allowedIds.length === 0) return [];
 
   const rows = await db
@@ -134,7 +126,7 @@ export async function listMinhasObrasReal(
     .leftJoin(clientes, eq(clientes.id, obras.clienteId))
     .leftJoin(users, eq(users.id, clientes.userId))
     .where(and(
-      eq(obras.empreiteiraId, effectiveCompany.empreiteiraId),
+      eq(obras.empreiteiraId, scope.empreiteiraId),
       ...(isMember ? [isNull(obras.clienteId)] : []),
       ...(allowedIds !== null ? [inArray(obras.id, allowedIds)] : []),
     ))
@@ -208,7 +200,7 @@ export async function listMinhasObrasReal(
           inArray(financeiro.obraId, obraIds),
           eq(financeiro.status, "pago"),
           eq(financeiro.escopo, "obra"),
-           eq(financeiro.pagadorUserId, effectiveCompany.donoUserId ?? userId),
+           eq(financeiro.pagadorUserId, scope.donoUserId ?? userId),
         ),
       )
       .groupBy(financeiro.obraId);

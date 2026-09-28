@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { atividades, clientes, empreiteiras, financeiro, medicoes, obras, users, xgestaoMembroObras } from "@shared/db/schema";
+import { atividades, chatThreads, clientes, empreiteiras, financeiro, medicoes, obras, users, xgestaoMembroObras } from "@shared/db/schema";
 import {
   CNPJ_VALIDO,
   completarPerfilOperacional,
@@ -134,12 +134,14 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   const verificationEmail = (await fetchCapturedEmails(request, inviteEmail))
     .find((item) => item.meta?.kind === "verification");
   const verificationUrl = verificationEmail?.meta?.verificationUrl;
+
   expect(typeof verificationUrl, "verificação deve conter URL").toBe("string");
   // O e-mail pode conter a URL pública de desenvolvimento; consumir o token no
   // mesmo servidor E2E que criou o convite e os usuários deste teste.
   const verificationPath = new URL(verificationUrl as string);
   const verified = await request.get(`${verificationPath.pathname}${verificationPath.search}`, { maxRedirects: 0 });
   expect([302, 303, 307, 308]).toContain(verified.status());
+  expect(verified.headers().location).toContain("success=verified");
   const [invitee] = await db
     .select({ id: users.id, emailVerified: users.emailVerified })
     .from(users)
@@ -239,7 +241,20 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   expect(idsListados).toEqual(expect.arrayContaining([obraA, obraB]));
   expect(idsListados).not.toContain(obraC);
   expect(idsListados).not.toContain(obraNova);
-
+  const memberStats = await collaboratorRequest.get("/api/empreiteiro/dashboard/stats");
+  expect(memberStats.status(), await memberStats.text()).toBe(200);
+  expect(await memberStats.json()).toMatchObject({ obrasAtivas: 2 });
+  const memberHealth = await collaboratorRequest.get("/api/empreiteiro/obras-health");
+  expect(memberHealth.status(), await memberHealth.text()).toBe(200);
+  const healthIds = Object.keys(await memberHealth.json());
+  expect(healthIds).toEqual(expect.arrayContaining([obraA, obraB]));
+  expect(healthIds).not.toContain(obraC);
+  const memberFinancial = await collaboratorRequest.get("/api/empreiteiro/dashboard/financial");
+  expect(memberFinancial.status(), await memberFinancial.text()).toBe(200);
+  const memberOwnWorkChat = await collaboratorRequest.post("/api/empreiteiro/chat/garantir-thread", {
+    data: { obraId: obraA },
+  });
+  expect(memberOwnWorkChat.status()).toBe(422);
   const colaboradorSemGestaoEquipe = await collaboratorRequest.get("/api/xgestao/membros");
   expect(colaboradorSemGestaoEquipe.status()).toBe(403);
   const nonOwnerResend = await collaboratorRequest.post(`/api/xgestao/membros/${invited.row.id}/reenviar`, { data: {} });
@@ -284,8 +299,15 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   const grantedList = await collaboratorRequest.get("/api/empreiteiro/minhas-obras");
   expect(grantedList.status(), await grantedList.text()).toBe(200);
   const grantedIds = ((await grantedList.json()) as Array<{ id: string }>).map((obra) => obra.id);
+
   expect(grantedIds).toEqual(expect.arrayContaining([obraA, obraC]));
   expect(grantedIds).not.toContain(obraB);
+  const grantedStats = await collaboratorRequest.get("/api/empreiteiro/dashboard/stats");
+  expect(grantedStats.status(), await grantedStats.text()).toBe(200);
+  expect(await grantedStats.json()).toMatchObject({ obrasAtivas: 2 });
+  const grantedHealth = await collaboratorRequest.get("/api/empreiteiro/obras-health");
+  expect(grantedHealth.status(), await grantedHealth.text()).toBe(200);
+  expect(Object.keys(await grantedHealth.json())).toEqual(expect.arrayContaining([obraA, obraC]));
 
   // Phase B — restringe a área do membro ao financeiro e, dentro dela, apenas
   // à categoria mão de obra. As permissões devem valer imediatamente.
@@ -462,9 +484,10 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
     .select({ id: empreiteiras.id })
     .from(empreiteiras)
     .where(eq(empreiteiras.userId, ownerId));
+  const [otherActor] = await db.select({ id: users.id }).from(users).where(eq(users.email, SEED_ADMIN_EMAIL));
   const [clienteTeste] = await db
     .insert(clientes)
-    .values({ nome: "Cliente XG31 escopo", email: uniqueEmail("xg31-marketplace-client") })
+    .values({ nome: "Cliente XG31 escopo", email: uniqueEmail("xg31-marketplace-client"), userId: otherActor.id })
     .returning({ id: clientes.id });
   const [obraMarketplace] = await db
     .insert(obras)
@@ -475,7 +498,6 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
       empreiteiraId: empresa!.id,
     })
     .returning({ id: obras.id });
-  const [otherActor] = await db.select({ id: users.id }).from(users).where(eq(users.email, SEED_ADMIN_EMAIL));
   const [marketplaceEvent] = await db.insert(atividades).values({
     tipo: "diario_postado", actorUserId: otherActor.id, obraId: obraMarketplace!.id,
     payload: { descricao: "Evento feito por terceiro" },
@@ -520,48 +542,24 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
     expect(memberWorks.status(), await memberWorks.text()).toBe(200);
     const memberWorkIds = ((await memberWorks.json()) as Array<{ id: string }>).map((obra) => obra.id);
     expect(memberWorkIds).not.toContain(obraMarketplace!.id);
-
-    await db.insert(medicoes).values([
-      {
-        obraId: obraA,
-        empreiteiroId: ownerId,
-        numero: 901,
-        etapa: xgMedicaoId,
-        percentual: "10",
-        valor: "23.00",
-        status: "pendente",
-      },
-      {
-        obraId: obraMarketplace!.id,
-        empreiteiroId: ownerId,
-        numero: 902,
-        etapa: marketplaceMedicaoId,
-        percentual: "10",
-        valor: "97.00",
-        status: "pendente",
-      },
-    ]);
-    await db.insert(financeiro).values([
-      {
-        tipo: "entrada",
-        descricao: xgFinanceiroId,
-        valor: "23.00",
-        data: "2026-01-01",
-        status: "pendente",
-        obraId: obraA,
-        recebedorUserId: ownerId,
-      },
-      {
-        tipo: "entrada",
-        descricao: marketplaceFinanceiroId,
-        valor: "97.00",
-        data: "2026-01-02",
-        status: "pendente",
-        obraId: obraMarketplace!.id,
-        recebedorUserId: ownerId,
-      },
-    ]);
-
+    const memberMarketplaceChat = await collaboratorRequest.post("/api/empreiteiro/chat/garantir-thread", {
+      data: { obraId: obraMarketplace!.id },
+    });
+    expect(memberMarketplaceChat.status()).toBe(422);
+    const ownerMarketplaceChat = await request.post("/api/empreiteiro/chat/garantir-thread", {
+      data: { obraId: obraMarketplace!.id },
+    });
+    expect(ownerMarketplaceChat.status(), await ownerMarketplaceChat.text()).toBe(200);
+    expect(await ownerMarketplaceChat.json()).toMatchObject({ threadId: expect.any(String) });
+    const memberHealthWithMarketplace = await collaboratorRequest.get("/api/empreiteiro/obras-health");
+    expect(memberHealthWithMarketplace.status(), await memberHealthWithMarketplace.text()).toBe(200);
+    expect(Object.keys(await memberHealthWithMarketplace.json())).not.toContain(obraMarketplace!.id);
+    const ownerHealthWithMarketplace = await request.get("/api/empreiteiro/obras-health");
+    expect(ownerHealthWithMarketplace.status(), await ownerHealthWithMarketplace.text()).toBe(200);
+    expect(Object.keys(await ownerHealthWithMarketplace.json())).toContain(obraMarketplace!.id);
+    const memberStatsWithMarketplace = await collaboratorRequest.get("/api/empreiteiro/dashboard/stats");
+    expect(memberStatsWithMarketplace.status()).toBe(200);
+    expect(await memberStatsWithMarketplace.json()).toMatchObject({ obrasAtivas: 2 });
     const ownerMedicoes = await request.get("/api/empreiteiro/medicoes");
     expect(ownerMedicoes.status(), await ownerMedicoes.text()).toBe(200);
     const ownerMedicaoIds = ((await ownerMedicoes.json()) as Array<{ etapa: string }>).map((row) => row.etapa);
@@ -595,6 +593,7 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
     expect(ownerKpiBody.totalContratado - memberKpiBody.totalContratado).toBeGreaterThanOrEqual(97);
     expect(ownerKpiBody.aguardandoAprovacao - memberKpiBody.aguardandoAprovacao).toBeGreaterThanOrEqual(97);
   } finally {
+    await db.delete(chatThreads).where(eq(chatThreads.obraId, obraMarketplace!.id));
     await db.delete(atividades).where(eq(atividades.id, marketplaceEvent.id));
     await db.delete(financeiro).where(inArray(financeiro.obraId, [obraA, obraMarketplace!.id]));
     await db.delete(medicoes).where(inArray(medicoes.obraId, [obraA, obraMarketplace!.id]));
@@ -642,6 +641,9 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   expect(managerList.status(), await managerList.text()).toBe(200);
   const managerIds = ((await managerList.json()) as Array<{ id: string }>).map((obra) => obra.id);
   expect(managerIds).toEqual(expect.arrayContaining([obraA, obraB, obraC]));
+  const managerStats = await managerRequest.get("/api/empreiteiro/dashboard/stats");
+  expect(managerStats.status(), await managerStats.text()).toBe(200);
+  expect(await managerStats.json()).toMatchObject({ obrasAtivas: 4 });
   const managerCanEdit = await managerRequest.patch(`/api/obras/${obraC}`, {
     data: { nome: "XG31 C editada pelo gestor" },
   });
@@ -693,6 +695,19 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   const revokedList = await collaboratorRequest.get("/api/empreiteiro/minhas-obras");
   expect(revokedList.status(), await revokedList.text()).toBe(200);
   expect(await revokedList.json()).toEqual([]);
+  const revokedStats = await collaboratorRequest.get("/api/empreiteiro/dashboard/stats");
+  expect(revokedStats.status(), await revokedStats.text()).toBe(200);
+  expect(await revokedStats.json()).toMatchObject({ obrasAtivas: 0, obrasConcluidas: 0, valorRecebido: 0 });
+  const revokedHealth = await collaboratorRequest.get("/api/empreiteiro/obras-health");
+  expect(revokedHealth.status(), await revokedHealth.text()).toBe(200);
+  expect(await revokedHealth.json()).toEqual({});
+  const revokedFinancial = await collaboratorRequest.get("/api/empreiteiro/dashboard/financial");
+  expect(revokedFinancial.status(), await revokedFinancial.text()).toBe(200);
+  expect(await revokedFinancial.json()).toMatchObject({ ticketMedio: 0, fluxoCaixa: [] });
+  const revokedChat = await collaboratorRequest.post("/api/empreiteiro/chat/garantir-thread", {
+    data: { obraId: obraA },
+  });
+  expect(revokedChat.status()).toBe(403);
   const revokedTimeline = await collaboratorRequest.get(`/api/atividades?obraId=${obraA}`);
   expect(revokedTimeline.status()).toBe(200);
   expect((await revokedTimeline.json() as { items: unknown[] }).items).toEqual([]);
