@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@shared/components/ui/dropdown-menu';
 
-export function XGestaoTopbar() {
+export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { data: plano } = usePerfilPlano('xgestao');
@@ -89,10 +89,10 @@ export function XGestaoTopbar() {
             <RiSettings3Line className="mr-2 size-4" />
             Configurações
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/xgestao/equipe')}>
+          {isOwner && <DropdownMenuItem onClick={() => router.push('/xgestao/equipe')}>
             <RiTeamLine className="mr-2 size-4" />
             Equipe
-          </DropdownMenuItem>
+          </DropdownMenuItem>}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}

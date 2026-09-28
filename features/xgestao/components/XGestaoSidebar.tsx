@@ -22,7 +22,7 @@ import { Separator } from '@shared/components/ui/separator';
 import { XGESTAO_BOTTOM_NAV_ITEMS, XGESTAO_NAV_ITEMS } from '../constants';
 import { XGESTAO_HOME } from '@features/xgestao/routes';
 
-export function XGestaoSidebar() {
+export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
@@ -63,7 +63,7 @@ export function XGestaoSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {XGESTAO_NAV_ITEMS.map((item) => {
+              {XGESTAO_NAV_ITEMS.filter((item) => isOwner || item.url !== '/xgestao/equipe').map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>

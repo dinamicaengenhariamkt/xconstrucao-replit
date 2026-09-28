@@ -6,7 +6,7 @@ import { ImpersonationBanner } from '@features/admin/components/ImpersonationBan
 import { XGestaoSidebar } from './XGestaoSidebar';
 import { XGestaoTopbar } from './XGestaoTopbar';
 
-export function XGestaoLayout({ children }: { children: ReactNode }) {
+export function XGestaoLayout({ children, isOwner }: { children: ReactNode; isOwner: boolean }) {
   return (
     <SidebarProvider
       style={
@@ -17,10 +17,10 @@ export function XGestaoLayout({ children }: { children: ReactNode }) {
       }
     >
       <div className="flex h-screen w-full">
-        <XGestaoSidebar />
+        <XGestaoSidebar isOwner={isOwner} />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <ImpersonationBanner />
-          <XGestaoTopbar />
+          <XGestaoTopbar isOwner={isOwner} />
           <main className="min-h-0 flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}
           </main>

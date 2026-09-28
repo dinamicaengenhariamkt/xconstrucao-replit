@@ -75,6 +75,7 @@ interface ModalState {
 
 interface DocumentosSectionProps {
   obra: MinhaObraDetalhe;
+  readOnly?: boolean;
 }
 
 // ─── Sub-component: DocumentoRow ──────────────────────────────────────────────
@@ -201,7 +202,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function DocumentosSection({ obra }: DocumentosSectionProps) {
+export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionProps) {
   // XG10 — a lista vem do servidor. Antes era `useState(obra.documentos)`, e
   // enviar/excluir mexiam só no estado do React: sumia no refresh.
   const documentos = obra.documentos;
@@ -210,7 +211,7 @@ export function DocumentosSection({ obra }: DocumentosSectionProps) {
   const { toast } = useToast();
   const excluirAnexo = useExcluirAnexo(obra.id);
 
-  const obraFinalizada = obra.status === 'finalizada';
+  const obraFinalizada = obra.status === 'finalizada' || readOnly;
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 

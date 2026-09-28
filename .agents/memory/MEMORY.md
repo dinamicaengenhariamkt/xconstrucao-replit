@@ -16,3 +16,4 @@
 - [Replit Playwright Chromium](replit-playwright-chromium.md) — use the workspace-provided Chromium executable instead of requiring a manual Playwright browser download.
 - [Provisionamento de membros xgestão](xgestao-member-provisioning.md) — convidados não podem ganhar empresa própria pelo provisionamento automático, inclusive antes de aceitar o convite.
 - [Verificação de e-mail nos testes E2E](e2e-verification-url.md) — consuma links de verificação no servidor E2E, não no host público de desenvolvimento embutido no e-mail.
+- [Overlay legal no E2E xgestão](xgestao-e2e-legal-overlay.md) — convite novo pode mostrar diálogo legal em cada navegação; dispense antes de consultar abas por papel.

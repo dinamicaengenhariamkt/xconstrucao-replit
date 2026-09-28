@@ -1,6 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import {
   completarPerfilOperacional,
+  fetchCapturedEmails,
   loginAs,
   logout,
   SEED_ADMIN_EMAIL,
@@ -68,6 +69,146 @@ async function abrirDialog(page: Page, titulo: string) {
 }
 
 test.describe("xgestão — tarefas e etapas no navegador", () => {
+  test("presets da equipe mudam imediatamente as abas, o financeiro e a leitura por obra", async ({
+    page,
+    request,
+    browser,
+  }, testInfo) => {
+    const dono = await registrarEmpreiteiro(request);
+    await loginAs(request, dono);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, dono);
+    await loginAs(request, dono);
+
+    const nomeA = `Obra editável ${Date.now()}`;
+    const nomeB = `Obra leitura ${Date.now()}`;
+    const criar = async (nome: string) => {
+      const response = await request.post("/api/xgestao/obras", {
+        data: { nome, endereco: "Rua das Permissões, 10" },
+      });
+      expect(response.status(), await response.text()).toBe(201);
+      return ((await response.json()) as { id: string }).id;
+    };
+    const obraA = await criar(nomeA);
+    const obraB = await criar(nomeB);
+    const etapa = await request.post(`/api/obras/${obraB}/etapas`, {
+      data: { nome: "Etapa visível somente para leitura" },
+    });
+    expect(etapa.status(), await etapa.text()).toBe(201);
+    const material = await request.post(`/api/obras/${obraA}/financeiro`, {
+      data: { tipo: "saida", categoria: "material", descricao: "Material privado", valor: 99, data: "2026-01-04" },
+    });
+    expect(material.status(), await material.text()).toBe(201);
+    const maoDeObra = await request.post(`/api/obras/${obraA}/financeiro`, {
+      data: { tipo: "saida", categoria: "mao_de_obra", descricao: "Pagamento da equipe", valor: 125, data: "2026-01-04" },
+    });
+    expect(maoDeObra.status(), await maoDeObra.text()).toBe(201);
+    await logout(request);
+
+    expect((await page.request.post("/api/test/login-as", { data: { email: dono } })).status()).toBe(200);
+    await page.goto("/xgestao/equipe");
+    await expect(page.getByTestId("xgestao-equipe-page")).toBeVisible();
+    await page.getByRole("button", { name: /Convidar (primeira )?pessoa/ }).first().click();
+    const convite = page.getByRole("dialog", { name: "Convidar pessoa" });
+    const membroEmail = uniqueEmail("xgestao-browser-member");
+    await convite.locator("#member-name").fill("Membro navegador");
+    await convite.locator("#member-email").fill(membroEmail);
+    await convite.getByText(nomeA, { exact: true }).click();
+    await convite.getByText(nomeB, { exact: true }).click();
+    await convite.getByRole("combobox", { name: `Permissão para ${nomeA}` }).selectOption("editar");
+    const enviado = page.waitForResponse((res) => res.url().endsWith("/api/xgestao/membros") && res.request().method() === "POST");
+    await convite.getByRole("button", { name: "Enviar convite" }).click();
+    expect((await enviado).status()).toBe(201);
+    await expect(convite).toHaveCount(0);
+
+    const emails = await fetchCapturedEmails(page.request, membroEmail);
+    const setupUrl = emails.find((email) => email.meta?.kind === "password-setup")?.meta?.setupUrl;
+    expect(typeof setupUrl).toBe("string");
+    const setup = await page.request.post("/api/auth/definir-senha-inicial", {
+      data: {
+        token: new URL(setupUrl as string).searchParams.get("token"),
+        password: "Xconstr@E2E2026!",
+        confirmPassword: "Xconstr@E2E2026!",
+      },
+    });
+    expect(setup.status(), await setup.text()).toBe(200);
+
+    const editarPermissoes = async (preset: string) => {
+      await page.getByRole("button", { name: "Permissões" }).click();
+      const dialog = page.getByRole("dialog", { name: "Permissões de Membro navegador" });
+      await expect(dialog).toBeVisible();
+      await dialog.locator("#member-access-preset").selectOption(preset);
+      const salvo = page.waitForResponse((res) =>
+        res.url().includes("/api/xgestao/membros/") && res.request().method() === "PATCH");
+      await dialog.getByRole("button", { name: "Salvar permissões" }).click();
+      expect((await salvo).status()).toBe(200);
+      await expect(dialog).toHaveCount(0);
+    };
+    await editarPermissoes("mao_de_obra");
+    await expect(page.getByText("Áreas: Financeiro · Financeiro: Mão de obra")).toBeVisible();
+
+    const membroContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    try {
+      const membro = await membroContext.newPage();
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const abas = membro.locator('[data-tour="abas-obra"]');
+      await membro.goto(`/xgestao/obras/${obraA}`);
+      await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+      const legal = membro.getByRole("dialog", { name: "Atualizamos nossos documentos" });
+      if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+      const tour = membro.getByTestId("guided-tour");
+      if (await tour.isVisible()) await tour.getByRole("button", { name: "Pular" }).click();
+      await expect(membro.getByRole("link", { name: "Equipe", exact: true })).toHaveCount(0);
+      await membro.getByRole("button", { name: "Abrir menu da conta" }).click();
+      await expect(membro.getByRole("menuitem", { name: "Equipe" })).toHaveCount(0);
+      await membro.keyboard.press("Escape");
+      await expect(abas.getByRole("button", { name: "Financeiro" })).toBeVisible();
+      for (const nome of ["Etapas", "Cronograma", "Diário", "Fotos", "Ocorrências", "Documentos"]) {
+        await expect(abas.getByRole("button", { name: nome, exact: true })).toHaveCount(0);
+      }
+      await abas.getByRole("button", { name: "Financeiro" }).click();
+      await expect(membro.getByText("Acesso limitado aos lançamentos de saída da categoria Mão de obra.")).toBeVisible();
+      await expect(membro.getByText("Pagamento da equipe", { exact: true })).toBeVisible();
+      await expect(membro.getByText("Material privado", { exact: true })).toHaveCount(0);
+      await expect(membro.getByTestId("button-nova-entrada")).toHaveCount(0);
+      await expect(membro.getByTestId("button-nova-saida")).toBeVisible();
+      await expect(membro.getByTestId("detalhes-link-publico")).toHaveCount(0);
+
+      // O membro mantém a mesma sessão; a próxima navegação deve ler o preset salvo.
+      await editarPermissoes("encarregado");
+      await membro.reload();
+      await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+      if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+      await expect(abas.getByRole("button", { name: "Financeiro" })).toHaveCount(0);
+      await expect(abas.getByRole("button", { name: "Etapas" })).toBeVisible();
+      await expect(abas.getByRole("button", { name: "Diário" })).toBeVisible();
+      await abas.getByRole("button", { name: "Etapas" }).click();
+      await expect(membro.getByTestId("button-nova-etapa")).toBeVisible();
+
+      await editarPermissoes("completo");
+      await membro.goto(`/xgestao/obras/${obraB}`);
+      await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+      if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+      await expect(abas.getByRole("button", { name: "Financeiro" })).toBeVisible();
+      await abas.getByRole("button", { name: "Etapas" }).click();
+      await expect(membro.getByText("Etapa visível somente para leitura")).toBeVisible();
+      await expect(membro.getByTestId("button-nova-etapa")).toHaveCount(0);
+      await expect(membro.getByTestId(/^input-progresso-/)).toHaveCount(0);
+      await abas.getByRole("button", { name: "Diário" }).click();
+      await expect(membro.getByTestId("input-diario-texto")).toHaveCount(0);
+      await abas.getByRole("button", { name: "Checklists" }).click();
+      await expect(membro.getByRole("button", { name: "Novo Checklist" })).toHaveCount(0);
+      await abas.getByRole("button", { name: "Documentos" }).click();
+      await expect(membro.getByRole("button", { name: "Enviar Documento" })).toHaveCount(0);
+      await abas.getByRole("button", { name: "Financeiro" }).click();
+      await expect(membro.getByTestId("button-nova-saida")).toHaveCount(0);
+      await expect(membro.getByTestId("detalhes-editar-informacoes")).toHaveCount(0);
+      await expect(membro.getByTestId("detalhes-excluir-obra")).toHaveCount(0);
+    } finally {
+      await membroContext.close();
+    }
+  });
+
   test("cadastro evita envio duplicado e preserva dados durante o bloqueio", async ({
     page,
   }) => {

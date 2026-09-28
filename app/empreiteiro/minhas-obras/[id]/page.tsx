@@ -401,7 +401,7 @@ function LinkPublicoBloco({
   onGerenciar,
 }: {
   obraId: string;
-  onGerenciar: () => void;
+  onGerenciar?: () => void;
 }) {
   const { data, isLoading, error } = useObraShares(obraId);
   const shareError = error as (Error & { status?: number }) | null;
@@ -492,14 +492,14 @@ function LinkPublicoBloco({
         (cliente, arquiteto…) para escolher o que cada uma vê. Valores só aparecem no link com
         Pagamentos ligado; custos, lucro, equipe e o endereço exato nunca são compartilhados.
       </p>
-      <button
+      {onGerenciar && <button
         type="button"
         onClick={onGerenciar}
         className="mt-3 cursor-pointer text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
         data-testid="detalhes-link-gerenciar"
       >
         {shares.length > 0 ? 'Gerenciar links públicos' : 'Gerar link público'}
-      </button>
+      </button>}
     </div>
   );
 }
@@ -511,9 +511,9 @@ function DetalhesObraCard({
   onExcluir,
 }: {
   obra: MinhaObraDetalhe;
-  onEditar: () => void;
-  onGerenciarLink: () => void;
-  onExcluir: () => void;
+  onEditar?: () => void;
+  onGerenciarLink?: () => void;
+  onExcluir?: () => void;
 }) {
   // O adapter devolve "—" para data ausente; tratar como vazio evita um card
   // que anuncia um travessão como se fosse informação.
@@ -552,14 +552,14 @@ function DetalhesObraCard({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          {onEditar && <button
             type="button"
             onClick={onEditar}
             className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-80"
             data-testid="detalhes-editar-informacoes"
           >
             Editar informações
-          </button>
+          </button>}
           {/* XG18 — o link "Cadastro completo" saiu junto com a tela `/editar`.
               Os 14 campos que ela editava vivem nos modais deste console, pelas
               mesmas funções de `use-editar-obra`; manter os dois caminhos era
@@ -597,7 +597,7 @@ function DetalhesObraCard({
 
       {/* Fica fora do `vazio`: o link público independe de a obra ter
           descrição ou prazos preenchidos. */}
-      <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />
+      {onGerenciarLink && <LinkPublicoBloco obraId={obra.id} onGerenciar={onGerenciarLink} />}
 
       {/*
         XG18 — a exclusão desce para cá junto com o fim da tela `/editar`, que
@@ -609,7 +609,7 @@ function DetalhesObraCard({
         continua no diálogo, que exige digitar o nome da obra — um clique
         acidental não apaga meses de registro.
       */}
-      <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+      {onExcluir && <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
         <button
           type="button"
           onClick={onExcluir}
@@ -618,7 +618,7 @@ function DetalhesObraCard({
         >
           Excluir obra
         </button>
-      </div>
+      </div>}
     </motion.section>
   );
 }
@@ -662,6 +662,10 @@ export function ObraConsoleView({
     : obra.permissoesXgestao
       ? obra.permissoesXgestao.areasPermitidas === null || obra.permissoesXgestao.areasPermitidas.includes('equipe')
       : Object.prototype.hasOwnProperty.call(obra, 'equipe');
+  const linksAreaPermitida = !obra?.permissoesXgestao ||
+    obra.permissoesXgestao.areasPermitidas === null ||
+    obra.permissoesXgestao.areasPermitidas.includes('links');
+  const podeEscreverConteudo = !obra?.isObraPropria || allowOwnWorkEdit;
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
   // XG12 — a edição da obra vem para a tela do console, em modais.
@@ -1006,9 +1010,9 @@ export function ObraConsoleView({
       {obra.isObraPropria && (
         <DetalhesObraCard
           obra={obra}
-          onEditar={() => setShowInfo(true)}
-          onGerenciarLink={() => setShowShare(true)}
-          onExcluir={() => setShowExcluir(true)}
+          onEditar={allowOwnWorkEdit ? () => setShowInfo(true) : undefined}
+          onGerenciarLink={linksAreaPermitida ? (allowOwnWorkEdit ? () => setShowShare(true) : undefined) : undefined}
+          onExcluir={allowOwnWorkEdit ? () => setShowExcluir(true) : undefined}
         />
       )}
 
@@ -1259,37 +1263,38 @@ export function ObraConsoleView({
               )}
               {abaAtual === 'tarefas' && <TaskManagerSection obra={obra} />}
               {abaAtual === 'diario' && (
-                <DiarioJ06Card obraId={obra.id} canWrite currentUserId={user?.id ?? null} />
+                <DiarioJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} currentUserId={user?.id ?? null} />
               )}
-              {abaAtual === 'checklists' && <ChecklistsSection obra={obra} />}
+              {abaAtual === 'checklists' && <ChecklistsSection obra={obra} readOnly={obra.isObraPropria && !allowOwnWorkEdit} />}
               {abaAtual === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
               {abaAtual === 'fotos' && (
                 <FotosJ06Card
                   obraId={obra.id}
-                  canWrite
+                  canWrite={podeEscreverConteudo}
                   currentUserId={user?.id ?? null}
                   currentUserRole={user?.role}
                 />
               )}
-              {abaAtual === 'documentos' && <DocumentosSection obra={obra} />}
+              {abaAtual === 'documentos' && <DocumentosSection obra={obra} readOnly={obra.isObraPropria && !allowOwnWorkEdit} />}
               {abaAtual === 'etapas' && (
                 <EtapasJ06Card
                   obraId={obra.id}
-                  canWrite
-                  canEditScope={obra.isObraPropria}
+                  canWrite={podeEscreverConteudo}
+                  canEditScope={obra.isObraPropria && allowOwnWorkEdit}
                 />
               )}
               {abaAtual === 'cronograma' && (
                 <CronogramaGanttCard
                   obraId={obra.id}
                   onIrParaEtapas={() => setActiveTab('etapas')}
+                  readOnly={obra.isObraPropria && !allowOwnWorkEdit}
                 />
               )}
               {/* XG12 — `OcorrenciasSection` era `useState` puro: o que o
                   usuário criava ali evaporava no F5. Quem persiste é este
                   card, que estava escondido no rodapé. O arquivo antigo fica
                   no repo (reversibilidade), fora da árvore de render. */}
-              {abaAtual === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite />}
+              {abaAtual === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} />}
               {abaAtual === 'disputas' && <DisputasTab obraId={obra.id} />}
               {/* XG17 — inalcançável na obra própria (`tabsVisiveis` filtra a
                   aba), mas mantido para o marketplace, onde a Saúde continua. */}
@@ -1348,7 +1353,7 @@ export function ObraConsoleView({
               (`obra_equipe.user_id` é nullable), e era só a UI que travava:
               "os empreiteiros na obra... eu coloco o Jefferson, o telefone do
               cara. Eu não preciso cadastrar ele na plataforma" (27:25–27:33). */}
-          <EquipeSection obra={obra} />
+          <EquipeSection obra={obra} readOnly={obra.isObraPropria && !allowOwnWorkEdit} />
         </motion.div>
       )}
 

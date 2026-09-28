@@ -61,6 +61,7 @@ const PERMISSAO_BADGE: Record<NonNullable<MembroEquipe['permissao']>, { label: s
 interface MembroCardProps {
   membro: MembroEquipe;
   obraFinalizada: boolean;
+  readOnly?: boolean;
   onEditar: (m: MembroEquipe) => void;
   onPermissoes: (m: MembroEquipe) => void;
   onToggleAtivo: (m: MembroEquipe) => void;
@@ -70,6 +71,7 @@ interface MembroCardProps {
 function MembroCard({
   membro,
   obraFinalizada,
+  readOnly = false,
   onEditar,
   onPermissoes,
   onToggleAtivo,
@@ -81,7 +83,7 @@ function MembroCard({
   return (
     <div className={cn('p-5 rounded-xl border relative', theme.bg, theme.border)}>
       {/* ⋮ Menu */}
-      {!obraFinalizada && (
+      {!obraFinalizada && !readOnly && (
         <div className="absolute top-4 right-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -226,6 +228,7 @@ function MembroCard({
 
 interface EquipeSectionProps {
   obra: MinhaObraDetalhe;
+  readOnly?: boolean;
 }
 
 /**
@@ -234,7 +237,7 @@ interface EquipeSectionProps {
  * ninguém a passava), e que contradizia a XG10: a equipe é editável em obra
  * própria desde então.
  */
-export function EquipeSection({ obra }: EquipeSectionProps) {
+export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
   const membros = obra.equipe;
   const [modal, setModal] = useState<ModalState>({ type: null, membro: null });
 
@@ -321,7 +324,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
             </div>
           </div>
 
-          <button
+          {!readOnly && <button
             type="button"
             disabled={obraFinalizada}
             onClick={() => openModal('novo')}
@@ -329,7 +332,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           >
             <IconPersonAdd className="text-sm" />
             Adicionar Membro
-          </button>
+          </button>}
         </div>
 
         {/* Grid */}
@@ -339,6 +342,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
               key={membro.id}
               membro={membro}
               obraFinalizada={obraFinalizada}
+              readOnly={readOnly}
               onEditar={(m) => openModal('editar', m)}
               onPermissoes={(m) => openModal('permissoes', m)}
               onToggleAtivo={handleToggleAtivo}
@@ -347,7 +351,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           ))}
 
           {/* Add member dashed card */}
-          {!obraFinalizada && (
+          {!obraFinalizada && !readOnly && (
             <button
               type="button"
               onClick={() => openModal('novo')}
@@ -366,7 +370,7 @@ export function EquipeSection({ obra }: EquipeSectionProps) {
           <div className="text-center py-16">
             <IconGroup className="text-4xl text-gray-300 dark:text-gray-700" />
             <p className="text-sm font-medium text-gray-400 mt-2">Nenhum membro na equipe</p>
-            {!obraFinalizada && (
+            {!obraFinalizada && !readOnly && (
               <button
                 type="button"
                 onClick={() => openModal('novo')}

@@ -10,5 +10,5 @@ export default async function XGestaoRouteLayout({ children }: { children: React
     redirect(XGESTAO_LOGIN_HREF);
   }
 
-  return <XGestaoLayout>{children}</XGestaoLayout>;
+  return <XGestaoLayout isOwner={entitlement.papel === 'dono'}>{children}</XGestaoLayout>;
 }

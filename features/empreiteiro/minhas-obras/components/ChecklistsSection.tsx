@@ -59,6 +59,7 @@ import {
 // ─── ChecklistCard ────────────────────────────────────────────────────────────
 
 interface ChecklistCardProps {
+  readOnly?: boolean;
   checklist: MinhaObraChecklist;
   obraFinalizada: boolean;
   /** Itens com PATCH em voo — feedback visual do toggle otimista. */
@@ -74,6 +75,7 @@ interface ChecklistCardProps {
 }
 
 function ChecklistCard({
+  readOnly = false,
   checklist,
   obraFinalizada,
   itensEmVoo,
@@ -181,7 +183,7 @@ function ChecklistCard({
           )}
 
           {/* Menu ⋮ */}
-          <DropdownMenu>
+          {!readOnly && <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded"
@@ -237,7 +239,7 @@ function ChecklistCard({
                 Excluir
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu>}
         </div>
       </div>
 
@@ -327,7 +329,7 @@ function ChecklistCard({
           </span>
         )}
 
-        <button
+        {!readOnly && <button
           onClick={handleAcaoPrincipal}
           disabled={isCompleto && checklist.tipo !== 'diario'}
           className={cn(
@@ -347,7 +349,7 @@ function ChecklistCard({
             : isCompleto
               ? 'Concluído'
               : config.actionBtnLabel}
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -357,9 +359,10 @@ function ChecklistCard({
 
 interface ChecklistsSectionProps {
   obra: MinhaObraDetalhe;
+  readOnly?: boolean;
 }
 
-export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
+export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionProps) {
   const checklists = obra.checklists;
   const [modalState, setModalState] = useState<ModalState>({ type: null, checklist: null });
 
@@ -368,7 +371,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
   const deleteMut = useDeleteChecklist(obra.id);
   const toggleMut = useToggleChecklistItem(obra.id);
 
-  const obraFinalizada = obra.status === 'finalizada';
+  const obraFinalizada = obra.status === 'finalizada' || readOnly;
 
   const openModal = (type: ModalType, checklist?: MinhaObraChecklist) =>
     setModalState({ type, checklist: checklist ?? null });
@@ -543,7 +546,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Checklists</h3>
             <p className="text-sm text-gray-500">Segurança, conformidade e controle de qualidade</p>
           </div>
-          <button
+          {!readOnly && <button
             onClick={() => !obraFinalizada && openModal('novo')}
             disabled={obraFinalizada}
             title={obraFinalizada ? 'Obra finalizada — não é possível adicionar checklists' : undefined}
@@ -556,7 +559,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
           >
             <IconAdd className="text-sm" />
             Novo Checklist
-          </button>
+          </button>}
         </div>
 
         {/* Empty state */}
@@ -586,6 +589,7 @@ export function ChecklistsSection({ obra }: ChecklistsSectionProps) {
             {checklists.map((checklist) => (
               <ChecklistCard
                 key={checklist.id}
+                readOnly={readOnly}
                 checklist={checklist}
                 obraFinalizada={obraFinalizada}
                 itensEmVoo={itensEmVoo}
