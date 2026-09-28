@@ -204,6 +204,21 @@ export default function CadastroPage() {
               <button
                 type="button"
                 onClick={() => {
+                   if (window.self !== window.top) {
+                     // Cookies SameSite podem ser bloqueados no preview embutido.
+                     // Abrir a mesma página fora do iframe preserva a persona.
+                     const tab = window.open(window.location.href, "_blank");
+                     if (tab) {
+                       tab.opener = null;
+                     } else {
+                       toast({
+                         title: "Abra o aplicativo em uma nova aba",
+                         description: "O navegador bloqueou a nova aba. Abra o preview fora do Replit e clique novamente em Continuar com Google.",
+                         variant: "destructive",
+                       });
+                     }
+                     return;
+                   }
                   const persona = perfil === "empreiteiro" || perfil === "xgestao" ? perfil : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
                   signIn("google", { callbackUrl: oauthCallbackUrl });

@@ -196,6 +196,8 @@ export default function LoginPage() {
               <p role="alert" className="text-sm text-red-600 text-center mb-5">
                 {oauthError === "Configuration"
                   ? "O acesso com Google está indisponível no momento. Você ainda pode entrar com email e senha."
+                   : oauthError === "MissingCSRF"
+                     ? "O navegador não enviou o cookie de segurança do Google. Abra o aplicativo em uma nova aba e tente novamente."
                   : "Não foi possível entrar com Google. Tente novamente ou use seu email e senha."}
               </p>
             )}
@@ -241,6 +243,21 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
+                   if (window.self !== window.top) {
+                     // Cookies SameSite podem ser bloqueados no preview embutido.
+                     // O OAuth precisa começar em uma aba de primeira parte.
+                     const tab = window.open(window.location.href, "_blank");
+                     if (tab) {
+                       tab.opener = null;
+                     } else {
+                       toast({
+                         title: "Abra o aplicativo em uma nova aba",
+                         description: "O navegador bloqueou a nova aba. Abra o preview fora do Replit e clique novamente em Continuar com Google.",
+                         variant: "destructive",
+                       });
+                     }
+                     return;
+                   }
                   const persona = perfil === "empreiteiro" || perfil === "xgestao" ? perfil : "contratante";
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
                   signIn("google", { callbackUrl: oauthCallbackUrl });
