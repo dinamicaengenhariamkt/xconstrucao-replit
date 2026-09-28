@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 import {
+  AREAS_XGESTAO,
+  CATEGORIAS_FINANCEIRO_RESTRITAS,
+} from "@features/xgestao/equipe/permissions";
+import {
   atualizarMembro,
   MemberServiceError,
   revogarMembro,
@@ -15,6 +19,10 @@ const patchSchema = z.object({
     obraId: z.string().min(1),
     permissao: z.enum(["visualizar", "editar"]),
   })),
+  areasPermitidas: z.array(z.enum(AREAS_XGESTAO)).nullable().optional(),
+  categoriasFinanceiroPermitidas: z.array(
+    z.enum(CATEGORIAS_FINANCEIRO_RESTRITAS),
+  ).max(1).nullable().optional(),
 });
 
 function json(payload: unknown, status = 200) {

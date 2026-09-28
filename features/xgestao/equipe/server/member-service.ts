@@ -16,6 +16,10 @@ import { generateStrongPassword } from "@features/auth/api/password-generator";
 import { issueSetupToken } from "@features/auth/api/password-setup-tokens";
 import { getBaseUrl } from "@features/auth/api/auth-utils";
 import { sendPasswordSetupEmail } from "@shared/lib/email";
+import type {
+  AreasPermitidas,
+  CategoriasFinanceiroPermitidas,
+} from "@features/xgestao/equipe/permissions";
 
 export type ObraGrantInput = { obraId: string; permissao: "visualizar" | "editar" };
 export type PapelMembro = "gestor" | "colaborador";
@@ -42,6 +46,8 @@ export async function listarMembros(empreiteiraId: string) {
       email: users.email,
       papel: xgestaoMembros.papel,
       status: xgestaoMembros.status,
+      areasPermitidas: xgestaoMembros.areasPermitidas,
+      categoriasFinanceiroPermitidas: xgestaoMembros.categoriasFinanceiroPermitidas,
       criadoEm: xgestaoMembros.criadoEm,
       obras: sql<ObraGrantInput[]>`coalesce(
         json_agg(json_build_object('obraId', ${xgestaoMembroObras.obraId}, 'permissao', ${xgestaoMembroObras.permissao}))
@@ -113,6 +119,8 @@ export async function convidarMembro(input: {
   email: string;
   papel: PapelMembro;
   obras: ObraGrantInput[];
+  areasPermitidas?: AreasPermitidas;
+  categoriasFinanceiroPermitidas?: CategoriasFinanceiroPermitidas;
   request: Request;
 }) {
   const grants = input.papel === "colaborador" ? input.obras : [];
@@ -151,6 +159,8 @@ export async function convidarMembro(input: {
         userId: user.id,
         papel: input.papel,
         status: "convidado",
+        areasPermitidas: input.areasPermitidas ?? null,
+        categoriasFinanceiroPermitidas: input.categoriasFinanceiroPermitidas ?? null,
         convidadoPor: input.donoUserId,
       }).returning({ id: xgestaoMembros.id });
       await gravarGrants(tx, createdMember.id, input.empreiteiraId, grants);
@@ -175,7 +185,15 @@ export async function convidarMembro(input: {
     });
     throw new MemberServiceError("Não foi possível enviar o convite. Tente novamente.", 502);
   }
-  return { id: member.memberId, nome: member.name, email: member.email, papel: input.papel, status: "convidado" };
+  return {
+    id: member.memberId,
+    nome: member.name,
+    email: member.email,
+    papel: input.papel,
+    status: "convidado",
+    areasPermitidas: input.areasPermitidas ?? null,
+    categoriasFinanceiroPermitidas: input.categoriasFinanceiroPermitidas ?? null,
+  };
 }
 
 export async function atualizarMembro(input: {
@@ -183,20 +201,39 @@ export async function atualizarMembro(input: {
   id: string;
   papel: PapelMembro;
   obras: ObraGrantInput[];
+  areasPermitidas?: AreasPermitidas;
+  categoriasFinanceiroPermitidas?: CategoriasFinanceiroPermitidas;
 }) {
   const grants = input.papel === "colaborador" ? input.obras : [];
   await validarGrants(input.empreiteiraId, grants);
   return db.transaction(async (tx) => {
-    const [member] = await tx.select({ id: xgestaoMembros.id })
+    const [member] = await tx.select({
+      id: xgestaoMembros.id,
+      areasPermitidas: xgestaoMembros.areasPermitidas,
+      categoriasFinanceiroPermitidas: xgestaoMembros.categoriasFinanceiroPermitidas,
+    })
       .from(xgestaoMembros)
       .where(and(eq(xgestaoMembros.id, input.id), eq(xgestaoMembros.empreiteiraId, input.empreiteiraId)));
     if (!member) throw new MemberServiceError("Membro não encontrado.", 404);
-    await tx.update(xgestaoMembros).set({
+    const changes: Partial<typeof xgestaoMembros.$inferInsert> = {
       papel: input.papel,
       atualizadoEm: new Date(),
-    }).where(eq(xgestaoMembros.id, member.id));
+    };
+    if (input.areasPermitidas !== undefined) changes.areasPermitidas = input.areasPermitidas;
+    if (input.categoriasFinanceiroPermitidas !== undefined) {
+      changes.categoriasFinanceiroPermitidas = input.categoriasFinanceiroPermitidas;
+    }
+    await tx.update(xgestaoMembros).set(changes).where(eq(xgestaoMembros.id, member.id));
     await gravarGrants(tx, member.id, input.empreiteiraId, grants);
-    return { id: member.id, papel: input.papel, obras: grants };
+    return {
+      id: member.id,
+      papel: input.papel,
+      obras: grants,
+      areasPermitidas: input.areasPermitidas === undefined ? member.areasPermitidas : input.areasPermitidas,
+      categoriasFinanceiroPermitidas: input.categoriasFinanceiroPermitidas === undefined
+        ? member.categoriasFinanceiroPermitidas
+        : input.categoriasFinanceiroPermitidas,
+    };
   });
 }
 

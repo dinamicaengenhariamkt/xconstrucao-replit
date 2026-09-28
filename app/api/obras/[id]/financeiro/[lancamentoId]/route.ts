@@ -5,7 +5,11 @@ import { db } from "@shared/db/db";
 import { financeiro } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import {
+  findObraAccess,
+  canAccessObraFinanceCategory,
+  canWriteObraArea,
+} from "@features/obras/api/access";
 import { LANCAMENTO_CATEGORIAS } from "@features/financeiro/lancamentos";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
 import { resolverFornecedor } from "@features/financeiro/api/resolver-fornecedor";
@@ -50,20 +54,20 @@ async function carregarLancamento(obraId: string, lancamentoId: string) {
 
 async function autorizar(request: NextRequest, obraId: string) {
   const guard = await requireVerifiedUser(request);
-  if (guard.error) return { error: guard.error as NextResponse };
+  if (guard.error) return { error: guard.error as NextResponse, userId: null, access: null };
 
   const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
     setNoCacheHeaders(r);
-    return { error: r };
+    return { error: r, userId: null, access: null };
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "financeiro")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
-    return { error: r };
+    return { error: r, userId: null, access: null };
   }
-  return { userId: guard.user.id };
+  return { error: null, userId: guard.user.id, access };
 }
 
 export async function PATCH(
@@ -76,6 +80,11 @@ export async function PATCH(
 
   const existing = await carregarLancamento(id, lancamentoId);
   if (!existing) {
+    const r = NextResponse.json({ message: "Lançamento não encontrado" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canAccessObraFinanceCategory(auth.access!, existing.categoria)) {
     const r = NextResponse.json({ message: "Lançamento não encontrado" }, { status: 404 });
     setNoCacheHeaders(r);
     return r;
@@ -111,6 +120,12 @@ export async function PATCH(
   }
   if (data.categoria === null && existing.tipo === "saida") {
     const r = NextResponse.json({ message: "Saída precisa de categoria." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (data.categoria !== undefined &&
+      !canAccessObraFinanceCategory(auth.access!, data.categoria ?? null)) {
+    const r = NextResponse.json({ message: "Sem permissão para esta categoria financeira." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
@@ -183,6 +198,11 @@ export async function DELETE(
 
   const existing = await carregarLancamento(id, lancamentoId);
   if (!existing) {
+    const r = NextResponse.json({ message: "Lançamento não encontrado" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canAccessObraFinanceCategory(auth.access!, existing.categoria)) {
     const r = NextResponse.json({ message: "Lançamento não encontrado" }, { status: 404 });
     setNoCacheHeaders(r);
     return r;

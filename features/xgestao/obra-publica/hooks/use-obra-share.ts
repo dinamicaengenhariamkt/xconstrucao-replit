@@ -35,7 +35,11 @@ const baseUrl = (obraId: string) => `/api/xgestao/obras/${obraId}/share`;
 
 async function fetchObraShares(obraId: string): Promise<ObraSharesState> {
   const response = await fetch(baseUrl(obraId), { credentials: 'include', cache: 'no-store' });
-  if (!response.ok) throw new Error('Não foi possível consultar os links.');
+  if (!response.ok) {
+    const error = new Error('Não foi possível consultar os links.') as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
   return (await response.json()) as ObraSharesState;
 }
 

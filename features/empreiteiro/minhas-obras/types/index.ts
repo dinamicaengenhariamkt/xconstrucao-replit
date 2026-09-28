@@ -1,4 +1,5 @@
 import type { ObraStatus, FilterChipOption } from '@features/shared/types';
+import type { AreasPermitidas, CategoriasFinanceiroPermitidas } from '@features/xgestao/equipe/permissions';
 
 export interface MinhaObra {
   id: string;
@@ -68,6 +69,11 @@ export interface MinhaObra {
 }
 
 export interface MinhaObraDetalhe extends MinhaObra {
+  /** Escopo explícito recebido no detalhe de uma obra própria do xgestão. */
+  permissoesXgestao?: {
+    areasPermitidas: AreasPermitidas;
+    categoriasFinanceiroPermitidas: CategoriasFinanceiroPermitidas;
+  };
   // XG28 — `statusObra` subiu para `MinhaObra`, mesmo motivo que levou
   // `diasAtraso` para lá na XG27: a lista passou a entregar o campo que só o
   // detalhe entregava, e redeclarar aqui era um convite a divergirem.

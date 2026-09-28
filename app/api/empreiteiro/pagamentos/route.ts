@@ -5,6 +5,11 @@ import { empreiteiras, medicoes, obras, xgestaoMembros, xgestaoMembroObras } fro
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listLancamentosEmpreiteiro, type LancamentoRow } from "@features/financeiro/lancamentos-service";
 import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import {
+  canAccessObraArea,
+  canAccessObraFinanceCategory,
+  findObraAccess,
+} from "@features/obras/api/access";
 
 type MedicaoStatus = "recebido" | "aguardando_aprovacao" | "pendente" | "atrasado" | "rejeitado";
 
@@ -108,8 +113,21 @@ export async function GET(request: NextRequest) {
   // O dono conserva todo o histórico financeiro próprio (marketplace e
   // xgestão). Membros recebem apenas lançamentos das obras xgestão autorizadas.
   const lancamentos = isTeamMember
-    ? lancamentosRaw.filter((l) => l.obraId && obraIdsXgestao.includes(l.obraId))
+    ? (await Promise.all(lancamentosRaw.filter((l) => l.obraId && obraIdsXgestao.includes(l.obraId))
+      .map(async (l) => {
+        const access = await findObraAccess(l.obraId!, { id: guard.user.id, role: guard.user.role });
+        return access && canAccessObraArea(access, "financeiro") &&
+          canAccessObraFinanceCategory(access, l.categoria) ? l : null;
+      }))).filter((l): l is LancamentoRow => l !== null)
     : lancamentosRaw;
+  const scopedMedicoes = isTeamMember
+    ? (await Promise.all(medicoesPendentes.map(async (m) => {
+        const access = await findObraAccess(m.obraId, { id: guard.user.id, role: guard.user.role });
+        return access && canAccessObraArea(access, "cronograma") &&
+          canAccessObraArea(access, "financeiro") &&
+          access.xgestaoCategoriasFinanceiroPermitidas == null ? m : null;
+      }))).filter((m): m is (typeof medicoesPendentes)[number] => m !== null)
+    : medicoesPendentes;
 
   // Numeração sequencial por obra (ordem cronológica).
   const byObra = new Map<string, number>();
@@ -143,7 +161,7 @@ export async function GET(request: NextRequest) {
 
   // Medições aguardando decisão do contratante. `numero` vem do próprio registro
   // (sequencial por obra, atribuído no POST de /api/empreiteiro/medicoes).
-  const aguardando = medicoesPendentes.map((m) => ({
+  const aguardando = scopedMedicoes.map((m) => ({
     id: m.id,
     obraId: m.obraId,
     obraNome: m.obraNome ?? "(sem obra)",

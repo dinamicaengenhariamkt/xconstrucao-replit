@@ -6,7 +6,7 @@ import { obraEquipe, userFiles } from "@shared/db/schema";
 import { deleteObject } from "@shared/lib/storage";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
 import { contratoFields } from "@features/obras/api/equipe-contrato-schema";
 import { validarContratoMembro } from "@features/obras/api/validar-contrato-membro";
 
@@ -40,7 +40,7 @@ export async function PATCH(
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "equipe")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
@@ -136,7 +136,7 @@ export async function DELETE(
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "equipe")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

@@ -3,8 +3,13 @@ import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { empreiteiras, medicoes, obras, xgestaoMembros, xgestaoMembroObras } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { listLancamentosEmpreiteiro } from "@features/financeiro/lancamentos-service";
+import { listLancamentosEmpreiteiro, type LancamentoRow } from "@features/financeiro/lancamentos-service";
 import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import {
+  canAccessObraArea,
+  canAccessObraFinanceCategory,
+  findObraAccess,
+} from "@features/obras/api/access";
 
 function diffDays(a: string, b: string): number {
   const ta = new Date(a).getTime();
@@ -74,17 +79,38 @@ export async function GET(request: NextRequest) {
         ? or(eq(medicoes.empreiteiroId, guard.user.id), inArray(medicoes.obraId, obraIdsXgestao))
         : eq(medicoes.empreiteiroId, guard.user.id)
       : eq(medicoes.empreiteiroId, guard.user.id);
+  const permittedMedicaoWorkIds = isTeamMember
+    ? (await Promise.all(obraIdsXgestao.map(async (obraId) => {
+        const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
+        return access &&
+          canAccessObraArea(access, "cronograma") &&
+          canAccessObraArea(access, "financeiro") &&
+          access.xgestaoCategoriasFinanceiroPermitidas == null
+          ? obraId
+          : null;
+      }))).filter((id): id is string => id !== null)
+    : null;
+  const medicaoReadScope = isTeamMember
+    ? permittedMedicaoWorkIds!.length > 0
+      ? inArray(medicoes.obraId, permittedMedicaoWorkIds!)
+      : sql`false`
+    : medicaoScope;
   const [lancamentosRaw, [aguardandoAgg]] = await Promise.all([
     listLancamentosEmpreiteiro(empresaXgestao?.donoUserId ?? guard.user.id),
     db
       .select({ total: sql<string>`COALESCE(SUM(${medicoes.valor}), 0)` })
       .from(medicoes)
-      .where(and(medicaoScope, eq(medicoes.status, "pendente"))),
+      .where(and(medicaoReadScope, eq(medicoes.status, "pendente"))),
   ]);
   // Donos veem seu histórico completo; membros ficam restritos às obras
   // xgestão da empresa filtradas acima por empresa, clienteId nulo e grants.
   const lancamentos = isTeamMember
-    ? lancamentosRaw.filter((l) => l.obraId && obraIdsXgestao.includes(l.obraId))
+    ? (await Promise.all(lancamentosRaw.filter((l) => l.obraId && obraIdsXgestao.includes(l.obraId))
+      .map(async (l) => {
+        const access = await findObraAccess(l.obraId!, { id: guard.user.id, role: guard.user.role });
+        return access && canAccessObraArea(access, "financeiro") &&
+          canAccessObraFinanceCategory(access, l.categoria) ? l : null;
+      }))).filter((l): l is LancamentoRow => l !== null)
     : lancamentosRaw;
 
   const aguardandoAprovacao = Number(aguardandoAgg?.total ?? 0);

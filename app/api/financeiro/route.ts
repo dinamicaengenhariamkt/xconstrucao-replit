@@ -3,7 +3,12 @@ import { getFinanceiros, createFinanceiro } from "@features/financeiro/api/finan
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { insertFinanceiroSchema } from "@features/financeiro/schemas";
 import { registrarAtividade } from "@features/atividades/api/registrar";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import {
+  findObraAccess,
+  canAccessObraArea,
+  canAccessObraFinanceCategory,
+  canWriteObraArea,
+} from "@features/obras/api/access";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,8 +33,15 @@ export async function GET(request: NextRequest) {
       obraId,
       await findObraAccess(obraId, { id: userId, role: payload.role }),
     ] as const));
-    const readable = new Set(accessEntries.filter(([, access]) => access).map(([obraId]) => obraId));
-    return NextResponse.json(financeiros.filter((row) => row.obraId && readable.has(row.obraId)));
+    const readable = new Map(accessEntries.filter(([, access]) => access)
+      .map(([obraId, access]) => [obraId, access!]));
+    return NextResponse.json(financeiros.filter((row) => {
+      if (!row.obraId) return false;
+      const access = readable.get(row.obraId);
+      return !!access &&
+        canAccessObraArea(access, "financeiro") &&
+        canAccessObraFinanceCategory(access, row.categoria);
+    }));
   } catch (error) {
     return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 });
   }
@@ -58,10 +70,13 @@ export async function POST(request: NextRequest) {
     const obraIdAlvo = (parsed.data as { obraId?: string | null }).obraId ?? null;
     if (obraIdAlvo) {
       const access = await findObraAccess(obraIdAlvo, { id: userId, role: payload.role });
-      if (!access || !canWriteObraContent(access)) {
+      if (!access || !canWriteObraArea(access, "financeiro")) {
         // 404 em vez de 403: quem não tem acesso à obra não deve nem confirmar
         // que ela existe.
         return NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+      }
+      if (!canAccessObraFinanceCategory(access, (parsed.data as { categoria?: string | null }).categoria ?? null)) {
+        return NextResponse.json({ message: "Sem permissão para esta categoria financeira." }, { status: 403 });
       }
     } else if (payload.role !== "admin" && payload.role !== "superadmin") {
       return NextResponse.json({ message: "Lançamentos precisam estar vinculados a uma obra autorizada." }, { status: 403 });

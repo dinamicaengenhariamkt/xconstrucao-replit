@@ -2,7 +2,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { canWriteObraContent, findObraAccess } from '@features/obras/api/access';
+import { canAccessObraArea, canWriteObraContent, findObraAccess } from '@features/obras/api/access';
 import { requireVerifiedUser, setNoCacheHeaders } from '@features/auth/api/auth-utils';
 import { assertXgestaoUser } from '@features/xgestao/lib/entitlement';
 import { SECOES_PUBLICAS, type SecaoPublica } from '../secoes';
@@ -65,6 +65,7 @@ export async function requireXgestaoObraAccess(request: NextRequest, obraId: str
   if (
     !access ||
     !canWriteObraContent(access) ||
+    !canAccessObraArea(access, 'links') ||
     access.obra.clienteId !== null ||
     access.obra.empreiteiraId !== entitlement.empreiteiraId
   ) {

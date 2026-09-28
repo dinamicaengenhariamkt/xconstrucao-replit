@@ -7,10 +7,12 @@ import {
   empreiteiras,
   obras,
   users,
+  xgestaoMembros,
   type AtividadeTipo,
 } from "@shared/db/schema";
 import { isAdminLike, requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import { canAccessObraArea, findObraAccess } from "@features/obras/api/access";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -114,6 +116,75 @@ export async function GET(request: NextRequest) {
             eq(atividades.actorUserId, userId),
             eq(atividades.targetUserId, userId),
           )),
+        ));
+        {
+          // Gestores também podem ter áreas restritas, apesar de acessarem
+          // todas as obras. Filtrar eventos por área para ambos os papéis.
+          const grantIds = permitidas ?? (await db.select({ id: obras.id }).from(obras)
+            .where(and(
+              eq(obras.empreiteiraId, empresaXgestao.empreiteiraId),
+              isNull(obras.clienteId),
+            ))).map((row) => row.id);
+          const accessRows = await Promise.all(grantIds.map(async (obraId) => [
+            obraId,
+            await findObraAccess(obraId, { id: userId, role }),
+          ] as const));
+          const areaWorkIds = (area: "diario" | "ocorrencias" | "cronograma" | "financeiro") =>
+            accessRows
+              .filter(([, access]) => access && canAccessObraArea(access, area))
+              .map(([obraId]) => obraId);
+          const diarioIds = areaWorkIds("diario");
+          const ocorrenciaIds = areaWorkIds("ocorrencias");
+          const cronogramaIds = areaWorkIds("cronograma");
+          const financeiroIds = areaWorkIds("financeiro").filter((obraId) => {
+            const access = accessRows.find(([id]) => id === obraId)?.[1];
+            return access?.xgestaoCategoriasFinanceiroPermitidas == null;
+          });
+          const eventScopes = [];
+          if (diarioIds.length) {
+            eventScopes.push(and(
+              inArray(atividades.obraId, diarioIds),
+              inArray(atividades.tipo, ["diario_postado"]),
+            )!);
+          }
+          if (ocorrenciaIds.length) {
+            eventScopes.push(and(
+              inArray(atividades.obraId, ocorrenciaIds),
+              inArray(atividades.tipo, ["ocorrencia_aberta", "ocorrencia_resolvida"]),
+            )!);
+          }
+          if (cronogramaIds.length && financeiroIds.length) {
+            const measurementIds = cronogramaIds.filter((id) => financeiroIds.includes(id));
+            if (measurementIds.length) {
+              eventScopes.push(and(
+                inArray(atividades.obraId, measurementIds),
+                inArray(atividades.tipo, ["medicao_criada", "medicao_aprovada", "medicao_contestada"]),
+              )!);
+            }
+          }
+          if (financeiroIds.length) {
+            eventScopes.push(and(
+              inArray(atividades.obraId, financeiroIds),
+              inArray(atividades.tipo, ["lancamento_criado", "lancamento_quitado"]),
+            )!);
+          }
+          // Workless personal events remain visible; obra-scoped event payloads
+          // are limited by the corresponding area (and finance category).
+          conditions.push(or(
+            and(
+              isNull(atividades.obraId),
+              or(eq(atividades.actorUserId, userId), eq(atividades.targetUserId, userId)),
+            ),
+            ...(eventScopes.length ? eventScopes : []),
+          ));
+        }
+      } else if (!empresaXgestao && (await db.select({ id: xgestaoMembros.id })
+        .from(xgestaoMembros).where(eq(xgestaoMembros.userId, userId)).limit(1)).length) {
+        // Um membro revogado ainda pode ter eventos próprios; isso não lhe dá
+        // acesso à timeline da obra da qual foi removido.
+        conditions.push(and(
+          isNull(atividades.obraId),
+          or(eq(atividades.actorUserId, userId), eq(atividades.targetUserId, userId)),
         ));
       } else {
         // O responsável mantém o escopo anterior, inclusive obras marketplace

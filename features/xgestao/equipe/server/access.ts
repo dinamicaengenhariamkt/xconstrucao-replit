@@ -1,9 +1,10 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { empreiteiras, obras, xgestaoMembroObras, xgestaoMembros } from "@shared/db/schema";
 import { userHasRole } from "@features/auth/api/auth-utils";
+import type { AreasPermitidas, CategoriasFinanceiroPermitidas } from "../permissions";
 
 export type PapelEmpresa = "dono" | "gestor" | "colaborador";
 export type PermissaoObra = "visualizar" | "editar";
@@ -68,6 +69,38 @@ export async function resolverAcessoObraXgestao(
       eq(xgestaoMembroObras.obraId, obraId),
     ));
   return grant?.permissao ?? null;
+}
+
+/** Resolve as restrições do membro somente após validar sua empresa e obra.
+ * Dono e membros antigos mantêm acesso integral (colunas NULL).
+ */
+export async function resolverPermissoesObraXgestao(
+  userId: string,
+  obraId: string,
+): Promise<{
+  areasPermitidas: AreasPermitidas;
+  categoriasFinanceiroPermitidas: CategoriasFinanceiroPermitidas;
+} | null> {
+  const empresa = await resolverEmpresaDoUsuario(userId);
+  if (!empresa) return null;
+  const [obra] = await db.select({ id: obras.id }).from(obras).where(and(
+    eq(obras.id, obraId),
+    eq(obras.empreiteiraId, empresa.empreiteiraId),
+    isNull(obras.clienteId),
+  ));
+  if (!obra) return null;
+  if (empresa.papel === "dono") {
+    return { areasPermitidas: null, categoriasFinanceiroPermitidas: null };
+  }
+  const [member] = await db.select({
+    areasPermitidas: xgestaoMembros.areasPermitidas,
+    categoriasFinanceiroPermitidas: xgestaoMembros.categoriasFinanceiroPermitidas,
+  }).from(xgestaoMembros).where(and(
+    eq(xgestaoMembros.userId, userId),
+    eq(xgestaoMembros.empreiteiraId, empresa.empreiteiraId),
+    eq(xgestaoMembros.status, "ativo"),
+  ));
+  return member ?? null;
 }
 
 export async function listarIdsObrasPermitidas(

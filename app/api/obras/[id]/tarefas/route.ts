@@ -5,7 +5,7 @@ import { db } from "@shared/db/db";
 import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { etapaProgressoEhDerivado } from "@features/obras/api/etapa-progresso";
 
 const createSchema = z.object({
@@ -32,6 +32,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canAccessObraArea(access, "cronograma")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const rows = await db
     .select()
     .from(obraTarefas)
@@ -52,7 +57,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "cronograma")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

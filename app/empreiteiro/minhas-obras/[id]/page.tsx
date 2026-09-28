@@ -104,7 +104,7 @@ const TABS: { key: ObraTab; label: string; Icon: React.ComponentType<{ className
  * marketplace, onde a mediação entre contratante e empreiteiro faz sentido
  * (princípio do README §3 — reversibilidade é entregável).
  */
-function tabsVisiveis(isObraPropria: boolean) {
+function tabsVisiveis(isObraPropria: boolean, obra?: MinhaObraDetalhe) {
   /*
    * XG17 — "Saúde" sai junto com "Disputas" na obra própria, pelo mesmo
    * mecanismo: ocultar por filtro, não apagar a aba. Em obra de marketplace
@@ -125,9 +125,38 @@ function tabsVisiveis(isObraPropria: boolean) {
    * o contratante aprova e isso libera pagamento. Lá nada muda.
    */
   const ocultasNaObraPropria: ObraTab[] = ['disputas', 'saude', 'atualizacoes', 'tarefas'];
-  return isObraPropria
+  const tabsBase = isObraPropria
     ? TABS.filter((t) => !ocultasNaObraPropria.includes(t.key))
     : TABS;
+
+  // O endpoint expõe as permissões da obra explicitamente. O teste de presença
+  // abaixo fica como compatibilidade para respostas anteriores sem metadados;
+  // campos de dados ausentes nunca devem decidir sobre uma permissão que veio
+  // declarada no contrato.
+  if (!isObraPropria || !obra) return tabsBase;
+  const possui = (campo: keyof MinhaObraDetalhe) => Object.prototype.hasOwnProperty.call(obra, campo);
+  const permissoes = obra.permissoesXgestao;
+  const areaPermitida = (
+    area: 'cronograma' | 'diario' | 'ocorrencias' | 'financeiro' | 'equipe',
+    campoFallback: keyof MinhaObraDetalhe,
+  ) => permissoes
+    ? permissoes.areasPermitidas === null || permissoes.areasPermitidas.includes(area)
+    : possui(campoFallback);
+  const areasIndisponiveis = new Set<ObraTab>();
+  if (!areaPermitida('cronograma', 'etapas')) {
+    ['etapas', 'cronograma', 'checklists'].forEach((tab) => areasIndisponiveis.add(tab as ObraTab));
+  }
+  if (!areaPermitida('diario', 'timeline') || (!permissoes && !possui('fotos'))) {
+    ['diario', 'fotos', 'timeline'].forEach((tab) => areasIndisponiveis.add(tab as ObraTab));
+  }
+  if (!areaPermitida('ocorrencias', 'ocorrencias')) areasIndisponiveis.add('ocorrencias');
+  if (!areaPermitida('equipe', 'equipe')) areasIndisponiveis.add('documentos');
+  const categoriasFinanceiro = permissoes?.categoriasFinanceiroPermitidas;
+  if (
+    !areaPermitida('financeiro', 'financeiro') ||
+    (categoriasFinanceiro !== undefined && categoriasFinanceiro !== null && categoriasFinanceiro.length === 0)
+  ) areasIndisponiveis.add('financeiro');
+  return tabsBase.filter((tab) => !areasIndisponiveis.has(tab.key));
 }
 
 /**
@@ -374,7 +403,9 @@ function LinkPublicoBloco({
   obraId: string;
   onGerenciar: () => void;
 }) {
-  const { data, isLoading } = useObraShares(obraId);
+  const { data, isLoading, error } = useObraShares(obraId);
+  const shareError = error as (Error & { status?: number }) | null;
+  if (shareError?.status === 403 || shareError?.status === 404) return null;
   const shares = data?.shares ?? [];
   const { toast } = useToast();
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -616,10 +647,21 @@ export function ObraConsoleView({
    * falharia. Vale também para quem chega por um caminho que força uma aba
    * oculta (o painel de Saúde, por exemplo), em vez de tratar caso a caso.
    */
-  const abasVisiveis = tabsVisiveis(Boolean(obra?.isObraPropria));
+  const abasVisiveis = tabsVisiveis(Boolean(obra?.isObraPropria), obra);
   const abaAtual = abasVisiveis.some((t) => t.key === activeTab)
     ? activeTab
     : (abasVisiveis[0]?.key ?? activeTab);
+  const categoriasFinanceiro = obra?.permissoesXgestao?.categoriasFinanceiroPermitidas;
+  const somenteMaoDeObra = Boolean(
+    obra?.isObraPropria &&
+    categoriasFinanceiro?.length === 1 &&
+    categoriasFinanceiro[0] === 'mao_de_obra',
+  );
+  const equipeAreaPermitida = !obra?.isObraPropria
+    ? true
+    : obra.permissoesXgestao
+      ? obra.permissoesXgestao.areasPermitidas === null || obra.permissoesXgestao.areasPermitidas.includes('equipe')
+      : Object.prototype.hasOwnProperty.call(obra, 'equipe');
   const [showAtualizacao, setShowAtualizacao] = useState(false);
   const [showShare, setShowShare] = useState(false);
   // XG12 — a edição da obra vem para a tela do console, em modais.
@@ -1264,13 +1306,14 @@ export function ObraConsoleView({
               {abaAtual === 'financeiro' && (
                 <FinanceiroTab
                   obraId={obra.id}
-                  metrics={computeProfitFromObra(obra)}
+                  metrics={somenteMaoDeObra ? undefined : computeProfitFromObra(obra)}
+                  somenteMaoDeObra={somenteMaoDeObra}
                   // XG12 — os KPIs de contrato (contratado, aditivos, total,
                   // saldo) vinham do "Resumo Financeiro" solto no rodapé.
-                  financeiro={obra.financeiro}
+                  financeiro={somenteMaoDeObra ? undefined : obra.financeiro}
                   // Marketplace: o dinheiro da obra é do contratante, então o
                   // empreiteiro atribuído lê mas não lança.
-                  podeLancar={obra.isObraPropria}
+                  podeLancar={allowOwnWorkEdit && obra.isObraPropria}
                   // XG29 — mesmo valor, propósito distinto: este decide o que a
                   // aba **exibe** (a barra "Percentual executado" sai na obra
                   // própria), aquele decide o que ela deixa **escrever**.
@@ -1298,14 +1341,16 @@ export function ObraConsoleView({
       */}
 
       {/* BLOCO 12: Equipe e Colaboradores */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        {/* XG10 — equipe deixa de ser somente leitura na obra própria. O
-            backend sempre aceitou membro sem conta na plataforma
-            (`obra_equipe.user_id` é nullable), e era só a UI que travava:
-            "os empreiteiros na obra... eu coloco o Jefferson, o telefone do
-            cara. Eu não preciso cadastrar ele na plataforma" (27:25–27:33). */}
-        <EquipeSection obra={obra} />
-      </motion.div>
+      {equipeAreaPermitida && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          {/* XG10 — equipe deixa de ser somente leitura na obra própria. O
+              backend sempre aceitou membro sem conta na plataforma
+              (`obra_equipe.user_id` é nullable), e era só a UI que travava:
+              "os empreiteiros na obra... eu coloco o Jefferson, o telefone do
+              cara. Eu não preciso cadastrar ele na plataforma" (27:25–27:33). */}
+          <EquipeSection obra={obra} />
+        </motion.div>
+      )}
 
       {/* J58 — Contrato entre as partes (auto-oculta se a obra não tem contrato). */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>

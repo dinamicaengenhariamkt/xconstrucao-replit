@@ -5,6 +5,7 @@ import { empreiteiras, obras, xgestaoMembros, xgestaoMembroObras } from '@shared
 import { requireVerifiedUser, setNoCacheHeaders } from '@features/auth/api/auth-utils';
 import { computeHealthMapForObras } from '@features/shared/health/summary-server';
 import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from '@features/xgestao/equipe/server/access';
+import { canAccessObraArea, findObraAccess } from '@features/obras/api/access';
 
 /**
  * GET /api/empreiteiro/obras-health — mapa `obraId → ObraHealth` real das obras
@@ -57,7 +58,18 @@ export async function GET(request: NextRequest) {
       ...(permitidas === null ? [] : [inArray(obras.id, permitidas)]),
     ]),
   ));
-  const map = await computeHealthMapForObras(rows.map((o) => o.id));
+  const readable = await Promise.all(rows.map(async ({ id }) => {
+    const access = await findObraAccess(id, { id: guard.user.id, role: guard.user.role });
+    if (
+      !access ||
+      !canAccessObraArea(access, "cronograma") ||
+      !canAccessObraArea(access, "ocorrencias") ||
+      !canAccessObraArea(access, "financeiro") ||
+      (access.role === "empreiteiro" && access.xgestaoCategoriasFinanceiroPermitidas != null)
+    ) return null;
+    return id;
+  }));
+  const map = await computeHealthMapForObras(readable.filter((id): id is string => id !== null));
   const r = NextResponse.json(map);
   setNoCacheHeaders(r);
   return r;

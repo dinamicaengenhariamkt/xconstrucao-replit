@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { empreiteiroDocumentos, empreiteiroPortfolio, obraAnexos, obraFotos, obras, userFiles, users } from "@shared/db/schema";
+import { empreiteiroDocumentos, empreiteiroPortfolio, financeiro, obraAnexos, obraFotos, obras, userFiles, users } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { deleteObject } from "@shared/lib/storage";
-import { canWriteObraContent, findObraAccess } from "@features/obras/api/access";
+import {
+  canAccessObraFinanceCategory,
+  canWriteObraArea,
+  findObraAccess,
+} from "@features/obras/api/access";
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -26,15 +30,36 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
 
   // Arquivos pessoais que já foram vinculados a conteúdo de obra não podem ser
   // removidos por um membro somente-leitura apenas por serem seus uploads.
-  const [anexos, fotos, capas] = await Promise.all([
+  const [anexos, fotos, capas, lancamentos] = await Promise.all([
     db.select({ obraId: obraAnexos.obraId }).from(obraAnexos).where(eq(obraAnexos.fileId, id)),
     db.select({ obraId: obraFotos.obraId }).from(obraFotos).where(eq(obraFotos.fileId, id)),
     db.select({ obraId: obras.id }).from(obras).where(eq(obras.fotoCapaFileId, id)),
+    db.select({ obraId: financeiro.obraId, categoria: financeiro.categoria })
+      .from(financeiro).where(eq(financeiro.comprovanteFileId, id)),
   ]);
-  const linkedObraIds = [...new Set([...anexos, ...fotos, ...capas].map((row) => row.obraId))];
-  for (const obraId of linkedObraIds) {
+  const linkedResources = [
+    ...anexos.map((row) => ({ obraId: row.obraId, area: "equipe" as const })),
+    ...fotos.map((row) => ({ obraId: row.obraId, area: "diario" as const })),
+    ...capas.map((row) => ({ obraId: row.obraId, area: "diario" as const })),
+    ...lancamentos.filter((row) => row.obraId).map((row) => ({
+      obraId: row.obraId!,
+      area: "financeiro" as const,
+      categoria: row.categoria,
+    })),
+  ];
+  const uniqueResources = new Map(linkedResources.map((resource) => [
+    `${resource.obraId}:${resource.area}:${"categoria" in resource ? resource.categoria : ""}`,
+    resource,
+  ]));
+  for (const resource of uniqueResources.values()) {
+    const { obraId, area } = resource;
     const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role });
-    if (!access || !canWriteObraContent(access)) {
+    if (!access || !canWriteObraArea(access, area)) {
+      const r = NextResponse.json({ message: "Sem permissão para remover arquivo desta obra." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+    if ("categoria" in resource && !canAccessObraFinanceCategory(access, resource.categoria)) {
       const r = NextResponse.json({ message: "Sem permissão para remover arquivo desta obra." }, { status: 403 });
       setNoCacheHeaders(r);
       return r;

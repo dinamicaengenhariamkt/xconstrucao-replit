@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { Skeleton } from '@shared/components/ui/skeleton';
+import type { AreaXgestao, CategoriaFinanceiroRestrita } from '@features/xgestao/equipe/permissions';
 
 type Papel = 'gestor' | 'colaborador';
 type Permissao = 'visualizar' | 'editar';
@@ -30,9 +31,29 @@ type Membro = {
   papel: string;
   status: string;
   obras: MembroObra[];
+  areasPermitidas?: AreaXgestao[] | null;
+  categoriasFinanceiroPermitidas?: CategoriaFinanceiroRestrita[] | null;
 };
 type EquipeData = { rows: Membro[]; obras: Obra[] };
-type FormState = { nome: string; email: string; papel: Papel; obras: MembroObra[] };
+type FormState = {
+  nome: string;
+  email: string;
+  papel: Papel;
+  obras: MembroObra[];
+  areasPermitidas: AreaXgestao[] | null;
+  categoriasFinanceiroPermitidas: CategoriaFinanceiroRestrita[] | null;
+};
+
+const AREAS: Array<{ id: AreaXgestao; label: string; description: string }> = [
+  { id: 'financeiro', label: 'Financeiro', description: 'Acompanhamento financeiro da obra' },
+  { id: 'cronograma', label: 'Cronograma', description: 'Etapas, prazos e andamento' },
+  { id: 'diario', label: 'Diário e fotos', description: 'Registros e imagens da obra' },
+  { id: 'ocorrencias', label: 'Ocorrências', description: 'Acompanhamento de ocorrências' },
+  { id: 'links', label: 'Links públicos', description: 'Gerenciamento de links de compartilhamento' },
+  { id: 'equipe', label: 'Equipe', description: 'Acesso à área da equipe' },
+];
+const ALL_AREA_IDS = AREAS.map(({ id }) => id);
+const ENCARREGADO_AREAS: AreaXgestao[] = ['cronograma', 'diario', 'ocorrencias', 'links', 'equipe'];
 
 const ROLE_LABEL: Record<string, string> = { gestor: 'Gestor', colaborador: 'Colaborador' };
 const STATUS_LABEL: Record<string, string> = {
@@ -58,7 +79,53 @@ const STATUS_STYLE: Record<string, string> = {
   revoked: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
 };
 
-const blankForm = (): FormState => ({ nome: '', email: '', papel: 'colaborador', obras: [] });
+const blankForm = (): FormState => ({
+  nome: '',
+  email: '',
+  papel: 'colaborador',
+  obras: [],
+  areasPermitidas: null,
+  categoriasFinanceiroPermitidas: null,
+});
+
+function getAccessPreset(form: FormState): string {
+  if (form.areasPermitidas === null && form.categoriasFinanceiroPermitidas === null) return 'completo';
+  if (
+    form.areasPermitidas?.length === 1 &&
+    form.areasPermitidas[0] === 'financeiro' &&
+    form.categoriasFinanceiroPermitidas === null
+  ) return 'financeiro';
+  if (
+    form.areasPermitidas?.length === 1 &&
+    form.areasPermitidas[0] === 'financeiro' &&
+    form.categoriasFinanceiroPermitidas?.length === 1 &&
+    form.categoriasFinanceiroPermitidas[0] === 'mao_de_obra'
+  ) return 'mao_de_obra';
+  if (
+    form.areasPermitidas?.length === ENCARREGADO_AREAS.length &&
+    ENCARREGADO_AREAS.every((area) => form.areasPermitidas?.includes(area)) &&
+    !form.areasPermitidas.includes('financeiro')
+  ) return 'encarregado';
+  return 'personalizado';
+}
+
+function applyAccessPreset(form: FormState, preset: string): FormState {
+  if (preset === 'completo') return { ...form, areasPermitidas: null, categoriasFinanceiroPermitidas: null };
+  if (preset === 'financeiro') {
+    return { ...form, areasPermitidas: ['financeiro'], categoriasFinanceiroPermitidas: null };
+  }
+  if (preset === 'mao_de_obra') {
+    return { ...form, areasPermitidas: ['financeiro'], categoriasFinanceiroPermitidas: ['mao_de_obra'] };
+  }
+  if (preset === 'encarregado') {
+    return { ...form, areasPermitidas: [...ENCARREGADO_AREAS], categoriasFinanceiroPermitidas: [] };
+  }
+  return {
+    ...form,
+    areasPermitidas: form.areasPermitidas === null ? [...ALL_AREA_IDS] : form.areasPermitidas,
+    categoriasFinanceiroPermitidas: form.categoriasFinanceiroPermitidas,
+  };
+}
 
 async function apiRequest(path: string, init?: RequestInit) {
   const response = await fetch(path, {
@@ -154,6 +221,98 @@ function WorkAccessEditor({
   );
 }
 
+function AreaAccessEditor({
+  value,
+  onChange,
+}: {
+  value: FormState;
+  onChange: (next: FormState) => void;
+}) {
+  const preset = getAccessPreset(value);
+  const hasArea = (area: AreaXgestao) => value.areasPermitidas === null || value.areasPermitidas.includes(area);
+  const hasFinanceCategory = (category: CategoriaFinanceiroRestrita) =>
+    value.categoriasFinanceiroPermitidas === null || value.categoriasFinanceiroPermitidas.includes(category);
+
+  function toggleArea(area: AreaXgestao, checked: boolean) {
+    const current = value.areasPermitidas ?? [...ALL_AREA_IDS];
+    onChange({
+      ...value,
+      areasPermitidas: checked
+        ? [...new Set([...current, area])]
+        : current.filter((item) => item !== area),
+    });
+  }
+
+  function toggleFinanceCategory(checked: boolean) {
+    const current = value.categoriasFinanceiroPermitidas ?? ['mao_de_obra'];
+    onChange({
+      ...value,
+      categoriasFinanceiroPermitidas: checked
+        ? [...new Set([...current, 'mao_de_obra' as const])]
+        : current.filter((category) => category !== 'mao_de_obra'),
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="member-access-preset">Modelo de acesso</Label>
+        <select
+          id="member-access-preset"
+          value={preset}
+          onChange={(event) => onChange(applyAccessPreset(value, event.target.value))}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="completo">Acesso completo</option>
+          <option value="financeiro">Financeiro</option>
+          <option value="mao_de_obra">Mão de obra</option>
+          <option value="encarregado">Encarregado de obra</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Acesso completo mantém o padrão irrestrito. As permissões por obra abaixo continuam independentes.
+        </p>
+      </div>
+
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-semibold">Áreas disponíveis</legend>
+        <div className="space-y-1 rounded-lg border p-2">
+          {AREAS.map((area) => (
+            <label key={area.id} className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-muted/50">
+              <Checkbox
+                checked={hasArea(area.id)}
+                onCheckedChange={(checked) => toggleArea(area.id, checked === true)}
+                aria-label={area.label}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">{area.label}</span>
+                <span className="block text-xs text-muted-foreground">{area.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {hasArea('financeiro') && (
+        <fieldset className="space-y-2 rounded-lg border p-3">
+          <legend className="px-1 text-sm font-semibold">Categorias do financeiro</legend>
+          <label className="flex cursor-pointer items-start gap-3">
+            <Checkbox
+              checked={hasFinanceCategory('mao_de_obra')}
+              onCheckedChange={(checked) => toggleFinanceCategory(checked === true)}
+              aria-label="Mão de obra"
+            />
+            <span>
+              <span className="block text-sm font-medium">Mão de obra</span>
+              <span className="block text-xs text-muted-foreground">Permite visualizar os lançamentos de mão de obra.</span>
+            </span>
+          </label>
+        </fieldset>
+      )}
+    </div>
+  );
+}
+
 export function XGestaoEquipeView() {
   const [data, setData] = useState<EquipeData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -209,6 +368,8 @@ export function XGestaoEquipeView() {
       email: member.email,
       papel: member.papel === 'gestor' ? 'gestor' : 'colaborador',
       obras: member.obras.map((obra) => ({ ...obra })),
+      areasPermitidas: member.areasPermitidas ?? null,
+      categoriasFinanceiroPermitidas: member.categoriasFinanceiroPermitidas ?? null,
     });
     setFormError('');
     setFormOpen(true);
@@ -227,7 +388,12 @@ export function XGestaoEquipeView() {
       if (editing) {
         await apiRequest(`/api/xgestao/membros/${encodeURIComponent(editing.id)}`, {
           method: 'PATCH',
-          body: JSON.stringify({ papel: form.papel, obras: form.obras }),
+          body: JSON.stringify({
+            papel: form.papel,
+            obras: form.obras,
+            areasPermitidas: form.areasPermitidas,
+            categoriasFinanceiroPermitidas: form.categoriasFinanceiroPermitidas,
+          }),
         });
       } else {
         await apiRequest('/api/xgestao/membros', {
@@ -307,6 +473,9 @@ export function XGestaoEquipeView() {
           {data?.rows.map((member) => {
             const status = member.status.toLowerCase();
             const busy = pendingAction?.startsWith(`${member.id}:`) ?? false;
+            const permittedAreaNames = member.areasPermitidas === null || member.areasPermitidas === undefined
+              ? 'Acesso completo'
+              : AREAS.filter((area) => member.areasPermitidas?.includes(area.id)).map((area) => area.label).join(', ') || 'Nenhuma área liberada';
             return (
               <Card key={member.id} className={isRevoked(member.status) ? 'opacity-75' : ''}>
                 <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -320,6 +489,12 @@ export function XGestaoEquipeView() {
                     <p className="mt-1 break-all text-sm text-muted-foreground">{member.email}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       {ROLE_LABEL[member.papel] ?? member.papel} · {member.obras.length ? `${member.obras.length} ${member.obras.length === 1 ? 'obra vinculada' : 'obras vinculadas'}` : 'sem obras vinculadas'}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Áreas: {permittedAreaNames}
+                      {(member.areasPermitidas == null || member.areasPermitidas.includes('financeiro')) && member.categoriasFinanceiroPermitidas !== null && member.categoriasFinanceiroPermitidas !== undefined
+                        ? ` · Financeiro: ${member.categoriasFinanceiroPermitidas.includes('mao_de_obra') ? 'Mão de obra' : 'sem categorias'}`
+                        : ''}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -351,7 +526,7 @@ export function XGestaoEquipeView() {
           <DialogHeader>
             <DialogTitle>{editing ? `Permissões de ${editing.nome}` : 'Convidar pessoa'}</DialogTitle>
             <DialogDescription>
-              {editing ? 'Atualize o papel e as obras que esta pessoa pode acessar.' : 'A pessoa receberá um convite para acessar a empresa.'}
+              {editing ? 'Defina as áreas do sistema e as obras que esta pessoa pode acessar.' : 'A pessoa receberá um convite para acessar a empresa. Depois do convite, você poderá ajustar as permissões por área.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveMember} className="space-y-5">
@@ -379,6 +554,12 @@ export function XGestaoEquipeView() {
                 <option value="colaborador">Colaborador</option>
               </select>
             </div>
+            {editing && (
+              <AreaAccessEditor
+                value={form}
+                onChange={(next) => setForm(next)}
+              />
+            )}
             {data && <WorkAccessEditor obras={data.obras} value={form.obras} onChange={(obras) => setForm((current) => ({ ...current, obras }))} />}
             {formError && <p role="alert" className="rounded-md bg-destructive/5 p-2 text-sm text-destructive">{formError}</p>}
             <DialogFooter>

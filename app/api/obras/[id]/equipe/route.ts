@@ -5,7 +5,7 @@ import { db } from "@shared/db/db";
 import { obraEquipe } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { contratoFields, refineContrato } from "@features/obras/api/equipe-contrato-schema";
 import { validarContratoMembro } from "@features/obras/api/validar-contrato-membro";
 
@@ -35,6 +35,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canAccessObraArea(access, "equipe")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const rows = await db
     .select()
     .from(obraEquipe)
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "equipe")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

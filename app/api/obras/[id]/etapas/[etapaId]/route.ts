@@ -5,7 +5,7 @@ import { db } from "@shared/db/db";
 import { obraEtapas, obraTarefas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
 
 const patchSchema = z.object({
   nome: z.string().trim().min(2).max(160).optional(),
@@ -29,7 +29,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "cronograma")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
@@ -137,7 +137,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "cronograma")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

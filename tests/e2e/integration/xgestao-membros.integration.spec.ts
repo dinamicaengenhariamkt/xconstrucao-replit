@@ -135,7 +135,10 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
     .find((item) => item.meta?.kind === "verification");
   const verificationUrl = verificationEmail?.meta?.verificationUrl;
   expect(typeof verificationUrl, "verificação deve conter URL").toBe("string");
-  const verified = await request.get(verificationUrl as string, { maxRedirects: 0 });
+  // O e-mail pode conter a URL pública de desenvolvimento; consumir o token no
+  // mesmo servidor E2E que criou o convite e os usuários deste teste.
+  const verificationPath = new URL(verificationUrl as string);
+  const verified = await request.get(`${verificationPath.pathname}${verificationPath.search}`, { maxRedirects: 0 });
   expect([302, 303, 307, 308]).toContain(verified.status());
   const [invitee] = await db
     .select({ id: users.id, emailVerified: users.emailVerified })
@@ -283,6 +286,175 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   const grantedIds = ((await grantedList.json()) as Array<{ id: string }>).map((obra) => obra.id);
   expect(grantedIds).toEqual(expect.arrayContaining([obraA, obraC]));
   expect(grantedIds).not.toContain(obraB);
+
+  // Phase B — restringe a área do membro ao financeiro e, dentro dela, apenas
+  // à categoria mão de obra. As permissões devem valer imediatamente.
+  const invalidArea = await request.patch(`/api/xgestao/membros/${invited.row.id}`, {
+    data: {
+      papel: "colaborador",
+      obras: [
+        { obraId: obraA, permissao: "editar" },
+        { obraId: obraC, permissao: "visualizar" },
+      ],
+      areasPermitidas: ["financeiro", "area_invalida"],
+      categoriasFinanceiroPermitidas: ["mao_de_obra"],
+    },
+  });
+  expect(invalidArea.status(), await invalidArea.text()).toBe(400);
+
+  const restrictedPermissions = await request.patch(`/api/xgestao/membros/${invited.row.id}`, {
+    data: {
+      papel: "colaborador",
+      obras: [
+        { obraId: obraA, permissao: "editar" },
+        { obraId: obraC, permissao: "visualizar" },
+      ],
+      areasPermitidas: ["financeiro"],
+      categoriasFinanceiroPermitidas: ["mao_de_obra"],
+    },
+  });
+  expect(restrictedPermissions.status(), await restrictedPermissions.text()).toBe(200);
+  expect(await restrictedPermissions.json()).toMatchObject({
+    row: {
+      areasPermitidas: ["financeiro"],
+      categoriasFinanceiroPermitidas: ["mao_de_obra"],
+    },
+  });
+
+  const nonOwnerCannotPatch = await collaboratorRequest.patch(`/api/xgestao/membros/${invited.row.id}`, {
+    data: {
+      papel: "colaborador",
+      obras: [],
+      areasPermitidas: null,
+      categoriasFinanceiroPermitidas: null,
+    },
+  });
+  expect(nonOwnerCannotPatch.status()).toBe(403);
+
+  for (const areaPath of ["etapas", "diario", "ocorrencias", "equipe"]) {
+    const blockedArea = await collaboratorRequest.get(`/api/obras/${obraA}/${areaPath}`);
+    expect(blockedArea.status(), `${areaPath} deve ser bloqueada ao membro`).toBe(403);
+  }
+
+  const laborDescription = `XG31 mão de obra membro ${Date.now()}`;
+  const materialDescription = `XG31 material dono ${Date.now()}`;
+  const memberLabor = await collaboratorRequest.post(`/api/obras/${obraA}/financeiro`, {
+    data: {
+      tipo: "saida",
+      categoria: "mao_de_obra",
+      descricao: laborDescription,
+      valor: 125,
+      data: "2026-01-03",
+    },
+  });
+  expect(memberLabor.status(), await memberLabor.text()).toBe(201);
+
+  const memberMaterial = await collaboratorRequest.post(`/api/obras/${obraA}/financeiro`, {
+    data: {
+      tipo: "saida",
+      categoria: "material",
+      descricao: `XG31 material bloqueado ${Date.now()}`,
+      valor: 50,
+      data: "2026-01-04",
+    },
+  });
+  expect(memberMaterial.status()).toBe(403);
+  const memberEntrada = await collaboratorRequest.post(`/api/obras/${obraA}/financeiro`, {
+    data: {
+      tipo: "entrada",
+      descricao: `XG31 entrada bloqueada ${Date.now()}`,
+      valor: 500,
+      data: "2026-01-05",
+    },
+  });
+  expect(memberEntrada.status()).toBe(403);
+
+  const ownerMaterial = await request.post(`/api/obras/${obraA}/financeiro`, {
+    data: {
+      tipo: "saida",
+      categoria: "material",
+      descricao: materialDescription,
+      valor: 250,
+      data: "2026-01-06",
+    },
+  });
+  expect(ownerMaterial.status(), await ownerMaterial.text()).toBe(201);
+
+  const ownerFinance = await request.get(`/api/obras/${obraA}/financeiro`);
+  expect(ownerFinance.status(), await ownerFinance.text()).toBe(200);
+  const ownerFinanceDescriptions = (await ownerFinance.json() as {
+    rows: Array<{ descricao: string }>;
+  }).rows.map((row) => row.descricao);
+  expect(ownerFinanceDescriptions).toEqual(expect.arrayContaining([laborDescription, materialDescription]));
+
+  const memberFinance = await collaboratorRequest.get(`/api/obras/${obraA}/financeiro`);
+  expect(memberFinance.status(), await memberFinance.text()).toBe(200);
+  const memberFinanceDescriptions = (await memberFinance.json() as {
+    rows: Array<{ descricao: string }>;
+  }).rows.map((row) => row.descricao);
+  expect(memberFinanceDescriptions).toContain(laborDescription);
+  expect(memberFinanceDescriptions).not.toContain(materialDescription);
+  const laborCannotChangeTotal = await collaboratorRequest.patch(`/api/obras/${obraA}`, {
+    data: { valorTotal: "8000" },
+  });
+  expect(laborCannotChangeTotal.status()).toBe(403);
+  const laborGeneralPatch = await collaboratorRequest.patch(`/api/obras/${obraA}`, {
+    data: { nome: "XG31 A sem vazamento financeiro" },
+  });
+  expect(laborGeneralPatch.status(), await laborGeneralPatch.text()).toBe(200);
+  const laborGeneralBody = await laborGeneralPatch.json() as Record<string, unknown>;
+  expect(laborGeneralBody).not.toHaveProperty("valorTotal");
+  expect(laborGeneralBody).not.toHaveProperty("valorPago");
+  expect(laborGeneralBody).not.toHaveProperty("financeiro");
+  expect(laborGeneralBody).not.toHaveProperty("progresso");
+  expect(laborGeneralBody).not.toHaveProperty("fotoCapaFileId");
+
+  // Cronograma não concede acesso implícito a valores das medições.
+  const onlySchedule = await request.patch(`/api/xgestao/membros/${invited.row.id}`, {
+    data: {
+      papel: "colaborador",
+      obras: [
+        { obraId: obraA, permissao: "editar" },
+        { obraId: obraC, permissao: "visualizar" },
+      ],
+      areasPermitidas: ["cronograma"],
+      categoriasFinanceiroPermitidas: null,
+    },
+  });
+  expect(onlySchedule.status(), await onlySchedule.text()).toBe(200);
+  expect((await collaboratorRequest.get(`/api/obras/${obraA}/etapas`)).status()).toBe(200);
+  const schedulePatch = await collaboratorRequest.patch(`/api/obras/${obraA}`, {
+    data: { nome: "XG31 A só cronograma" },
+  });
+  expect(schedulePatch.status(), await schedulePatch.text()).toBe(200);
+  expect(await schedulePatch.json()).not.toHaveProperty("valorTotal");
+  const hiddenMeasurements = await collaboratorRequest.get("/api/empreiteiro/medicoes");
+  expect(hiddenMeasurements.status(), await hiddenMeasurements.text()).toBe(200);
+  expect((await hiddenMeasurements.json() as Array<{ obraId: string }>).some((row) => row.obraId === obraA)).toBe(false);
+  expect((await collaboratorRequest.get(`/api/obras/${obraA}/medicoes`)).status()).toBe(403);
+  const cannotCreateMeasurement = await collaboratorRequest.post("/api/empreiteiro/medicoes", {
+    data: { obraId: obraA, etapa: "Medição restrita", percentual: 5, valor: 500 },
+  });
+  expect(cannotCreateMeasurement.status(), await cannotCreateMeasurement.text()).toBe(403);
+  const noFinancialTimeline = await collaboratorRequest.get(`/api/atividades?obraId=${obraA}`);
+  expect(noFinancialTimeline.status()).toBe(200);
+  expect((await noFinancialTimeline.json() as { items: Array<{ tipo: string }> }).items
+    .some((item) => item.tipo === "lancamento_criado")).toBe(false);
+
+  // Limpa as restrições para que o restante deste teste continue cobrindo o
+  // comportamento legado de membership sem áreas/categorias limitadas.
+  const resetRestrictions = await request.patch(`/api/xgestao/membros/${invited.row.id}`, {
+    data: {
+      papel: "colaborador",
+      obras: [
+        { obraId: obraA, permissao: "editar" },
+        { obraId: obraC, permissao: "visualizar" },
+      ],
+      areasPermitidas: null,
+      categoriasFinanceiroPermitidas: null,
+    },
+  });
+  expect(resetRestrictions.status(), await resetRestrictions.text()).toBe(200);
 
   // IDs de grant contaminados com obra de marketplace não podem expor dados
   // financeiros/medições. O dono, por outro lado, mantém os dois escopos.
@@ -476,6 +648,26 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   expect(managerCanEdit.status(), await managerCanEdit.text()).toBe(200);
   const managerCannotManageMembers = await managerRequest.get("/api/xgestao/membros");
   expect(managerCannotManageMembers.status()).toBe(403);
+
+  const managerRestricted = await request.patch(`/api/xgestao/membros/${managerId}`, {
+    data: {
+      papel: "gestor",
+      obras: [],
+      areasPermitidas: ["cronograma"],
+      categoriasFinanceiroPermitidas: null,
+    },
+  });
+  expect(managerRestricted.status(), await managerRestricted.text()).toBe(200);
+  const managerRestrictedTimeline = await managerRequest.get(`/api/atividades?obraId=${obraA}`);
+  expect(managerRestrictedTimeline.status(), await managerRestrictedTimeline.text()).toBe(200);
+  const managerEventIds = (await managerRestrictedTimeline.json() as {
+    items: Array<{ id: string }>;
+  }).items.map((item) => item.id);
+  expect(managerEventIds).not.toContain(managerEvent.id);
+  const managerRestrictedMeasurements = await managerRequest.get("/api/empreiteiro/medicoes");
+  expect(managerRestrictedMeasurements.status(), await managerRestrictedMeasurements.text()).toBe(200);
+  expect((await managerRestrictedMeasurements.json() as Array<{ obraId: string }>)
+    .some((row) => row.obraId === obraA)).toBe(false);
 
   const managerCreatedObra = await managerRequest.post("/api/xgestao/obras", {
     data: { nome: "XG31 obra criada pelo gestor", endereco: "Rua XG31, 102" },

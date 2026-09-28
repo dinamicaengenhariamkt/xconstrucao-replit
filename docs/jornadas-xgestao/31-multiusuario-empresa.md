@@ -1,6 +1,6 @@
 # Jornada — XG31: vários usuários na mesma empresa (gestores e colaboradores)
 
-> Status: 🟢 implementada (acesso por obra, equipe, convites e admin verificados por integração; ver pendências de cobertura abaixo) | Prioridade: alta | Wave: xgestão-31
+> Status: 🟢 implementada (acesso por obra e permissões por área; ver pendências de cobertura abaixo) | Prioridade: alta | Wave: xgestão-31
 > Última atualização: 2026-09-28
 
 ## 1. Contexto
@@ -20,12 +20,12 @@ O cliente quer que a empresa tenha mais de um login. Hoje os dois sócios da Din
 São **dois pedidos**, com custos e riscos diferentes:
 
 1. **Mais de um login por empresa**, com acesso definido por papel e, para colaboradores, por obra.
-2. **Permissões por área** para cada login ("só mão de obra", "só financeiro"), que ficam para
-   uma fase posterior.
+2. **Permissões por área** para cada login ("só mão de obra", "só financeiro"), implementadas
+   após a definição das seis áreas com o cliente.
 
 O escopo da Fase A está decidido abaixo: dono com acesso total, gestor com acesso de edição a todas
-as obras e colaborador com acesso de visualização ou edição apenas às obras atribuídas. A Fase B,
-de permissões por área, fica para depois (§3).
+ as obras e colaborador com acesso de visualização ou edição apenas às obras atribuídas. A Fase B
+ acrescenta restrições por área, sem substituir esses limites por obra (§3).
 
 ## 2. Os achados
 
@@ -97,11 +97,10 @@ O limite de obras sai de `getLimiteRecurso(userId, …)`
 | Atribuição | Obras existentes são atribuídas explicitamente ao colaborador; obras novas **não** são atribuídas automaticamente | Configuração de áreas e presets de permissão |
 | Limites de papel | Membros não gerenciam cobrança/plano, dados da empresa ou usuários, e não excluem obras. Essas ações ficam com o dono | — |
 | Gestão | Convite e revogação pelo dono; `/admin/xgestao` exibe contagens e dados de membros somente para leitura | — |
-| Decisão | **Fase A implementada e testada para acesso por obra, convites e revogação.** Pendências complementares estão indicadas no checklist (§6–7) | **Adiada** até a Fase A estar em uso e as áreas serem definidas com o cliente |
+| Decisão | **Fase A implementada e testada para acesso por obra, convites e revogação.** Pendências complementares estão indicadas no checklist (§6–7) | **Implementada:** seis áreas confirmadas pelo cliente, com financeiro opcionalmente limitado a mão de obra |
 
-**Por que a Fase B espera.** As áreas ainda não estão definidas: "mão de obra" nem é módulo hoje.
-Desenhar permissões antes do uso real seria chutar a granularidade. Com a Fase A em uso, o cliente
-poderá indicar quais separações fazem falta.
+**Por que a Fase B esperou.** "Mão de obra" não era um módulo separado e as áreas ainda
+precisavam ser confirmadas. A lista foi definida com o cliente antes de implementar (§5).
 
 ## 4. Decisões fechadas (Fase A)
 
@@ -138,17 +137,22 @@ poderá indicar quais separações fazem falta.
 - **"Quem lançou"** no financeiro e na timeline da obra, a partir do `actorUserId` que já é
   gravado. É o ganho imediato de ter logins separados.
 
-## 5. Fase B (adiada; detalhar só quando for priorizada)
 
-- Permissões por área dentro da obra, por exemplo `financeiro` (com filtro por categoria, para
-  cobrir "só mão de obra"),
-  `etapas_cronograma`, `diario_fotos`, `ocorrencias`, `links_publicos`, `equipe`.
-- `ObraAccess` passa a carregar as permissões do membro, com um guard por área em cada rota. As
-  telas escondem o que o usuário não pode, e o servidor recusa mesmo assim.
-- Tela de permissões por membro, com presets ("Financeiro", "Encarregado de obra") em vez de
-  dezenas de caixas soltas.
-- **Pré-requisitos:** Fase A em uso e a lista de áreas fechada com o cliente. Não faz parte do
-  checklist de implementação da Fase A.
+## 5. Fase B — permissões por área
+
+As áreas confirmadas pelo cliente são `financeiro`, `cronograma` (etapas, tarefas e checklists),
+`diario` (diário e fotos), `ocorrencias`, `links` públicos e `equipe` da obra. O dono escolhe
+um modelo (acesso completo, financeiro, mão de obra ou encarregado) ou personaliza a lista
+de áreas por membro. A opção **só mão de obra** libera no financeiro apenas lançamentos de
+saída com categoria `mao_de_obra`; entradas, outras despesas e totais financeiros globais
+não são exibidos. Documentos/anexos genéricos da obra seguem a área `equipe`.
+
+As restrições são aditivas à Fase A: o dono permanece sem restrições; gestores mantêm
+acesso a todas as obras com edição, exceto quando o dono lhes configura áreas; colaboradores
+continuam limitados às obras e ao nível visualizar/editar atribuídos. Membros existentes
+mantêm acesso integral às áreas até que o dono defina uma restrição. O servidor aplica
+o filtro em cada pedido, inclusive em leituras, lançamentos, arquivos e totais, enquanto
+a interface oculta as áreas indisponíveis. A revogação e as alterações valem no pedido seguinte.
 
 ## 6. Checklist de execução (Fase A)
 
@@ -228,14 +232,14 @@ da checagem e exigir o mesmo guard antes de servir dados ou mutar a obra.
 As decisões de escopo da Fase A estão fechadas (§3–4), e a Fase A foi implementada,
 não fica para depois do MVP: gestor tem acesso de edição a todas as obras; colaborador recebe
 acesso explícito por obra (visualização ou edição); membro não administra cobrança/empresa/usuários
-nem exclui obras; convite e revogação cabem ao dono; o admin é somente leitura. Permissões por área
-ficam adiadas para a Fase B.
+ nem exclui obras; convite e revogação cabem ao dono; o admin é somente leitura. A Fase B
+ permite ao dono restringir áreas dentro das obras permitidas.
 
 1. **Limite de usuários por plano?** Ex.: Freemium 1, Basic 3, Pro ilimitado. Hoje nenhum plano
    fala em usuários.
 2. **Membro pode criar e revogar links públicos (XG30)?** Não muda os limites acima; confirmar
    essa ação específica antes de incluí-la nas permissões de membro.
-3. **Quais áreas separar na Fase B?** Definir com o cliente depois da Fase A em uso.
+3. **Áreas da Fase B:** definidas com o cliente e registradas no §5.
 
 ## 9. Riscos e fora de escopo
 
@@ -243,8 +247,8 @@ ficam adiadas para a Fase B.
   vazia naquele ponto; não é vazamento, mas é bug visível. Mitigação: o check da §7 e a lista
   fechada de arquivos na execução.
 - **Fora de escopo:** membros para empreiteiro do marketplace; um usuário em mais de uma empresa;
-  transferência de titularidade da empresa; permissões por área (Fase B). Permissões por obra
-  para colaboradores fazem parte da Fase A.
+  transferência de titularidade da empresa. Permissões por obra para colaboradores fazem parte da
+  Fase A; restrições por área fazem parte da Fase B.
 - O alerta do README sobre o contratante vale aqui: *"auditar o que mais um `users.id` válido
   destrava no resto do sistema"*. O membro é um `empreiteiro` sem `empreiteiras`; as rotas de
   marketplace que assumem essa linha precisam responder com erro limpo, não com 500.

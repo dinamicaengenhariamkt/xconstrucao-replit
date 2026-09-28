@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { findObraAccess } from "@features/obras/api/access";
+import { canAccessObraArea, filterObraPayloadByAreas, findObraAccess } from "@features/obras/api/access";
 import { buildMinhaObraDetalheReal } from "@features/empreiteiro/minhas-obras/api/build-detalhe-server";
+import type { AreasPermitidas, CategoriasFinanceiroPermitidas } from "@features/xgestao/equipe/permissions";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -31,7 +32,24 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     setNoCacheHeaders(r);
     return r;
   }
-  const r = NextResponse.json(detalhe);
+  const filtered = filterObraPayloadByAreas(access, detalhe);
+  if (!canAccessObraArea(access, "equipe")) {
+    delete (filtered as Partial<typeof detalhe>).documentos;
+  }
+  if (!canAccessObraArea(access, "diario")) {
+    (filtered as Partial<typeof detalhe>).imagemUrl = "";
+  }
+  const payload = access.xgestaoPermission
+    ? {
+        ...filtered,
+        permissoesXgestao: {
+          areasPermitidas: (access.xgestaoAreasPermitidas ?? null) as AreasPermitidas,
+          categoriasFinanceiroPermitidas:
+            (access.xgestaoCategoriasFinanceiroPermitidas ?? null) as CategoriasFinanceiroPermitidas,
+        },
+      }
+    : filtered;
+  const r = NextResponse.json(payload);
   setNoCacheHeaders(r);
   return r;
 }

@@ -5,7 +5,12 @@ import { db } from "@shared/db/db";
 import { empreiteiras, financeiro } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import {
+  findObraAccess,
+  canAccessObraArea,
+  canAccessObraFinanceCategory,
+  canWriteObraArea,
+} from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { getLancamentoCreatorNames } from "@features/financeiro/lancamentos-service";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
@@ -82,12 +87,18 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canAccessObraArea(access, "financeiro")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
 
-  const rows = await db
+  const allRows = await db
     .select()
     .from(financeiro)
     .where(and(eq(financeiro.obraId, id), eq(financeiro.escopo, "obra")))
     .orderBy(asc(financeiro.data));
+  const rows = allRows.filter((row) => canAccessObraFinanceCategory(access, row.categoria));
 
   const creatorNames = await getLancamentoCreatorNames(rows.map((row) => row.id));
   const r = NextResponse.json({
@@ -108,7 +119,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "financeiro")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
@@ -129,6 +140,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   const erroCategoria = validarCategoria(tipo, categoria);
   if (erroCategoria) {
     const r = NextResponse.json({ message: erroCategoria }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canAccessObraFinanceCategory(access, categoria ?? null)) {
+    const r = NextResponse.json({ message: "Sem permissão para esta categoria financeira." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }

@@ -111,6 +111,7 @@ interface LancamentoFinanceiroModalProps {
   onOpenChange: (open: boolean) => void;
   obraId: string;
   tipo: LancamentoTipo;
+  somenteMaoDeObra?: boolean;
   /** Quando presente, o modal edita em vez de criar. */
   lancamento?: ObraLancamentoApi | null;
   /** XG20 — equipe da obra, para escolher quem recebeu a saída. */
@@ -122,6 +123,7 @@ export function LancamentoFinanceiroModal({
   onOpenChange,
   obraId,
   tipo,
+  somenteMaoDeObra = false,
   lancamento = null,
   equipe = [],
 }: LancamentoFinanceiroModalProps) {
@@ -196,7 +198,7 @@ export function LancamentoFinanceiroModal({
             data: toBrDate(lancamento.data),
           }
         : {
-            categoria: '',
+            categoria: somenteMaoDeObra ? 'mao_de_obra' : '',
             fornecedorId: '',
             fornecedorNome: '',
             descricao: '',
@@ -204,9 +206,13 @@ export function LancamentoFinanceiroModal({
             data: hojeBr(),
           },
     );
-  }, [open, lancamento, form]);
+  }, [open, lancamento, form, somenteMaoDeObra]);
 
   const onSubmit = async (data: FormData) => {
+    if (somenteMaoDeObra && (!isSaida || data.categoria !== 'mao_de_obra')) {
+      form.setError('categoria', { message: 'Este acesso permite somente saídas de mão de obra.' });
+      return;
+    }
     const valor = parseValorBr(data.valor);
     if (!Number.isFinite(valor) || valor <= 0) {
       form.setError('valor', { message: 'Informe um valor maior que zero' });
@@ -281,7 +287,9 @@ export function LancamentoFinanceiroModal({
           </DialogTitle>
           <DialogDescription>
             {isSaida
-              ? 'Dinheiro que saiu da obra — mão de obra, material ou outras despesas.'
+              ? somenteMaoDeObra
+                ? 'Registre uma saída da obra somente na categoria Mão de obra.'
+                : 'Dinheiro que saiu da obra — mão de obra, material ou outras despesas.'
               : 'Dinheiro que entrou na obra — pagamento recebido do cliente.'}
           </DialogDescription>
         </DialogHeader>
@@ -302,7 +310,7 @@ export function LancamentoFinanceiroModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {LANCAMENTO_CATEGORIAS.map((c) => (
+                        {LANCAMENTO_CATEGORIAS.filter((c) => !somenteMaoDeObra || c === 'mao_de_obra').map((c) => (
                           <SelectItem key={c} value={c}>
                             {LANCAMENTO_CATEGORIA_LABELS[c]}
                           </SelectItem>

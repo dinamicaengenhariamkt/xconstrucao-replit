@@ -172,7 +172,7 @@ export const CRITICAL_PROBES: HealthProbe[] = [
   },
   {
     table: "xgestao_membros",
-    columns: ["empreiteira_id", "user_id", "papel", "status", "convidado_por", "atualizado_em"],
+    columns: ["empreiteira_id", "user_id", "papel", "status", "areas_permitidas", "categorias_financeiro_permitidas", "convidado_por", "atualizado_em"],
     label: "xgestao_membros (XG31 membership)",
   },
   {

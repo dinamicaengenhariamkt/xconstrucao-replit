@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { findObraAccess } from "@features/obras/api/access";
+import { canAccessObraArea, findObraAccess } from "@features/obras/api/access";
 import { calcularUsoObra } from "@features/obras/api/storage-quota";
 
 /**
@@ -19,6 +19,12 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const access = await findObraAccess(id, { id: guard.user.id, role: guard.user.role });
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  // The byte/file totals combine photos (diário) and attached documents.
+  if (!canAccessObraArea(access, "diario") || !canAccessObraArea(access, "equipe")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }

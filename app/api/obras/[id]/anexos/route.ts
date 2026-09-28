@@ -7,7 +7,7 @@ import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 
 const TIPOS = [
   "projeto_arquitetonico",
@@ -73,6 +73,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const access = await findObraAccess(obraId, { id: guard.user.id, role: guard.user.role }, { allowDiscovery: true });
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canAccessObraArea(access, "equipe")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "equipe")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

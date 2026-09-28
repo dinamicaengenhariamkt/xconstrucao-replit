@@ -5,7 +5,7 @@ import { db } from "@shared/db/db";
 import { obraEtapas } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 
 const createSchema = z.object({
   nome: z.string().trim().min(2).max(160),
@@ -27,6 +27,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     setNoCacheHeaders(r);
     return r;
   }
+  if (!canAccessObraArea(access, "cronograma")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const rows = await db.select().from(obraEtapas).where(eq(obraEtapas.obraId, id)).orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt));
   const r = NextResponse.json({ rows });
   setNoCacheHeaders(r);
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "cronograma")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

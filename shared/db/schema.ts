@@ -318,6 +318,8 @@ export const xgestaoMembros = pgTable(
     userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     papel: text("papel").$type<"gestor" | "colaborador">().notNull(),
     status: text("status").$type<"convidado" | "ativo" | "revogado">().notNull().default("convidado"),
+    areasPermitidas: jsonb("areas_permitidas").$type<import("@features/xgestao/equipe/permissions").AreasPermitidas>(),
+    categoriasFinanceiroPermitidas: jsonb("categorias_financeiro_permitidas").$type<import("@features/xgestao/equipe/permissions").CategoriasFinanceiroPermitidas>(),
     convidadoPor: varchar("convidado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
     criadoEm: timestamp("criado_em").defaultNow().notNull(),
     atualizadoEm: timestamp("atualizado_em").defaultNow().notNull(),

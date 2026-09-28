@@ -9,7 +9,11 @@ import { isRateLimited } from "@features/auth/api/rate-limit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoMedicaoCriada } from "@features/notificacoes/medicao-dispatcher";
 import { publicUrlForKey } from "@shared/lib/storage";
-import { canWriteObraContent, findObraAccess } from "@features/obras/api/access";
+import {
+  canAccessObraArea,
+  canWriteObraArea,
+  findObraAccess,
+} from "@features/obras/api/access";
 import { listarIdsObrasPermitidas, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 const bodySchema = z.object({
@@ -105,7 +109,17 @@ export async function GET(request: NextRequest) {
     .where(obraScope)
     .orderBy(desc(medicoes.createdAt));
 
-  const r = NextResponse.json(rows);
+  const readableRows = await Promise.all(rows.map(async (row) => {
+    const access = await findObraAccess(row.obraId, { id: guard.user.id, role: guard.user.role });
+    if (
+      !access ||
+       !canAccessObraArea(access, "cronograma") ||
+       !canAccessObraArea(access, "financeiro") ||
+      (access.role === "empreiteiro" && access.xgestaoCategoriasFinanceiroPermitidas != null)
+    ) return null;
+    return row;
+  }));
+  const r = NextResponse.json(readableRows.filter(Boolean));
   setNoCacheHeaders(r);
   return r;
 }
@@ -152,7 +166,11 @@ export async function POST(request: NextRequest) {
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (
+     !canWriteObraArea(access, "cronograma") ||
+     !canWriteObraArea(access, "financeiro") ||
+    access.xgestaoCategoriasFinanceiroPermitidas != null
+  ) {
     const r = NextResponse.json({ message: "Sem permissão para registrar uma medição nesta obra." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

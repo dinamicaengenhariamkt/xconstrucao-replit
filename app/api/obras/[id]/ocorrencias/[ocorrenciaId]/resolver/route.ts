@@ -4,7 +4,7 @@ import { db } from "@shared/db/db";
 import { obraOcorrencias } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string; ocorrenciaId: string }> }) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "ocorrencias")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

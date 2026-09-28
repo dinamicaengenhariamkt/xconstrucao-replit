@@ -5,7 +5,7 @@ import { db } from "@shared/db/db";
 import { obraChecklistItens, obraChecklists } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { carregarMarcacoes, projetarChecklist } from "@features/obras/api/checklist-recorrencia";
 
 const createSchema = z.object({
@@ -28,6 +28,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const access = await findObraAccess(id, { id: guard.user.id, role: guard.user.role });
   if (!access) {
     const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  if (!canAccessObraArea(access, "cronograma")) {
+    const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
@@ -80,7 +85,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraArea(access, "cronograma")) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;

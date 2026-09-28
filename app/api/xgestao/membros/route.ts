@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 import {
+  AREAS_XGESTAO,
+  CATEGORIAS_FINANCEIRO_RESTRITAS,
+} from "@features/xgestao/equipe/permissions";
+import {
   convidarMembro,
   listarMembros,
   MemberServiceError,
@@ -12,11 +16,17 @@ const grantsSchema = z.array(z.object({
   obraId: z.string().min(1),
   permissao: z.enum(["visualizar", "editar"]),
 }));
+const areasPermitidasSchema = z.array(z.enum(AREAS_XGESTAO)).nullable();
+const categoriasFinanceiroPermitidasSchema = z.array(
+  z.enum(CATEGORIAS_FINANCEIRO_RESTRITAS),
+).max(1).nullable();
 const createSchema = z.object({
   nome: z.string().trim().min(2).max(160),
   email: z.string().trim().toLowerCase().email(),
   papel: z.enum(["gestor", "colaborador"]),
   obras: grantsSchema,
+  areasPermitidas: areasPermitidasSchema.optional(),
+  categoriasFinanceiroPermitidas: categoriasFinanceiroPermitidasSchema.optional(),
 });
 
 function json(payload: unknown, status = 200) {

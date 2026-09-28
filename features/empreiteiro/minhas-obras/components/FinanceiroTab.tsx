@@ -67,7 +67,9 @@ const FILTRO_PESSOA_TODAS = 'todas';
 
 interface FinanceiroTabProps {
   obraId: string;
-  metrics: ProfitMetrics;
+  metrics?: ProfitMetrics;
+  /** Membro limitado à única categoria financeira de mão de obra. */
+  somenteMaoDeObra?: boolean;
   /** Obra de marketplace é read-only aqui: o dinheiro é do contratante. */
   podeLancar?: boolean;
   /**
@@ -335,6 +337,7 @@ function CustoPrevistoEquipe({
 export function FinanceiroTab({
   obraId,
   metrics,
+  somenteMaoDeObra = false,
   podeLancar = true,
   isObraPropria = false,
   financeiro,
@@ -344,6 +347,12 @@ export function FinanceiroTab({
   const { toast } = useToast();
   const { data: lancamentos = [], isLoading } = useObraLancamentos(obraId);
   const excluir = useExcluirLancamento(obraId);
+  const lancamentosVisiveis = useMemo(
+    () => somenteMaoDeObra
+      ? lancamentos.filter((lancamento) => lancamento.tipo === 'saida' && lancamento.categoria === 'mao_de_obra')
+      : lancamentos,
+    [lancamentos, somenteMaoDeObra],
+  );
 
   /*
    * Receita, custo, margem e saldo a receber são derivados no servidor, então
@@ -369,36 +378,42 @@ export function FinanceiroTab({
    */
   const pessoasComLancamento = useMemo(() => {
     const porChave = new Map<string, string>();
-    for (const l of lancamentos) {
+    for (const l of lancamentosVisiveis) {
       if (!l.fornecedorNome) continue;
       porChave.set(l.fornecedorId ?? `nome:${l.fornecedorNome}`, l.fornecedorNome);
     }
     return [...porChave.entries()]
       .map(([chave, nome]) => ({ chave, nome }))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  }, [lancamentos]);
+  }, [lancamentosVisiveis]);
 
   const filtrados = useMemo(() => {
-    return lancamentos.filter((l) => {
+    return lancamentosVisiveis.filter((l) => {
       if (filtroTipo !== 'todos' && l.tipo !== filtroTipo) return false;
-      if (filtroCategoria !== 'todas' && l.categoria !== filtroCategoria) return false;
+      if (!somenteMaoDeObra && filtroCategoria !== 'todas' && l.categoria !== filtroCategoria) return false;
       if (filtroPessoa !== FILTRO_PESSOA_TODAS) {
         const chave = l.fornecedorId ?? (l.fornecedorNome ? `nome:${l.fornecedorNome}` : null);
         if (chave !== filtroPessoa) return false;
       }
       return true;
     });
-  }, [lancamentos, filtroTipo, filtroCategoria, filtroPessoa]);
+  }, [lancamentosVisiveis, filtroTipo, filtroCategoria, filtroPessoa, somenteMaoDeObra]);
 
   // Total do que está em tela: com filtro de mão de obra aplicado, responde
   // direto "quanto já gastei com isso".
   const totalFiltrado = useMemo(
     () =>
       filtrados.reduce(
-        (acc, l) => acc + (l.tipo === 'entrada' ? Number(l.valor) : -Number(l.valor)),
+        (acc, l) =>
+          acc +
+          (somenteMaoDeObra
+            ? Number(l.valor)
+            : l.tipo === 'entrada'
+              ? Number(l.valor)
+              : -Number(l.valor)),
         0,
       ),
-    [filtrados],
+    [filtrados, somenteMaoDeObra],
   );
 
   /**
@@ -451,7 +466,12 @@ export function FinanceiroTab({
 
   return (
     <div className="space-y-4">
-      {financeiro && (
+      {somenteMaoDeObra && (
+        <p className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+          Acesso limitado aos lançamentos de saída da categoria Mão de obra.
+        </p>
+      )}
+      {!somenteMaoDeObra && financeiro && (
         <ValoresDoContrato
           financeiro={financeiro}
           luminous={luminous}
@@ -460,19 +480,21 @@ export function FinanceiroTab({
         />
       )}
 
-      <ProfitCard
-        metrics={metrics}
-        title="Resultado da obra"
-        description={
-          recalculando
-            ? 'Atualizando com o lançamento…'
-            : 'Receita e custo somam os lançamentos registrados abaixo.'
-        }
-        mostrarLucroEstimado={false}
-        luminous={luminous}
-      />
+      {!somenteMaoDeObra && metrics && (
+        <ProfitCard
+          metrics={metrics}
+          title="Resultado da obra"
+          description={
+            recalculando
+              ? 'Atualizando com o lançamento…'
+              : 'Receita e custo somam os lançamentos registrados abaixo.'
+          }
+          mostrarLucroEstimado={false}
+          luminous={luminous}
+        />
+      )}
 
-      {financeiro && financeiro.custoPrevistoEquipe > 0 && (
+      {!somenteMaoDeObra && financeiro && financeiro.custoPrevistoEquipe > 0 && (
         <CustoPrevistoEquipe financeiro={financeiro} luminous={luminous} />
       )}
 
@@ -485,14 +507,20 @@ export function FinanceiroTab({
                   <IconPayments className="w-5 h-5 text-primary" />
                   Lançamentos
                 </CardTitle>
-                <CardDescription>Tudo que entrou e saiu desta obra.</CardDescription>
+                <CardDescription>
+                  {somenteMaoDeObra
+                    ? 'Saídas registradas na categoria Mão de obra.'
+                    : 'Tudo que entrou e saiu desta obra.'}
+                </CardDescription>
               </div>
               {podeLancar && (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => abrirNovo('entrada')} data-testid="button-nova-entrada">
-                    <IconAdd className="w-4 h-4 mr-1" />
-                    Entrada
-                  </Button>
+                  {!somenteMaoDeObra && (
+                    <Button size="sm" onClick={() => abrirNovo('entrada')} data-testid="button-nova-entrada">
+                      <IconAdd className="w-4 h-4 mr-1" />
+                      Entrada
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -500,42 +528,48 @@ export function FinanceiroTab({
                     data-testid="button-nova-saida"
                   >
                     <IconAdd className="w-4 h-4 mr-1" />
-                    Saída
+                    {somenteMaoDeObra ? 'Mão de obra' : 'Saída'}
                   </Button>
                 </div>
               )}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as FiltroTipo)}>
-                <SelectTrigger className="w-[150px] h-9" data-testid="filtro-tipo-lancamento">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Tudo</SelectItem>
-                  <SelectItem value="entrada">Só entradas</SelectItem>
-                  <SelectItem value="saida">Só saídas</SelectItem>
-                </SelectContent>
-              </Select>
+              {!somenteMaoDeObra && (
+                <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as FiltroTipo)}>
+                  <SelectTrigger className="w-[150px] h-9" data-testid="filtro-tipo-lancamento">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Tudo</SelectItem>
+                    <SelectItem value="entrada">Só entradas</SelectItem>
+                    <SelectItem value="saida">Só saídas</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
 
-              <Select
-                value={filtroCategoria}
-                onValueChange={(v) => setFiltroCategoria(v as FiltroCategoria)}
-              >
-                <SelectTrigger className="w-[180px] h-9" data-testid="filtro-categoria-lancamento">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas as categorias</SelectItem>
-                  {/* Itera a constante, como o modal já faz: a lista escrita à
-                      mão aqui divergiria na primeira categoria nova. */}
-                  {LANCAMENTO_CATEGORIAS.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {LANCAMENTO_CATEGORIA_LABELS[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {somenteMaoDeObra ? (
+                <Badge variant="secondary" className="h-9 px-3">Mão de obra</Badge>
+              ) : (
+                <Select
+                  value={filtroCategoria}
+                  onValueChange={(v) => setFiltroCategoria(v as FiltroCategoria)}
+                >
+                  <SelectTrigger className="w-[180px] h-9" data-testid="filtro-categoria-lancamento">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as categorias</SelectItem>
+                    {/* Itera a constante, como o modal já faz: a lista escrita à
+                        mão aqui divergiria na primeira categoria nova. */}
+                    {LANCAMENTO_CATEGORIAS.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {LANCAMENTO_CATEGORIA_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               {/* XG20 — "depois no filtro eu posso colocar lá Jefferson elétrica
                   e eu vejo quanto eu paguei só para ele". Só aparece quando há
@@ -564,33 +598,37 @@ export function FinanceiroTab({
             ) : filtrados.length === 0 ? (
               <div className="py-8 text-center">
                 <p className="text-sm text-gray-500">
-                  {lancamentos.length === 0
+                  {lancamentosVisiveis.length === 0
                     ? 'Nenhum lançamento ainda.'
                     : 'Nenhum lançamento com esses filtros.'}
                 </p>
-                {lancamentos.length === 0 && podeLancar && (
+                {lancamentosVisiveis.length === 0 && podeLancar && (
                   <>
                     <p className="text-xs text-gray-400 mt-1">
-                      Registre o que entrou e o que saiu para ver receita, custo e margem.
+                      {somenteMaoDeObra
+                        ? 'Registre uma saída de mão de obra para acompanhar os pagamentos desta categoria.'
+                        : 'Registre o que entrou e o que saiu para ver receita, custo e margem.'}
                     </p>
                     {/* XG15 — os botões ficavam só no cabeçalho, acima dos
                         filtros; quem chega na aba vazia não tinha ação à mão. */}
                     <div className="mt-4 flex justify-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => abrirNovo('entrada')}
-                        className="cursor-pointer rounded-lg bg-success px-4 py-2 text-sm font-bold text-white transition-all hover:shadow-md"
-                        data-testid="btn-primeira-entrada"
-                      >
-                        Registrar entrada
-                      </button>
+                      {!somenteMaoDeObra && (
+                        <button
+                          type="button"
+                          onClick={() => abrirNovo('entrada')}
+                          className="cursor-pointer rounded-lg bg-success px-4 py-2 text-sm font-bold text-white transition-all hover:shadow-md"
+                          data-testid="btn-primeira-entrada"
+                        >
+                          Registrar entrada
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => abrirNovo('saida')}
                         className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-200"
                         data-testid="btn-primeira-saida"
                       >
-                        Registrar saída
+                        {somenteMaoDeObra ? 'Registrar mão de obra' : 'Registrar saída'}
                       </button>
                     </div>
                   </>
@@ -692,12 +730,12 @@ export function FinanceiroTab({
 
                 <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
                   <span className="text-xs text-gray-500">
-                    {filtrados.length} {filtrados.length === 1 ? 'lançamento' : 'lançamentos'}
+                    {somenteMaoDeObra ? 'Total mão de obra' : `${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`}
                   </span>
                   <span
                     className={cn(
                       'text-sm font-bold tabular-nums',
-                      totalFiltrado >= 0 ? 'text-emerald-600' : 'text-amber-600',
+                      somenteMaoDeObra ? 'text-amber-600' : totalFiltrado >= 0 ? 'text-emerald-600' : 'text-amber-600',
                     )}
                     data-testid="total-filtrado"
                   >
@@ -710,7 +748,7 @@ export function FinanceiroTab({
         </Card>
       </motion.div>
 
-      <AditivosCard obraId={obraId} podeLancar={podeLancar} />
+      {!somenteMaoDeObra && <AditivosCard obraId={obraId} podeLancar={podeLancar} />}
 
       {modalTipo && (
         <LancamentoFinanceiroModal
@@ -725,6 +763,7 @@ export function FinanceiroTab({
           tipo={modalTipo}
           lancamento={emEdicao}
           equipe={equipe}
+          somenteMaoDeObra={somenteMaoDeObra}
         />
       )}
 

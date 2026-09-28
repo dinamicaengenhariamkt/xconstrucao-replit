@@ -8,7 +8,7 @@ import {
   validateUpload,
   type UploadKind,
 } from "@shared/lib/storage";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canWriteObraArea, canWriteObraContent } from "@features/obras/api/access";
 import { verificarQuotaObra } from "@features/obras/api/storage-quota";
 
 const bodySchema = z.object({
@@ -75,7 +75,14 @@ export async function POST(request: NextRequest) {
       id: guard.user.id,
       role: guard.user.role,
     });
-    if (!acesso || !canWriteObraContent(acesso)) {
+    const area = parsed.data.kind === "comprovante_pagamento"
+      ? "financeiro"
+      : parsed.data.kind === "obra_anexo"
+        ? "equipe"
+        : parsed.data.kind === "obra_foto" || parsed.data.kind === "obra_capa"
+          ? "diario"
+          : null;
+    if (!acesso || !canWriteObraContent(acesso) || (area !== null && !canWriteObraArea(acesso, area))) {
       const r = NextResponse.json({ message: "Obra não encontrada" }, { status: 404 });
       setNoCacheHeaders(r);
       return r;

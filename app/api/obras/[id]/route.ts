@@ -28,7 +28,12 @@ import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararSurveyObraConcluida } from "@features/surveys/triggers";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import {
+  findObraAccess,
+  canAccessObraArea,
+  canWriteObraContent,
+  filterObraPayloadByAreas,
+} from "@features/obras/api/access";
 import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -48,7 +53,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   }
 
   // Anexos com URL: signed se file privado, public caso contrário.
-  const anexosRows = await db
+  const anexosRows = canAccessObraArea(access, "equipe") ? await db
     .select({
       id: obraAnexos.id,
       tipo: obraAnexos.tipo,
@@ -64,7 +69,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     })
     .from(obraAnexos)
     .innerJoin(userFiles, eq(userFiles.id, obraAnexos.fileId))
-    .where(and(eq(obraAnexos.obraId, id), isNull(userFiles.deletedAt)));
+    .where(and(eq(obraAnexos.obraId, id), isNull(userFiles.deletedAt))) : [];
 
   const anexos = await Promise.all(
     anexosRows.map(async (a) => {
@@ -143,7 +148,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       : Promise.resolve([]),
 
     // URL da foto de capa (pública ou signed).
-    access.obra.fotoCapaFileId
+    access.obra.fotoCapaFileId && canAccessObraArea(access, "diario")
       ? db
           .select({
             bucketKey: userFiles.bucketKey,
@@ -175,7 +180,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
   // Resolve URL da foto de capa.
   let fotoCapaUrl: string | null = null;
-  if (fotoCapa[0]) {
+  if (fotoCapa[0] && canAccessObraArea(access, "diario")) {
     const f = fotoCapa[0] as { bucketKey: string; publicUrl: string | null; visibility: string };
     fotoCapaUrl = f.visibility === "public"
       ? (f.publicUrl ?? publicUrlForKey(f.bucketKey))
@@ -192,9 +197,25 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   }
 
   // Empreiteiro: sanitizar PII do contratante.
-  const obraOut = guard.user.role === "empreiteiro"
+  const obraOutRaw = guard.user.role === "empreiteiro"
     ? (() => { const { clienteId, ...rest } = access.obra; return rest; })()
     : access.obra;
+  const obraOut = { ...obraOutRaw } as Record<string, unknown>;
+  if (!canAccessObraArea(access, "cronograma")) {
+    delete obraOut.progresso;
+  }
+  if (!canAccessObraArea(access, "diario")) {
+    delete obraOut.fotoCapaFileId;
+  }
+  // `valorPago` is an aggregate across finance categories. A category-limited
+  // member must not infer hidden entries through the obra summary.
+  if (
+    !canAccessObraArea(access, "financeiro") ||
+    (access.xgestaoCategoriasFinanceiroPermitidas != null && access.role === "empreiteiro")
+  ) {
+    delete obraOut.valorPago;
+    delete obraOut.valorTotal;
+  }
 
   // Enum do banco (`pendente|aceita|rejeitada`) → enum da UI (`ApplicationStatus`).
   // Sem candidatura → 'nao_aplicado'. Só é computado para empreiteiro.
@@ -212,7 +233,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   // Escopo planejado pelo contratante. Alimenta o bloco "Escopo e Fases
   // Previstas" no detalhe da obra — antes o adapter devolvia `[]` fixo e o
   // card aparecia sempre vazio para o empreiteiro.
-  const etapasRows = await db
+  const etapasRows = canAccessObraArea(access, "cronograma") ? await db
     .select({
       id: obraEtapas.id,
       nome: obraEtapas.nome,
@@ -223,7 +244,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     })
     .from(obraEtapas)
     .where(eq(obraEtapas.obraId, id))
-    .orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt));
+    .orderBy(asc(obraEtapas.ordem), asc(obraEtapas.createdAt)) : [];
 
   const r = NextResponse.json({
     ...obraOut,
@@ -232,13 +253,13 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     candidaturasCount,
     ...(applicationStatus ? { applicationStatus } : {}),
     medicoes: medicoesRows,
-    empreiteiraInfo: empreiteiraRow[0]
+    empreiteiraInfo: canAccessObraArea(access, "equipe") && empreiteiraRow[0]
     ? {
         ...empreiteiraRow[0],
         avatarUrl: empreiteiraRow[0].userImage || empreiteiraRow[0].empreiteiraAvatarUrl || null,
       }
     : null,
-    fotoCapaUrl,
+    fotoCapaUrl: canAccessObraArea(access, "diario") ? fotoCapaUrl : null,
     diasRestantes,
   });
   setNoCacheHeaders(r);
@@ -353,6 +374,30 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       { message: "Dados inválidos", errors: incomingParsed.error.flatten() },
       { status: 400 },
     );
+    setNoCacheHeaders(r);
+    return r;
+  }
+  // O PATCH genérico também edita campos usados por áreas com guard próprio.
+  // Não deixar a edição das informações da obra contornar essas restrições.
+  const camposPorArea = {
+    financeiro: ["orcamento", "valorTotal"],
+    cronograma: ["dataInicio", "dataPrevisao", "progresso"],
+    diario: ["fotoCapaFileId"],
+  } as const;
+  for (const [area, campos] of Object.entries(camposPorArea) as Array<
+    [keyof typeof camposPorArea, readonly string[]]
+  >) {
+    if (campos.some((campo) => Object.hasOwn(incomingParsed.data, campo)) &&
+        !canAccessObraArea(access, area)) {
+      const r = NextResponse.json({ message: "Sem permissão para esta área." }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
+  }
+  if (access.xgestaoCategoriasFinanceiroPermitidas != null &&
+      (Object.hasOwn(incomingParsed.data, "valorTotal") ||
+       Object.hasOwn(incomingParsed.data, "orcamento"))) {
+    const r = NextResponse.json({ message: "Sem permissão para editar os totais financeiros." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
@@ -558,7 +603,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     void dispararSurveyObraConcluida(id);
   }
 
-  const r = NextResponse.json(updated);
+  const r = NextResponse.json(filterObraPayloadByAreas(access, updated));
   setNoCacheHeaders(r);
   return r;
 }

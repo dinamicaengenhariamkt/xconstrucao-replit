@@ -2,7 +2,16 @@ import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras, obras } from "@shared/db/schema";
 import { isAdminLike, userHasRole } from "@features/auth/api/auth-utils";
-import { resolverAcessoObraXgestao, resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import {
+  resolverAcessoObraXgestao,
+  resolverEmpresaDoUsuario,
+  resolverPermissoesObraXgestao,
+} from "@features/xgestao/equipe/server/access";
+import type {
+  AreaXgestao,
+  AreasPermitidas,
+  CategoriasFinanceiroPermitidas,
+} from "@features/xgestao/equipe/permissions";
 
 /**
  * Resolve acesso de leitura/escrita a uma obra para qualquer persona.
@@ -24,6 +33,10 @@ export type ObraAccess = {
   isDiscoveryOnly: boolean;
   /** Obra própria xgestão: concessão específica (ou acesso integral do dono/gestor). */
   xgestaoPermission?: "visualizar" | "editar";
+  /** null means unrestricted (also the legacy/default behavior). */
+  xgestaoAreasPermitidas?: AreasPermitidas;
+  /** null means all finance categories are visible and writable. */
+  xgestaoCategoriasFinanceiroPermitidas?: CategoriasFinanceiroPermitidas;
 };
 
 /**
@@ -83,13 +96,22 @@ export async function findObraAccess(
     if (isAssigned && isXgestao && !(await userHasRole(user.id, "xgestao"))) {
       return null;
     }
+    const xgestaoAreaPermissions = isAssigned && isXgestao
+      ? await resolverPermissoesObraXgestao(user.id, obraId)
+      : null;
+    if (isAssigned && isXgestao && !xgestaoAreaPermissions) return null;
     return {
       obra,
       role: "empreiteiro",
       clienteId: null,
       empreiteiraId: isXgestao ? company?.empreiteiraId ?? null : emp?.id ?? null,
       isDiscoveryOnly: !isAssigned,
-      ...(isXgestao && xgestaoPermission ? { xgestaoPermission } : {}),
+      ...(isXgestao && xgestaoPermission ? {
+        xgestaoPermission,
+        xgestaoAreasPermitidas: xgestaoAreaPermissions?.areasPermitidas ?? null,
+        xgestaoCategoriasFinanceiroPermitidas:
+          xgestaoAreaPermissions?.categoriasFinanceiroPermitidas ?? null,
+      } : {}),
     };
   }
 
@@ -110,4 +132,60 @@ export function canWriteObraContent(access: ObraAccess): boolean {
     return access.xgestaoPermission !== "visualizar";
   }
   return false;
+}
+
+/** Tests a scoped xgestão area permission after the obra itself was authorized. */
+export function canAccessObraArea(access: ObraAccess, area: AreaXgestao): boolean {
+  if (access.role !== "empreiteiro" || !access.xgestaoPermission) return true;
+  return access.xgestaoAreasPermitidas == null || access.xgestaoAreasPermitidas.includes(area);
+}
+
+export function canWriteObraArea(access: ObraAccess, area: AreaXgestao): boolean {
+  return canWriteObraContent(access) && canAccessObraArea(access, area);
+}
+
+/** Finance-category checks are separate from area checks to prevent data leaks. */
+export function canAccessObraFinanceCategory(access: ObraAccess, category: string | null): boolean {
+  if (access.role !== "empreiteiro" || !access.xgestaoPermission) return true;
+  const allowed = access.xgestaoCategoriasFinanceiroPermitidas;
+  return allowed == null || (category !== null && allowed.includes(category as "mao_de_obra"));
+}
+
+/**
+ * Strip summaries embedded in generic obra payloads when their source area is
+ * restricted. Detailed area APIs can still return their scoped rows directly.
+ */
+export function filterObraPayloadByAreas<T extends object>(access: ObraAccess, payload: T): T {
+  const result = { ...payload } as Record<string, unknown>;
+  if (!canAccessObraArea(access, "cronograma")) {
+    for (const key of [
+      "progresso", "progressoDisponivel", "tarefasPendentes", "tarefasEmAndamento",
+      "tarefasTotal", "tarefas", "etapas", "checklists", "atividades",
+    ]) delete result[key];
+  }
+  if (!canAccessObraArea(access, "diario")) {
+    delete result.timeline;
+    delete result.fotos;
+    delete result.fotoCapaFileId;
+  }
+  if (!canAccessObraArea(access, "ocorrencias")) {
+    for (const key of [
+      "ocorrencias", "ocorrenciasAbertas", "problemasAbertos", "problemasPorGravidade", "status",
+    ]) {
+      delete result[key];
+    }
+  }
+  if (!canAccessObraArea(access, "equipe")) {
+    delete result.equipe;
+    delete result.equipeAtiva;
+  }
+  if (
+    !canAccessObraArea(access, "financeiro") ||
+    (access.role === "empreiteiro" && access.xgestaoCategoriasFinanceiroPermitidas != null)
+  ) {
+    for (const key of [
+      "orcamento", "valorTotal", "custoReal", "consumoOrcamento", "valorPago", "aReceber", "financeiro",
+    ]) delete result[key];
+  }
+  return result as T;
 }

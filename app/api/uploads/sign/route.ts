@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { userFiles } from "@shared/db/schema";
+import { financeiro, obraAnexos, obraFotos, obras, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { createSignedReadUrl } from "@shared/lib/storage";
+import {
+  canAccessObraArea,
+  canAccessObraFinanceCategory,
+  findObraAccess,
+} from "@features/obras/api/access";
 
 export async function GET(request: NextRequest) {
   const guard = await requireVerifiedUser(request);
@@ -32,6 +37,39 @@ export async function GET(request: NextRequest) {
     const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // Possessing the original upload is not a substitute for area access after
+  // the file has been attached to obra content.
+  const [photoLinks, attachmentLinks, coverLinks, financeLinks] = await Promise.all([
+    db.select({ obraId: obraFotos.obraId }).from(obraFotos).where(eq(obraFotos.fileId, file.id)),
+    db.select({ obraId: obraAnexos.obraId }).from(obraAnexos).where(eq(obraAnexos.fileId, file.id)),
+    db.select({ obraId: obras.id }).from(obras).where(eq(obras.fotoCapaFileId, file.id)),
+    db.select({ obraId: financeiro.obraId, categoria: financeiro.categoria })
+      .from(financeiro).where(eq(financeiro.comprovanteFileId, file.id)),
+  ]);
+  const scopedLinks = [
+    ...photoLinks.map((link) => ({ obraId: link.obraId, area: "diario" as const, categoria: null })),
+    ...attachmentLinks.map((link) => ({ obraId: link.obraId, area: "equipe" as const, categoria: null })),
+    ...coverLinks.map((link) => ({ obraId: link.obraId, area: "diario" as const, categoria: null })),
+    ...financeLinks.map((link) => ({
+      obraId: link.obraId,
+      area: "financeiro" as const,
+      categoria: link.categoria,
+    })),
+  ];
+  for (const link of scopedLinks) {
+    if (!link.obraId) continue;
+    const access = await findObraAccess(link.obraId, { id: guard.user.id, role: guard.user.role });
+    if (
+      !access ||
+      !canAccessObraArea(access, link.area) ||
+      (link.area === "financeiro" && !canAccessObraFinanceCategory(access, link.categoria))
+    ) {
+      const r = NextResponse.json({ message: "Acesso negado" }, { status: 403 });
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
 
   if (file.visibility === "public" && file.publicUrl) {
