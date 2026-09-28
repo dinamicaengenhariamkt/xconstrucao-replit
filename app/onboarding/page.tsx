@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { OnboardingWizard } from '@features/onboarding/OnboardingWizard';
@@ -29,6 +30,15 @@ export default function OnboardingPage() {
       router.replace('/admin/financeiro');
     }
   }, [isLoading, user, router]);
+
+  if (!isLoading && !user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center dark:bg-[#1C1F22]">
+        <p>Não foi possível confirmar sua sessão. Entre novamente para continuar.</p>
+        <Link href="/login" className="underline">Ir para o login</Link>
+      </div>
+    );
+  }
 
   if (isLoading || !user || !isPersona(user.role)) {
     return (

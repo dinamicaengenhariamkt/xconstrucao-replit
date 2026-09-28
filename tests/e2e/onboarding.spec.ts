@@ -297,6 +297,72 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     }
   });
 
+  for (const { perfil, role, roles, titulo } of [
+    { perfil: "contratante", role: "contratante", roles: ["contratante"], titulo: "Sobre você ou sua empresa" },
+    { perfil: "empreiteiro", role: "empreiteiro", roles: ["empreiteiro"], titulo: "Sobre sua empresa" },
+    { perfil: "xgestao", role: "empreiteiro", roles: ["empreiteiro", "xgestao"], titulo: "Sobre sua empresa" },
+  ]) {
+    test(`OAuth: ${perfil} abre o wizard sem loader e recupera sessão após recarregar`, async ({ page }) => {
+      test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+      // Contrato do retorno Google simulado na camada de rede: sem cookies
+      // reais, o teste também funciona no servidor E2E local por HTTP.
+      const user = {
+        id: `oauth-${perfil}`,
+        email: `${perfil}@example.test`,
+        name: "Cadastro OAuth",
+        role,
+        roles,
+        onboardingConcluido: false,
+      };
+      let refreshes = 0;
+      await page.route("**/api/auth/oauth-convert", (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+      );
+      await page.route("**/api/auth/me", (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(user) }),
+      );
+      await page.route("**/api/auth/refresh", (route) => {
+        refreshes++;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ user }),
+        });
+      });
+
+      await page.goto("/auth/oauth-success");
+      await expect(page).toHaveURL(/\/onboarding$/);
+      await expect(page.getByTestId("text-onboarding-empresa-title")).toHaveText(titulo);
+      expect(refreshes).toBe(0); // /me já confirmou a sessão; não renovar de novo.
+
+      await page.reload();
+      await expect(page.getByTestId("text-onboarding-empresa-title")).toHaveText(titulo);
+      expect(refreshes).toBe(1); // Entrada direta reidrata a sessão exatamente uma vez.
+
+      if (perfil === "contratante") {
+        await page.route("**/api/onboarding/concluir", (route) =>
+          route.fulfill({ status: 500, contentType: "application/json", body: "{}" }),
+        );
+        await page.getByTestId("button-onboarding-skip").click();
+        await expect(page.getByText("Não foi possível concluir o cadastro", { exact: true })).toBeVisible();
+        await expect(page).toHaveURL(/\/onboarding$/);
+
+        await page.unroute("**/api/auth/refresh");
+        await page.route("**/api/auth/refresh", (route) =>
+          route.fulfill({ status: 401, contentType: "application/json", body: "{}" }),
+        );
+        await page.reload();
+        await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+      }
+    });
+  }
+
+  test("onboarding sem sessão não permanece no carregamento", async ({ page }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+    await page.goto("/onboarding");
+    await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+  });
+
   test("OAuth: retorno com next válido encaminha para o destino seguro", async ({ page }) => {
     test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
 

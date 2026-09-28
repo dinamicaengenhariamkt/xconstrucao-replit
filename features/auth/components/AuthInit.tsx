@@ -2,7 +2,7 @@
  * Componente de inicialização da autenticação
  * Substitui o useEffect do antigo AuthProvider
  * Executa checkAuth automaticamente APENAS em rotas autenticadas
- * (dashboard / admin / contratante / empreiteiro / xgestao), evitando disparar
+ * (dashboard / admin / contratante / empreiteiro / xgestao / onboarding), evitando disparar
  * POST /api/auth/refresh com 401 em páginas públicas como home,
  * cadastro, login, recuperar-senha, verificar-email, termos, etc.
  *
@@ -26,6 +26,7 @@ const PROTECTED_ROUTE_PREFIXES = [
   '/empreiteiro',
   '/anunciante',
   '/xgestao',
+  '/onboarding',
 ];
 
 /**
@@ -46,6 +47,7 @@ export function AuthInit() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
   const hasCheckedAuth = useAuthStore((state) => state._hasCheckedAuth);
   const skipInitialCheck = useAuthStore((state) => state._skipInitialCheck);
+  const setHasCheckedAuth = useAuthStore((state) => state.setHasCheckedAuth);
 
   useEffect(() => {
     // Não executa se já checou ou se deve pular
@@ -60,8 +62,11 @@ export function AuthInit() {
       return;
     }
 
-    checkAuth();
-  }, [pathname, checkAuth, hasCheckedAuth, skipInitialCheck]);
+    // Marca antes da chamada: mudanças de rota e reexecução do efeito em StrictMode
+    // não devem iniciar uma segunda renovação da mesma sessão.
+    setHasCheckedAuth(true);
+    void checkAuth();
+  }, [pathname, checkAuth, hasCheckedAuth, skipInitialCheck, setHasCheckedAuth]);
 
   // XG10 — mantém a sessão viva enquanto a aba está aberta em área autenticada.
   useEffect(() => {

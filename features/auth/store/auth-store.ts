@@ -183,6 +183,8 @@ export const useAuthStore = create<AuthState>()(
                   method: 'POST',
                   credentials: 'include',
                   cache: 'no-store',
+                  // Uma rede sem resposta não pode manter /onboarding no loader.
+                  signal: AbortSignal.timeout(20_000),
                 });
 
                 if (!res.ok) return false;

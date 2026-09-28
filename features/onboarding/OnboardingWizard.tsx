@@ -80,10 +80,13 @@ export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
   const finalizar = async () => {
     try {
       await concluir.mutateAsync();
-    } catch {
-      // Best-effort: não prender o usuário no wizard por falha de rede.
-    } finally {
       irParaDashboard();
+    } catch {
+      toast({
+        title: 'Não foi possível concluir o cadastro',
+        description: 'Tente novamente. Seus dados permanecem nesta página.',
+        variant: 'destructive',
+      });
     }
   };
 

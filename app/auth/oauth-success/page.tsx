@@ -1,16 +1,20 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolvePostLoginRedirect } from "@features/auth/utils/redirect-by-role";
+import { useAuthStore } from "@features/auth/store/auth-store";
 
 function OAuthSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const started = useRef(false);
 
   useEffect(() => {
-    convertOAuthToJWT();
+    if (started.current) return;
+    started.current = true;
+    void convertOAuthToJWT();
   }, []);
 
   const convertOAuthToJWT = async () => {
@@ -25,8 +29,9 @@ function OAuthSuccessContent() {
         throw new Error("Erro ao converter sessão OAuth");
       }
 
+      let meRes: Response | undefined;
       for (let attempt = 0; attempt < 3; attempt++) {
-        const meRes = await fetch("/api/auth/me", {
+        meRes = await fetch("/api/auth/me", {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -41,38 +46,37 @@ function OAuthSuccessContent() {
         await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
-      // Sucesso! Buscar o user para descobrir a role correta e redirecionar
-      const meRes = await fetch("/api/auth/me", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (meRes.ok) {
-        const userData = await meRes.json();
-        const role = userData?.role || userData?.user?.role || "contratante";
-        const roles = userData?.roles || userData?.user?.roles || [];
-        const adminEscopo = userData?.adminEscopo || userData?.user?.adminEscopo;
-        // J51 — primeiro acesso via Google também passa pelo wizard de onboarding
-        // (exceto admin, que não se cadastra por aqui). Reusa o mesmo /me já lido.
-        const onboardingConcluido =
-          userData?.onboardingConcluido ?? userData?.user?.onboardingConcluido;
-        const isAdmin = role === "admin" || role === "superadmin";
-        const loginContext =
-          searchParams.get("context") === "xgestao" ? "xgestao" : undefined;
-        const target =
-          !isAdmin && onboardingConcluido === false
-            ? "/onboarding"
-            : resolvePostLoginRedirect(
-                role,
-                searchParams.get("next"),
-                roles,
-                adminEscopo,
-                loginContext,
-              );
-        router.replace(target);
-      } else {
-        router.replace("/contratante/dashboard");
+      if (!meRes?.ok) throw new Error("Sessão OAuth não confirmada");
+      const userData = await meRes.json();
+      const user = userData?.user ?? userData;
+      if (!user || typeof user.id !== "string" || typeof user.role !== "string") {
+        throw new Error("Dados da sessão OAuth inválidos");
       }
+
+      // /me confirmou a sessão: hidratar o mesmo store que /onboarding consome
+      // antes de navegar. Evita um refresh desnecessário logo após a conversão.
+      const auth = useAuthStore.getState();
+      auth.setUser(user);
+      auth.setSkipInitialCheck(true);
+      auth.setHasCheckedAuth(false);
+      auth.setLoading(false);
+
+      const role = user.role;
+      const roles = user.roles || [];
+      const isAdmin = role === "admin" || role === "superadmin";
+      const loginContext =
+        searchParams.get("context") === "xgestao" ? "xgestao" : undefined;
+      const target =
+        !isAdmin && user.onboardingConcluido === false
+          ? "/onboarding"
+          : resolvePostLoginRedirect(
+              role,
+              searchParams.get("next"),
+              roles,
+              user.adminEscopo,
+              loginContext,
+            );
+      router.replace(target);
     } catch (error) {
       console.error("Erro no callback OAuth:", error);
       setError("Erro ao processar login. Tente novamente.");
