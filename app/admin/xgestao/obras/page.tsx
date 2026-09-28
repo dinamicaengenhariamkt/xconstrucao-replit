@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { RiArrowLeftLine, RiLinkM, RiSearchLine } from 'react-icons/ri';
 import { Input } from '@shared/components/ui/input';
@@ -9,7 +9,9 @@ import { Skeleton } from '@shared/components/ui/skeleton';
 import { Button } from '@shared/components/ui/button';
 import { HealthBadge } from '@features/shared/health';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
+import { AssinantesObrasPicker } from '@features/xgestao/admin/components/AssinantesObrasPicker';
 import {
+  useXgestaoAdminAssinantes,
   useXgestaoAdminObras,
   type XgestaoObraStatus,
 } from '@features/xgestao/admin/hooks/use-admin-xgestao';
@@ -40,13 +42,15 @@ export default function AdminXgestaoObrasPage() {
 }
 
 function ObrasXgestao() {
-  // `empreiteira_id` chega da lista de assinantes, que linka para as obras de
-  // um assinante específico. Sem ler o parâmetro, o link abriria sem filtro.
+  // A URL preserva a seleção ao chegar do dashboard/lista e ao navegar de volta.
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [busca, setBusca] = useState('');
   const [status, setStatus] = useState<XgestaoObraStatus | ''>('');
-  const [empreiteiraId, setEmpreiteiraId] = useState(searchParams.get('empreiteira_id') ?? '');
+  const empreiteiraId = searchParams.get('empreiteira_id') ?? '';
   const [pagina, setPagina] = useState(1);
+  const assinantes = useXgestaoAdminAssinantes();
+  const selecionada = assinantes.data?.rows.find((item) => item.empreiteiraId === empreiteiraId);
 
   const { data, isLoading, isError, refetch, isFetching } = useXgestaoAdminObras({
     busca,
@@ -61,14 +65,10 @@ function ObrasXgestao() {
     setter(valor);
     setPagina(1);
   };
-
-  if (isError && !data) {
-    return (
-      <div className="p-6 md:p-10">
-        <AdminDashboardError onRetry={refetch} isRetrying={isFetching} />
-      </div>
-    );
-  }
+  const selecionarEmpreiteira = (id: string) => {
+    setPagina(1);
+    router.push(id ? `/admin/xgestao/obras?empreiteira_id=${encodeURIComponent(id)}` : '/admin/xgestao/obras', { scroll: false });
+  };
 
   return (
     <div className="space-y-6 p-6 md:p-10">
@@ -79,13 +79,35 @@ function ObrasXgestao() {
         >
           <RiArrowLeftLine /> Voltar ao resumo
         </Link>
-        <h1 className="text-2xl font-extrabold tracking-tight">Obras do xgestão</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Obras por assinante</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Obras próprias dos assinantes. Somente leitura.
+          Acompanhe as obras próprias de cada empreiteira do xgestão. Somente leitura.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_200px_240px]">
+      <div className="grid items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <AssinantesObrasPicker
+          assinantes={assinantes.data?.rows ?? []}
+          selecionadaId={empreiteiraId}
+          onSelecionar={selecionarEmpreiteira}
+          carregando={assinantes.isLoading && !assinantes.data}
+          erro={assinantes.isError && !assinantes.data}
+          onTentarNovamente={() => void assinantes.refetch()}
+        />
+        <section className="min-w-0 space-y-5" aria-label="Obras da empreiteira selecionada">
+          <div>
+            <h2 className="text-xl font-bold">
+              {empreiteiraId ? (selecionada?.empreiteiraNome ?? 'Empreiteira selecionada') : 'Todas as obras'}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {selecionada
+                ? `${selecionada.obrasGerenciadas} obras no total · ${selecionada.obrasAtivas} em andamento`
+                : empreiteiraId && assinantes.data
+                  ? 'Empreiteira não encontrada entre os assinantes xgestão.'
+                  : 'Obras próprias das empreiteiras com acesso ao xgestão.'}
+            </p>
+          </div>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
         <div className="relative">
           <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -107,26 +129,26 @@ function ObrasXgestao() {
             <option key={valor} value={valor}>{rotulo}</option>
           ))}
         </select>
-        <select
-          value={empreiteiraId}
-          onChange={(event) => aplicar(setEmpreiteiraId)(event.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          data-testid="xgestao-obras-empreiteira"
-        >
-          <option value="">Todas as empreiteiras</option>
-          {data?.empreiteiras.map((empreiteira) => (
-            <option key={empreiteira.id} value={empreiteira.id}>{empreiteira.nome}</option>
-          ))}
-        </select>
       </div>
 
-      {isLoading && !data ? (
+      {isError && !data ? (
+        <AdminDashboardError onRetry={() => void refetch()} isRetrying={isFetching} />
+      ) : isLoading && !data ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-xl" />)}
         </div>
       ) : !data || data.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800">
-          Nenhuma obra encontrada com esses filtros.
+          <p>
+            {selecionada && selecionada.obrasGerenciadas === 0 && !busca && !status
+              ? 'Esta empreiteira ainda não tem obras.'
+              : 'Nenhuma obra encontrada com esses filtros.'}
+          </p>
+          {empreiteiraId && (
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => selecionarEmpreiteira('')}>
+              Ver todas as empreiteiras
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -213,6 +235,8 @@ function ObrasXgestao() {
           )}
         </>
       )}
+        </section>
+      </div>
     </div>
   );
 }

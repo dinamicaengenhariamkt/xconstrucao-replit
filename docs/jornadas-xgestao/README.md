@@ -43,6 +43,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG29](29-remocao-total-do-percentual.md) | O percentual de execução sai das telas do xgestão, por inteiro | 2 | pronto (falta verificação visual) | alta | médio |
 | [XG30](30-link-cliente-publicos-e-cronograma.md) | Um link por público (pagamentos só no do cliente), cronograma no link, checklist e atualizações fora | 4 | pronto (falta verificação visual) | alta | médio |
 | [XG31](31-multiusuario-empresa.md) | Vários usuários na mesma empresa: sócios/gestores (Fase A) e permissões por área (Fase B) | 4 | planejada | alta | médio |
+| [XG32](32-obras-por-assinante-admin.md) | Obras por assinante no admin xgestão + auditoria do dashboard | 6 | pronto (falta verificação visual autenticada) | média | médio |
 
 ## Contexto
 

@@ -163,6 +163,7 @@ escrito é a camada de recorte em [features/xgestao/admin/server/](../../feature
 
 - Depende de: XG01 (role aditiva), XG03 (planos), XG04 (contagem de links ativos)
 - Relacionada: J09/J18 (financeiro admin), J33 (saúde da plataforma)
+- Extensão planejada: [XG32 — obras por assinante e auditoria do dashboard](32-obras-por-assinante-admin.md)
 
 ## 13. Gaps descobertos durante execução
 

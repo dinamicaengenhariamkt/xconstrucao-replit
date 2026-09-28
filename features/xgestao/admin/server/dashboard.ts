@@ -1,5 +1,6 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
+import { XGESTAO_OBRA } from './escopo';
 import {
   assinaturas,
   empreiteiras,
@@ -61,6 +62,7 @@ export interface XgestaoAdminAlerta {
 export interface XgestaoAdminDashboard {
   indicadores: {
     assinantes: number;
+    empreiteirasComPerfil: number;
     obrasGerenciadas: number;
     obrasAtivas: number;
     progressoMedio: number;
@@ -82,7 +84,6 @@ export interface XgestaoAdminDashboard {
   };
 }
 
-const XGESTAO_OBRA = and(isNull(obras.clienteId), isNotNull(obras.empreiteiraId));
 const STATUS_VAZIO: Record<XgestaoAdminObraStatus, number> = {
   em_andamento: 0,
   concluida: 0,
@@ -130,29 +131,60 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
 
   const userIds = entitlements.map((item) => item.userId);
   const empreiteiraIds = entitlements.flatMap((item) => item.empreiteiraId ? [item.empreiteiraId] : []);
+  // Uma assinatura ativa pode anteceder a conclusão do perfil da empreiteira.
+  // Resolver os planos antes do retorno sem obras evita classificar todos como free.
+  const subscriptionRows = userIds.length === 0
+    ? []
+    : await db
+      .select({
+        userId: assinaturas.userId,
+        status: assinaturas.status,
+        iniciadaEm: assinaturas.iniciadaEm,
+        tier: planos.tier,
+        planoNome: planos.nome,
+      })
+      .from(assinaturas)
+      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
+      .where(and(eq(assinaturas.persona, 'xgestao'), inArray(assinaturas.userId, userIds)));
+  const activeSubscriptions = new Map<string, typeof subscriptionRows[number]>();
+  for (const subscription of subscriptionRows) {
+    if (subscription.status !== 'ativa') continue;
+    const current = activeSubscriptions.get(subscription.userId);
+    if (!current || subscription.iniciadaEm > current.iniciadaEm) {
+      activeSubscriptions.set(subscription.userId, subscription);
+    }
+  }
 
   if (empreiteiraIds.length === 0) {
+    const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0 };
+    const assinantes = entitlements.map((entitlement) => {
+      const subscription = activeSubscriptions.get(entitlement.userId);
+      const tier = (subscription?.tier ?? 'free') as XgestaoTier;
+      distribuicaoPlanos[tier] += 1;
+      return {
+        id: entitlement.userId,
+        empreiteira: 'Perfil ainda não concluído',
+        email: entitlement.email,
+        obrasGerenciadas: 0,
+        plano: { tier, nome: subscription?.planoNome ?? freePlan[0]?.nome ?? 'Freemium' },
+        fimTeste: null,
+        entradaEm: entitlement.entradaEm.toISOString(),
+      };
+    });
     return {
       indicadores: {
         assinantes: entitlements.length,
+        empreiteirasComPerfil: 0,
         obrasGerenciadas: 0,
         obrasAtivas: 0,
         progressoMedio: 0,
         orcamentoGerenciado: 0,
         valorPago: 0,
-        distribuicaoPlanos: { free: entitlements.length, pro: 0, enterprise: 0 },
+        distribuicaoPlanos,
         distribuicaoStatus: { ...STATUS_VAZIO },
         linksPublicosAtivos: 0,
       },
-      assinantes: entitlements.map((entitlement) => ({
-        id: entitlement.userId,
-        empreiteira: 'Perfil ainda não concluído',
-        email: entitlement.email,
-        obrasGerenciadas: 0,
-        plano: { tier: 'free', nome: freePlan[0]?.nome ?? 'Freemium' },
-        fimTeste: null,
-        entradaEm: entitlement.entradaEm.toISOString(),
-      })),
+      assinantes,
       obras: [],
       alertas: {
         totais: { ocorrenciasAbertas: 0, pagamentosAtrasados: 0, obrasPausadas: 0 },
@@ -162,7 +194,6 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
   }
 
   const [
-    subscriptionRows,
     obraCountRows,
     obrasAggregate,
     statusRows,
@@ -173,19 +204,6 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     overdueAlerts,
     pausedAlerts,
   ] = await Promise.all([
-    userIds.length === 0
-      ? Promise.resolve([])
-      : db
-        .select({
-          userId: assinaturas.userId,
-          status: assinaturas.status,
-          iniciadaEm: assinaturas.iniciadaEm,
-          tier: planos.tier,
-          planoNome: planos.nome,
-        })
-        .from(assinaturas)
-        .innerJoin(planos, eq(planos.id, assinaturas.planoId))
-        .where(and(eq(assinaturas.persona, 'xgestao'), inArray(assinaturas.userId, userIds))),
     db
       .select({
         empreiteiraId: obras.empreiteiraId,
@@ -313,15 +331,6 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       .limit(6),
   ]);
 
-  const activeSubscriptions = new Map<string, typeof subscriptionRows[number]>();
-  for (const subscription of subscriptionRows) {
-    if (subscription.status !== 'ativa') continue;
-    const current = activeSubscriptions.get(subscription.userId);
-    if (!current || subscription.iniciadaEm > current.iniciadaEm) {
-      activeSubscriptions.set(subscription.userId, subscription);
-    }
-  }
-
   const obrasPorEmpreiteira = new Map(
     obraCountRows.map((row) => [row.empreiteiraId, Number(row.total) || 0]),
   );
@@ -411,6 +420,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
   return {
     indicadores: {
       assinantes: assinantes.length,
+      empreiteirasComPerfil: empreiteiraIds.length,
       obrasGerenciadas: totalObras,
       obrasAtivas: distribuicaoStatus.em_andamento,
       progressoMedio: Number(obrasAggregate[0]?.progressoMedio) || 0,

@@ -56,7 +56,7 @@ export default function AdminXgestaoPage() {
   const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0 };
   const saldoPrevisto = (indicadores?.orcamentoGerenciado ?? 0) - (indicadores?.valorPago ?? 0);
   const cards = [
-    { label: 'Assinantes', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+    { label: 'Acessos xgestão', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
     { label: 'Obras ativas', value: String(indicadores?.obrasAtivas ?? 0), icon: RiHammerLine, iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' },
     { label: 'Progresso médio', value: `${indicadores?.progressoMedio ?? 0}%`, icon: RiLineChartLine, iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' },
     { label: 'Orçamento gerenciado', value: formatCurrency(indicadores?.orcamentoGerenciado ?? 0), icon: RiMoneyDollarCircleLine, iconBgColor: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' },
@@ -116,6 +116,9 @@ export default function AdminXgestaoPage() {
           <StatsCard key={card.label} {...card} luminous testId={`xgestao-kpi-${card.label.toLowerCase().replaceAll(' ', '-')}`} />
         ))}
       </div>
+      <p className="-mt-5 text-sm text-muted-foreground">
+        {indicadores?.empreiteirasComPerfil ?? 0} empreiteiras com perfil concluído. Os acessos xgestão incluem quem ainda não concluiu o cadastro.
+      </p>
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="border-gray-100 dark:border-gray-800 lg:col-span-2" data-testid="xgestao-operacao-resumo">
           <CardHeader>
@@ -286,8 +289,8 @@ export default function AdminXgestaoPage() {
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Assinantes xgestão</h2>
-          <p className="text-sm text-muted-foreground">Recorte exclusivo do produto adicional; não altera as assinaturas do marketplace.</p>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Acessos xgestão</h2>
+          <p className="text-sm text-muted-foreground">Inclui perfis incompletos. Na lista de obras, apenas empreiteiras com perfil concluído; o marketplace não é alterado.</p>
         </div>
         {data?.assinantes.length ? (
           <div className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">

@@ -14,6 +14,7 @@ let cnpjSequence = 9_000;
 type Dashboard = {
   indicadores: {
     assinantes: number;
+    empreiteirasComPerfil: number;
     obrasGerenciadas: number;
     obrasAtivas: number;
     progressoMedio: number;
@@ -313,6 +314,126 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     };
     expect(financeiroBody.lucro.metrics).toHaveProperty('receitaTotal');
     expect(financeiroBody.faturamento).toHaveProperty('receitaRecorrenteMensal');
+    await logout(request);
+  });
+
+  test('lista obras de múltiplas empreiteiras xgestão com filtro, paginação e consistência do dashboard', async ({
+    request,
+  }) => {
+    const tag = `XG06 paginação ${Date.now()}`;
+    const contratadas: Array<{ email: string; empreiteiraId: string; obras: string[] }> = [];
+
+    for (const [index, label] of ['lista-a', 'lista-b'].entries()) {
+      const email = await registrar(request, 'empreiteiro', `admin-xgestao-${label}`);
+      await loginAs(request, email);
+      await completarPerfilOperacional(request, 'empreiteiro');
+      await logout(request);
+      const userId = await concederXGestao(request, email);
+
+      await loginAs(request, SEED_ADMIN_EMAIL);
+      const assinantes = await request.get('/api/admin/xgestao/assinantes');
+      expect(assinantes.status(), await assinantes.text()).toBe(200);
+      const payload = (await assinantes.json()) as {
+        rows: Array<{ userId: string; email: string; empreiteiraId: string }>;
+      };
+      const assinante = payload.rows.find((row) => row.email === email);
+      expect(assinante, `assinante ${email} deve aparecer no xgestão`).toBeTruthy();
+      await logout(request);
+
+      await loginAs(request, email);
+      const obras: string[] = [];
+      for (const obraIndex of [1, 2]) {
+        const criada = await request.post('/api/xgestao/obras', {
+          data: { nome: `${tag} empreiteira ${index + 1} obra ${obraIndex}`, endereco: 'Rua da paginação, 100' },
+        });
+        expect(criada.status(), await criada.text()).toBe(201);
+        obras.push(((await criada.json()) as { id: string }).id);
+      }
+      await logout(request);
+      contratadas.push({ email, empreiteiraId: assinante!.empreiteiraId, obras });
+      expect(userId).toBeTruthy();
+    }
+
+    // Obra de marketplace com o mesmo termo de busca: nunca entra no escopo
+    // da lista administrativa xgestão.
+    const contratanteEmail = await registrar(request, 'contratante', 'admin-xgestao-lista-mkt');
+    await loginAs(request, contratanteEmail);
+    await completarPerfilOperacional(request, 'contratante');
+    const marketplace = await request.post('/api/obras', {
+      data: { nome: `${tag} controle marketplace`, endereco: 'Rua do marketplace, 200', tipo: 'Reforma' },
+    });
+    expect(marketplace.status(), await marketplace.text()).toBe(201);
+    const marketplaceId = ((await marketplace.json()) as { id: string }).id;
+    await logout(request);
+
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    const listaUrl = `/api/admin/xgestao/obras?q=${encodeURIComponent(tag)}&por_pagina=1`;
+    const primeira = await request.get(`${listaUrl}&pagina=1`);
+    expect(primeira.status(), await primeira.text()).toBe(200);
+    const pagina1 = (await primeira.json()) as {
+      rows: Array<{ id: string; empreiteiraId: string }>;
+      total: number;
+      pagina: number;
+      porPagina: number;
+      totalPaginas: number;
+      empreiteiras: Array<{ id: string; nome: string }>;
+    };
+    expect(pagina1).toMatchObject({ total: 4, pagina: 1, porPagina: 1, totalPaginas: 4 });
+    expect(pagina1.rows).toHaveLength(1);
+    expect(pagina1.rows[0]?.id).not.toBe(marketplaceId);
+    expect(pagina1.empreiteiras.map((item) => item.id)).toEqual(
+      expect.arrayContaining(contratadas.map((item) => item.empreiteiraId)),
+    );
+
+    const segunda = await request.get(`${listaUrl}&pagina=2`);
+    expect(segunda.status(), await segunda.text()).toBe(200);
+    const pagina2 = (await segunda.json()) as typeof pagina1;
+    expect(pagina2).toMatchObject({ total: 4, pagina: 2, porPagina: 1, totalPaginas: 4 });
+    expect(pagina2.rows).toHaveLength(1);
+    expect(pagina2.rows[0]?.id).not.toBe(pagina1.rows[0]?.id);
+
+    const completa = await request.get(
+      `/api/admin/xgestao/obras?q=${encodeURIComponent(tag)}&por_pagina=20`,
+    );
+    expect(completa.status(), await completa.text()).toBe(200);
+    const completaBody = (await completa.json()) as { rows: Array<{ id: string }>; total: number };
+    expect(completaBody.total).toBe(4);
+    expect(completaBody.rows.map((row) => row.id)).toEqual(
+      expect.arrayContaining(contratadas.flatMap((item) => item.obras)),
+    );
+    expect(completaBody.rows.map((row) => row.id)).not.toContain(marketplaceId);
+
+    for (const contratada of contratadas) {
+      const filtrada = await request.get(
+        `/api/admin/xgestao/obras?q=${encodeURIComponent(tag)}&por_pagina=20&empreiteira_id=${encodeURIComponent(contratada.empreiteiraId)}`,
+      );
+      expect(filtrada.status(), await filtrada.text()).toBe(200);
+      const filtradaBody = (await filtrada.json()) as {
+        rows: Array<{ id: string; empreiteiraId: string }>;
+        total: number;
+        totalPaginas: number;
+      };
+      expect(filtradaBody.total).toBe(2);
+      expect(filtradaBody.totalPaginas).toBe(1);
+      expect(filtradaBody.rows).toHaveLength(2);
+      expect(filtradaBody.rows.map((row) => row.empreiteiraId)).toEqual(
+        Array(2).fill(contratada.empreiteiraId),
+      );
+      expect(filtradaBody.rows.map((row) => row.id)).toEqual(
+        expect.arrayContaining(contratada.obras),
+      );
+      expect(filtradaBody.rows.map((row) => row.id)).not.toContain(marketplaceId);
+    }
+
+    const dashboard = await request.get('/api/admin/xgestao');
+    expect(dashboard.status(), await dashboard.text()).toBe(200);
+    const dashboardBody = (await dashboard.json()) as Dashboard;
+    for (const contratada of contratadas) {
+      const assinante = dashboardBody.assinantes.find((item) => item.email === contratada.email);
+      expect(assinante?.obrasGerenciadas).toBe(2);
+    }
+    expect(dashboardBody.indicadores.empreiteirasComPerfil).toBeGreaterThanOrEqual(2);
+    expect(dashboardBody.indicadores.obrasGerenciadas).toBeGreaterThanOrEqual(4);
     await logout(request);
   });
 
