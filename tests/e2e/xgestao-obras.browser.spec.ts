@@ -356,7 +356,7 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     }
   });
 
-  test("revogar membro remove acesso à obra sem desativar o link público do cliente", async ({
+  test("revogar membro preserva links públicos criados pelo dono e pelo membro", async ({
     page,
     request,
     browser,
@@ -389,6 +389,7 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await convite.locator("#member-name").fill("Membro revogado");
     await convite.locator("#member-email").fill(membroEmail);
     await convite.getByText(nomeObra, { exact: true }).click();
+    await convite.getByRole("combobox", { name: `Permissão para ${nomeObra}` }).selectOption("editar");
     const enviado = page.waitForResponse((res) =>
       res.url().endsWith("/api/xgestao/membros") && res.request().method() === "POST");
     await convite.getByRole("button", { name: "Enviar convite" }).click();
@@ -422,13 +423,26 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       // A navegação pode trocar o cookie HTTP de teste por um Secure.
       // Reponha-o antes da transição; não refaça login depois da revogação.
       expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const criadoPeloMembro = await membro.request.post(`/api/xgestao/obras/${obraId}/share`, {
+        data: { nome: "Link criado pelo membro" },
+      });
+      expect(criadoPeloMembro.status(), await criadoPeloMembro.text()).toBe(201);
+      const linkMembro = (await criadoPeloMembro.json()) as { share: { id: string; path: string } };
+      expect(linkMembro.share.path).not.toBe(share.path);
       const listaAntes = await membro.request.get(`/api/xgestao/obras/${obraId}/share`);
       expect(listaAntes.status(), await listaAntes.text()).toBe(200);
-      expect(await listaAntes.json()).toMatchObject({ shares: [{ id: share.id, path: share.path }] });
+      const linksAntes = (await listaAntes.json()) as { shares: Array<{ id: string; path: string }> };
+      expect(linksAntes.shares).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: share.id, path: share.path }),
+        expect.objectContaining({ id: linkMembro.share.id, path: linkMembro.share.path }),
+      ]));
 
       const destinatario = await destinatarioContext.newPage();
       const antes = await destinatario.goto(share.path);
       expect(antes?.status()).toBe(200);
+      await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
+      const antesMembro = await destinatario.goto(linkMembro.share.path);
+      expect(antesMembro?.status()).toBe(200);
       await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
 
       // Revoga a participação inteira pela tela de Equipe, não a concessão
@@ -450,6 +464,9 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
 
       const depois = await destinatario.reload();
       expect(depois?.status()).toBe(200);
+      await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
+      const depoisDono = await destinatario.goto(share.path);
+      expect(depoisDono?.status()).toBe(200);
       await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
     } finally {
       await membroContext.close();
