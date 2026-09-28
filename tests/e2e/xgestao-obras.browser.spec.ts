@@ -320,6 +320,107 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     }
   });
 
+  test("revogar membro remove acesso à obra sem desativar o link público do cliente", async ({
+    page,
+    request,
+    browser,
+  }, testInfo) => {
+    const dono = await registrarEmpreiteiro(request);
+    await loginAs(request, dono);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, dono);
+    await loginAs(request, dono);
+
+    const nomeObra = `Obra compartilhada ${Date.now()}`;
+    const criada = await request.post("/api/xgestao/obras", {
+      data: { nome: nomeObra, endereco: "Rua do Cliente, 10" },
+    });
+    expect(criada.status(), await criada.text()).toBe(201);
+    const obraId = ((await criada.json()) as { id: string }).id;
+    const criadoLink = await request.post(`/api/xgestao/obras/${obraId}/share`, {
+      data: { nome: "Link enviado ao cliente" },
+    });
+    expect(criadoLink.status(), await criadoLink.text()).toBe(201);
+    const { share } = (await criadoLink.json()) as { share: { id: string; path: string } };
+    await logout(request);
+
+    expect((await page.request.post("/api/test/login-as", { data: { email: dono } })).status()).toBe(200);
+    await page.goto("/xgestao/equipe");
+    await expect(page.getByTestId("xgestao-equipe-page")).toBeVisible();
+    await page.getByRole("button", { name: /Convidar (primeira )?pessoa/ }).first().click();
+    const convite = page.getByRole("dialog", { name: "Convidar pessoa" });
+    const membroEmail = uniqueEmail("xgestao-browser-revoked-member");
+    await convite.locator("#member-name").fill("Membro revogado");
+    await convite.locator("#member-email").fill(membroEmail);
+    await convite.getByText(nomeObra, { exact: true }).click();
+    const enviado = page.waitForResponse((res) =>
+      res.url().endsWith("/api/xgestao/membros") && res.request().method() === "POST");
+    await convite.getByRole("button", { name: "Enviar convite" }).click();
+    expect((await enviado).status()).toBe(201);
+    await expect(convite).toHaveCount(0);
+
+    const emails = await fetchCapturedEmails(page.request, membroEmail);
+    const setupUrl = emails.find((email) => email.meta?.kind === "password-setup")?.meta?.setupUrl;
+    expect(typeof setupUrl).toBe("string");
+    const setup = await page.request.post("/api/auth/definir-senha-inicial", {
+      data: {
+        token: new URL(setupUrl as string).searchParams.get("token"),
+        password: "Xconstr@E2E2026!",
+        confirmPassword: "Xconstr@E2E2026!",
+      },
+    });
+    expect(setup.status(), await setup.text()).toBe(200);
+
+    const membroContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    const destinatarioContext = await browser.newContext({ baseURL: testInfo.project.use.baseURL });
+    try {
+      const membro = await membroContext.newPage();
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      await membro.goto(`/xgestao/obras/${obraId}`);
+      await expect(membro.getByTestId("hero-minha-obra")).toBeVisible();
+      const legal = membro.getByRole("dialog", { name: "Atualizamos nossos documentos" });
+      if (await legal.isVisible()) await legal.getByRole("button", { name: "Agora não" }).click();
+      const tour = membro.getByTestId("guided-tour");
+      if (await tour.isVisible()) await tour.getByRole("button", { name: "Pular" }).click();
+      await expect(membro.getByTestId(`detalhes-link-${share.id}`)).toContainText("Link enviado ao cliente");
+      // A navegação pode trocar o cookie HTTP de teste por um Secure.
+      // Reponha-o antes da transição; não refaça login depois da revogação.
+      expect((await membro.request.post("/api/test/login-as", { data: { email: membroEmail } })).status()).toBe(200);
+      const listaAntes = await membro.request.get(`/api/xgestao/obras/${obraId}/share`);
+      expect(listaAntes.status(), await listaAntes.text()).toBe(200);
+      expect(await listaAntes.json()).toMatchObject({ shares: [{ id: share.id, path: share.path }] });
+
+      const destinatario = await destinatarioContext.newPage();
+      const antes = await destinatario.goto(share.path);
+      expect(antes?.status()).toBe(200);
+      await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
+
+      // Revoga a participação inteira pela tela de Equipe, não a concessão
+      // de uma obra nem o próprio link público.
+      page.once("dialog", (dialog) => dialog.accept());
+      const revogado = page.waitForResponse((res) =>
+        /\/api\/xgestao\/membros\/[^/]+$/.test(new URL(res.url()).pathname) &&
+        res.request().method() === "DELETE");
+      await page.getByRole("button", { name: "Revogar", exact: true }).click();
+      expect((await revogado).status()).toBe(200);
+      await expect(page.getByText("Acesso revogado", { exact: true })).toBeVisible();
+
+      const listaDepois = await membro.request.get(`/api/xgestao/obras/${obraId}/share`);
+      expect(listaDepois.status(), await listaDepois.text()).toBe(403);
+      await membro.reload();
+      await expect(membro).toHaveURL(/\/login\?perfil=xgestao/);
+      await expect(membro.getByTestId("hero-minha-obra")).toHaveCount(0);
+      await expect(membro.getByTestId(`detalhes-link-${share.id}`)).toHaveCount(0);
+
+      const depois = await destinatario.reload();
+      expect(depois?.status()).toBe(200);
+      await expect(destinatario.getByTestId("obra-publica-shell")).toContainText(nomeObra);
+    } finally {
+      await membroContext.close();
+      await destinatarioContext.close();
+    }
+  });
+
   test("cadastro evita envio duplicado e preserva dados durante o bloqueio", async ({
     page,
   }) => {
