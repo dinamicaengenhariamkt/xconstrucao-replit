@@ -197,9 +197,31 @@ poderá indicar quais separações fazem falta.
 - [x] `/admin/xgestao` exibe contagens/dados de membros sem ações de escrita
 - [x] Obra criada por gestor usa o plano do dono
 - [x] Convite para e-mail de quem já tem empresa → 409
-- [ ] **Guarda de regressão:** um check no `test:integration:gaps` (ou script próprio) que
-      reprova `eq(empreiteiras.userId` fora do helper e das junções listadas. Sem isso, a próxima
-      rota nova esquece o membro e ninguém percebe
+- [x] **Guarda de regressão:** `test:integration:gaps` checa cada handler de detalhe
+      `/api/obras/[id]/**` e `/api/xgestao/obras/[id]/**` quanto a uma chamada ao guard
+      da obra (direta ou via função local), mesmo com E2E coberto ou URL na baseline.
+      A criação `/api/xgestao/obras` exige `assertXgestaoUser`. Falha também no modo
+      informativo e ao atualizar a baseline. Testes em
+      `scripts/obra-route-access-guard.test.ts`.
+
+### Exceções da checagem estática
+
+- `/api/admin/**` tem autenticação e autorização administrativa próprias; suas junções
+  com empreiteiras servem à visão de moderação/consulta, não ao acesso de membros.
+- `/api/obras` é listagem/criação do **marketplace** (a consulta de `empreiteiras.userId`
+  ali é para filtrar a zona do empreiteiro, não para conceder acesso a uma obra xgestão).
+  `/api/obras/destaque` é a vitrine pública curada. Só estes caminhos exatos são
+  dispensados; uma rota de detalhe nova sob `/api/obras/[id]` não herda a exceção.
+- Rotas de candidaturas, chat e `empreiteiro/minhas-obras` são de marketplace,
+  fora do namespace de conteúdo interno da obra xgestão. As junções com
+  `empreiteiras.userId` nessas rotas não concedem permissão de equipe.
+- Links públicos sob `/api/xgestao/obras/[id]/share` passam por
+  `requireXgestaoObraAccess`, que verifica o acesso por obra internamente.
+
+O check é um alerta estático de chamadas nos handlers, não substitui testes de
+autorização nem prova que o resultado foi usado para bloquear a resposta. Ao criar
+ou mover um endpoint de conteúdo privado para outro namespace, revisar o escopo
+da checagem e exigir o mesmo guard antes de servir dados ou mutar a obra.
 
 ## 8. Pendências para o cliente
 

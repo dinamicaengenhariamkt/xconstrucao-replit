@@ -19,7 +19,10 @@
  *   npm run test:integration:gaps:strict        (gate: falha em gap NOVO fora da baseline)
  *   npm run test:integration:gaps -- --update-baseline  (regrava a baseline atual)
  *
- * Exit code: 0 por padrão (é um radar informativo). Com --strict o exit passa a
+ * Além do radar, verifica o uso de guards nas rotas privadas de obras; problemas
+ * de acesso falham em TODOS os modos e não podem entrar na baseline.
+ *
+ * Exit code: 0 por padrão se não houver problemas de acesso. Com --strict o exit passa a
  * ser 1 quando há gap NOVO — endpoint sem cobertura que não consta na baseline
  * `scripts/integration-coverage-baseline.json`. Isso implementa um "ratchet":
  * todo endpoint novo nasce com E2E, sem bloquear o backlog já existente. À medida
@@ -29,6 +32,7 @@
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { checkObraRouteAccess, type ObraRouteIssue } from "./obra-route-access-guard";
 
 const ROOT = process.cwd();
 const API_DIR = join(ROOT, "app", "api");
@@ -95,7 +99,7 @@ function urlFromRouteFile(file: string): string {
 
 /** Extrai os métodos HTTP exportados de um route.ts. */
 function methodsInFile(content: string): string[] {
-  const re = /export\s+(?:async\s+)?function\s+(GET|POST|PATCH|PUT|DELETE|HEAD|OPTIONS)\b/g;
+  const re = /export\s+(?:(?:async\s+)?function\s+|(?:const|let)\s+)(GET|POST|PATCH|PUT|DELETE|HEAD|OPTIONS)\b/g;
   const found = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(content))) found.add(m[1]!);
@@ -169,6 +173,9 @@ function main(): void {
   const updateBaseline = args.includes("--update-baseline");
 
   const endpoints = collectEndpoints();
+  const accessIssues: ObraRouteIssue[] = endpoints.flatMap((endpoint) =>
+    checkObraRouteAccess(endpoint.file, readFileSync(join(ROOT, endpoint.file), "utf8"))
+  );
   const testText = readAllTestText();
 
   const gaps = endpoints
@@ -180,6 +187,12 @@ function main(): void {
   gaps.sort((a, b) => score(b) - score(a) || a.url.localeCompare(b.url));
 
   if (updateBaseline) {
+    if (accessIssues.length) {
+      console.error("A baseline de E2E não dispensa a verificação de acesso às obras.");
+      printAccessIssues(accessIssues);
+      process.exitCode = 1;
+      return;
+    }
     writeBaseline(gaps.map((e) => e.url));
     console.log(`✅ Baseline atualizada: ${gaps.length} endpoint(s) sem cobertura registrados.`);
     console.log(`   ${relative(ROOT, BASELINE_FILE)}`);
@@ -193,15 +206,16 @@ function main(): void {
   if (asJson) {
     console.log(
       JSON.stringify(
-        { total: endpoints.length, gaps, baselineSize: baseline.size, newGaps },
+        { total: endpoints.length, gaps, baselineSize: baseline.size, newGaps, accessIssues },
         null,
         2
       )
     );
-    if (strict && newGaps.length > 0) process.exit(1);
+    if (accessIssues.length || (strict && newGaps.length > 0)) process.exitCode = 1;
     return;
   }
 
+  if (accessIssues.length) printAccessIssues(accessIssues);
   console.log("");
   console.log("🔎 Radar de cobertura de integração (Jornada 36 — Fase 5)");
   console.log(`   Endpoints na API: ${endpoints.length}`);
@@ -218,6 +232,7 @@ function main(): void {
     if (newGaps.length === 0) {
       console.log("✅ Nenhum endpoint novo sem cobertura. Gate OK.");
       console.log("   (backlog da baseline não bloqueia — encolha com --update-baseline)");
+      if (accessIssues.length) process.exitCode = 1;
       return;
     }
     console.log("❌ Gate strict: endpoint(s) NOVO(s) sem cobertura de integração —");
@@ -232,11 +247,13 @@ function main(): void {
       console.log(`     ${tag}  —  ${e.file}`);
     }
     console.log("");
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (gaps.length === 0) {
     console.log("✅ Nenhum endpoint crítico/mutação sem cobertura detectado. Bom trabalho!");
+    if (accessIssues.length) process.exitCode = 1;
     return;
   }
 
@@ -253,6 +270,12 @@ function main(): void {
   console.log("");
   console.log("   Dica: escreva o spec em tests/e2e/integration/ seguindo os padrões");
   console.log("   já existentes (login-as, cleanup por nome 'E2E', asserts de status + estado).");
+  if (accessIssues.length) process.exitCode = 1;
+}
+
+function printAccessIssues(issues: ObraRouteIssue[]): void {
+  console.error("❌ Rotas de obra sem verificação de acesso da equipe:");
+  for (const issue of issues) console.error(`   ${issue.method} ${issue.file}: ${issue.reason}`);
 }
 
 main();
