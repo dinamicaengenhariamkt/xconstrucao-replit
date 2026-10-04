@@ -12,6 +12,7 @@ import {
   type PlanUsageItem,
 } from "@shared/lib/plans-catalog";
 import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
+import { getEstadoTeste, naoEhTesteVencido, type EstadoTeste } from "@features/xgestao/teste/server/teste-service";
 
 async function computeEmpreiteiroUsage(userId: string): Promise<Record<string, number>> {
   const [emp] = await db.select().from(empreiteiras).where(eq(empreiteiras.userId, userId));
@@ -134,6 +135,8 @@ export async function GET(request: NextRequest) {
     persona = user.role === "empreiteiro" ? "empreiteiro" : "contratante";
   }
   let tier: PlanoTier = (user.plano as PlanoTier) ?? "free";
+  // XG35 — calculado antes do tier: também grava o vencimento preguiçoso do teste.
+  const teste: EstadoTeste | null = persona === "xgestao" ? await getEstadoTeste(user.id) : null;
   if (persona === "xgestao") {
     const [assinaturaXGestao] = await db
       .select({ tier: planos.tier })
@@ -143,6 +146,7 @@ export async function GET(request: NextRequest) {
         eq(assinaturas.userId, user.id),
         eq(assinaturas.persona, "xgestao"),
         eq(assinaturas.status, "ativa"),
+        naoEhTesteVencido(),
       ))
       .limit(1);
     tier = (assinaturaXGestao?.tier as PlanoTier | undefined) ?? "free";
@@ -246,6 +250,7 @@ export async function GET(request: NextRequest) {
     catalogo,
     uso,
     hasCpfCnpj,
+    ...(teste ? { teste } : {}),
   });
   setNoCacheHeaders(response);
   return response;

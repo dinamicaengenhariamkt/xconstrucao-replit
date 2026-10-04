@@ -2,7 +2,8 @@ import 'server-only';
 
 import { and, count, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '@shared/db/db';
-import { assinaturas, financeiro, obras, planos } from '@shared/db/schema';
+import { assinaturas, financeiro, obras, planos, users } from '@shared/db/schema';
+import { getPlanCatalog } from '@shared/lib/plans-catalog';
 import {
   filtroObrasXgestao,
   listarMembrosEmpreiteirasXgestao,
@@ -10,6 +11,7 @@ import {
   type XgestaoAssinanteBase,
   type XgestaoMembroEmpresa,
 } from './escopo';
+import { expirarTestesVencidos, TESTE_PROVIDER } from '@features/xgestao/teste/server/teste-service';
 
 export type XgestaoTier = 'free' | 'pro' | 'enterprise';
 
@@ -25,9 +27,18 @@ export interface XgestaoAssinanteDetalhe extends XgestaoAssinanteBase {
      */
     status: string | null;
     renovaEm: string | null;
+    /** XG35 — assinatura ativa é o teste grátis; `renovaEm` é então o fim do teste. */
+    emTeste: boolean;
   };
   obrasGerenciadas: number;
   obrasAtivas: number;
+  /**
+   * XG36 — uso do plano pela mesma regra do limite (`create-obra.ts`): obras não
+   * concluídas. `limiteObras >= 9999` significa sem limite (fase de teste, XG39).
+   */
+  uso: { obrasEmAberto: number; limiteObras: number };
+  /** XG36 — último login do responsável (`users.last_login_at`). */
+  ultimoAcessoEm: string | null;
   /** Pessoas vinculadas à empresa; não entram na contagem de assinantes. */
   membros: Array<Pick<XgestaoMembroEmpresa, 'userId' | 'nome' | 'email' | 'papel' | 'status' | 'obras'>>;
 }
@@ -58,6 +69,8 @@ function money(valor: unknown): number {
  * assinantes, não no de obras.
  */
 export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDetalhe[]> {
+  // XG35 — teste vencido não pode aparecer como plano ativo na lista.
+  await expirarTestesVencidos();
   const base = await listarBase();
   if (base.length === 0) return [];
 
@@ -68,11 +81,12 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
   const escopo = filtroObrasXgestao(empreiteiraIds);
   if (!escopo) return [];
 
-  const [assinaturaRows, obraRows, planoFree, membros] = await Promise.all([
+  const [assinaturaRows, obraRows, planoFree, membros, acessos] = await Promise.all([
     db
       .select({
         userId: assinaturas.userId,
         status: assinaturas.status,
+        provider: assinaturas.gatewayProvider,
         renovaEm: assinaturas.renovaEm,
         tier: planos.tier,
         nome: planos.nome,
@@ -87,6 +101,7 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
         empreiteiraId: obras.empreiteiraId,
         total: count(),
         ativas: sql<number>`count(*) filter (where ${obras.status} = 'em_andamento')::int`,
+        emAberto: sql<number>`count(*) filter (where ${obras.status} <> 'concluida')::int`,
       })
       .from(obras)
       .where(escopo)
@@ -97,7 +112,9 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
       .where(and(eq(planos.persona, 'xgestao'), eq(planos.tier, 'free')))
       .limit(1),
     listarMembrosEmpreiteirasXgestao([...new Set(empreiteiraIds)]),
+    db.select({ id: users.id, lastLoginAt: users.lastLoginAt }).from(users).where(inArray(users.id, userIds)),
   ]);
+  const ultimoAcesso = new Map(acessos.map((linha) => [linha.id, linha.lastLoginAt]));
 
   // Só assinatura **ativa** define o tier, o mesmo critério de `dashboard.ts`.
   // Pegar a mais recente de qualquer status faria quem cancelou o pro e voltou
@@ -119,17 +136,25 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
   return base.map((assinante) => {
     const assinatura = porUsuario.get(assinante.userId);
     const obrasDoAssinante = obrasPorEmpreiteira.get(assinante.empreiteiraId);
+    const tier = (assinatura?.tier ?? 'free') as XgestaoTier;
+    const acesso = ultimoAcesso.get(assinante.userId);
     return {
       ...assinante,
       plano: {
-        tier: (assinatura?.tier ?? 'free') as XgestaoTier,
+        tier,
         nome: assinatura?.nome ?? planoFree[0]?.nome ?? 'Freemium',
         valorMensal: money(assinatura?.valorMensal ?? planoFree[0]?.valorMensal),
         status: assinatura?.status ?? null,
         renovaEm: assinatura?.renovaEm ? assinatura.renovaEm.toISOString() : null,
+        emTeste: assinatura?.provider === TESTE_PROVIDER,
       },
       obrasGerenciadas: obrasDoAssinante?.total ?? 0,
       obrasAtivas: obrasDoAssinante?.ativas ?? 0,
+      uso: {
+        obrasEmAberto: Number(obrasDoAssinante?.emAberto) || 0,
+        limiteObras: getPlanCatalog('xgestao', tier).limites.obrasAtivas ?? 0,
+      },
+      ultimoAcessoEm: acesso ? acesso.toISOString() : null,
       membros: (membrosPorEmpreiteira.get(assinante.empreiteiraId) ?? [])
         .map(({ userId, nome, email, papel, status, obras }) => ({ userId, nome, email, papel, status, obras })),
     };
@@ -185,7 +210,8 @@ export async function faturamentoXgestao(
     distribuicaoPlanos[assinante.plano.tier] += 1;
     // Só assinatura paga e ativa entra no recorrente: inadimplente e cancelada
     // não são receita esperada para o próximo ciclo.
-    if (assinante.plano.tier !== 'free' && assinante.plano.status === 'ativa') {
+    // XG35 — teste grátis não é receita recorrente.
+    if (assinante.plano.tier !== 'free' && assinante.plano.status === 'ativa' && !assinante.plano.emTeste) {
       receitaRecorrenteMensal += assinante.plano.valorMensal;
       assinantesPagantes += 1;
     }

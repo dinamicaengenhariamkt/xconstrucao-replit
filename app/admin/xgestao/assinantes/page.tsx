@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { RiArrowLeftLine } from 'react-icons/ri';
+import { RiArrowLeftLine, RiDownloadLine } from 'react-icons/ri';
+import { Button } from '@shared/components/ui/button';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
 import { useXgestaoAdminAssinantes } from '@features/xgestao/admin/hooks/use-admin-xgestao';
@@ -38,7 +39,12 @@ export default function AdminXgestaoAssinantesPage() {
         >
           <RiArrowLeftLine /> Voltar ao resumo
         </Link>
-        <h1 className="text-2xl font-extrabold tracking-tight">Assinantes do xgestão</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">Assinantes do xgestão</h1>
+          <Button asChild variant="outline" size="sm" data-testid="xgestao-assinantes-exportar">
+            <a href="/api/admin/xgestao/export?tipo=assinantes"><RiDownloadLine /> Exportar CSV</a>
+          </Button>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Cada linha representa uma empresa e seu responsável com acesso xgestão. Membros aparecem apenas como vínculos da equipe e não contam como nova empresa ou assinatura.
         </p>
@@ -63,6 +69,7 @@ export default function AdminXgestaoAssinantesPage() {
                   <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
                   <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Plano</th>
                   <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Situação</th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Último acesso</th>
                   <th className="hidden px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell">Entrada</th>
                 </tr>
               </thead>
@@ -117,17 +124,29 @@ export default function AdminXgestaoAssinantesPage() {
                       {assinante.obrasAtivas > 0 && (
                         <span className="ml-1 text-xs font-normal text-gray-400">({assinante.obrasAtivas} ativas)</span>
                       )}
+                      {/* XG36 — uso do plano pela regra do limite: obras não concluídas. */}
+                      <p className="mt-1 text-xs font-normal text-gray-400" data-testid={`xgestao-assinante-uso-${assinante.userId}`}>
+                        {assinante.uso.limiteObras >= 9999
+                          ? `${assinante.uso.obrasEmAberto} em aberto · sem limite`
+                          : `${assinante.uso.obrasEmAberto} de ${assinante.uso.limiteObras} no plano`}
+                      </p>
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                         {TIER_LABEL[assinante.plano.tier] ?? assinante.plano.tier}
                       </span>
-                      {assinante.plano.valorMensal > 0 && (
+                      {assinante.plano.emTeste ? (
+                        <p className="mt-1 text-xs text-gray-400">teste grátis</p>
+                      ) : assinante.plano.valorMensal > 0 && (
                         <p className="mt-1 text-xs text-gray-400">{formatCurrency(assinante.plano.valorMensal)}/mês</p>
                       )}
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      {assinante.plano.status ? (
+                      {assinante.plano.emTeste ? (
+                        <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          teste até {assinante.plano.renovaEm ? dateFormatter.format(new Date(assinante.plano.renovaEm)) : '—'}
+                        </span>
+                      ) : assinante.plano.status ? (
                         <span className={cn(
                           'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
                           STATUS_STYLE[assinante.plano.status] ?? 'bg-gray-100 text-gray-600',
@@ -138,6 +157,9 @@ export default function AdminXgestaoAssinantesPage() {
                         // Free não gera cobrança, então não há assinatura para ter situação.
                         <span className="text-xs text-gray-400">sem cobrança</span>
                       )}
+                    </td>
+                    <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">
+                      {assinante.ultimoAcessoEm ? dateFormatter.format(new Date(assinante.ultimoAcessoEm)) : 'nunca'}
                     </td>
                     <td className="hidden px-5 py-3 text-gray-500 xl:table-cell">
                       {dateFormatter.format(new Date(assinante.entradaEm))}

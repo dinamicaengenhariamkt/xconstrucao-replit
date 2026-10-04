@@ -9,18 +9,22 @@ import {
   medicoes,
   obras,
   obrasSalvas,
+  obraAditivos,
   obraAnexos,
   obraChecklistItens,
+  obraChecklistMarcacoes,
   obraChecklists,
   obraDiario,
   obraEquipe,
   obraEtapas,
   obraFotos,
   obraOcorrencias,
+  obraShareLinks,
   obraTarefas,
   pagamentosSplit,
   users,
   userFiles,
+  xgestaoMembroObras,
 } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { insertObraSchema, insertObraSchemaStrict } from "@features/obras/schemas";
@@ -696,9 +700,10 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
       .from(obraChecklists)
       .where(eq(obraChecklists.obraId, id));
     if (checklistsDaObra.length > 0) {
-      await tx.delete(obraChecklistItens).where(
-        inArray(obraChecklistItens.checklistId, checklistsDaObra.map((c) => c.id)),
-      );
+      const checklistIds = checklistsDaObra.map((c) => c.id);
+      await tx.delete(obraChecklistItens).where(inArray(obraChecklistItens.checklistId, checklistIds));
+      // XG33 AJ-05 — marcações da recorrência (XG21), filhas do checklist.
+      await tx.delete(obraChecklistMarcacoes).where(inArray(obraChecklistMarcacoes.checklistId, checklistIds));
     }
 
     const candidaturasDaObra = await tx
@@ -719,6 +724,13 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     await tx.delete(obraFotos).where(eq(obraFotos.obraId, id));
     await tx.delete(obraAnexos).where(eq(obraAnexos.obraId, id));
     await tx.delete(obraEquipe).where(eq(obraEquipe.obraId, id));
+    // XG33 AJ-05 — filhos do xgestão que a limpeza da XG10 não cobria. No banco
+    // de dev `xgestao_membro_obras` não tem FK nenhuma para `obras` (sobraria o
+    // vínculo do membro com uma obra inexistente); as outras três têm cascade em
+    // dev, mas a regra desta limpeza é não depender das constraints do ambiente.
+    await tx.delete(xgestaoMembroObras).where(eq(xgestaoMembroObras.obraId, id));
+    await tx.delete(obraShareLinks).where(eq(obraShareLinks.obraId, id));
+    await tx.delete(obraAditivos).where(eq(obraAditivos.obraId, id));
     await tx.delete(medicoes).where(eq(medicoes.obraId, id));
     await tx.delete(obrasSalvas).where(eq(obrasSalvas.obraId, id));
     await tx.delete(candidaturas).where(eq(candidaturas.obraId, id));

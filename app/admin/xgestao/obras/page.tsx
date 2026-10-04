@@ -3,11 +3,10 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { RiArrowLeftLine, RiLinkM, RiSearchLine } from 'react-icons/ri';
+import { RiArrowLeftLine, RiDownloadLine, RiLinkM, RiSearchLine } from 'react-icons/ri';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Button } from '@shared/components/ui/button';
-import { HealthBadge } from '@features/shared/health';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
 import { AssinantesObrasPicker } from '@features/xgestao/admin/components/AssinantesObrasPicker';
 import {
@@ -15,7 +14,8 @@ import {
   useXgestaoAdminObras,
   type XgestaoObraStatus,
 } from '@features/xgestao/admin/hooks/use-admin-xgestao';
-import { formatCurrency } from '@shared/lib/formatters';
+import type { SituacaoObra } from '@features/xgestao/admin/server/situacao';
+import { formatCurrency, formatDate } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
 
 const STATUS_LABEL: Record<XgestaoObraStatus, string> = {
@@ -32,6 +32,23 @@ const STATUS_STYLE: Record<XgestaoObraStatus, string> = {
   concluida: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
 };
 
+const SITUACAO_LABEL: Record<SituacaoObra, string> = {
+  atrasada: 'Atrasadas',
+  parada: 'Paradas',
+  no_prazo: 'No prazo',
+};
+
+function situacaoDaUrl(valor: string | null): SituacaoObra | '' {
+  return valor && valor in SITUACAO_LABEL ? (valor as SituacaoObra) : '';
+}
+
+/** Mesma regra do indicador "Obras atrasadas" do painel: previsão vencida e obra não concluída. */
+function estaAtrasada(obra: { dataPrevisao: string | null; status: XgestaoObraStatus }): boolean {
+  if (!obra.dataPrevisao || obra.status === 'concluida') return false;
+  const hoje = new Date().toISOString().slice(0, 10);
+  return obra.dataPrevisao.slice(0, 10) < hoje;
+}
+
 /** `useSearchParams` exige boundary de Suspense na renderização estática. */
 export default function AdminXgestaoObrasPage() {
   return (
@@ -47,6 +64,8 @@ function ObrasXgestao() {
   const router = useRouter();
   const [busca, setBusca] = useState('');
   const [status, setStatus] = useState<XgestaoObraStatus | ''>('');
+  // XG36 — o painel abre a lista já filtrada (`?situacao=atrasada|parada|no_prazo`).
+  const [situacao, setSituacao] = useState<SituacaoObra | ''>(() => situacaoDaUrl(searchParams.get('situacao')));
   const empreiteiraId = searchParams.get('empreiteira_id') ?? '';
   const [pagina, setPagina] = useState(1);
   const assinantes = useXgestaoAdminAssinantes();
@@ -56,6 +75,7 @@ function ObrasXgestao() {
     busca,
     status: status || undefined,
     empreiteiraId: empreiteiraId || undefined,
+    situacao: situacao || undefined,
     pagina,
   });
 
@@ -95,6 +115,7 @@ function ObrasXgestao() {
           onTentarNovamente={() => void assinantes.refetch()}
         />
         <section className="min-w-0 space-y-5" aria-label="Obras da empreiteira selecionada">
+          <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">
               {empreiteiraId ? (selecionada?.empreiteiraNome ?? 'Empreiteira selecionada') : 'Todas as obras'}
@@ -107,7 +128,20 @@ function ObrasXgestao() {
                   : 'Obras próprias das empreiteiras com acesso ao xgestão.'}
             </p>
           </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
+          {/* XG36 — exporta exatamente o que os filtros mostram. */}
+          <Button asChild variant="outline" size="sm" data-testid="xgestao-obras-exportar">
+            <a href={`/api/admin/xgestao/export?${new URLSearchParams({
+              tipo: 'obras',
+              ...(busca.trim() ? { q: busca.trim() } : {}),
+              ...(status ? { status } : {}),
+              ...(situacao ? { situacao } : {}),
+              ...(empreiteiraId ? { empreiteira_id: empreiteiraId } : {}),
+            }).toString()}`}>
+              <RiDownloadLine /> Exportar CSV
+            </a>
+          </Button>
+          </div>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_180px]">
         <div className="relative">
           <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -129,6 +163,17 @@ function ObrasXgestao() {
             <option key={valor} value={valor}>{rotulo}</option>
           ))}
         </select>
+        <select
+          value={situacao}
+          onChange={(event) => aplicar(setSituacao)(event.target.value as SituacaoObra | '')}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-testid="xgestao-obras-situacao"
+        >
+          <option value="">Todas as situações</option>
+          {Object.entries(SITUACAO_LABEL).map(([valor, rotulo]) => (
+            <option key={valor} value={valor}>{rotulo}</option>
+          ))}
+        </select>
       </div>
 
       {isError && !data ? (
@@ -140,7 +185,7 @@ function ObrasXgestao() {
       ) : !data || data.rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800">
           <p>
-            {selecionada && selecionada.obrasGerenciadas === 0 && !busca && !status
+            {selecionada && selecionada.obrasGerenciadas === 0 && !busca && !status && !situacao
               ? 'Esta empreiteira ainda não tem obras.'
               : 'Nenhuma obra encontrada com esses filtros.'}
           </p>
@@ -160,9 +205,10 @@ function ObrasXgestao() {
                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Obra</th>
                     <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Empreiteira</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Saúde</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Progresso</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prazo</th>
                     <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Orçamento</th>
+                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Custo real</th>
+                    <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell">Última atividade</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -194,12 +240,23 @@ function ObrasXgestao() {
                           {STATUS_LABEL[obra.status]}
                         </span>
                       </td>
-                      <td className="hidden px-4 py-3 lg:table-cell">
-                        {obra.saude ? <HealthBadge status={obra.saude.status} size="sm" /> : <span className="text-xs text-gray-400">—</span>}
+                      {/* XG34 — era o percentual de `obras.progresso`, coluna sem escritor. */}
+                      <td
+                        className={cn(
+                          'px-4 py-3 text-right font-semibold',
+                          estaAtrasada(obra) && 'text-red-600 dark:text-red-400',
+                        )}
+                      >
+                        {obra.dataPrevisao ? formatDate(obra.dataPrevisao) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold">{obra.progresso}%</td>
                       <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-gray-300 sm:table-cell">
                         {formatCurrency(obra.valorTotal)}
+                      </td>
+                      <td className="hidden px-4 py-3 text-right text-gray-600 dark:text-gray-300 lg:table-cell">
+                        {formatCurrency(obra.valorPago)}
+                      </td>
+                      <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-gray-300 xl:table-cell">
+                        {obra.ultimaAtividadeEm ? formatDate(obra.ultimaAtividadeEm) : '—'}
                       </td>
                     </tr>
                   ))}

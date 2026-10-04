@@ -25,6 +25,7 @@ import { Switch } from '@shared/components/ui/switch';
 import { Checkbox } from '@shared/components/ui/checkbox';
 import { Textarea } from '@shared/components/ui/textarea';
 import { cn } from '@shared/lib/utils';
+import { useAuth } from '@features/auth/hooks/use-auth';
 import { useToast } from '@shared/hooks/use-toast';
 import { CepInput } from '@features/perfil/components/CepInput';
 import { formatCnpj, isCepValid, isCnpjValid, unformatCnpj } from '@shared/lib/masks';
@@ -53,15 +54,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
 }
 
-export function XGestaoConfiguracoesView() {
+/**
+ * XG37 — membro da equipe (gestor/colaborador) não administra empresa nem plano:
+ * essas rotas respondem 403 para ele. Antes a tela as chamava mesmo assim e
+ * mostrava formulários vazios. Para o membro ficam Perfil (leitura), Notificações
+ * e Segurança.
+ */
+const SECOES_DO_MEMBRO: Section[] = ['perfil', 'notificacoes', 'seguranca'];
+
+export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean }) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const navItems = isOwner ? NAV_ITEMS : NAV_ITEMS.filter((item) => SECOES_DO_MEMBRO.includes(item.id));
   const requested = searchParams.get('tab') as Section | null;
   const [section, setSection] = useState<Section>(
-    requested && NAV_ITEMS.some((item) => item.id === requested) ? requested : 'perfil',
+    requested && navItems.some((item) => item.id === requested) ? requested : 'perfil',
   );
   const { toast } = useToast();
-  const { data: perfil, isLoading } = usePerfilEmpreiteiro();
+  const { user } = useAuth();
+  const { data: perfil, isLoading: carregandoPerfil } = usePerfilEmpreiteiro({ enabled: isOwner });
+  const isLoading = isOwner && carregandoPerfil;
   const updatePerfil = useUpdatePerfilEmpreiteiro();
   const { data: preferencias } = usePreferencias();
   const updatePreferencias = useUpdatePreferencias();
@@ -82,8 +94,8 @@ export function XGestaoConfiguracoesView() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (requested && NAV_ITEMS.some((item) => item.id === requested)) setSection(requested);
-  }, [requested]);
+    if (requested && navItems.some((item) => item.id === requested)) setSection(requested);
+  }, [requested, navItems]);
 
   useEffect(() => {
     if (!perfil) return;
@@ -161,7 +173,7 @@ export function XGestaoConfiguracoesView() {
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <Button key={item.id} variant={section === item.id ? 'default' : 'outline'} size="sm" onClick={() => setSection(item.id)} className="shrink-0">
             <item.icon className="mr-2 size-4" />{item.label}
           </Button>
@@ -170,7 +182,7 @@ export function XGestaoConfiguracoesView() {
 
       <div className="flex items-start gap-8">
         <nav className="sticky top-6 hidden w-56 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 lg:block">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -190,7 +202,21 @@ export function XGestaoConfiguracoesView() {
         <div className="min-w-0 flex-1">
           {isLoading ? <Skeleton className="h-96 rounded-xl" /> : (
             <>
-              {section === 'perfil' && (
+              {section === 'perfil' && !isOwner && (
+                <Card data-testid="xgestao-perfil-membro">
+                  <CardHeader><CardTitle>Seu perfil</CardTitle></CardHeader>
+                  <CardContent className="grid gap-5 sm:grid-cols-2">
+                    <Field label="Nome"><Input value={user?.name ?? ''} disabled /></Field>
+                    <Field label="E-mail"><Input value={user?.email ?? ''} disabled /></Field>
+                    <p className="text-sm text-muted-foreground sm:col-span-2">
+                      Você participa da empresa como membro da equipe. Dados da empresa e do plano são
+                      gerenciados pelo responsável.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {section === 'perfil' && isOwner && (
                 <Card>
                   <CardHeader><CardTitle>Perfil do responsável</CardTitle></CardHeader>
                   <CardContent className="grid gap-5 sm:grid-cols-2">
@@ -202,7 +228,7 @@ export function XGestaoConfiguracoesView() {
                 </Card>
               )}
 
-              {section === 'empresa' && (
+              {section === 'empresa' && isOwner && (
                 <Card>
                   <CardHeader><CardTitle>Dados da empresa</CardTitle></CardHeader>
                   <CardContent className="grid gap-5 sm:grid-cols-2">
@@ -333,11 +359,11 @@ export function XGestaoConfiguracoesView() {
               {section === 'seguranca' && (
                 <div className="flex flex-col gap-6">
                   <TwoFactorSection />
-                  <ContaSection emailAtual={perfil?.email} />
+                  <ContaSection emailAtual={isOwner ? perfil?.email : user?.email} />
                 </div>
               )}
 
-              {section === 'plano' && (
+              {section === 'plano' && isOwner && (
                 <XGestaoPlanosSection />
               )}
             </>

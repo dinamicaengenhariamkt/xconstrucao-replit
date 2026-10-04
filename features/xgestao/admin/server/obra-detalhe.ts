@@ -3,24 +3,23 @@ import 'server-only';
 import { and, desc, eq, gt, isNull, or } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { empreiteiras, obraShareLinks, obras, users } from '@shared/db/schema';
-import { computeHealthMapForObras } from '@features/shared/health/summary-server';
 import { computeProfitSummaryForObras } from '@features/shared/profit/summary-server';
-import type { ObraHealth } from '@features/shared/health/types';
 import type { ProfitSummaryData } from '@features/shared/profit/types';
 import { buildObraPublicaView } from '@features/xgestao/obra-publica/server/projection';
 import type { ObraPublicaView } from '@features/xgestao/obra-publica/types';
 import { SECOES_PUBLICAS, type SecoesPublicas } from '@features/xgestao/obra-publica/secoes';
 import { obraPertenceAoXgestao } from './escopo';
+import { custoRealPorObra } from './custo-real';
 
 export interface XgestaoObraDetalhe {
   obra: {
     id: string;
     nome: string;
     status: string;
-    progresso: number;
     cidade: string | null;
     uf: string | null;
     valorTotal: number;
+    /** Custo real: saídas pagas pelo dono (`custo-real.ts`), não `obras.valor_pago`. */
     valorPago: number;
     dataInicio: string | null;
     dataPrevisao: string | null;
@@ -34,7 +33,6 @@ export interface XgestaoObraDetalhe {
     email: string;
   };
   /** Diagnóstico administrativo — nunca exposto no link público (XG04 §8). */
-  saude: ObraHealth | null;
   lucro: ProfitSummaryData;
   linkPublico: {
     ativo: boolean;
@@ -42,6 +40,14 @@ export interface XgestaoObraDetalhe {
     ultimoAcessoEm: string | null;
     criadoEm: string | null;
   };
+  /** XG36 — todos os links ativos (a XG30 permite até 5 por obra, um por público). */
+  linksPublicos: Array<{
+    nome: string;
+    visualizacoes: number;
+    ultimoAcessoEm: string | null;
+    criadoEm: string | null;
+    expiraEm: string | null;
+  }>;
   /** Mesmo conteúdo operacional que o cliente vê, em leitura. */
   conteudo: ObraPublicaView | null;
 }
@@ -66,11 +72,9 @@ export async function detalheObraXgestao(obraId: string): Promise<XgestaoObraDet
       id: obras.id,
       nome: obras.nome,
       status: obras.status,
-      progresso: obras.progresso,
       cidade: obras.cidade,
       uf: obras.uf,
       valorTotal: obras.valorTotal,
-      valorPago: obras.valorPago,
       dataInicio: obras.dataInicio,
       dataPrevisao: obras.dataPrevisao,
       criadaEm: obras.createdAt,
@@ -87,13 +91,15 @@ export async function detalheObraXgestao(obraId: string): Promise<XgestaoObraDet
 
   if (!linha) return null;
 
-  const [saudeMap, lucro, conteudo, [link]] = await Promise.all([
-    computeHealthMapForObras([obraId]),
+  // XG34 — sem Saúde: dependia de `obras.progresso`/`obras.valor_pago`, que o xgestão não escreve.
+  const [lucro, conteudo, custoPorObra, links] = await Promise.all([
     computeProfitSummaryForObras([obraId]),
     buildObraPublicaView(obraId, TODAS_AS_SECOES),
+    custoRealPorObra([obraId]),
     db
       .select({
-        ativo: obraShareLinks.ativo,
+        nome: obraShareLinks.nome,
+        expiraEm: obraShareLinks.expiraEm,
         visualizacoes: obraShareLinks.visualizacoes,
         ultimoAcessoEm: obraShareLinks.ultimoAcessoEm,
         criadoEm: obraShareLinks.criadoEm,
@@ -104,20 +110,23 @@ export async function detalheObraXgestao(obraId: string): Promise<XgestaoObraDet
         eq(obraShareLinks.ativo, true),
         or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
       ))
-      .orderBy(desc(obraShareLinks.criadoEm))
-      .limit(1),
+      .orderBy(desc(obraShareLinks.criadoEm)),
   ]);
+  const iso = (data: Date | null) => (data ? data.toISOString() : null);
+  const ultimoAcesso = links
+    .map((l) => l.ultimoAcessoEm)
+    .filter((data): data is Date => Boolean(data))
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
 
   return {
     obra: {
       id: linha.id,
       nome: linha.nome,
       status: linha.status,
-      progresso: linha.progresso ?? 0,
       cidade: linha.cidade,
       uf: linha.uf,
       valorTotal: money(linha.valorTotal),
-      valorPago: money(linha.valorPago),
+      valorPago: custoPorObra.get(obraId) ?? 0,
       dataInicio: linha.dataInicio,
       dataPrevisao: linha.dataPrevisao,
       criadaEm: linha.criadaEm ? linha.criadaEm.toISOString() : null,
@@ -129,14 +138,21 @@ export async function detalheObraXgestao(obraId: string): Promise<XgestaoObraDet
       responsavel: linha.responsavel,
       email: linha.email,
     },
-    saude: saudeMap[obraId] ?? null,
     lucro,
+    // Resumo agregado de todos os links ativos (antes só o mais recente contava).
     linkPublico: {
-      ativo: Boolean(link),
-      visualizacoes: link?.visualizacoes ?? 0,
-      ultimoAcessoEm: link?.ultimoAcessoEm ? link.ultimoAcessoEm.toISOString() : null,
-      criadoEm: link?.criadoEm ? link.criadoEm.toISOString() : null,
+      ativo: links.length > 0,
+      visualizacoes: links.reduce((total, l) => total + (l.visualizacoes ?? 0), 0),
+      ultimoAcessoEm: iso(ultimoAcesso),
+      criadoEm: iso(links[links.length - 1]?.criadoEm ?? null),
     },
+    linksPublicos: links.map((l) => ({
+      nome: l.nome,
+      visualizacoes: l.visualizacoes ?? 0,
+      ultimoAcessoEm: iso(l.ultimoAcessoEm),
+      criadoEm: iso(l.criadoEm),
+      expiraEm: iso(l.expiraEm),
+    })),
     conteudo,
   };
 }

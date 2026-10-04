@@ -254,7 +254,6 @@ export async function buildObraPublicaView(
         etapa: obraTarefas.etapa,
         status: obraTarefas.status,
         prazo: obraTarefas.prazo,
-        progresso: obraTarefas.progresso,
       })
       .from(obraTarefas)
       .where(eq(obraTarefas.obraId, obraId))
@@ -329,8 +328,8 @@ export async function buildObraPublicaView(
       descricao: tarefa.descricao,
       etapa: tarefa.etapa,
       status: tarefa.status,
+      // XG34 — sem percentual de tarefa no link: o cliente vê só status e prazo.
       prazo: tarefa.prazo || null,
-      progresso: tarefa.progresso ?? null,
     })),
     pagamentos,
     secoes,

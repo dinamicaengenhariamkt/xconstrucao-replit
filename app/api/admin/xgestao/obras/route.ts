@@ -5,6 +5,7 @@ import {
   listarObrasXgestao,
   type XgestaoObraStatus,
 } from '@features/xgestao/admin/server/obras';
+import { SITUACOES_OBRA } from '@features/xgestao/admin/server/situacao';
 
 const STATUS_VALIDOS: XgestaoObraStatus[] = ['planejamento', 'em_andamento', 'pausada', 'concluida'];
 
@@ -23,12 +24,15 @@ export async function GET(request: NextRequest) {
   const params = new URL(request.url).searchParams;
   const statusParam = params.get('status');
   const status = STATUS_VALIDOS.find((valor) => valor === statusParam);
+  const situacaoParam = params.get('situacao');
+  const situacao = SITUACOES_OBRA.find((valor) => valor === situacaoParam);
 
   const [pagina, empreiteiras] = await Promise.all([
     listarObrasXgestao({
       busca: params.get('q') ?? undefined,
       status,
       empreiteiraId: params.get('empreiteira_id') ?? undefined,
+      situacao,
       pagina: Number(params.get('pagina')) || 1,
       porPagina: Number(params.get('por_pagina')) || undefined,
     }),

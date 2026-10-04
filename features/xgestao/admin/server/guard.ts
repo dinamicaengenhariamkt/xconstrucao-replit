@@ -20,7 +20,7 @@ export async function requireAdminXgestao(request: NextRequest) {
     setNoCacheHeaders(response);
     return { error: response };
   }
-  return { error: null as null };
+  return { error: null as null, user: guard.user };
 }
 
 /** Resposta JSON sem cache, padrão das rotas administrativas. */

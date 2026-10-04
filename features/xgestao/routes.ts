@@ -39,3 +39,9 @@ export const XGESTAO_HOME_ENCODED = encodeURIComponent(XGESTAO_HOME);
 
 /** O link de login do xgestão, já com o contexto e o destino. */
 export const XGESTAO_LOGIN_HREF = `/login?perfil=xgestao&next=${XGESTAO_HOME_ENCODED}`;
+/**
+ * Retorno do checkout de assinatura do xgestão (XG33 AJ-01). O marketplace volta
+ * para `/planos/sucesso`, que lê o plano do marketplace e leva ao dashboard dele;
+ * o assinante xgestão precisa voltar para dentro do próprio produto.
+ */
+export const XGESTAO_PLANO_SUCESSO = '/xgestao/planos/sucesso';

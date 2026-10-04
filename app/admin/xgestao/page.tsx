@@ -6,14 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { useXgestaoAdminDashboard } from '@features/xgestao/admin/hooks/use-admin-dashboard';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
-import { formatCurrency } from '@shared/lib/formatters';
+import { formatCurrency, formatDate } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
 import {
   RiAlarmWarningLine,
   RiCheckboxCircleLine,
   RiGroupLine,
   RiHammerLine,
-  RiLineChartLine,
   RiLinkM,
   RiMoneyDollarCircleLine,
   RiPauseCircleLine,
@@ -58,8 +57,11 @@ export default function AdminXgestaoPage() {
   const cards = [
     { label: 'Responsáveis com acesso', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
     { label: 'Vínculos de equipe', value: String(indicadores?.membrosEquipe ?? 0), icon: RiGroupLine, iconBgColor: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20' },
-    { label: 'Obras ativas', value: String(indicadores?.obrasAtivas ?? 0), icon: RiHammerLine, iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20' },
-    { label: 'Progresso médio', value: `${indicadores?.progressoMedio ?? 0}%`, icon: RiLineChartLine, iconBgColor: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20' },
+    { label: 'Obras ativas', value: String(indicadores?.obrasAtivas ?? 0), icon: RiHammerLine, iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20', href: '/admin/xgestao/obras' },
+    // XG34 — era "Progresso médio", lido de `obras.progresso` (coluna sem escritor desde a XG23).
+    { label: 'Obras atrasadas', value: String(indicadores?.obrasAtrasadas ?? 0), icon: RiAlarmWarningLine, iconBgColor: 'bg-red-50 text-red-600 dark:bg-red-900/20', href: '/admin/xgestao/obras?situacao=atrasada' },
+    // XG36 — em andamento e sem nenhum registro há N dias (configurável).
+    { label: 'Obras paradas', value: String(indicadores?.obrasParadas ?? 0), icon: RiPauseCircleLine, iconBgColor: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20', href: '/admin/xgestao/obras?situacao=parada' },
     { label: 'Orçamento gerenciado', value: formatCurrency(indicadores?.orcamentoGerenciado ?? 0), icon: RiMoneyDollarCircleLine, iconBgColor: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' },
   ];
 
@@ -67,8 +69,8 @@ export default function AdminXgestaoPage() {
     return (
       <div className="p-6 md:p-10 space-y-8">
         <div><Skeleton className="h-8 w-52" /><Skeleton className="h-4 w-80 mt-2" /></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)}
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           <Skeleton className="h-64 rounded-2xl" />
@@ -112,7 +114,7 @@ export default function AdminXgestaoPage() {
         </nav>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4">
         {cards.map((card) => (
           <StatsCard key={card.label} {...card} luminous testId={`xgestao-kpi-${card.label.toLowerCase().replaceAll(' ', '-')}`} />
         ))}
@@ -143,7 +145,7 @@ export default function AdminXgestaoPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Valor registrado como pago</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Custo real (saídas pagas)</p>
               <p className="mt-1 text-2xl font-extrabold">{formatCurrency(indicadores?.valorPago ?? 0)}</p>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
@@ -226,7 +228,7 @@ export default function AdminXgestaoPage() {
                       </span>
                     </div>
                     <div className="sm:text-right">
-                      <p className="text-sm font-extrabold">{obra.progresso}%</p>
+                      <p className="text-sm font-extrabold">{obra.dataPrevisao ? `Prazo ${formatDate(obra.dataPrevisao)}` : 'Sem prazo'}</p>
                       <p className="text-xs text-muted-foreground">{formatCurrency(obra.valorTotal)}</p>
                     </div>
                   </div>

@@ -8,7 +8,6 @@ export interface ObraPublicaTarefa {
   etapa: string;
   status: 'pendente' | 'em_andamento' | 'bloqueado' | 'concluido';
   prazo: string | null;
-  progresso: number | null;
 }
 
 export interface ObraPublicaEtapa {

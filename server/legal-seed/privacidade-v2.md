@@ -171,16 +171,20 @@ A XConstrução não vende seus dados pessoais a terceiros. Compartilhamos seus 
 > **Minuta — substitui a descrição de "perfil público" da versão anterior, que era do
 > marketplace e não descrevia a exposição que de fato ocorre hoje.**
 
-Você pode gerar um **link público** para compartilhar o acompanhamento de uma obra. Quando o faz:
+Você pode gerar **links públicos** para compartilhar o acompanhamento de uma obra, inclusive um link para cada público (por exemplo, o cliente e um fornecedor), cada um com as próprias seções. Quando o faz:
 
 - O conteúdo das seções que você habilitar fica acessível **a qualquer pessoa que tenha o link, sem exigir login**
-- **Você escolhe o que publicar.** Por padrão, diário de obra, ocorrências, tarefas e endereço vêm **desligados**, e só aparecem se você os habilitar
+- **Você escolhe o que publicar, link a link.** Por padrão, pagamentos, diário de obra, ocorrências, tarefas e endereço vêm **desligados**, e só aparecem se você os habilitar
 - Mesmo com o endereço habilitado, exibimos **apenas o logradouro** — nunca número, complemento, CEP ou coordenadas
 - Somente as fotos que você marcar para compartilhamento aparecem
 - Você pode **revogar ou substituir** o link a qualquer momento. A revogação bloqueia novos acessos, mas não recupera o que já tenha sido visualizado ou salvo por quem teve acesso
 - As páginas públicas não são indexadas por buscadores
 
 **Este compartilhamento é decisão sua.** Antes de publicar, avalie o que expõe sobre seu cliente, sua equipe e terceiros.
+
+### Dentro da sua empresa, com os membros da equipe:
+
+Se o responsável pela conta convidar membros (gestores ou colaboradores), eles acessam as obras e áreas que o responsável liberar, e os registros feitos por cada um identificam o autor. Se você é membro, o responsável pela empresa vê seu nome, e-mail e os registros que você fizer nas obras da empresa, e pode revogar seu acesso a qualquer momento.
 
 ### Com Prestadores de Serviço:
 

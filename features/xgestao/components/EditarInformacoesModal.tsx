@@ -70,9 +70,8 @@ function Campo({
 /**
  * XG12 — editar os dados da obra sem trocar de tela.
  *
- * O progresso não está aqui, de propósito: ele vem das atualizações, com data,
- * autor e fotos (XG09 D6). Um campo editável sobrescreveria o acumulado, e o
- * `PATCH` recusa `progresso` em obra própria com 409.
+ * Não há campo de progresso da obra, de propósito: o xgestão não mostra percentual
+ * agregado (XG29/XG34). O avanço vive em cada etapa, digitado no cronograma (XG23).
  */
 export function EditarInformacoesModal({
   obraId,

@@ -4,10 +4,11 @@ import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, or, type SQL } f
 import { db } from '@shared/db/db';
 import { empreiteiras, obraShareLinks, obras } from '@shared/db/schema';
 import { computeProfitSummaryForObras } from '@features/shared/profit/summary-server';
-import { computeHealthMapForObras } from '@features/shared/health/summary-server';
-import type { ObraHealth } from '@features/shared/health/types';
 import type { ProfitSummaryData } from '@features/shared/profit/types';
 import { filtroObrasXgestao, listarEmpreiteiraIdsXgestao } from './escopo';
+import { custoRealPorObra } from './custo-real';
+import { condicaoSituacao, ultimaAtividadeObra, type SituacaoObra } from './situacao';
+import { getDiasObraParada } from '@features/admin/platform-settings/server/settings-reader';
 
 export type XgestaoObraStatus = 'planejamento' | 'em_andamento' | 'pausada' | 'concluida';
 
@@ -17,21 +18,23 @@ export interface XgestaoAdminObraRow {
   empreiteira: string;
   empreiteiraId: string;
   status: XgestaoObraStatus;
-  progresso: number;
   cidade: string | null;
   uf: string | null;
   valorTotal: number;
+  /** Custo real: saídas pagas pelo dono (`custo-real.ts`), não `obras.valor_pago`. */
   valorPago: number;
   dataPrevisao: string | null;
   atualizadaEm: string | null;
+  /** XG36 — último registro do assinante na obra (ver `situacao.ts`). */
+  ultimaAtividadeEm: string | null;
   linkPublicoAtivo: boolean;
-  saude: ObraHealth | null;
 }
 
 export interface XgestaoObrasFiltros {
   busca?: string;
   status?: XgestaoObraStatus;
   empreiteiraId?: string;
+  situacao?: SituacaoObra;
   pagina?: number;
   porPagina?: number;
 }
@@ -71,6 +74,7 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
   const condicoes: SQL[] = [escopo];
   if (filtros.status) condicoes.push(eq(obras.status, filtros.status));
   if (filtros.empreiteiraId) condicoes.push(eq(obras.empreiteiraId, filtros.empreiteiraId));
+  if (filtros.situacao) condicoes.push(condicaoSituacao(filtros.situacao, await getDiasObraParada()));
   if (filtros.busca?.trim()) {
     const termo = `%${filtros.busca.trim()}%`;
     condicoes.push(
@@ -87,13 +91,12 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
         empreiteira: empreiteiras.nome,
         empreiteiraId: empreiteiras.id,
         status: obras.status,
-        progresso: obras.progresso,
         cidade: obras.cidade,
         uf: obras.uf,
         valorTotal: obras.valorTotal,
-        valorPago: obras.valorPago,
         dataPrevisao: obras.dataPrevisao,
         atualizadaEm: obras.updatedAt,
+        ultimaAtividadeEm: ultimaAtividadeObra,
       })
       .from(obras)
       .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
@@ -114,8 +117,10 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
   const obraIds = linhas.map((linha) => linha.id);
   // A saúde é agregada em lote: uma consulta para a página inteira, em vez de
   // uma por linha renderizada.
-  const [saude, linksAtivos] = await Promise.all([
-    computeHealthMapForObras(obraIds),
+  // XG34 — a Saúde saiu do admin xgestão: era calculada sobre `obras.progresso` e
+  // `obras.valor_pago`, colunas que o xgestão não escreve (a XG17 já a tirou do console).
+  const [custoPorObra, linksAtivos] = await Promise.all([
+    custoRealPorObra(obraIds),
     obraIds.length === 0
       ? Promise.resolve([] as Array<{ obraId: string }>)
       : db
@@ -140,15 +145,14 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
       empreiteira: linha.empreiteira,
       empreiteiraId: linha.empreiteiraId,
       status: linha.status as XgestaoObraStatus,
-      progresso: linha.progresso ?? 0,
       cidade: linha.cidade,
       uf: linha.uf,
       valorTotal: money(linha.valorTotal),
-      valorPago: money(linha.valorPago),
+      valorPago: custoPorObra.get(linha.id) ?? 0,
       dataPrevisao: linha.dataPrevisao,
       atualizadaEm: linha.atualizadaEm ? linha.atualizadaEm.toISOString() : null,
+      ultimaAtividadeEm: linha.ultimaAtividadeEm ? new Date(linha.ultimaAtividadeEm).toISOString() : null,
       linkPublicoAtivo: comLink.has(linha.id),
-      saude: saude[linha.id] ?? null,
     })),
     total,
     pagina,

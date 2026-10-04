@@ -195,6 +195,11 @@ async function initializeNodeRuntime() {
     const { expirarAnuncios } = await import("./features/anuncios/expirar-anuncios-job");
     await runBootstrap("expirar-anuncios", () => expirarAnuncios().then(() => {}));
 
+    // XG35 — vence testes grátis do xgestão cujo prazo passou. Idempotente; a
+    // leitura do plano também vence de forma preguiçosa, então isto é só higiene.
+    const { expirarTestesVencidos } = await import("./features/xgestao/teste/server/teste-service");
+    await runBootstrap("expirar-testes-xgestao", () => expirarTestesVencidos().then(() => {}));
+
     const { snapshotKpisJob } = await import("./features/financeiro/snapshot-kpis-job");
     await runBootstrap("snapshot-kpis", () => snapshotKpisJob().then(() => {}));
 

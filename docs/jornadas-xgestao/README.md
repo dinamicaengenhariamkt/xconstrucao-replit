@@ -14,7 +14,7 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 |---|---|---|---|---|---|
 | [XG01](01-fundacoes-e-shell.md) | Fundações e shell do xgestão | 1 | pronto | alta | baixo |
 | [XG02](02-obra-do-empreiteiro.md) | Obra criada e editada pelo empreiteiro | 2 | pronto | alta | baixo |
-| [XG03](03-planos-limites-trial.md) | Planos, limites e teste de 3 meses | 3 | parcial (§8 trial bloqueado) | alta | médio |
+| [XG03](03-planos-limites-trial.md) | Planos, limites e teste de 3 meses | 3 | parcial (§8 trial destravado → XG35) | alta | médio |
 | [XG04](04-link-publico-obra.md) | Link público de acompanhamento | 4 | pronto | alta | médio |
 | [XG05](05-ocultar-marketplace.md) | Ocultar o marketplace | 5 | pronto | alta | baixo |
 | [XG06](06-admin-xgestao.md) | Visão administrativa do xgestão | 6 | pronto (escopo mínimo) | média | baixo |
@@ -42,8 +42,15 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG28](28-dashboard-tabela-e-entrada.md) | Tabela de visão geral e o dashboard como porta de entrada | 3 | pronto (falta verificação visual) | alta | médio |
 | [XG29](29-remocao-total-do-percentual.md) | O percentual de execução sai das telas do xgestão, por inteiro | 2 | pronto (falta verificação visual) | alta | médio |
 | [XG30](30-link-cliente-publicos-e-cronograma.md) | Um link por público (pagamentos só no do cliente), cronograma no link, checklist e atualizações fora | 4 | pronto (falta verificação visual) | alta | médio |
-| [XG31](31-multiusuario-empresa.md) | Vários usuários na mesma empresa: gestor e colaborador com permissões por obra (Fase A); permissões por área adiadas (Fase B) | 4 | implementada (acesso por obra e equipe testados; ver pendências complementares) | alta | médio |
+| [XG31](31-multiusuario-empresa.md) | Vários usuários na mesma empresa: gestor e colaborador com permissões por obra (Fase A); permissões por área (Fase B, implementada) | 4 | implementada (acesso por obra e equipe testados; ver pendências complementares) | alta | médio |
 | [XG32](32-obras-por-assinante-admin.md) | Obras por assinante no admin xgestão + auditoria do dashboard | 6 | pronto (falta verificação visual autenticada) | média | médio |
+| [XG33](33-ajustes-pendentes-mvp.md) | Ajustes pendentes do MVP (backlog vivo, itens AJ-NN) | 7 | planejada | alta | médio |
+| [XG34](34-zero-percentual-dados-reais.md) | Zero percentual e só dado real em todas as visões (admin, assinante, link) | 7 | planejada | alta | médio |
+| [XG35](35-teste-gratis-e-fim-do-teste.md) | Teste grátis de 3 meses, rebaixamento automático e barra do Free | 7 | planejada (2 decisões) | alta | médio |
+| [XG36](36-admin-xgestao-fechamento.md) | Fechamento do admin: atrasadas/paradas, prazo e valor pago, assinantes, CSV | 7 | planejada | alta | médio |
+| [XG37](37-equipe-empresa-fechamento.md) | Fechamento da equipe da empresa: isolamento entre empresas e cobertura | 7 | planejada | alta | médio |
+| [XG38](38-termos-privacidade-no-ar.md) | Termos e privacidade do xgestão no ar (v2 atualizada) | 7 | planejada (aguarda dados da empresa) | alta | baixo |
+| [XG39](39-virada-de-chave-lancamento.md) | Virada de chave do lançamento: limites de obras/usuários e pagamento real | 8 | planejada (só no OK de lançamento) | alta | médio |
 
 ## Contexto
 

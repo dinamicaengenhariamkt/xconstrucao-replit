@@ -27,7 +27,7 @@ import {
 export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { data: plano } = usePerfilPlano('xgestao');
+  const { data: plano } = usePerfilPlano('xgestao', { enabled: isOwner });
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout({ persona: 'xgestao', next: XGESTAO_HOME });
@@ -57,7 +57,7 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
               </p>
               <p className="mt-1 text-[11px] font-medium text-gray-500">Conta xgestão</p>
               <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                {plano?.catalogo.nome ?? 'Plano xgestão'}
+                {plano?.catalogo.nome ?? (isOwner ? 'Plano xgestão' : 'Membro da equipe')}
               </span>
             </div>
             <Avatar className="size-10 border border-border-light">
@@ -73,7 +73,7 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
             <span className="text-sm font-semibold">{user?.name ?? 'Empreiteiro'}</span>
             <span className="text-xs font-normal text-muted-foreground">{user?.email}</span>
             <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-              {plano?.catalogo.nome ?? 'Plano xgestão'}
+              {plano?.catalogo.nome ?? (isOwner ? 'Plano xgestão' : 'Membro da equipe')}
             </span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
@@ -81,10 +81,10 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
             <RiUserLine className="mr-2 size-4" />
             Meu perfil
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes?tab=plano')}>
+          {isOwner && <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes?tab=plano')}>
             <RiPriceTag3Line className="mr-2 size-4" />
             Plano e uso
-          </DropdownMenuItem>
+          </DropdownMenuItem>}
           <DropdownMenuItem onClick={() => router.push('/xgestao/configuracoes')}>
             <RiSettings3Line className="mr-2 size-4" />
             Configurações

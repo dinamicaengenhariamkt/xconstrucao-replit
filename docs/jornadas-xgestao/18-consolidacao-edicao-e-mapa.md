@@ -163,6 +163,8 @@ fazer.
   todo o produto. **A auditoria não serviu para confirmar o que já se sabia; serviu para
   achar o que ninguém lembrava.**
 
+- 2026-10-04 (XG33 AJ-09): o mapa desta jornada foi removido pela [XG26](26-remocao-mapa-localizacao.md); fica só o `LocalizacaoCard` com o endereço.
+
 ## 7. Links cruzados
 
 - Reverte: [XG12 §6](12-console-obra-tela-unica.md) ("a tela `/editar` fica")

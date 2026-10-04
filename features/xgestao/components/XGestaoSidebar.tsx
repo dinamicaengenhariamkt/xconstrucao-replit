@@ -26,7 +26,7 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
-  const { data: plano } = usePerfilPlano('xgestao');
+  const { data: plano } = usePerfilPlano('xgestao', { enabled: isOwner });
 
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout({ persona: 'xgestao', next: XGESTAO_HOME });
@@ -87,7 +87,7 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
 
       <SidebarFooter className="p-4">
         <SidebarMenu>
-          <SidebarMenuItem>
+          {isOwner && <SidebarMenuItem>
             <Link
               href="/xgestao/configuracoes?tab=plano"
               data-testid="xgestao-sidebar-upgrade"
@@ -108,7 +108,7 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
                 </span>
               </span>
             </Link>
-          </SidebarMenuItem>
+          </SidebarMenuItem>}
           {XGESTAO_BOTTOM_NAV_ITEMS.map((item) => {
             const active = isActive(item.url);
             return (

@@ -56,6 +56,13 @@ const DEFAULTS: PlatformSettings = {
   marketplace: {
     percentualPlataforma: "10",
   },
+  // XG35 — teste grátis do xgestão. Parâmetro comercial: muda sem deploy.
+  xgestao: {
+    testeDias: "90",
+    testeTier: "enterprise",
+    // XG36 — obra em andamento sem nenhum registro há N dias conta como "parada".
+    diasObraParada: "14",
+  },
 };
 
 const TTL_MS = 30_000;
@@ -196,6 +203,24 @@ export async function isPerfilHabilitado(role: "contratante" | "empreiteiro"): P
 export async function isRelatoriosHabilitado(): Promise<boolean> {
   const plataforma = await getPlatformSetting("plataforma");
   return plataforma?.relatorios === true;
+}
+
+/**
+ * XG35 — duração (dias) e tier do teste grátis do xgestão (`xgestao.testeDias`,
+ * `xgestao.testeTier`). Fail-open → 90 dias no tier `enterprise` (plano Pro).
+ */
+export async function getConfigTesteXgestao(): Promise<{ dias: number; tier: "pro" | "enterprise" }> {
+  const cfg = await getPlatformSetting("xgestao");
+  const dias = Number(cfg.testeDias);
+  const tier = cfg.testeTier === "pro" ? "pro" : "enterprise";
+  return { dias: Number.isFinite(dias) && dias >= 1 && dias <= 365 ? Math.floor(dias) : 90, tier };
+}
+
+/** XG36 — dias sem registro para uma obra em andamento contar como parada. Fail-open → 14. */
+export async function getDiasObraParada(): Promise<number> {
+  const cfg = await getPlatformSetting("xgestao");
+  const dias = Number(cfg.diasObraParada);
+  return Number.isFinite(dias) && dias >= 1 && dias <= 365 ? Math.floor(dias) : 14;
 }
 
 /** XG05 — controla somente a visibilidade pública do marketplace. Fail-open → visível. */

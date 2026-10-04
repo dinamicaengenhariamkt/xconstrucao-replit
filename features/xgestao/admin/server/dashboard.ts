@@ -14,6 +14,10 @@ import {
   xgestaoMembros,
 } from '@shared/db/schema';
 import { listarMembrosEmpreiteirasXgestao, type XgestaoMembroEmpresa } from './escopo';
+import { custoRealPorObra, custoRealTotal } from './custo-real';
+import { obraAtrasada, obraParada } from './situacao';
+import { getDiasObraParada } from '@features/admin/platform-settings/server/settings-reader';
+import { expirarTestesVencidos, fimTestePorUsuario } from '@features/xgestao/teste/server/teste-service';
 
 export type XgestaoTier = 'free' | 'pro' | 'enterprise';
 
@@ -26,12 +30,7 @@ export interface XgestaoAdminAssinante {
   membros: Array<Pick<XgestaoMembroEmpresa, 'userId' | 'nome' | 'email' | 'papel' | 'status' | 'obras'>>;
   obrasGerenciadas: number;
   plano: { tier: XgestaoTier; nome: string };
-  /**
-   * Sempre `null`: não existe período de teste no modelo atual. A mecânica do
-   * trial segue bloqueada por definição comercial (XG03 §8), então o campo é
-   * um espaço reservado, não um dado ausente por falha. A UI não o exibe — ver
-   * o critério de aceite 1 em XG06, corrigido em 2026-09-02.
-   */
+  /** XG35 — fim do teste grátis em andamento (ISO); `null` fora do teste. */
   fimTeste: string | null;
   entradaEm: string;
 }
@@ -43,10 +42,10 @@ export interface XgestaoAdminObra {
   nome: string;
   empreiteira: string;
   status: XgestaoAdminObraStatus;
-  progresso: number;
   cidade: string | null;
   uf: string | null;
   valorTotal: number;
+  /** Custo real: saídas pagas pelo dono (`custo-real.ts`), não `obras.valor_pago`. */
   valorPago: number;
   dataPrevisao: string | null;
   atualizadaEm: string | null;
@@ -71,7 +70,11 @@ export interface XgestaoAdminDashboard {
     membrosEquipe: number;
     obrasGerenciadas: number;
     obrasAtivas: number;
-    progressoMedio: number;
+    /** Previsão de término vencida e obra não concluída. Substitui o "Progresso médio" (XG34). */
+    obrasAtrasadas: number;
+    /** XG36 — em andamento e sem nenhum registro há `diasObraParada` dias. */
+    obrasParadas: number;
+    diasObraParada: number;
     orcamentoGerenciado: number;
     valorPago: number;
     distribuicaoPlanos: Record<XgestaoTier, number>;
@@ -141,7 +144,11 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
 
   const userIds = entitlements.map((item) => item.userId);
   const empreiteiraIds = [...new Set(entitlements.flatMap((item) => item.empreiteiraId ? [item.empreiteiraId] : []))];
-  const membros = await listarMembrosEmpreiteirasXgestao(empreiteiraIds);
+  await expirarTestesVencidos();
+  const [membros, fimTestes] = await Promise.all([
+    listarMembrosEmpreiteirasXgestao(empreiteiraIds),
+    fimTestePorUsuario(userIds),
+  ]);
   const membrosPorEmpreiteira = new Map<string, XgestaoMembroEmpresa[]>();
   for (const membro of membros) {
     const lista = membrosPorEmpreiteira.get(membro.empreiteiraId) ?? [];
@@ -186,7 +193,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         membros: [],
         obrasGerenciadas: 0,
         plano: { tier, nome: subscription?.planoNome ?? freePlan[0]?.nome ?? 'Freemium' },
-        fimTeste: null,
+        fimTeste: fimTestes.get(entitlement.userId) ?? null,
         entradaEm: entitlement.entradaEm.toISOString(),
       };
     });
@@ -197,7 +204,9 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         membrosEquipe: 0,
         obrasGerenciadas: 0,
         obrasAtivas: 0,
-        progressoMedio: 0,
+        obrasAtrasadas: 0,
+        obrasParadas: 0,
+        diasObraParada: 14,
         orcamentoGerenciado: 0,
         valorPago: 0,
         distribuicaoPlanos,
@@ -213,6 +222,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     };
   }
 
+  const diasParada = await getDiasObraParada();
   const [
     obraCountRows,
     obrasAggregate,
@@ -235,9 +245,9 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     db
       .select({
         total: sql<number>`count(*)::int`,
-        progressoMedio: sql<number>`coalesce(round(avg(${obras.progresso})), 0)::int`,
+        atrasadas: sql<number>`count(*) filter (where ${obraAtrasada})::int`,
+        paradas: sql<number>`count(*) filter (where ${obraParada(diasParada)})::int`,
         orcamento: sql<string>`coalesce(sum(${obras.valorTotal}), 0)`,
-        pago: sql<string>`coalesce(sum(${obras.valorPago}), 0)`,
       })
       .from(obras)
       .where(and(XGESTAO_OBRA, inArray(obras.empreiteiraId, empreiteiraIds))),
@@ -252,11 +262,9 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         nome: obras.nome,
         empreiteira: empreiteiras.nome,
         status: obras.status,
-        progresso: obras.progresso,
         cidade: obras.cidade,
         uf: obras.uf,
         valorTotal: obras.valorTotal,
-        valorPago: obras.valorPago,
         dataPrevisao: obras.dataPrevisao,
         atualizadaEm: obras.updatedAt,
       })
@@ -383,10 +391,15 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       },
       // Não há período de teste no modelo atual. O campo preserva o contrato
       // para quando a cobrança passar a registrar essa informação explicitamente.
-      fimTeste: null,
+      fimTeste: fimTestes.get(entitlement.userId) ?? null,
       entradaEm: entitlement.entradaEm.toISOString(),
     };
   });
+
+  const [custoPorObra, custoTotal] = await Promise.all([
+    custoRealPorObra(recentWorks.map((obra) => obra.id)),
+    custoRealTotal(and(XGESTAO_OBRA, inArray(obras.empreiteiraId, empreiteiraIds))),
+  ]);
 
   const activeLinkIds = new Set(activeLinks.map((link) => link.obraId));
   const obrasRecentes: XgestaoAdminObra[] = recentWorks.map((obra) => ({
@@ -394,11 +407,10 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     nome: obra.nome,
     empreiteira: obra.empreiteira,
     status: obra.status,
-    progresso: obra.progresso ?? 0,
     cidade: obra.cidade,
     uf: obra.uf,
     valorTotal: money(obra.valorTotal),
-    valorPago: money(obra.valorPago),
+    valorPago: custoPorObra.get(obra.id) ?? 0,
     dataPrevisao: obra.dataPrevisao,
     atualizadaEm: iso(obra.atualizadaEm),
     linkPublicoAtivo: activeLinkIds.has(obra.id),
@@ -448,9 +460,11 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       membrosEquipe: membros.length,
       obrasGerenciadas: totalObras,
       obrasAtivas: distribuicaoStatus.em_andamento,
-      progressoMedio: Number(obrasAggregate[0]?.progressoMedio) || 0,
+      obrasAtrasadas: Number(obrasAggregate[0]?.atrasadas) || 0,
+      obrasParadas: Number(obrasAggregate[0]?.paradas) || 0,
+      diasObraParada: diasParada,
       orcamentoGerenciado: money(obrasAggregate[0]?.orcamento),
-      valorPago: money(obrasAggregate[0]?.pago),
+      valorPago: custoTotal,
       distribuicaoPlanos,
       distribuicaoStatus,
       linksPublicosAtivos: activeLinks.length,

@@ -104,6 +104,16 @@ O acesso à plataforma é oferecido mediante **assinatura**, nas modalidades e v
 
 A cobrança é **recorrente** e realizada por meio de processador de pagamentos terceirizado. O Assinante autoriza a cobrança automática no meio de pagamento informado, a cada ciclo, até que a assinatura seja cancelada.
 
+### 5.1-A Teste grátis
+
+A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. O teste é opcional, iniciado por escolha do Assinante, e pode ser usado **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
+
+Ao fim do prazo, se o Assinante não tiver contratado um plano pago, a conta passa **automaticamente para o plano gratuito**, com as funcionalidades e limites dele. **Nenhum dado é excluído** por causa do fim do teste: as obras continuam disponíveis, e apenas recursos acima dos limites do plano gratuito, como a criação de novas obras, ficam restritos até a contratação de um plano.
+
+### 5.1-B Membros da equipe
+
+O Assinante pode convidar pessoas para usar a plataforma em nome da sua empresa, com acesso às obras e áreas que ele definir. O Assinante é o responsável pela conta e pela assinatura: **responde pelos acessos que concede e pelos atos praticados pelos membros** que convidou, e pode revogá-los a qualquer momento. Membros não contratam, alteram ou cancelam a assinatura.
+
 ### 5.2 Renovação automática
 
 A assinatura é **renovada automaticamente** ao fim de cada ciclo, pelo valor vigente, salvo cancelamento na forma da Seção 5.4.
@@ -136,7 +146,7 @@ Encerrada a assinatura, os dados das obras permanecem disponíveis para exporta�
 
 > **Minuta — seção inteiramente nova.** Funcionalidade não coberta pela versão anterior.
 
-O Assinante pode gerar um **link público** para compartilhar o acompanhamento de uma obra.
+O Assinante pode gerar **links públicos** para compartilhar o acompanhamento de uma obra, inclusive links diferentes para públicos diferentes (por exemplo, o cliente e um fornecedor), cada um com as seções que o Assinante escolher, como cronograma, fotos e pagamentos.
 
 O Assinante declara estar ciente de que:
 

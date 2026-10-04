@@ -50,7 +50,6 @@ export function TabTarefasPublica({ tarefas }: { tarefas: ObraPublicaTarefa[] })
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
               {tarefa.prazo && <span>Prazo: {formatarPrazo(tarefa.prazo)}</span>}
-              {tarefa.progresso !== null && <span>{tarefa.progresso}% concluído</span>}
             </div>
           </article>
         );

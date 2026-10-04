@@ -38,6 +38,16 @@ export interface PerfilPlano {
   uso: Array<{ key: string; label: string; current: number; max: number }>;
   /** true se o usuário tem CPF/CNPJ cadastrado (pré-requisito para assinar) */
   hasCpfCnpj: boolean;
+  /** XG35 — só na persona xgestão. */
+  teste?: {
+    elegivel: boolean;
+    emTeste: boolean;
+    fimTeste: string | null;
+    diasRestantes: number | null;
+    avisoFimPendente: boolean;
+    duracaoDias: number;
+    tierTeste: 'pro' | 'enterprise';
+  };
 }
 
 const CFG = { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } as const;
@@ -56,7 +66,10 @@ export function usePlanos(persona?: PlanoPersona): UseQueryResult<PlanoApi[], Er
 }
 
 /** Plano atual + uso/limites (`GET /api/perfil/plano`). */
-export function usePerfilPlano(persona?: PlanoPersona): UseQueryResult<PerfilPlano, Error> {
+export function usePerfilPlano(
+  persona?: PlanoPersona,
+  options?: { enabled?: boolean },
+): UseQueryResult<PerfilPlano, Error> {
   return useQuery({
     queryKey: ['perfil', 'plano', persona ?? 'padrao'],
     queryFn: async () => {
@@ -65,6 +78,8 @@ export function usePerfilPlano(persona?: PlanoPersona): UseQueryResult<PerfilPla
       return res.json();
     },
     ...CFG,
+    // XG37 — membro do xgestão recebe 403 nesta rota; quem não decide o plano não consulta.
+    enabled: options?.enabled ?? true,
   });
 }
 

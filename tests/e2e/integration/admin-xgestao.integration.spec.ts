@@ -17,7 +17,7 @@ type Dashboard = {
     empreiteirasComPerfil: number;
     obrasGerenciadas: number;
     obrasAtivas: number;
-    progressoMedio: number;
+    obrasAtrasadas: number;
     orcamentoGerenciado: number;
     valorPago: number;
     distribuicaoPlanos: { free: number; pro: number; enterprise: number };
@@ -40,7 +40,6 @@ type Dashboard = {
     id: string;
     empreiteira: string;
     status: string;
-    progresso: number;
     valorTotal: number;
     valorPago: number;
     linkPublicoAtivo: boolean;
@@ -164,7 +163,9 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     expect(dashboard.indicadores.assinantes).toBe(antes.indicadores.assinantes + 1);
     expect(dashboard.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas + 1);
     expect(dashboard.indicadores.obrasAtivas).toBe(antes.indicadores.obrasAtivas);
-    expect(dashboard.indicadores.progressoMedio).toBeGreaterThanOrEqual(0);
+    expect(dashboard.indicadores.obrasAtrasadas).toBeGreaterThanOrEqual(0);
+    // XG34 — percentual de execução não existe no admin xgestão (coluna sem escritor).
+    expect(dashboard.indicadores).not.toHaveProperty('progressoMedio');
     expect(dashboard.indicadores.orcamentoGerenciado).toBeGreaterThanOrEqual(0);
     expect(dashboard.indicadores.valorPago).toBeGreaterThanOrEqual(0);
     expect(dashboard.indicadores.distribuicaoStatus.planejamento).toBe(
@@ -176,12 +177,13 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
       expect.objectContaining({
         id: obraXgestaoBody.id,
         status: 'planejamento',
-        progresso: 0,
         valorTotal: 0,
         valorPago: 0,
         linkPublicoAtivo: true,
       }),
     ]));
+    const obraNoPainel = dashboard.obras.find((obra) => obra.id === obraXgestaoBody.id);
+    expect(obraNoPainel).not.toHaveProperty('progresso');
     expect(dashboard.alertas.totais).toEqual(expect.objectContaining({
       ocorrenciasAbertas: expect.any(Number),
       pagamentosAtrasados: expect.any(Number),

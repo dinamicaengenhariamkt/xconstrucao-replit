@@ -392,3 +392,4 @@ marketplace** (`/empreiteiro/minhas-obras/[id]`) — é o mesmo arquivo servindo
   Ninguém tinha percorrido os passos num aparelho; medir os 7 passos × 3 tamanhos achou
   em minutos o que a leitura do código não pegou. **Estimar a dimensão de um elemento
   que já está no DOM para ser medido é um bug esperando o texto certo.**
+- 2026-10-04 (XG33 AJ-09): critérios 1, 2 e 12 superados. As abas Atualizações e Tarefas ficam ocultas na obra própria desde a [XG23](23-etapas-progresso-manual.md) (`tabsVisiveis()`), e o tour usa a chave `console-v4` ([XG24](24-tour-guiado-completo.md)).

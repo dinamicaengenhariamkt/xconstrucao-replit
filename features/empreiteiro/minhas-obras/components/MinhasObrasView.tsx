@@ -189,7 +189,7 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
             title="Minhas Obras"
             subtitle={
               xgestao
-                ? 'Gerencie suas obras próprias e acompanhe o progresso da execução.'
+                ? 'Gerencie suas obras próprias e acompanhe prazos e valores.'
                 : 'Gerencie suas obras em execução e acompanhe o progresso operacional.'
             }
           />

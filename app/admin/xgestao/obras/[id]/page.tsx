@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { use } from 'react';
 import { RiArrowLeftLine, RiLinkM } from 'react-icons/ri';
 import { Skeleton } from '@shared/components/ui/skeleton';
-import { HealthCard } from '@features/shared/health';
 import { ProfitCard } from '@features/shared/profit';
 import { StatsCard } from '@features/shared/components/StatsCard';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
@@ -15,7 +14,6 @@ import {
   RiBuilding2Line,
   RiCalendarLine,
   RiMoneyDollarCircleLine,
-  RiLineChartLine,
 } from 'react-icons/ri';
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
@@ -56,7 +54,7 @@ export default function AdminXgestaoObraDetalhePage({
     );
   }
 
-  const { obra, assinante, saude, lucro, linkPublico, conteudo } = data;
+  const { obra, assinante, lucro, linkPublico, linksPublicos, conteudo } = data;
 
   return (
     <div className="space-y-6 p-6 md:p-10">
@@ -74,13 +72,8 @@ export default function AdminXgestaoObraDetalhePage({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard
-          label="Progresso"
-          value={`${obra.progresso}%`}
-          icon={RiLineChartLine}
-          iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
-        />
+      {/* XG34 — o card "Progresso" saiu: lia `obras.progresso`, coluna sem escritor desde a XG23. */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatsCard
           label="Orçamento"
           value={formatCurrency(obra.valorTotal)}
@@ -88,7 +81,7 @@ export default function AdminXgestaoObraDetalhePage({
           iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20"
         />
         <StatsCard
-          label="Recebido"
+          label="Custo real"
           value={formatCurrency(obra.valorPago)}
           icon={RiBuilding2Line}
           iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
@@ -101,10 +94,9 @@ export default function AdminXgestaoObraDetalhePage({
         />
       </div>
 
-      {/* Saúde e lucro são leitura administrativa: nenhum dos dois vai para o
-          link público, porque ambos revelam a margem do assinante. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {saude && <HealthCard health={saude} />}
+      {/* O lucro é leitura administrativa: não vai para o link público, porque
+          revela a margem do assinante. A Saúde saiu na XG34 (dado morto). */}
+      <div className="grid gap-4">
         <ProfitCard
           metrics={lucro.metrics}
           title="Lucro desta obra"
@@ -126,7 +118,23 @@ export default function AdminXgestaoObraDetalhePage({
             </span>
             {linkPublico.ultimoAcessoEm && <span>Último acesso: {formatarData(linkPublico.ultimoAcessoEm)}</span>}
           </p>
-        ) : (
+        ) : null}
+        {/* XG36 — um link por público (XG30): mostra cada um, não só o mais recente. */}
+        {linksPublicos.length > 1 && (
+          <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800">
+            {linksPublicos.map((link, index) => (
+              <li key={`${link.nome}-${index}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                <span className="font-medium">{link.nome}</span>
+                <span className="text-xs text-muted-foreground">
+                  {link.visualizacoes} {link.visualizacoes === 1 ? 'visualização' : 'visualizações'}
+                  {link.ultimoAcessoEm && ` · último acesso ${formatarData(link.ultimoAcessoEm)}`}
+                  {link.expiraEm && ` · expira ${formatarData(link.expiraEm)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!linkPublico.ativo && (
           <p className="mt-2 text-sm text-muted-foreground">Nenhum link público ativo para esta obra.</p>
         )}
       </section>

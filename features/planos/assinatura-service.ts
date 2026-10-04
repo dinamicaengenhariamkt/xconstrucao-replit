@@ -6,6 +6,8 @@ import { criarLancamentoPlataforma } from "@features/financeiro/lancamentos-serv
 import { getPaymentGateway } from "@features/planos/gateway";
 import { dispararNotificacaoAssinaturaAdmin } from "@features/notificacoes/assinatura-admin-dispatcher";
 import { criarNotificacao } from "@features/notificacoes/service";
+import { XGESTAO_PLANO_SUCESSO } from "@features/xgestao/routes";
+import { naoEhTesteVencido, TESTE_PROVIDER } from "@features/xgestao/teste/server/teste-service";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -37,6 +39,7 @@ export async function getLimitesUsuario(
         eq(assinaturas.userId, userId),
         eq(assinaturas.persona, "xgestao"),
         eq(assinaturas.status, "ativa"),
+        naoEhTesteVencido(),
       ))
       .limit(1);
     tier = (assinaturaXGestao?.tier ?? "free") as PlanoTier;
@@ -141,6 +144,17 @@ export async function iniciarCheckout(args: {
   }
 }
 
+/**
+ * URL absoluta de retorno do checkout xgestão (XG33 AJ-01). Em produção vem de
+ * `NEXT_PUBLIC_BASE_URL`; no ambiente de desenvolvimento do Replit essa variável
+ * não existe, e sem reserva o gateway caía no domínio fixo do marketplace. O
+ * `NEXTAUTH_URL` de desenvolvimento aponta para o domínio do próprio Repl.
+ */
+function xgestaoUrl(path: string): string | undefined {
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXTAUTH_URL;
+  return base ? `${base.replace(/\/$/, "")}${path}` : undefined;
+}
+
 async function _iniciarCheckoutImpl(args: {
   userId: string;
   planoId: string;
@@ -159,7 +173,10 @@ async function _iniciarCheckoutImpl(args: {
 
   // Já tem assinatura paga ativa? (free pode "assinar" um pago; pago→pago troca via cancelar antes.)
   const atual = await getAssinaturaAtiva(args.userId, personaAssinatura);
-  if (atual && atual.planoId === args.planoId) return { ok: false, code: "JA_ASSINANTE" };
+  // XG35 — quem está no teste grátis pode assinar o mesmo plano do teste.
+  if (atual && atual.planoId === args.planoId && atual.gatewayProvider !== TESTE_PROVIDER) {
+    return { ok: false, code: "JA_ASSINANTE" };
+  }
 
   const ciclo = args.ciclo ?? "mensal";
   const valor = ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal);
@@ -228,12 +245,12 @@ async function _iniciarCheckoutImpl(args: {
     ciclo,
     valor,
     planoNome: plano.nome,
-    successUrl: process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
-    cancelUrl: process.env.NEXT_PUBLIC_BASE_URL
-      ? args.persona === "xgestao"
-        ? `${process.env.NEXT_PUBLIC_BASE_URL}/xgestao/configuracoes?tab=plano`
-        : `${process.env.NEXT_PUBLIC_BASE_URL}/${personaAssinatura}/planos`
-      : undefined,
+    successUrl: args.persona === "xgestao"
+      ? xgestaoUrl(XGESTAO_PLANO_SUCESSO)
+      : process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/planos/sucesso` : undefined,
+    cancelUrl: args.persona === "xgestao"
+      ? xgestaoUrl("/xgestao/configuracoes?tab=plano")
+      : process.env.NEXT_PUBLIC_BASE_URL ? `${process.env.NEXT_PUBLIC_BASE_URL}/${personaAssinatura}/planos` : undefined,
     userEmail: userRow?.email ?? undefined,
     userName: userRow?.name ?? undefined,
     userCpfCnpj,

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { XgestaoAssinanteDetalhe, XgestaoFaturamento } from '../server/assinantes';
 import type { XgestaoObraDetalhe } from '../server/obra-detalhe';
 import type { XgestaoAdminObraRow, XgestaoObraStatus, XgestaoObrasPagina } from '../server/obras';
+import type { SituacaoObra } from '../server/situacao';
 import type { ProfitSummaryData } from '@features/shared/profit/types';
 
 const QUERY_CONFIG = { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false } as const;
@@ -16,6 +17,7 @@ export interface XgestaoObrasFiltrosUI {
   busca?: string;
   status?: XgestaoObraStatus;
   empreiteiraId?: string;
+  situacao?: SituacaoObra;
   pagina?: number;
 }
 
@@ -28,6 +30,7 @@ export function useXgestaoAdminObras(filtros: XgestaoObrasFiltrosUI) {
   if (filtros.busca?.trim()) params.set('q', filtros.busca.trim());
   if (filtros.status) params.set('status', filtros.status);
   if (filtros.empreiteiraId) params.set('empreiteira_id', filtros.empreiteiraId);
+  if (filtros.situacao) params.set('situacao', filtros.situacao);
   if (filtros.pagina && filtros.pagina > 1) params.set('pagina', String(filtros.pagina));
   const query = params.toString();
 

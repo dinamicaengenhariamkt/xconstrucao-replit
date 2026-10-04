@@ -35,15 +35,19 @@ function PlanCard({
   onChoose,
   pending,
   canChoosePaid,
+  emTeste,
 }: {
   plano: PlanoApi;
   currentTier: PlanoTier;
   onChoose: (plano: PlanoApi) => void;
   pending: boolean;
   canChoosePaid: boolean;
+  /** XG35 — no teste grátis o plano testado continua assinável e o Free fica para o fim do teste. */
+  emTeste: boolean;
 }) {
-  const isCurrent = plano.tier === currentTier;
   const isFree = plano.tier === 'free';
+  const isCurrent = plano.tier === currentTier && !emTeste;
+  const freeDuranteTeste = emTeste && isFree;
   const isFeatured = plano.tier === 'pro';
   const blockedByDocument = !isFree && !canChoosePaid;
 
@@ -90,12 +94,14 @@ function PlanCard({
         type="button"
         variant={isFeatured ? 'secondary' : 'outline'}
         className={isFeatured ? 'text-primary' : ''}
-        disabled={isCurrent || pending || blockedByDocument}
+        disabled={isCurrent || freeDuranteTeste || pending || blockedByDocument}
         onClick={() => onChoose(plano)}
         data-testid={`xgestao-assinar-${plano.tier}`}
       >
         {isCurrent
           ? 'Plano atual'
+          : freeDuranteTeste
+            ? 'Volta ao fim do teste'
           : pending
             ? 'Processando…'
             : blockedByDocument
@@ -116,9 +122,10 @@ export function XGestaoPlanosSection() {
   const checkout = useCheckout('xgestao');
   const [activeRequest, setActiveRequest] = useState<string | null>(null);
   const currentTier = perfil?.plano ?? 'free';
+  const emTeste = perfil?.teste?.emTeste === true;
 
   function choosePlan(plano: PlanoApi) {
-    if (checkout.isPending || plano.tier === currentTier) return;
+    if (checkout.isPending || (plano.tier === currentTier && !emTeste) || (emTeste && plano.tier === 'free')) return;
     if (plano.tier !== 'free' && perfil?.hasCpfCnpj !== true) {
       toast({
         title: 'CNPJ necessário',
@@ -202,10 +209,15 @@ export function XGestaoPlanosSection() {
             <div>
               <CardTitle>Plano e uso</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">Acompanhe seus limites e escolha o plano ideal para sua operação.</p>
+              {emTeste && perfil.teste?.fimTeste && (
+                <p className="mt-1 text-sm font-medium" data-testid="xgestao-plano-fim-teste">
+                  Teste grátis até {new Date(perfil.teste.fimTeste).toLocaleDateString('pt-BR')}. Depois disso, a conta volta para o plano Free.
+                </p>
+              )}
             </div>
             <Badge variant="secondary" className="gap-1.5 px-3 py-1">
               <RiVipCrownLine className="size-4" />
-              {perfil.catalogo.nome}
+              {perfil.catalogo.nome}{emTeste ? ' (teste grátis)' : ''}
             </Badge>
           </div>
         </CardHeader>
@@ -253,6 +265,7 @@ export function XGestaoPlanosSection() {
                 onChoose={choosePlan}
                 pending={checkout.isPending && activeRequest === plano.id}
                 canChoosePaid={perfil.hasCpfCnpj}
+                emTeste={emTeste}
               />
             ) : null;
           })}

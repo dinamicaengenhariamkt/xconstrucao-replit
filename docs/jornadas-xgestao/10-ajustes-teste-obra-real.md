@@ -281,3 +281,4 @@ de verdade é `shared/db/schema.ts` + `server/bootstrap-*.ts`, não migrations v
   aviso de "Gestão de equipe em breve" e o `obra_anexo` recusava o empreiteiro — mas
   `obra_equipe.user_id` é nullable desde sempre e a rota aceitava nome+telefone. O bloqueio era
   de UI, não de capacidade.
+- 2026-10-04 (XG33 AJ-09): o item "PATCH progresso da etapa → 409" foi revertido de propósito pela [XG23](23-etapas-progresso-manual.md): o percentual da etapa passou a ser manual. A limpeza do DELETE ganhou `xgestao_membro_obras`, `obra_share_links`, `obra_aditivos` e marcações de checklist (XG33 AJ-05).
