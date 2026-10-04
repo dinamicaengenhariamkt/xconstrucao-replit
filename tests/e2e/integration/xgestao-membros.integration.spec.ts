@@ -507,6 +507,16 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   const xgFinanceiroId = `xg31-xg-fin-${Date.now()}`;
   const marketplaceFinanceiroId = `xg31-market-fin-${Date.now()}`;
   try {
+    // Estes marcadores eram assertados abaixo, mas seus registros não eram
+    // criados. Sem fixtures persistidas, uma lista vazia não testa isolamento.
+    await db.insert(medicoes).values([
+      { obraId: obraA, empreiteiroId: ownerId!, numero: 9991, etapa: xgMedicaoId, percentual: "1", valor: "10", status: "aprovada" },
+      { obraId: obraMarketplace!.id, empreiteiroId: ownerId!, numero: 9991, etapa: marketplaceMedicaoId, percentual: "1", valor: "97", status: "pendente" },
+    ]);
+    await db.insert(financeiro).values([
+      { obraId: obraA, tipo: "entrada", descricao: xgFinanceiroId, valor: "10", categoria: "mao_de_obra", data: new Date().toISOString().slice(0, 10) },
+      { obraId: obraMarketplace!.id, tipo: "entrada", descricao: marketplaceFinanceiroId, valor: "97", categoria: "mao_de_obra", data: new Date().toISOString().slice(0, 10) },
+    ]);
     const ownerMarketplaceTimeline = await request.get(`/api/atividades?obraId=${obraMarketplace!.id}`);
     expect(ownerMarketplaceTimeline.status(), await ownerMarketplaceTimeline.text()).toBe(200);
     expect((await ownerMarketplaceTimeline.json() as { items: Array<{ id: string }> }).items)

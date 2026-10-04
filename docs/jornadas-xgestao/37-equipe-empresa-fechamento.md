@@ -1,7 +1,9 @@
 # Jornada — XG37: fechamento da equipe da empresa (isolamento e cobertura)
 
-> Status: em andamento (varredura feita; testes na rodada final) | Prioridade: alta | Wave: xgestão-37
+> Status: parcial (dono/gestor/colaborador e revogação aprovados em integração) | Prioridade: alta | Wave: xgestão-37
 > Última atualização: 2026-10-04
+
+Cenário extenso de grants, áreas, cobrança, marketplace e revogação executado e aprovado. Corrigida a preparação das medições/lançamentos sintéticos que as antigas assertivas esperavam sem criá-los; nenhuma permissão da aplicação foi alterada para fazer o teste passar. [Evidências](40-relatorio-homologacao-mvp.md).
 
 ## 1. Contexto & Objetivo
 

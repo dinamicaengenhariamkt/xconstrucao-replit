@@ -1,7 +1,9 @@
 # Jornada — XG36: fechamento do admin xgestão (visão macro com dado real)
 
-> Status: implementada (falta verificação visual; testes na rodada final) | Prioridade: alta | Wave: xgestão-36
+> Status: parcial (API, indicadores e CSV conferidos; visual autenticada pendente) | Prioridade: alta | Wave: xgestão-36
 > Última atualização: 2026-10-04
+
+Integração específica aprovada: +1 atrasada, +1 parada, R$ 321 pagos pelo responsável iguais em dashboard/lista/detalhe, prazo persistido, assinante em teste Pro e CSV identificando o teste. [Relatório](40-relatorio-homologacao-mvp.md). Nenhuma dessas verificações é apresentação visual autenticada de todas as páginas.
 
 ## 1. Contexto & Objetivo
 

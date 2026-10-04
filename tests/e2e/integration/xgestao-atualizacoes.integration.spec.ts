@@ -154,9 +154,11 @@ test.describe('XG12 — atualizações da obra', () => {
     expect(linhas, 'persistiu de fato').toHaveLength(1);
     expect(linhas[0].etapa).toBe('Fundação');
 
-    // O progresso da obra é derivado da medição — a fonte única da XG09 D6.
+    // XG29/XG34: a atualização conserva seu registro histórico, mas o detalhe
+    // do xgestão não volta a apresentar percentual agregado da obra.
     const detalhe = await request.get(`/api/empreiteiro/minhas-obras/${obraId}`);
-    expect((await detalhe.json()).progresso, 'progresso veio da atualização').toBe(15);
+    expect(detalhe.status(), await detalhe.text()).toBe(200);
+    expect((await detalhe.json()).progresso, 'agregado legado fica neutro no xgestão').toBe(0);
 
     await logout(request);
   });

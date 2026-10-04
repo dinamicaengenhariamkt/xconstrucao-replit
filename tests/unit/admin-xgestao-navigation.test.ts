@@ -26,7 +26,13 @@ describe('navegação administrativa do xgestão', () => {
       getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).map(
         (item) => item.title,
       ),
-      ['xgestão'],
+      ['xgestão', 'Obras xgestão', 'Assinantes xgestão', 'Financeiro xgestão'],
+    );
+    assert.ok(
+      getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).every(
+        (item) => isAdminXgestaoPath(item.url),
+      ),
+      'o shell do produto não deve incluir destinos do marketplace',
     );
     assert.deepEqual(
       getVisibleAdminNavigationItems(ADMIN_BOTTOM_NAV_ITEMS, context),

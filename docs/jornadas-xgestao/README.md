@@ -44,13 +44,17 @@ Separado de [`docs/jornadas/`](../jornadas/) de propósito: aquelas descrevem o 
 | [XG30](30-link-cliente-publicos-e-cronograma.md) | Um link por público (pagamentos só no do cliente), cronograma no link, checklist e atualizações fora | 4 | pronto (falta verificação visual) | alta | médio |
 | [XG31](31-multiusuario-empresa.md) | Vários usuários na mesma empresa: gestor e colaborador com permissões por obra (Fase A); permissões por área (Fase B, implementada) | 4 | implementada (acesso por obra e equipe testados; ver pendências complementares) | alta | médio |
 | [XG32](32-obras-por-assinante-admin.md) | Obras por assinante no admin xgestão + auditoria do dashboard | 6 | pronto (falta verificação visual autenticada) | média | médio |
-| [XG33](33-ajustes-pendentes-mvp.md) | Ajustes pendentes do MVP (backlog vivo, itens AJ-NN) | 7 | planejada | alta | médio |
-| [XG34](34-zero-percentual-dados-reais.md) | Zero percentual e só dado real em todas as visões (admin, assinante, link) | 7 | planejada | alta | médio |
-| [XG35](35-teste-gratis-e-fim-do-teste.md) | Teste grátis de 3 meses, rebaixamento automático e barra do Free | 7 | planejada (2 decisões) | alta | médio |
-| [XG36](36-admin-xgestao-fechamento.md) | Fechamento do admin: atrasadas/paradas, prazo e valor pago, assinantes, CSV | 7 | planejada | alta | médio |
-| [XG37](37-equipe-empresa-fechamento.md) | Fechamento da equipe da empresa: isolamento entre empresas e cobertura | 7 | planejada | alta | médio |
-| [XG38](38-termos-privacidade-no-ar.md) | Termos e privacidade do xgestão no ar (v2 atualizada) | 7 | planejada (aguarda dados da empresa) | alta | baixo |
+| [XG33](33-ajustes-pendentes-mvp.md) | Ajustes pendentes do MVP (backlog vivo, itens AJ-NN) | 7 | parcial (AJ-02 bloqueado; roteiro desktop/celular aprovado) | alta | médio |
+| [XG34](34-zero-percentual-dados-reais.md) | Zero percentual e só dado real em todas as visões (admin, assinante, link) | 7 | parcial (unidade/API aprovadas; inspeção visual completa pendente) | alta | médio |
+| [XG35](35-teste-gratis-e-fim-do-teste.md) | Teste grátis de 3 meses, rebaixamento automático e barra do Free | 7 | parcial (Pro/90 dias confirmado; integração aprovada) | alta | médio |
+| [XG36](36-admin-xgestao-fechamento.md) | Fechamento do admin: atrasadas/paradas, prazo e valor pago, assinantes, CSV | 7 | parcial (conferência de API; visual autenticada pendente) | alta | médio |
+| [XG37](37-equipe-empresa-fechamento.md) | Fechamento da equipe da empresa: isolamento entre empresas e cobertura | 7 | parcial (dono/gestor/colaborador e revogação aprovados em API) | alta | médio |
+| [XG38](38-termos-privacidade-no-ar.md) | Termos e privacidade do xgestão no ar (v2 atualizada) | 7 | bloqueada (dados legais e política de cancelamento; v2 não publicada) | alta | baixo |
 | [XG39](39-virada-de-chave-lancamento.md) | Virada de chave do lançamento: limites de obras/usuários e pagamento real | 8 | planejada (só no OK de lançamento) | alta | médio |
+
+### Homologação atual
+
+[Relatório parcial de homologação](40-relatorio-homologacao-mvp.md): resultados por execução, evidências, falhas corrigidas e bloqueios. **Não há autorização de lançamento comercial nem assinatura Asaas homologada.**
 
 ## Contexto
 
@@ -122,8 +126,8 @@ XG01  fundações e shell
 
 Sobraram **2**. Nenhuma bloqueia o desenvolvimento já entregue.
 
-1. **Preços finais e composição funcional dos 3 planos** — bloqueia apenas [XG03 §8](03-planos-limites-trial.md) (a mecânica do teste) e o seed de preços. O cliente ficou de enviar o documento (18:44). **Atenção:** a reunião 002 (*"ele vai ter o acesso ao plano dele"*, 14:41) **contradiz** o PDF de monetização (*"3 meses 100% grátis irrestrito"*). São implementações diferentes — a segunda exige um job de downgrade inteiro. Resolver antes de codificar §8.
-2. **Fim do teste com obras acima do limite** — o que acontece quando o período acaba e o usuário tem mais obras que o plano permite. Depende da resposta 1. A recomendação da jornada continua valendo: **nunca retirar acesso de leitura**, bloquear apenas a criação de novas.
+1. **Preços finais e composição funcional dos 3 planos para o lançamento** — a definição comercial continua separada da homologação. A antiga dúvida sobre o trial foi respondida pelo usuário: **Pro comercial por 90 dias; sem assinatura paga ativa, volta ao Free sem apagar dados**. Isso não autoriza novos preços nem ativação comercial.
+2. **Aplicação dos limites reais no lançamento** — manter obras e dados existentes no fim do teste; os limites temporários permanecem intactos. A ativação dos limites de obras/equipe exige o OK separado de XG39; não foi realizada nesta rodada.
 
 ### Pendência jurídica (bloqueia o go-live comercial, não o teste)
 
@@ -142,10 +146,10 @@ preencher os campos entre colchetes. Detalhes em [XG16 §3](16-revalidacao-pre-t
 
 ### Pendência de configuração (não bloqueia desenvolvimento)
 
-**`ASAAS_WEBHOOK_TOKEN` não está definido no ambiente publicado.** O gateway já roda em
-sandbox e o cartão de teste chega a aprovar, mas a ativação do plano depende do webhook, que
-é *fail-closed* em produção — sem o token, todo evento é recusado e **a assinatura não
-ativa**. É uma variável e um apontamento no painel Asaas, sem código.
+**Homologação de 2026-10-04:** `ASAAS_WEBHOOK_TOKEN` ausente no desenvolvimento; consulta
+autenticada ao Asaas sandbox retornou zero webhooks. O ciclo real permanece bloqueado.
+A situação do ambiente publicado e a antiga aprovação de cartão não foram novamente
+verificadas nesta execução; não usar esse histórico como comprovação de pagamento.
 Checklist em [XG03 §8-A](03-planos-limites-trial.md).
 ### Respondidas em 2026-08-19
 

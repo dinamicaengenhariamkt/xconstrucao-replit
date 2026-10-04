@@ -1,7 +1,9 @@
 # Jornada — XG34: zero percentual e só dado real em todas as visões do xgestão
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-34
+> Status: parcial (unidade e API aprovadas; inspeção visual completa pendente) | Prioridade: alta | Wave: xgestão-34
 > Última atualização: 2026-10-04
+
+Homologação: payload do admin sem agregado, detalhe sem percentual geral inventado e percentual manual de etapa independente de tarefas conferidos em testes. Custo real de R$ 321 do responsável bateu em dashboard/lista/detalhe. [Evidências e limites da rodada](40-relatorio-homologacao-mvp.md); não declarar todas as telas visualmente revisitadas.
 
 ## 1. Contexto & Objetivo
 

@@ -1,0 +1,171 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Homologação parcial — MVP xgestão</title><style>body{font:15px/1.65 system-ui,-apple-system,sans-serif;color:#192820;background:#f4f6f4;margin:0}main{max-width:1100px;margin:32px auto;background:white;padding:40px;border:1px solid #dce5df;border-radius:12px}h1{font-size:30px;line-height:1.25;color:#15452d}h2{font-size:22px;margin-top:36px;border-bottom:1px solid #dce5df;padding-bottom:8px}h3{font-size:18px;color:#15452d}table{width:100%;border-collapse:collapse;font-size:13px;margin:20px 0;display:block;overflow-x:auto}th,td{text-align:left;vertical-align:top;border:1px solid #dce5df;padding:11px}th{background:#eaf2ec}td:first-child{min-width:150px}code{font:12px/1.5 ui-monospace,monospace;background:#edf2ee;padding:2px 4px;overflow-wrap:anywhere}li{margin:6px 0}a{color:#15643a}strong{font-weight:700}@media(max-width:650px){main{margin:0;padding:22px;border:0;border-radius:0}h1{font-size:25px}}@media print{body{background:white}main{margin:0;padding:0;border:0}table{display:table;font-size:10px}th,td{padding:6px}h2,h3{break-after:avoid}}</style></head><body><main><h1>Relatório parcial de homologação do MVP xgestão</h1>
+<p><strong>Data:</strong> 2026-10-04 — desenvolvimento, não produção.</p>
+<h2>Resultado executivo</h2>
+<p><strong>O MVP não está liberado para lançamento comercial.</strong> O ciclo real do Asaas sandbox ainda não foi comprovado. As minutas v2 não foram publicadas e há uma divergência de cancelamento a decidir. A homologação permanece aberta para esses bloqueios, sem confundir testes manuais de assinatura com pagamento externo.</p>
+<p>Não foram ativados limites comerciais, alterada a cobrança de produção, publicados termos, forçado reconsentimento, migrado banco ou excluídos dados preexistentes para facilitar a rodada.</p>
+<h2>Evidências por requisito</h2>
+<table>
+<thead>
+<tr>
+<th>Requisito</th>
+<th>Resultado observado</th>
+<th>Limite da evidência</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Teste gratuito Pro por 90 dias</td>
+<td>Aprovado em integração: início voluntário, duas tentativas simultâneas geram um único teste, <code>enterprise</code> interno = Pro comercial; fim retorna ao Free e impede repetição.</td>
+<td>Não é pagamento Asaas. Barras e aviso de fim não receberam uma nova rodada interativa específica.</td>
+</tr>
+<tr>
+<td>Preservação no fim do teste</td>
+<td>Obra, membro da equipe da obra e anexo por link permanecem; aviso fica pendente até confirmar “Continuar no Free”; evento de expiração ocorre uma vez.</td>
+<td>O documento dessa fixture é um link, não um binário enviado ao R2.</td>
+</tr>
+<tr>
+<td>Contratação durante o teste</td>
+<td>Assinatura Basic comercial (<code>pro</code> interno) pelo gateway manual permanece ativa mesmo após o prazo antigo; cancelamento manual retorna ao Free, sem novo teste. Marketplace permanece Free.</td>
+<td>Compra, troca, cancelamento e repetição de evento vindos do Asaas continuam bloqueados.</td>
+</tr>
+<tr>
+<td>Criar, editar e excluir obra — AJ-07</td>
+<td>Aprovado por interação real em desktop 1440×900 e celular 390×844: login normal, criação, edição, recarga e exclusão com confirmação.</td>
+<td>Contas novas têm cadastro/perfil/onboarding preparados pela fixture; esse roteiro não homologa o onboarding.</td>
+</tr>
+<tr>
+<td>Upload e persistência — AJ-07</td>
+<td>PNG e PDF reais enviados ao R2 pela origem pública do preview; documento reaparece após recarregar e imagem é carregada pelo navegador.</td>
+<td>Não houve simulação do upload nem alteração do CORS do bucket. Não constitui auditoria de armazenamento físico ou de coleta de arquivos no R2.</td>
+</tr>
+<tr>
+<td>Exclusão segura — AJ-05</td>
+<td>Suíte anterior de exclusão passou. Nos dois roteiros interativos, obra não existe mais, leitura retorna 404 e não há filhos nas oito tabelas verificadas: anexos, diário, equipe, etapas, fotos, links, tarefas e financeiro.</td>
+<td>Somente IDs criados pela própria fixture são removidos. Registros históricos com <code>SET NULL</code> e objetos físicos do R2 não são tratados como exclusão imediata universal.</td>
+</tr>
+<tr>
+<td>Admin sem percentual agregado</td>
+<td>Integração existente e unidade passaram: indicadores não contêm <code>progressoMedio</code>; lista não contém progresso; leitura de detalhe preserva a convenção atual, sem inventar agregado a partir de tarefas.</td>
+<td>O menu agora testa as quatro páginas existentes e exige destinos xgestão. Não foi refeita uma inspeção visual autenticada de todas as páginas do admin.</td>
+</tr>
+<tr>
+<td>Admin: atrasadas, paradas, custo pago, prazo, trial e CSV</td>
+<td>Aprovado em integração adicional: obra descartável incrementa atrasadas/paradas em 1; custo pago aumenta R$ 321, iguais na lista e no detalhe; prazo persiste; assinante aparece em teste Pro; CSV inclui assinante, teste e ano do vencimento.</td>
+<td>Exportação foi conferida por HTTP; não foi repetida inspeção visual autenticada das páginas do admin nem de toda a tabela exportada.</td>
+</tr>
+<tr>
+<td>Equipe e isolamento — XG37</td>
+<td>Cenário extenso de dono, gestor e colaborador passou: grants por obra/área, restrição de cobrança, exclusão do marketplace, revogação imediata e admin somente leitura. Demais regressões de acesso passaram na rodada ampla.</td>
+<td>Duas medições e dois lançamentos sintéticos precisavam ser persistidos para que as antigas assertivas realmente testassem inclusão/exclusão. Não foram afrouxadas as restrições da aplicação.</td>
+</tr>
+<tr>
+<td>Minutas e consentimento — XG38</td>
+<td>Minutas v2 revisadas como dados inertes: trial, equipe, links por público, Free distinto de Basic e proteção da assinatura paga. Dados ausentes e divergência de cancelamento listados abaixo.</td>
+<td>Não publicadas. Novo aceite de uma v2 publicada não foi executado; não há certificação jurídica por advogado.</td>
+</tr>
+<tr>
+<td>Asaas real — AJ-02</td>
+<td>Ambiente compartilhado consultado: <code>ASAAS_ENVIRONMENT=sandbox</code>, gateway Asaas e credencial existente; consulta autenticada GET <code>/webhooks</code> retornou zero webhooks. <code>ASAAS_WEBHOOK_TOKEN</code> ausente no desenvolvimento.</td>
+<td>Não foram criados checkout, webhook ou pagamento real nesta rodada. A ausência no ambiente publicado não foi revalidada.</td>
+</tr>
+<tr>
+<td>XG39 e AJ-08</td>
+<td>Intactos e fora da ativação desta rodada.</td>
+<td>Limites reais, pagamentos de produção, hash de tokens e rate limit distribuído não foram ligados.</td>
+</tr>
+</tbody></table>
+<h2>Rodadas executadas</h2>
+<p>Os resultados abaixo são <strong>por execução</strong>, não uma alegação de que tudo passou em uma única rodada.</p>
+<table>
+<thead>
+<tr>
+<th>Rodada</th>
+<th>Resultado</th>
+<th>Registro local</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Unidade xgestão/admin, após correção do menu</td>
+<td>44 aprovados</td>
+<td><code>/tmp/xgestao-final-unit-fixed.log</code></td>
+</tr>
+<tr>
+<td>Configuração de visibilidade do marketplace</td>
+<td>2 aprovados</td>
+<td><code>/tmp/xgestao-final-config.log</code></td>
+</tr>
+<tr>
+<td>Indicadores/progresso</td>
+<td>17 aprovados</td>
+<td><code>/tmp/xgestao-final-indicadores.log</code></td>
+</tr>
+<tr>
+<td>Contrato do gateway Asaas</td>
+<td>2 aprovados</td>
+<td><code>/tmp/xgestao-final-gateway.log</code></td>
+</tr>
+<tr>
+<td>API ampla inicial</td>
+<td>61 aprovados, 1 ignorado, 6 falhas</td>
+<td><code>/tmp/xgestao-final-api.log</code></td>
+</tr>
+<tr>
+<td>Reexecução das 6 falhas iniciais</td>
+<td>4 aprovados, 2 falhas restantes</td>
+<td><code>/tmp/xgestao-final-recheck.log</code></td>
+</tr>
+<tr>
+<td>Reexecução de obra/equipe e primeiro navegador</td>
+<td>Obra aprovada; equipe e ambos uploads locais falharam</td>
+<td><code>/tmp/xgestao-final-targeted.log</code></td>
+</tr>
+<tr>
+<td>Nova origem pública, tentativa com cache inconsistente</td>
+<td>Servidor E2E não iniciou em 300 s; nenhum caso executado</td>
+<td><code>/tmp/xgestao-final-public.log</code></td>
+</tr>
+<tr>
+<td>Rodada isolada após reparar o cache de testes</td>
+<td>5 aprovados: equipe, 2 trial, desktop e celular; 1 falha da nova fixture admin</td>
+<td><code>/tmp/xgestao-final-evidence.log</code></td>
+</tr>
+<tr>
+<td>Admin específico, fixture com pagador corrigido</td>
+<td>1 aprovado em 48,3 s</td>
+<td><code>/tmp/xgestao-final-admin.log</code></td>
+</tr>
+<tr>
+<td>TypeScript após rodada final</td>
+<td>Aprovado, saída 0</td>
+<td><code>/tmp/xgestao-final-types-delivery.log</code></td>
+</tr>
+</tbody></table>
+<p>Casos já aprovados não foram reiniciados por alterações apenas na fixture admin. A suíte comum mantém <code>PAYMENT_GATEWAY=manual</code> e as guardas anti-produção.</p>
+<h2>Falhas reproduzidas e correções pontuais</h2>
+<ul>
+<li>Menu: expectativa antiga de uma página contrariava as quatro páginas xgestão já existentes; corrigida a expectativa e acrescentada a verificação de contexto dos destinos.</li>
+<li>Percentuais: expectativas antigas derivavam progresso geral de tarefas ou alteravam o percentual manual da etapa. A correção segue o comportamento aprovado: agregado não reaparece e a etapa mantém seu percentual manual.</li>
+<li>Perfil e navegação: expectativa de redirect passou a incluir o perfil/contexto xgestão; leitura de perfil usa contexto de requisição independente, evitando a limitação de cookies Secure no adaptador HTTP do teste.</li>
+<li>Equipe: os marcadores de medição/financeiro eram assertados, mas nunca inseridos. As fixtures passaram a criar os registros, incluindo o valor de R$ 97 previsto nas assertivas de exclusão do marketplace.</li>
+<li>Admin: a saída paga não identificava <code>pagadorUserId</code>. R$ 0 era a resposta correta para aquela fixture incompleta; o teste agora identifica o próprio responsável como pagador, sem alterar o cálculo da aplicação.</li>
+<li>Upload: a origem loopback falhou antes do commit ao R2. Os mesmos passos completos passaram pela origem pública do preview. Isso não prova, por si só, defeito de produção; nenhuma política do bucket foi modificada.</li>
+<li>Ambiente de testes: copiar o cache de um Next ativo deixou tipos gerados inconsistentes e uma inicialização sem sucesso. Foi limpo somente o cache gerado do E2E parado, removida a cópia do cache ativo e preservado o stderr em arquivo local. A rodada seguinte iniciou e executou os casos. Nenhum cache ou dado de produção foi limpo.</li>
+</ul>
+<h2>Bloqueios e informações necessárias</h2>
+<h3>1. Ciclo real do Asaas sandbox</h3>
+<p>É necessário configurar a autenticação do webhook pelo fluxo seguro de secrets, cadastrar um webhook sandbox no destino público correto e só então comprovar:</p>
+<ol>
+<li>Cadastro e checkout do assinante descartável.</li>
+<li>Confirmação de pagamento entregue pelo provedor.</li>
+<li>Assinatura ativa, plano correto e retorno ao xgestão.</li>
+<li>Troca de plano, cancelamento e evento repetido sem alteração do marketplace.</li>
+</ol>
+<p>O bloqueio histórico de reCAPTCHA <strong>não foi novamente reproduzido</strong>: a configuração do webhook bloqueou essa etapa antes do checkout. Se o provedor exigir interação humana, ela deverá ser solicitada, não contornada.</p>
+<h3>2. Identificação legal e publicação</h3>
+<p>Faltam confirmação do operador do xgestão, razão social, CNPJ, endereço completo, CEP, cidade/UF, comarca, telefone, e-mail de contato, nome/e-mail do encarregado de dados e data de publicação. Os prazos em colchetes também precisam de confirmação; o trial de 90 dias não aprova automaticamente outros prazos contratuais ou de retenção.</p>
+<p>Não presumir que o CNPJ de outra empresa mencionado em documentação anterior identifica o operador do produto.</p>
+<h3>3. Política de cancelamento</h3>
+<p>A seção 5.4 da minuta promete acesso até o fim do ciclo já pago. O serviço atual chama o cancelamento do gateway e marca a assinatura cancelada imediatamente. É necessário decidir a política comercial e alinhar texto, implementação e testes antes de publicar a cláusula. Não houve alteração de cobrança, reembolso ou prazo de acesso nesta homologação.</p>
+<h2>Próxima decisão</h2>
+<p>Continuar a homologação real do Asaas após configurar o token seguro. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.</p>
+<p>As evidências persistidas são os logs e resultados dos testes. As capturas efetuadas nos casos aprovados não foram encontradas no diretório final; não é entregue um pacote de imagens privadas. A captura independente do preview mostrou a página pública de login, não uma sessão autenticada. Logs e traces são locais e podem ser temporários; não são publicados com este relatório, pois podem conter URLs de mídia assinadas. Este documento não apresenta chaves, tokens, cookies ou dados pessoais de usuários reais.</p>
+</main></body></html>

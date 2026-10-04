@@ -47,9 +47,8 @@ export default defineConfig({
   },
   projects: [
     // ── api ──────────────────────────────────────────────────────────────
-    // Specs que falam só HTTP (`request`), sem abrir página. Rodam neste
-    // ambiente, onde o Chromium do Playwright não sobe (`GLIBC_PRIVATE not
-    // found` — ver docs/jornadas/37-testes-e2e.md §11).
+    // Specs predominantemente HTTP (`request`), incluindo os mistos legados.
+    // Os testes de navegador usam o Chromium fornecido pelo workspace acima.
     //
     // Antes existia um único project `chromium` cobrindo todo o testDir, e o
     // Playwright tentava lançar o browser mesmo para specs que não o usam:
@@ -74,8 +73,7 @@ export default defineConfig({
       ],
     },
     // ── browser ──────────────────────────────────────────────────────────
-    // Specs que navegam de verdade. Bloqueados neste ambiente; reentram na
-    // fila quando houver runner com glibc consistente (Docker/CI externo).
+    // Specs que navegam de verdade usando o executável do workspace/runner.
     {
       name: "browser",
       testMatch: [
@@ -84,21 +82,19 @@ export default defineConfig({
         "**/planos-redirect.spec.ts",
         "**/logout-xgestao.spec.ts",
         "**/xgestao-obras.browser.spec.ts",
+        "**/xgestao-homologacao.browser.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {
-    // Pré-sincroniza .next-e2e/dev com o cache do dev server (.next/dev) antes
-    // de subir o servidor E2E. O rsync copia apenas diffs; quando o dev server
-    // está rodando localmente o cache já está quente e o rsync termina em < 1 s.
-    // Em ambientes sem .next/dev (checkout limpo), o rsync falha silenciosamente
-    // (|| true) e o next dev compila do zero — funciona, só é mais lento.
+    // Não copiar o cache de um servidor ativo: arquivos gerados podem mudar
+    // durante a cópia e deixar o servidor E2E com um snapshot inconsistente.
     // NEXT_DIST_DIR=.next-e2e isola o E2E do lock do dev server na porta 5000.
     // A flag 2>/dev/null suprime o spam do warning de crypto (server/auth.ts
     // importado no Edge Runtime) que, sem filtro, cria backpressure no pipe do
     // playwright e aumenta muito o tempo de cada requisição de compilação.
-    command: `bash -c 'rsync -a --exclude=lock .next/dev/ .next-e2e/dev/ 2>/dev/null || true; npx next dev -p ${PORT} -H 127.0.0.1 2>/dev/null'`,
+    command: `bash -c 'npx next dev -p ${PORT} -H 127.0.0.1 2>/tmp/xgestao-e2e-server-stderr.log'`,
     // /api/planos devolve 401 (sem compilar página completa).
     // Playwright 1.59 aceita qualquer status 200–403 como "servidor pronto".
     url: `${BASE_URL}/api/planos`,

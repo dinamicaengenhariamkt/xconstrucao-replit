@@ -106,9 +106,9 @@ A cobrança é **recorrente** e realizada por meio de processador de pagamentos 
 
 ### 5.1-A Teste grátis
 
-A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. O teste é opcional, iniciado por escolha do Assinante, e pode ser usado **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
+A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. A oferta vigente do MVP é de **90 dias no plano Pro**, iniciado por escolha do Assinante e disponível **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
 
-Ao fim do prazo, se o Assinante não tiver contratado um plano pago, a conta passa **automaticamente para o plano gratuito**, com as funcionalidades e limites dele. **Nenhum dado é excluído** por causa do fim do teste: as obras continuam disponíveis, e apenas recursos acima dos limites do plano gratuito, como a criação de novas obras, ficam restritos até a contratação de um plano.
+Ao fim do prazo, se não houver uma **assinatura paga ativa**, a conta passa **automaticamente para o plano Free gratuito**, que não deve ser confundido com o Basic pago. Uma assinatura paga contratada durante o teste não é encerrada pelo vencimento do teste. **Nenhum dado é excluído** por causa do fim do teste: obras, documentos, equipe e histórico permanecem. Aplicam-se as funcionalidades e os limites do plano gratuito vigente, informados na plataforma; os limites comerciais de lançamento ainda dependem de autorização separada.
 
 ### 5.1-B Membros da equipe
 
@@ -123,6 +123,8 @@ A assinatura é **renovada automaticamente** ao fim de cada ciclo, pelo valor vi
 Alterações de preço serão comunicadas com antecedência mínima de **[30] dias** e passarão a valer no ciclo seguinte à comunicação. O Assinante que não concordar poderá cancelar antes da renovação, sem ônus.
 
 ### 5.4 Cancelamento
+
+> **Pendência de homologação, não publicar esta cláusula como aprovada:** o texto abaixo prevê acesso até o fim do ciclo pago, mas o serviço atual marca a assinatura como cancelada imediatamente. Confirmar a política comercial e alinhar texto e implementação antes da publicação; o ciclo real do Asaas sandbox ainda não foi homologado.
 
 O Assinante pode cancelar a assinatura a qualquer momento, pelo próprio painel da plataforma ou pelos canais de contato da Seção 12.
 

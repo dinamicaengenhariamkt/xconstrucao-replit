@@ -100,7 +100,9 @@ test.describe('xgestão — obras próprias', () => {
 
     const detalhe = await request.get(`/api/empreiteiro/minhas-obras/${obra.id}`);
     expect(detalhe.status(), await detalhe.text()).toBe(200);
-    expect(await detalhe.json()).toMatchObject({ progresso: 10 });
+    // O registro histórico da atualização não reintroduz o agregado removido
+    // do detalhe do xgestão (XG29/XG34).
+    expect(await detalhe.json()).toMatchObject({ progresso: 0 });
 
     const excesso = await request.post('/api/empreiteiro/medicoes', {
       data: { ...payload, percentual: 91, requestId: crypto.randomUUID() },
@@ -131,7 +133,11 @@ test.describe('xgestão — obras próprias', () => {
     await page.getByRole('button', { name: 'Salvar empresa' }).click();
     expect((await saved).status()).toBe(200);
 
-    const status = await page.request.get('/api/xgestao/perfil-status');
+    // O browser aceita o cookie Secure em loopback, mas page.request no
+    // projeto API não o envia sobre HTTP. Verifique a persistência com o
+    // contexto API independente, sem mudar os cookies da aplicação.
+    await loginAs(request, email);
+    const status = await request.get('/api/xgestao/perfil-status');
     expect(status.status(), await status.text()).toBe(200);
     expect(await status.json()).toMatchObject({ ok: true, faltando: [] });
 
@@ -418,8 +424,10 @@ test.describe('xgestão — obras próprias', () => {
     const etapasDepoisDaMudancaBody = await etapasDepoisDaMudanca.json() as {
       rows: Array<{ id: string; progresso: number }>;
     };
-    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === etapaBody.id)?.progresso).toBe(0);
-    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === segundaEtapaBody.id)?.progresso).toBe(60);
+    // O percentual manual da etapa é preservado ao mover uma tarefa (XG23/XG34).
+    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === etapaBody.id)?.progresso).toBe(30);
+    // A segunda etapa nunca recebeu percentual manual; mover uma tarefa não o calcula.
+    expect(etapasDepoisDaMudancaBody.rows.find((item) => item.id === segundaEtapaBody.id)?.progresso).toBe(0);
 
     const etapaRemovida = await request.delete(`/api/obras/${obra.id}/etapas/${segundaEtapaBody.id}`);
     expect(etapaRemovida.status(), await etapaRemovida.text()).toBe(200);

@@ -1,6 +1,6 @@
 # Jornada — XG38: termos de uso e privacidade do xgestão no ar
 
-> Status: planejada (aguarda dados da empresa) | Prioridade: alta | Wave: xgestão-38
+> Status: bloqueada (dados da empresa e cancelamento; minutas revisadas, não publicadas) | Prioridade: alta | Wave: xgestão-38
 > Última atualização: 2026-10-04
 
 ## 1. Contexto & Objetivo
@@ -55,6 +55,7 @@ Nenhum.
 - [ ] Preencher: razão social, CNPJ, endereço completo, CEP, cidade/UF, comarca, telefone,
       e-mail de contato, nome e e-mail do encarregado (DPO), data de publicação, prazos `[30]` e `[90]` dias
 - [ ] Remover o bloco de comentário "MINUTA PARA REVISÃO"
+- [ ] Confirmar política de cancelamento e alinhar §5.4 com o serviço: minuta prevê acesso até o fim do ciclo pago, mas a implementação cancela imediatamente
 - [ ] Publicar por `/admin/legal` no ambiente de teste e conferir o re-consentimento no login
 - [ ] Publicar no ambiente publicado
 
@@ -80,3 +81,4 @@ Nenhum.
 
 - 2026-10-04: jornada criada; substitui a pendência "jurídico publica" da XG16 §5.
 - 2026-10-04: minutas atualizadas. Termos: §5.1-A teste grátis (opcional, uma vez por conta, volta automática ao Free sem apagar dados) e §5.1-B membros da equipe (o responsável responde pelos acessos que concede); §6 fala em links por público. Privacidade: links por público com seções por link (pagamentos desligado por padrão, conferido em `secoes.ts`) e nova subseção sobre o que o responsável vê dos membros. Falta: dados da empresa nos colchetes, remover o bloco de minuta e publicar.
+- 2026-10-04: homologação especificou Pro/90 dias, Free distinto de Basic e preservação da assinatura paga; apontou divergência de cancelamento na própria minuta. V2 permanece inerte. Nenhuma publicação ou novo aceite foi forçado; conferir [relatório](40-relatorio-homologacao-mvp.md) antes de publicar.

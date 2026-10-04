@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "GnWpC9qPYnaYvkmPjixlc"
+uri = "file://attached_assets/relatorio-homologacao-xgestao-2026-10-04.html"
+type = "html"
+title = "Relatório parcial de homologação — xgestão"
+description = "Resultados de trial, desktop/celular, uploads reais, exclusão, admin e permissões; bloqueios do Asaas e dos termos. Sem liberação comercial."
+logical_id = "48354858-c51b-4533-9613-d601f0ad73de"
+content_hash = "sha256:6bffec85daacae7be9ea2730cc7685a97e517a04a38450d85aba56f5071f6b95"
+size = 13136
+mtime_ms = 1791156914734
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/repl:51413c3e-4847-4bb3-851a-f02c3f76aa1d/48354858-c51b-4533-9613-d601f0ad73de/1c67ab88-47f9-4fac-ab5f-4da800a86683"
+storage_version_token = "1791156941036113"
+content_type = "text/html"

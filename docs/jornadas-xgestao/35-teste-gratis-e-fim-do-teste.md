@@ -1,6 +1,6 @@
 # Jornada — XG35: teste grátis de 3 meses e o que acontece quando ele acaba
 
-> Status: implementada (falta verificação visual; testes na rodada final) | Prioridade: alta | Wave: xgestão-35
+> Status: parcial (regra confirmada e integração aprovada; visual específica do trial pendente) | Prioridade: alta | Wave: xgestão-35
 > Última atualização: 2026-10-04
 
 ## 1. Contexto & Objetivo
@@ -84,7 +84,7 @@ Nenhum. O `fimTeste: null` fixo do admin (`dashboard.ts:189,386`) passa a vir do
 - [x] Aviso de fim do teste com "Continuar no Free" (grava `teste_aviso_confirmado`) e "Ver planos"
 - [x] Barra permanente do Free com chamada para os planos
 - [x] Admin: `fimTeste` real no painel (`fimTestePorUsuario`)
-- [ ] _(rodada final)_ Testes: teste ativo libera, vencido rebaixa, aviso aparece uma vez, escolha persiste,
+- [x] _(integração executada; estado do aviso validado pela API, não nova inspeção visual)_ Testes: teste ativo libera, vencido rebaixa, aviso aparece uma vez, escolha persiste,
       membro não vê ações de cobrança
 
 ## 10. Critérios de aceite
@@ -119,4 +119,4 @@ Nenhum. O `fimTeste: null` fixo do admin (`dashboard.ts:189,386`) passa a vir do
 - 2026-10-04: jornada criada; destrava a XG03 §8 com a decisão do Ramon.
 - 2026-10-04: implementação. Endpoints `POST /api/xgestao/teste` (409 se já usou ou já assina) e `POST /api/xgestao/teste/continuar-free`, ambos só para o responsável (membro recebe 403). Duração e tier em `platform_settings.xgestao` (`testeDias` 90, `testeTier` enterprise), sem tela de edição ainda.
 - 2026-10-04: checkout durante o teste: `JA_ASSINANTE` não bloqueia assinar o mesmo plano do teste; o webhook de ativação já cancela a linha `ativa` anterior (o teste); `cancelSubscription(null)` no gateway é no-op. Aba Plano: o plano testado continua assinável e o Free fica desabilitado até o fim do teste. Tela de retorno reconhece "saiu do teste" como ativação.
-- 2026-10-04: decisão 1 (tier do teste) ainda aberta com o Ramon; implementado com o default recomendado (Pro), trocável na configuração sem deploy.
+- 2026-10-04: decisão de produto confirmada pelo usuário: Pro comercial por 90 dias; ao fim, sem assinatura paga ativa, retorno ao Free sem apagar dados. Integração confirmou o valor efetivo, concorrência, não repetição, aviso persistente, preservação e compra manual durante o teste. Ver [relatório](40-relatorio-homologacao-mvp.md). Não comprova pagamento Asaas nem nova rodada visual da barra/aviso.

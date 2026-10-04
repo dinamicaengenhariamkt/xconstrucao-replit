@@ -19,3 +19,5 @@
 - [Overlay legal no E2E xgestão](xgestao-e2e-legal-overlay.md) — convite novo pode mostrar diálogo legal em cada navegação; dispense antes de consultar abas por papel.
 - [Ordem de FK composta no Publish](publish-composite-fk-order.md) — o diff pode criar a FK antes da unicidade nova no pai; separar em duas publicações preserva dados.
 - [Rejeição genérica do Git](git-push-rejection.md) — PUSH_REJECTED também pode esconder blobs grandes no histórico local; não presumir divergência nem usar force push.
+- [Diretrizes do MVP xgestão](xgestao-mvp-rules.md) — Pro por 90 dias confirmado; ativação comercial depende de finalizar o MVP e receber OK explícito.
+- [Isolamento dos testes Playwright](playwright-isolated-builds.md) — evitar cache ativo e servidor compartilhado entre runners; validar uploads pela origem pública.

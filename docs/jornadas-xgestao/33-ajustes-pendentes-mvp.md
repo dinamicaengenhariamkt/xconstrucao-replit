@@ -1,7 +1,9 @@
 # Jornada — XG33: ajustes pendentes do MVP (backlog vivo)
 
-> Status: planejada | Prioridade: alta | Wave: xgestão-33
+> Status: parcial (roteiro de obra aprovado; Asaas real e publicação legal bloqueados) | Prioridade: alta | Wave: xgestão-33
 > Última atualização: 2026-10-04
+
+Homologação atual: [relatório por requisito e execução](40-relatorio-homologacao-mvp.md). AJ-05 teve os três cenários de exclusão executados e passou; AJ-07 teve criação, edição, capa/PDF reais, recarga e exclusão em desktop/celular aprovadas. A inspeção visual completa das demais telas e AJ-02 não estão sendo declarados concluídos.
 
 ## 1. Contexto & Objetivo
 
@@ -80,8 +82,9 @@ Nenhum mock encontrado nas rotas do xgestão (`features/xgestao`, `app/xgestao`,
 - [x] **AJ-06 · Guard inconsistente no admin.** _(2026-10-04: raiz usa `requireAdminXgestao` + `adminJson`; comportamento igual, 403 para não-admin.)_ `app/api/admin/xgestao/route.ts:10` usa só
       `isAdminLike`; as sub-rotas usam `requireAdminXgestao`. Padronizar.
 - [ ] **AJ-07 · Rodada de verificação visual.** _(2026-10-04, parcial: varredura automatizada de 30 telas (público, dono, admin) em desktop 1366 e celular 390: 0 erros de console, 0 requisições com erro, 0 rolagem horizontal, todos os links internos 200, redirects `/xgestao`→dashboard e `/xgestao/planos`→aba Plano corretos. Corrigido: a oferta do teste grátis abria sobre o tour guiado no console; agora só no dashboard. Falta a passada manual dos fluxos que exigem clique: criar obra, upload, excluir.)_ Todos os "falta verificação visual" de XG12 a XG32.
-      Testes de navegador não rodam no Replit (falta `libglib`/Chromium); fazer rodada manual
-      guiada com o Ramon ou rodar os specs de browser fora do Replit.
+      A anotação anterior sobre Chromium indisponível foi superada: o navegador fornecido pelo
+      workspace executou o roteiro interativo em desktop/celular. Demais verificações visuais
+      pendentes continuam separadas; não exigir outro computador para esse roteiro já aprovado.
 
 ### Baixa / pós-MVP
 

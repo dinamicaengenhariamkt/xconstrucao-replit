@@ -31,7 +31,10 @@ test.describe('Fundações xgestão — entitlement administrativo', () => {
     await loginAs(request, email);
     const semEntitlement = await request.get('/xgestao/obras', { maxRedirects: 0 });
     expect(semEntitlement.status()).toBe(307);
-    expect(semEntitlement.headers().location).toContain('/login?next=%2Fxgestao%2Fobras');
+    const destinoLogin = new URL(semEntitlement.headers().location, 'http://127.0.0.1');
+    expect(destinoLogin.pathname).toBe('/login');
+    expect(destinoLogin.searchParams.get('perfil')).toBe('xgestao');
+    expect(destinoLogin.searchParams.get('next')).toBe('/xgestao/dashboard');
     await logout(request);
 
     await loginAs(request, SEED_ADMIN_EMAIL);
