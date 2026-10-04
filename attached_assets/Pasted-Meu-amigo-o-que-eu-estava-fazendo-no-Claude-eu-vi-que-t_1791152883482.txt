@@ -1,0 +1,11 @@
+Meu amigo, o que eu estava fazendo no Claude: eu vi que tem esses pontos:
+- A finalizar os limites reais de pagamento, vai ser só quando a gente finalizar.
+- Então não se preocupe com isso, que eu acredito que é o XG ou XG39.
+- Isso daí, para a gente mudar para o aberto 100% real etc., de pagamento, isso daí vai ser feito só depois, quando a gente de fato dá o OK.
+- Mudar ali os parâmetros de gratificação, tudo mais e colocar os limites de forma correta.
+Isso daí vai ter que ser feito só quando a gente finalizar bem, a partir dos termos e privacidade e tudo mais, de acordo com o nosso ajuste que a gente fez da gestão e tudo mais. Vamos realmente ajustar isso daí para ver se tem o add-to-test e se está realmente finalizado, os textos e tudo mais. Tiro de teste grátis: no caso ali hoje, as regras que eu coloquei lá, se o cara está usando a forma gratuita ou está no free test ali, ele tem que ficar no free test nos 3 meses. Se ele quiser assinar, já assina direto mas aí, quando voltar e não assinar quando acabar o tempo, ele vai direto pro free, pro plano básico e tudo mais.
+Como eu falei, o liberal ou não para múltiplos projetos ou múltiplos usuários por projeto e tudo mais daí vai ser feito depois, quando a gente mandar o cenário real, tudo bem, link público mais robusto. Eu não sei o que contempla mas isso daí a gente pode pensar depois. Inclusive ali ele já tem o que ele pode liberar ou não. O empreiteiro pode fazer isso e não precisa ser eu. Acredito que pode ser ali. Vamos ir só para o cara saber como que está sendo o andamento.
+A assinatura, ponta a ponta, no que eu passei: web hook do sandbox de teste. Você, como detentor aqui das chaves e tudo mais, pode fazer o teste para ver se está tudo 100%.
+Troca de plano, compra de plano ali, novo cadastro de plano. Você pode fazer todas essas validações.
+Peço que você dê uma olhada nesse Intox Next, gestão de jornadas, para a gente ver se está tudo ok e aí valide. Tem mais algum ponto que está faltando ser marcado para a gente finalizar e tudo mais?
+Peço o máximo de cuidado para não quebrar o que já está funcional e a gente conseguir avançar aí para lançar esse MVP antes.
