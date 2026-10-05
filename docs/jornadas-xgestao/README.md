@@ -150,7 +150,9 @@ preencher os campos entre colchetes. Detalhes em [XG16 §3](16-revalidacao-pre-t
 webhook sandbox cadastrado e ativo na origem pública do desenvolvimento. Destino rejeita
 chamada sem token (400) e aceita sondagem autenticada sem processar pagamento (200).
 Checkout Basic mensal de R$ 89 criado para conta descartável, mas pagamento e ativação
-continuam não comprovados; conclusão interativa do checkout pendente.
+continuam não comprovados. AJ-02 pendente de validação pelo usuário, que optou por
+publicar e testar na versão publicada. Webhook desta rodada permanece em desenvolvimento;
+essa decisão não ativa cobrança real ou limites comerciais.
 A situação do ambiente publicado e a antiga aprovação de cartão não foram novamente
 verificadas nesta execução; não usar esse histórico como comprovação de pagamento.
 Checklist em [XG03 §8-A](03-planos-limites-trial.md).

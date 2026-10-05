@@ -87,6 +87,8 @@ A seção 5.4 da minuta promete acesso até o fim do ciclo já pago. O serviço 
 
 ## Próxima decisão
 
-Continuar a homologação real após a conclusão interativa do checkout. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.
+O usuário optou por publicar a aplicação por conta própria, realizar o teste na versão publicada e retornar caso encontre erro. AJ-02 fica **pendente de validação pelo usuário**, sem nova tentativa automatizada ou afirmação de pagamento aprovado. A homologação completa permanece aberta até existir evidência do provedor; publicação legal e XG39 continuam dependentes de decisões/autorização próprias.
+
+O webhook sandbox criado nesta rodada aponta para desenvolvimento. A validação de pagamento na aplicação publicada exige conferir o destino do webhook, sua autenticação e o ambiente Asaas efetivo dessa versão. Publicar o código para testar não equivale a autorizar cobrança real ou ativar limites comerciais. Nenhuma configuração de produção foi alterada após essa decisão.
 
 As evidências persistidas são os logs e resultados dos testes. As capturas efetuadas nos casos aprovados não foram encontradas no diretório final; não é entregue um pacote de imagens privadas. A captura independente do preview mostrou a página pública de login, não uma sessão autenticada. Logs e traces são locais e podem ser temporários; não são publicados com este relatório, pois podem conter URLs de mídia assinadas. Este documento não apresenta chaves, tokens, cookies ou dados pessoais de usuários reais.
