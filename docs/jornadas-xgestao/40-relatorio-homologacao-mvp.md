@@ -22,7 +22,7 @@ Não foram ativados limites comerciais, alterada a cobrança de produção, publ
 | Admin: atrasadas, paradas, custo pago, prazo, trial e CSV | Aprovado em integração adicional: obra descartável incrementa atrasadas/paradas em 1; custo pago aumenta R$ 321, iguais na lista e no detalhe; prazo persiste; assinante aparece em teste Pro; CSV inclui assinante, teste e ano do vencimento. | Exportação foi conferida por HTTP; não foi repetida inspeção visual autenticada das páginas do admin nem de toda a tabela exportada. |
 | Equipe e isolamento — XG37 | Cenário extenso de dono, gestor e colaborador passou: grants por obra/área, restrição de cobrança, exclusão do marketplace, revogação imediata e admin somente leitura. Demais regressões de acesso passaram na rodada ampla. | Duas medições e dois lançamentos sintéticos precisavam ser persistidos para que as antigas assertivas realmente testassem inclusão/exclusão. Não foram afrouxadas as restrições da aplicação. |
 | Minutas e consentimento — XG38 | Minutas v2 revisadas como dados inertes: trial, equipe, links por público, Free distinto de Basic e proteção da assinatura paga. Dados ausentes e divergência de cancelamento listados abaixo. | Não publicadas. Novo aceite de uma v2 publicada não foi executado; não há certificação jurídica por advogado. |
-| Asaas real — AJ-02 | Ambiente compartilhado consultado: `ASAAS_ENVIRONMENT=sandbox`, gateway Asaas e credencial existente; consulta autenticada GET `/webhooks` retornou zero webhooks. `ASAAS_WEBHOOK_TOKEN` ausente no desenvolvimento. | Não foram criados checkout, webhook ou pagamento real nesta rodada. A ausência no ambiente publicado não foi revalidada. |
+| Asaas real — AJ-02 | Token confirmado pelo usuário; webhook sandbox criado e ativo, não interrompido, no destino público correto. Sondagem sem token: 400; com token e evento ignorado: 200. Checkout recorrente Basic mensal de R$ 89 criado para conta nova. Preparação opt-in passou em 33,7 s. | Pagamento não comprovado: tentativa normal pela UI não gerou cobrança, cliente Asaas pelo e-mail descartável ou evento recebido; conta permanece no trial. A mensagem de confirmação localizada no DOM era oculta. Conclusão interativa pendente. |
 | XG39 e AJ-08 | Intactos e fora da ativação desta rodada. | Limites reais, pagamentos de produção, hash de tokens e rate limit distribuído não foram ligados. |
 
 ## Rodadas executadas
@@ -42,6 +42,7 @@ Os resultados abaixo são **por execução**, não uma alegação de que tudo pa
 | Rodada isolada após reparar o cache de testes | 5 aprovados: equipe, 2 trial, desktop e celular; 1 falha da nova fixture admin | `/tmp/xgestao-final-evidence.log` |
 | Admin específico, fixture com pagador corrigido | 1 aprovado em 48,3 s | `/tmp/xgestao-final-admin.log` |
 | TypeScript após rodada final | Aprovado, saída 0 | `/tmp/xgestao-final-types-delivery.log` |
+| Preparação externa Asaas, execução separada opt-in | Primeira execução parou antes de criar conta: runner usa manual também no processo do spec. Expectativa corrigida sem enfraquecer a guarda; reexecução aprovada em 33,7 s. | `/tmp/xgestao-asaas-preparacao.log` |
 
 Casos já aprovados não foram reiniciados por alterações apenas na fixture admin. A suíte comum mantém `PAYMENT_GATEWAY=manual` e as guardas anti-produção.
 
@@ -59,14 +60,20 @@ Casos já aprovados não foram reiniciados por alterações apenas na fixture ad
 
 ### 1. Ciclo real do Asaas sandbox
 
-É necessário configurar a autenticação do webhook pelo fluxo seguro de secrets, cadastrar um webhook sandbox no destino público correto e só então comprovar:
+Autenticação e cadastro do webhook foram concluídos após a confirmação segura do token. Webhook `242fe644-7a62-40df-958c-d66953ffb222`, entrega sequencial, eventos `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED` e `SUBSCRIPTION_DELETED`. O e-mail operacional existente da conta Asaas foi utilizado sem expô-lo no relatório.
 
-1. Cadastro e checkout do assinante descartável.
+O checkout foi criado pelo endpoint normal do app público, enquanto preparação de cadastro/perfil ficou no servidor isolado manual. A conta iniciou voluntariamente o trial; criar checkout não substituiu o teste por uma assinatura paga. Ainda é necessário comprovar:
+
+1. Conclusão do checkout do assinante descartável (cadastro e geração do checkout já executados).
 2. Confirmação de pagamento entregue pelo provedor.
 3. Assinatura ativa, plano correto e retorno ao xgestão.
 4. Troca de plano, cancelamento e evento repetido sem alteração do marketplace.
 
-O bloqueio histórico de reCAPTCHA **não foi novamente reproduzido**: a configuração do webhook bloqueou essa etapa antes do checkout. Se o provedor exigir interação humana, ela deverá ser solicitada, não contornada.
+O bloqueio histórico de reCAPTCHA **não foi novamente comprovado**. A interação automatizada avançou por identificação e endereço até cartão; uma tentativa com cartão fictício voltou ao formulário inicial, sem confirmação do provedor. Não foram enviados pagamentos adicionais nem contornado reCAPTCHA. A conclusão humana do checkout é o próximo passo.
+
+Uma leitura de texto oculto chegou a sugerir sucesso, mas foi invalidada pela captura e pelas consultas independentes: nenhum cliente com o e-mail descartável, nenhuma cobrança, nenhum evento recebido e somente a assinatura de trial no banco. Não contar essa mensagem como pagamento.
+
+Observação para antes da produção: o endpoint guarda headers completos no log de entrega, e o retry os reutiliza para validar novamente o webhook. Isso pode persistir o token de autenticação quando existir uma entrega real. Proteger os dados sensíveis e alinhar o retry requer uma correção coordenada; não remover headers isoladamente e quebrar a recuperação. Não foi alterado esse comportamento nesta rodada.
 
 ### 2. Identificação legal e publicação
 
@@ -80,6 +87,6 @@ A seção 5.4 da minuta promete acesso até o fim do ciclo já pago. O serviço 
 
 ## Próxima decisão
 
-Continuar a homologação real do Asaas após configurar o token seguro. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.
+Continuar a homologação real após a conclusão interativa do checkout. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.
 
 As evidências persistidas são os logs e resultados dos testes. As capturas efetuadas nos casos aprovados não foram encontradas no diretório final; não é entregue um pacote de imagens privadas. A captura independente do preview mostrou a página pública de login, não uma sessão autenticada. Logs e traces são locais e podem ser temporários; não são publicados com este relatório, pois podem conter URLs de mídia assinadas. Este documento não apresenta chaves, tokens, cookies ou dados pessoais de usuários reais.

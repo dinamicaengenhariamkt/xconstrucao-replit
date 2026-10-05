@@ -21,3 +21,5 @@
 - [Rejeição genérica do Git](git-push-rejection.md) — PUSH_REJECTED também pode esconder blobs grandes no histórico local; não presumir divergência nem usar force push.
 - [Diretrizes do MVP xgestão](xgestao-mvp-rules.md) — Pro por 90 dias confirmado; ativação comercial depende de finalizar o MVP e receber OK explícito.
 - [Isolamento dos testes Playwright](playwright-isolated-builds.md) — evitar cache ativo e servidor compartilhado entre runners; validar uploads pela origem pública.
+- [Evidência do checkout Asaas](asaas-checkout-evidence.md) — texto de sucesso pode estar oculto; comprovar pagamento e webhook, não apenas presença no DOM.
+- [TLS da origem pública no Node](replit-public-origin-tls.md) — usar a CA confiada pelo sistema; não desativar verificação TLS para sondar o preview.

@@ -64,8 +64,8 @@
 </tr>
 <tr>
 <td>Asaas real — AJ-02</td>
-<td>Ambiente compartilhado consultado: <code>ASAAS_ENVIRONMENT=sandbox</code>, gateway Asaas e credencial existente; consulta autenticada GET <code>/webhooks</code> retornou zero webhooks. <code>ASAAS_WEBHOOK_TOKEN</code> ausente no desenvolvimento.</td>
-<td>Não foram criados checkout, webhook ou pagamento real nesta rodada. A ausência no ambiente publicado não foi revalidada.</td>
+<td>Token confirmado pelo usuário; webhook sandbox criado e ativo, não interrompido, no destino público correto. Sondagem sem token: 400; com token e evento ignorado: 200. Checkout recorrente Basic mensal de R$ 89 criado para conta nova. Preparação opt-in passou em 33,7 s.</td>
+<td>Pagamento não comprovado: tentativa normal pela UI não gerou cobrança, cliente Asaas pelo e-mail descartável ou evento recebido; conta permanece no trial. A mensagem de confirmação localizada no DOM era oculta. Conclusão interativa pendente.</td>
 </tr>
 <tr>
 <td>XG39 e AJ-08</td>
@@ -138,6 +138,11 @@
 <td>Aprovado, saída 0</td>
 <td><code>/tmp/xgestao-final-types-delivery.log</code></td>
 </tr>
+<tr>
+<td>Preparação externa Asaas, execução separada opt-in</td>
+<td>Primeira execução parou antes de criar conta: runner usa manual também no processo do spec. Expectativa corrigida sem enfraquecer a guarda; reexecução aprovada em 33,7 s.</td>
+<td><code>/tmp/xgestao-asaas-preparacao.log</code></td>
+</tr>
 </tbody></table>
 <p>Casos já aprovados não foram reiniciados por alterações apenas na fixture admin. A suíte comum mantém <code>PAYMENT_GATEWAY=manual</code> e as guardas anti-produção.</p>
 <h2>Falhas reproduzidas e correções pontuais</h2>
@@ -152,20 +157,23 @@
 </ul>
 <h2>Bloqueios e informações necessárias</h2>
 <h3>1. Ciclo real do Asaas sandbox</h3>
-<p>É necessário configurar a autenticação do webhook pelo fluxo seguro de secrets, cadastrar um webhook sandbox no destino público correto e só então comprovar:</p>
+<p>Autenticação e cadastro do webhook foram concluídos após a confirmação segura do token. Webhook <code>242fe644-7a62-40df-958c-d66953ffb222</code>, entrega sequencial, eventos <code>PAYMENT_CONFIRMED</code>, <code>PAYMENT_RECEIVED</code>, <code>PAYMENT_OVERDUE</code>, <code>PAYMENT_DELETED</code> e <code>SUBSCRIPTION_DELETED</code>. O e-mail operacional existente da conta Asaas foi utilizado sem expô-lo no relatório.</p>
+<p>O checkout foi criado pelo endpoint normal do app público, enquanto preparação de cadastro/perfil ficou no servidor isolado manual. A conta iniciou voluntariamente o trial; criar checkout não substituiu o teste por uma assinatura paga. Ainda é necessário comprovar:</p>
 <ol>
-<li>Cadastro e checkout do assinante descartável.</li>
+<li>Conclusão do checkout do assinante descartável (cadastro e geração do checkout já executados).</li>
 <li>Confirmação de pagamento entregue pelo provedor.</li>
 <li>Assinatura ativa, plano correto e retorno ao xgestão.</li>
 <li>Troca de plano, cancelamento e evento repetido sem alteração do marketplace.</li>
 </ol>
-<p>O bloqueio histórico de reCAPTCHA <strong>não foi novamente reproduzido</strong>: a configuração do webhook bloqueou essa etapa antes do checkout. Se o provedor exigir interação humana, ela deverá ser solicitada, não contornada.</p>
+<p>O bloqueio histórico de reCAPTCHA <strong>não foi novamente comprovado</strong>. A interação automatizada avançou por identificação e endereço até cartão; uma tentativa com cartão fictício voltou ao formulário inicial, sem confirmação do provedor. Não foram enviados pagamentos adicionais nem contornado reCAPTCHA. A conclusão humana do checkout é o próximo passo.</p>
+<p>Uma leitura de texto oculto chegou a sugerir sucesso, mas foi invalidada pela captura e pelas consultas independentes: nenhum cliente com o e-mail descartável, nenhuma cobrança, nenhum evento recebido e somente a assinatura de trial no banco. Não contar essa mensagem como pagamento.</p>
+<p>Observação para antes da produção: o endpoint guarda headers completos no log de entrega, e o retry os reutiliza para validar novamente o webhook. Isso pode persistir o token de autenticação quando existir uma entrega real. Proteger os dados sensíveis e alinhar o retry requer uma correção coordenada; não remover headers isoladamente e quebrar a recuperação. Não foi alterado esse comportamento nesta rodada.</p>
 <h3>2. Identificação legal e publicação</h3>
 <p>Faltam confirmação do operador do xgestão, razão social, CNPJ, endereço completo, CEP, cidade/UF, comarca, telefone, e-mail de contato, nome/e-mail do encarregado de dados e data de publicação. Os prazos em colchetes também precisam de confirmação; o trial de 90 dias não aprova automaticamente outros prazos contratuais ou de retenção.</p>
 <p>Não presumir que o CNPJ de outra empresa mencionado em documentação anterior identifica o operador do produto.</p>
 <h3>3. Política de cancelamento</h3>
 <p>A seção 5.4 da minuta promete acesso até o fim do ciclo já pago. O serviço atual chama o cancelamento do gateway e marca a assinatura cancelada imediatamente. É necessário decidir a política comercial e alinhar texto, implementação e testes antes de publicar a cláusula. Não houve alteração de cobrança, reembolso ou prazo de acesso nesta homologação.</p>
 <h2>Próxima decisão</h2>
-<p>Continuar a homologação real do Asaas após configurar o token seguro. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.</p>
+<p>Continuar a homologação real após a conclusão interativa do checkout. Manter AJ-02 bloqueado até existir evidência do provedor; manter publicação legal e XG39 dependentes de decisões/autorização próprias.</p>
 <p>As evidências persistidas são os logs e resultados dos testes. As capturas efetuadas nos casos aprovados não foram encontradas no diretório final; não é entregue um pacote de imagens privadas. A captura independente do preview mostrou a página pública de login, não uma sessão autenticada. Logs e traces são locais e podem ser temporários; não são publicados com este relatório, pois podem conter URLs de mídia assinadas. Este documento não apresenta chaves, tokens, cookies ou dados pessoais de usuários reais.</p>
 </main></body></html>

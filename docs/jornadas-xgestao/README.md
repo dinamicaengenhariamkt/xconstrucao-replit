@@ -146,8 +146,11 @@ preencher os campos entre colchetes. Detalhes em [XG16 §3](16-revalidacao-pre-t
 
 ### Pendência de configuração (não bloqueia desenvolvimento)
 
-**Homologação de 2026-10-04:** `ASAAS_WEBHOOK_TOKEN` ausente no desenvolvimento; consulta
-autenticada ao Asaas sandbox retornou zero webhooks. O ciclo real permanece bloqueado.
+**Homologação de 2026-10-04, atualização:** o usuário confirmou `ASAAS_WEBHOOK_TOKEN`;
+webhook sandbox cadastrado e ativo na origem pública do desenvolvimento. Destino rejeita
+chamada sem token (400) e aceita sondagem autenticada sem processar pagamento (200).
+Checkout Basic mensal de R$ 89 criado para conta descartável, mas pagamento e ativação
+continuam não comprovados; conclusão interativa do checkout pendente.
 A situação do ambiente publicado e a antiga aprovação de cartão não foram novamente
 verificadas nesta execução; não usar esse histórico como comprovação de pagamento.
 Checklist em [XG03 §8-A](03-planos-limites-trial.md).
