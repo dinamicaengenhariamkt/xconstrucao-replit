@@ -3,17 +3,17 @@ name: Diretrizes do MVP xgestão
 description: Decisões confirmadas sobre teste gratuito e autorização da ativação comercial.
 ---
 
-Para a nova oferta, o usuário confirmou Premium completo por 90 dias e Basic pago de R$ 99/mês após o teste. O acesso ao fim do trial sem contratação ainda precisa ser definido; não presumir retorno ao Free nem cobrança automática.
+Para a nova oferta, o usuário confirmou Premium completo por 90 dias e Basic pago de R$ 99/mês após o teste. Ao fim do trial sem pagamento, somente leitura, preservando os dados; não presumir retorno ao Free nem cobrança automática.
 
 **Why:** o usuário confirmou a nova oferta ao revisar as imagens de monetização em 2026-11-02; essa decisão substitui a orientação comercial anterior de Pro seguido de Free gratuito, mas não ativa mudanças na aplicação existente.
 
-**How to apply:** usar essas regras no planejamento das novas jornadas e minutas; resolver explicitamente o fim do teste sem contratação. Preservar os dados e conferir a configuração efetiva na homologação, sem confundir decisão aprovada com funcionalidade implantada.
+**How to apply:** usar essas regras no planejamento das novas jornadas e minutas. O fim do teste sem pagamento deve preservar os dados em somente leitura; conferir a configuração efetiva na homologação, sem confundir decisão aprovada com funcionalidade implantada.
 
-Os limites de equipe da nova oferta incluem o titular: Basic é titular + 1 convidado; Basic Plus tem 5 pessoas no total; Premium, 15. A unidade de contagem, por empresa ou por obra, ainda não foi confirmada.
+Os limites de equipe da nova oferta são por empresa assinante e incluem o titular: Basic é titular + 1 convidado; Basic Plus tem 5 pessoas no total; Premium, 15.
 
-**Why:** o usuário confirmou a inclusão do titular em 2026-11-02.
+**Why:** o usuário confirmou a inclusão do titular e a contagem por empresa assinante em 2026-11-02.
 
-**How to apply:** não oferecer 5 ou 15 convidados além do titular; confirmar a unidade e o tratamento de convites/prestadores antes de aplicar cotas.
+**How to apply:** não oferecer 5 ou 15 convidados além do titular nem duplicar a contagem de uma pessoa que participa de várias obras da empresa; confirmar o tratamento de convites/prestadores antes de aplicar cotas.
 
 No link público, os valores autorizados são contrato, recebimentos e saldo, somente nos planos que permitem o recurso.
 
