@@ -95,6 +95,13 @@ Nenhum mock encontrado nas rotas do xgestão (`features/xgestao`, `app/xgestao`,
       ocultas, tour `console-v4`), XG18 (mapa removido pela XG26), README (XG31 "Fase B adiada",
       mas está implementada).
 
+### Adicionados em 2026-10-18 (raio-X)
+
+- [x] **AJ-12 · Token do webhook gravado no banco.** `app/api/webhooks/gateway/route.ts` salvava todos os headers em `webhook_delivery_log.headers_json`, inclusive `asaas-access-token`. Agora grava sem os sensíveis (`features/planos/webhook-headers.ts`); o retry reapresenta o token do ambiente, já que toda linha do log só é gravada depois de autenticada na rota. _(2026-10-18; publicar para valer em produção)_
+- [ ] **AJ-13 · Regra de cancelamento do plano pago.** Hoje cancelar a assinatura corta o plano na hora (`cancelarAssinatura` marca `cancelada` e cancela no Asaas); a minuta dos termos (§5.4) promete acesso até o fim do ciclo já pago. Decidir uma regra e alinhar código + termos + testes. Não é essencial para os testes do MVP. _(Não afeta o teste grátis nem a conta do usuário, só a assinatura paga.)_
+- [ ] **AJ-14 · Repositório GitHub público.** `dinamicaengenhariamkt/xconstrucao-replit` está público e traz senhas das contas de teste (`replit.md`, `server/seed.ts`), inclusive do superadmin seed. Tornar privado (só o dono da conta consegue) e trocar a senha do superadmin em produção: tornar privado não apaga o que já foi exposto.
+- [ ] **AJ-15 · Webhook do Asaas para o ambiente publicado.** O único webhook do sandbox aponta para o dev. Para testar pagamento no publicado: apontar a URL para `https://dinamicareforma.com.br/api/webhooks/gateway` e garantir `ASAAS_WEBHOOK_TOKEN` (mesmo valor do webhook) nos Secrets do deploy.
+
 ### Virada de chave (só quando o Ramon der o OK de lançamento)
 
 - [→] **AJ-10 · Limite do Freemium** e **AJ-11 · Pagamento real** foram movidos para a

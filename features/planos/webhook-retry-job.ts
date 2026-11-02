@@ -6,6 +6,7 @@ import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subc
 import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
 import { parseExternalRefObra } from "@features/marketplace/split-service";
 import { markAndNotifyDeadWebhooks } from "@features/planos/webhook-dead-notifier";
+import { cabecalhosParaRetry } from "@features/planos/webhook-headers";
 
 export const MAX_RETRIES = 5;
 export const RETRY_WINDOW_HOURS = 24;
@@ -102,7 +103,7 @@ export async function retryPendingWebhookEvents(
         try {
           retryEvt = await getPaymentGateway().parseWebhook(
             logRow.raw_body,
-            headers,
+            cabecalhosParaRetry(headers),
             clientIp,
           );
         } catch {

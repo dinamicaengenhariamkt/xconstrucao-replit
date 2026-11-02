@@ -10,6 +10,7 @@ import { parseExternalRefAnuncio } from "@features/anuncios/self-service/asaas-a
 import { getClientIp } from "@features/auth/api/rate-limit";
 import { db } from "@shared/db/db";
 import { retryPendingWebhookEvents } from "@features/planos/webhook-retry-job";
+import { semCabecalhosSensiveis } from "@features/planos/webhook-headers";
 
 /**
  * POST /api/webhooks/gateway — recebe eventos do gateway de pagamento (J11).
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       INSERT INTO webhook_delivery_log
         (gateway_event_id, event_type, raw_body, headers_json, status)
       VALUES
-        (${evt.eventId}, ${evt.type}, ${rawBody}, ${JSON.stringify(headers)}::jsonb, 'pending')
+        (${evt.eventId}, ${evt.type}, ${rawBody}, ${JSON.stringify(semCabecalhosSensiveis(headers))}::jsonb, 'pending')
       ON CONFLICT (gateway_event_id) DO UPDATE
         SET retry_count = webhook_delivery_log.retry_count + 1,
             status = CASE
