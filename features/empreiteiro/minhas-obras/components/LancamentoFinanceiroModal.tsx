@@ -1,4 +1,5 @@
 'use client';
+import { dinheiroDecimal } from '@features/xgestao/lib/dinheiro';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -112,6 +113,8 @@ interface LancamentoFinanceiroModalProps {
   obraId: string;
   tipo: LancamentoTipo;
   somenteMaoDeObra?: boolean;
+  /** Novo parser somente para obra própria; preserva o fluxo do marketplace. */
+  moedaXgestao?: boolean;
   /** Quando presente, o modal edita em vez de criar. */
   lancamento?: ObraLancamentoApi | null;
   /** XG20 — equipe da obra, para escolher quem recebeu a saída. */
@@ -124,6 +127,7 @@ export function LancamentoFinanceiroModal({
   obraId,
   tipo,
   somenteMaoDeObra = false,
+  moedaXgestao = false,
   lancamento = null,
   equipe = [],
 }: LancamentoFinanceiroModalProps) {
@@ -213,7 +217,13 @@ export function LancamentoFinanceiroModal({
       form.setError('categoria', { message: 'Este acesso permite somente saídas de mão de obra.' });
       return;
     }
-    const valor = parseValorBr(data.valor);
+    let valor: number;
+    try {
+      valor = moedaXgestao ? Number(dinheiroDecimal(data.valor)) : parseValorBr(data.valor);
+    } catch (error) {
+      form.setError('valor', { message: error instanceof Error ? error.message : 'Valor inválido.' });
+      return;
+    }
     if (!Number.isFinite(valor) || valor <= 0) {
       form.setError('valor', { message: 'Informe um valor maior que zero' });
       return;

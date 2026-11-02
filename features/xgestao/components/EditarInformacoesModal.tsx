@@ -198,9 +198,9 @@ export function EditarInformacoesModal({
             <Campo label="Orçamento previsto (R$)" htmlFor="modal-obra-valor" optional>
               <Input
                 id="modal-obra-valor"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
+                placeholder="Ex.: 500.000,50"
                 value={form.valorTotal}
                 onChange={(e) => update('valorTotal', e.target.value)}
               />

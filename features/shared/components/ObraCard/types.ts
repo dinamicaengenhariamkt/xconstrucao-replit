@@ -13,6 +13,8 @@ export interface ObraCardProps {
   status: ObraStatus;
   progresso: number;
   orcamento: number;
+  /** Formatação opcional; o padrão existente permanece para os demais produtos. */
+  formatarOrcamento?: (valor: number) => string;
   dataInicio: string;
   dataPrevisaoFim: string;
   tipo: string;

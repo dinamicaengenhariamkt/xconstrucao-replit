@@ -1,4 +1,5 @@
 'use client';
+import { invalidarCarteiraXgestao } from '@features/xgestao/lib/invalidar-carteira';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@shared/lib/queryClient';
@@ -65,6 +66,7 @@ export type EditarLancamentoInput = Partial<Omit<NovoLancamentoInput, 'tipo'>> &
 function useInvalidarFinanceiro(obraId: string) {
   const qc = useQueryClient();
   return () => {
+    void invalidarCarteiraXgestao(qc, obraId);
     qc.invalidateQueries({ queryKey: ['obras', obraId, 'lancamentos'] });
     qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
     qc.invalidateQueries({ queryKey: ['contratante', 'minhas-obras', obraId] });

@@ -46,6 +46,7 @@ import {
   type ObraLancamentoApi,
 } from '@features/financeiro/hooks/use-obra-lancamentos';
 import { LancamentoFinanceiroModal } from './LancamentoFinanceiroModal';
+import { EditarValorContratoModal } from '@features/xgestao/components/EditarValorContratoModal';
 import { AditivosCard } from './AditivosCard';
 import type { ProfitMetrics } from '@features/shared/profit';
 import type { MembroEquipe, ObraFinanceiro } from '../types';
@@ -116,6 +117,7 @@ function ValoresDoContrato({
   luminous = false,
   recalculando = false,
   isObraPropria = false,
+  onEditar,
 }: {
   financeiro: ObraFinanceiro;
   luminous?: boolean;
@@ -123,6 +125,7 @@ function ValoresDoContrato({
   recalculando?: boolean;
   /** XG29 — na obra própria a barra "Percentual executado" não é exibida. */
   isObraPropria?: boolean;
+  onEditar?: () => void;
 }) {
   const percentualAditivo =
     financeiro.valorContratado > 0
@@ -156,6 +159,11 @@ function ValoresDoContrato({
               O combinado com o cliente, somado aos aditivos lançados abaixo.
             </CardDescription>
           </div>
+          {isObraPropria && onEditar && (
+            <Button type="button" variant="ghost" size="sm" onClick={onEditar}>
+              <IconEdit className="mr-1 size-4" /> Editar informações
+            </Button>
+          )}
           {/*
             O recálculo do saldo acontece no servidor e leva um instante. Sem
             este aviso o número antigo fica parado na tela logo depois de
@@ -384,6 +392,7 @@ export function FinanceiroTab({
   const [modalTipo, setModalTipo] = useState<LancamentoTipo | null>(null);
   const [emEdicao, setEmEdicao] = useState<ObraLancamentoApi | null>(null);
   const [paraExcluir, setParaExcluir] = useState<ObraLancamentoApi | null>(null);
+  const [editarContrato, setEditarContrato] = useState(false);
 
   /**
    * XG20 — as pessoas que de fato aparecem nos lançamentos, não a equipe
@@ -491,6 +500,7 @@ export function FinanceiroTab({
           luminous={luminous}
           recalculando={recalculando}
           isObraPropria={isObraPropria}
+          onEditar={isObraPropria && podeLancar ? () => setEditarContrato(true) : undefined}
         />
       )}
 
@@ -786,7 +796,12 @@ export function FinanceiroTab({
           lancamento={emEdicao}
           equipe={equipe}
           somenteMaoDeObra={somenteMaoDeObra}
+          moedaXgestao={isObraPropria}
         />
+      )}
+
+      {isObraPropria && podeLancar && !somenteMaoDeObra && (
+        <EditarValorContratoModal obraId={obraId} open={editarContrato} onOpenChange={setEditarContrato} />
       )}
 
       <AlertDialog open={Boolean(paraExcluir)} onOpenChange={(o) => !o && setParaExcluir(null)}>

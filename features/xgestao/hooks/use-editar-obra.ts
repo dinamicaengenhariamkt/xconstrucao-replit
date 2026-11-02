@@ -1,6 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
+import { dinheiroDecimal } from '../lib/dinheiro';
 
 /**
  * XG12 — o que a edição da obra sabe fazer, fora de qualquer tela.
@@ -123,9 +124,7 @@ export function validarInformacoes(campos: Partial<CamposInformacoes>): void {
   if (campos.areaM2?.trim() && !Number.isFinite(Number(campos.areaM2.trim()))) {
     throw new Error('Informe a área como número, por exemplo 120.5.');
   }
-  if (campos.valorTotal?.trim() && !Number.isFinite(Number(campos.valorTotal.trim()))) {
-    throw new Error('Informe o orçamento como número.');
-  }
+  if (campos.valorTotal?.trim()) dinheiroDecimal(campos.valorTotal);
 }
 
 export function validarLocalizacao(campos: Partial<CamposLocalizacao>): void {
@@ -147,7 +146,7 @@ export function payloadInformacoes(campos: CamposInformacoes): Record<string, un
     tipo: campos.tipo.trim() || null,
     descricao: campos.descricao.trim() || null,
     areaM2: campos.areaM2.trim() || null,
-    valorTotal: campos.valorTotal.trim() || '0',
+    valorTotal: campos.valorTotal.trim() ? dinheiroDecimal(campos.valorTotal) : '0',
     dataInicio: campos.dataInicio || null,
     dataPrevisao: campos.dataPrevisao || null,
     status: campos.status,

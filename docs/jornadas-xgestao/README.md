@@ -170,6 +170,15 @@ Checklist em [XG03 §8-A](03-planos-limites-trial.md).
 
 > Ao receber respostas às 2 pendências restantes, atualizar **os dois** — este índice e o script [`gerar-pdf-xgestao.py`](../../scripts/gerar-pdf-xgestao.py), que é a fonte do PDF entregue ao cliente.
 
+## Revisão de planos e edição — 02/11/2026
+
+Ver [XG41 — Novos planos e edição financeira](41-novos-planos-edicao-financeira.md).
+A nova oferta aprovada é Basic R$ 99, Basic Plus R$ 179 e Premium R$ 299; trial Premium
+de 90 dias seguido de somente leitura sem pagamento. Equipe por empresa incluindo titular,
+e valores públicos restritos a contrato, recebimentos e saldo. **Decisão aprovada não significa
+catálogo/cobrança implantados:** a jornada rastreia implementação, testes e impedimentos separadamente.
+Preservar o histórico das jornadas anteriores; não ativar Asaas de produção ou limites globais nesta rodada.
+
 ## Nota de formato
 
 [XG07](07-integracao-sinapi.md) tem **15 seções**, não 13: insere `9. Configuração` e `10. Restrições contratuais`, deslocando as demais. É exceção conhecida e deliberadamente não corrigida — renumerar uma jornada congelada é risco sem retorno. As outras sete seguem o template.

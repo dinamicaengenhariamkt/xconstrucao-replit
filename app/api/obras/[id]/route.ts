@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { orcamentoApiValido } from "@features/xgestao/lib/dinheiro";
 import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import {
@@ -284,6 +285,9 @@ function validarCamposObraPropria(
   body: Record<string, unknown>,
 ): Record<string, string[]> | null {
   const erros: Record<string, string[]> = {};
+  if (body.valorTotal != null && !orcamentoApiValido(body.valorTotal)) {
+    erros.valorTotal = ["Orçamento inválido: use valor não negativo com até 13 dígitos inteiros e 2 centavos."];
+  }
 
   const texto = (valor: unknown) => (typeof valor === "string" ? valor.trim() : "");
 

@@ -5,6 +5,7 @@ import { SinalObra, textoOrcamento, textoPrazo } from '@features/shared/componen
 import { semaforoFinanceiro, semaforoPrazo } from '@features/xgestao/lib/indicadores-obra';
 import type { HealthStatus } from '@features/shared/health';
 import type { MinhaObraCardProps } from '../types';
+import { formatCurrency } from '@shared/lib/formatters';
 
 export function MinhaObraCard({
   obra,
@@ -42,6 +43,7 @@ export function MinhaObraCard({
         ) : undefined
       }
       orcamento={obra.orcamento}
+      formatarOrcamento={obra.isObraPropria ? formatCurrency : undefined}
       dataInicio={obra.dataInicio}
       dataPrevisaoFim={obra.dataPrevisaoFim}
       tipo={obra.tipo}

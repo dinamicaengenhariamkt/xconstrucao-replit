@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dinheiroApiValido } from "@features/xgestao/lib/dinheiro";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -113,6 +114,14 @@ export async function PATCH(
   }
 
   const data = parsed.data;
+  if (
+    auth.access!.obra.clienteId === null && auth.access!.obra.empreiteiraId !== null &&
+    data.valor !== undefined && !dinheiroApiValido(data.valor)
+  ) {
+    const r = NextResponse.json({ message: "Informe um valor com no máximo duas casas decimais." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (data.categoria !== undefined && existing.tipo === "entrada" && data.categoria !== null) {
     const r = NextResponse.json({ message: "Entrada não tem categoria de despesa." }, { status: 400 });
     setNoCacheHeaders(r);

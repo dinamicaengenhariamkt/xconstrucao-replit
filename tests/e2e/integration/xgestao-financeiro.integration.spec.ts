@@ -86,6 +86,46 @@ async function criarAssinanteComObra(request: APIRequestContext, label: string) 
 
 const HOJE = new Date().toISOString().slice(0, 10);
 
+test('XG41 — valores acima de 500 preservam centavos, edição e saldo', async ({ request }) => {
+  const { obraId } = await criarAssinanteComObra(request, 'xg41-valores');
+  for (const valor of ['499.99', '500.00', '500.01', '1500.50', '50000.75', '1000000.99']) {
+    const patch = await request.patch(`/api/obras/${obraId}`, { data: { valorTotal: valor } });
+    expect(patch.status(), await patch.text()).toBe(200);
+    const leitura = await request.get(`/api/empreiteiro/minhas-obras/${obraId}`);
+    expect(leitura.status(), await leitura.text()).toBe(200);
+    const detalhe = await leitura.json();
+    expect(detalhe.financeiro.valorContratado).toBe(Number(valor));
+    expect(detalhe.financeiro.saldoReceber).toBe(Number(valor));
+  }
+  for (const valor of ['-1', '10000000000000', '500,01', '500.001']) {
+    const invalido = await request.patch(`/api/obras/${obraId}`, { data: { valorTotal: valor } });
+    expect(invalido.status(), await invalido.text()).toBe(400);
+  }
+  const criado = await request.post(`/api/obras/${obraId}/financeiro`, {
+    data: { tipo: 'entrada', descricao: 'Recebimento de teste XG41', valor: 50000.75, data: HOJE },
+  });
+  expect(criado.status(), await criado.text()).toBe(201);
+  const lancamento = await criado.json();
+  for (const valor of [0, -1, 0.001, 500.001, 1_000_000_000]) {
+    const criarInvalido = await request.post(`/api/obras/${obraId}/financeiro`, {
+      data: { tipo: 'entrada', descricao: 'Valor inválido XG41', valor, data: HOJE },
+    });
+    expect(criarInvalido.status(), await criarInvalido.text()).toBe(400);
+    const editarInvalido = await request.patch(`/api/obras/${obraId}/financeiro/${lancamento.id}`, {
+      data: { valor },
+    });
+    expect(editarInvalido.status(), await editarInvalido.text()).toBe(400);
+  }
+  const editado = await request.patch(`/api/obras/${obraId}/financeiro/${lancamento.id}`, {
+    data: { valor: 500.01 },
+  });
+  expect(editado.status(), await editado.text()).toBe(200);
+  const leitura = await request.get(`/api/empreiteiro/minhas-obras/${obraId}`);
+  const detalhe = await leitura.json();
+  expect(detalhe.financeiro.valorContratado).toBe(1000000.99);
+  expect(detalhe.financeiro.saldoReceber).toBeCloseTo(1000000.99 - 500.01, 2);
+});
+
 test.describe('XG10 — lançamentos financeiros da obra', () => {
   test('entrada e saída somam receita e custo no detalhe da obra', async ({ request }) => {
     const { obraId } = await criarAssinanteComObra(request, 'xg10-fin-feliz');

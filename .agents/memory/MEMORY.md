@@ -23,3 +23,4 @@
 - [Isolamento dos testes Playwright](playwright-isolated-builds.md) — evitar cache ativo e servidor compartilhado entre runners; validar uploads pela origem pública.
 - [Evidência do checkout Asaas](asaas-checkout-evidence.md) — texto de sucesso pode estar oculto; comprovar pagamento e webhook, não apenas presença no DOM.
 - [TLS da origem pública no Node](replit-public-origin-tls.md) — usar a CA confiada pelo sistema; não desativar verificação TLS para sondar o preview.
+- [Consistência financeira xgestão](xgestao-financial-consistency.md) — preservar centavos e verificar atualização entre telas com o cache previamente carregado.

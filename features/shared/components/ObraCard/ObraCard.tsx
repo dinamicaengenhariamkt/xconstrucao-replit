@@ -27,6 +27,7 @@ export function ObraCard({
   status,
   progresso,
   orcamento,
+  formatarOrcamento = formatCurrency,
   dataInicio,
   dataPrevisaoFim,
   tipo,
@@ -182,7 +183,7 @@ export function ObraCard({
             <div>
               <p className="text-gray-400 text-xs">Orçamento</p>
               <p className="font-bold text-gray-900 dark:text-white">
-                {formatCurrency(orcamento)}
+                {formatarOrcamento(orcamento)}
               </p>
             </div>
             <div className="text-right">

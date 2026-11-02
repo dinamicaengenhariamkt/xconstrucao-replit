@@ -34,9 +34,8 @@ import {
 } from '@shared/components/ui/table';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import { Button } from '@shared/components/ui/button';
-// XG28 — o arquivo mantinha uma `formatCurrency` local idêntica a esta; a cópia
-// privada saiu.
-import { formatCurrencyRounded } from '@shared/lib/formatters';
+// XG41 — valores financeiros completos, com centavos também no resumo.
+import { formatCurrency } from '@shared/lib/formatters';
 import { OBRA_STATUS_DB_BADGE_CLASSES, obraStatusDbLabel } from '@shared/constants/status';
 import { cn } from '@shared/lib/utils';
 
@@ -130,7 +129,7 @@ function ObraRow({ obra }: { obra: MinhaObra }) {
       </TableCell>
 
       <TableCell className="hidden whitespace-nowrap text-right tabular-nums xl:table-cell">
-        {formatCurrencyRounded(obra.custoReal)}
+        {formatCurrency(obra.custoReal)}
       </TableCell>
 
       <TableCell className="whitespace-nowrap">
@@ -271,7 +270,7 @@ export function XGestaoDashboard() {
         <StatsCard
           luminous
           label="Saúde financeira"
-          value={formatCurrencyRounded(resumo.custoReal)}
+          value={formatCurrency(resumo.custoReal)}
           icon={RiWallet3Line}
           iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
           badge={{
@@ -282,7 +281,7 @@ export function XGestaoDashboard() {
         {/* XG28 — era "Orçamento gerenciado". É a soma do orçamento de todas as
             obras da carteira, e "gerenciado" sugeria uma distinção inexistente:
             o próprio cliente perguntou se era o valor de uma obra só. */}
-        <StatsCard luminous label="Orçamento total" value={formatCurrencyRounded(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
+        <StatsCard luminous label="Orçamento total" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
       </div>
 
       {/* XG17 — o resumo de Saúde saiu do dashboard do xgestão junto com o card

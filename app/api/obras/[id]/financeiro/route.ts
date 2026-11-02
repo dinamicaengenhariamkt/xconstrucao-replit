@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dinheiroApiValido } from "@features/xgestao/lib/dinheiro";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -137,6 +138,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
 
   const { tipo, categoria, descricao, valor, data, comprovanteFileId } = parsed.data;
+  if (access.obra.clienteId === null && access.obra.empreiteiraId !== null && !dinheiroApiValido(valor)) {
+    const r = NextResponse.json({ message: "Informe um valor com no máximo duas casas decimais." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const erroCategoria = validarCategoria(tipo, categoria);
   if (erroCategoria) {
     const r = NextResponse.json({ message: erroCategoria }, { status: 400 });

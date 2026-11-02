@@ -12,6 +12,98 @@ import { novoAssinanteHomologacao } from './helpers-xgestao-homologacao';
 // de um loopback que pode não estar permitido no CORS do bucket.
 const origemUI = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '';
 
+for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  test.describe(`XG41 — financeiro ${tamanho.width}`, () => {
+    test.use({ viewport: tamanho });
+    test('edita valor grande e conserva centavos no detalhe, dashboard e lista', async ({ page, request }) => {
+      const { email } = await novoAssinanteHomologacao(request, `financeiro-${tamanho.width}`);
+      const criada = await request.post('/api/xgestao/obras', {
+        data: { nome: `E2E XG41 financeiro ${tamanho.width}`, endereco: 'Rua de Teste, 41' },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const { id } = await criada.json();
+      const dispensar = async () => {
+        const legal = page.getByRole('dialog', { name: 'Atualizamos nossos documentos' });
+        if (await legal.isVisible().catch(() => false)) await legal.getByRole('button', { name: 'Agora não' }).click();
+        const oferta = page.getByTestId('button-oferta-agora-nao');
+        if (await oferta.isVisible().catch(() => false)) await oferta.click();
+        if (await page.getByTestId('guided-tour').isVisible().catch(() => false)) {
+          await page.getByRole('button', { name: 'Pular', exact: true }).click();
+        }
+      };
+      try {
+        await page.goto(`${origemUI}/login?perfil=xgestao&next=%2Fxgestao%2Fobras`);
+        await page.getByTestId('input-email').fill(email);
+        await page.getByTestId('input-password').fill('Xconstr@E2E2026!');
+        await page.waitForTimeout(3500);
+        const login = page.waitForResponse(r => r.url().includes('/api/auth/login') && r.request().method() === 'POST');
+        await page.getByTestId('button-login').click();
+        expect((await login).status()).toBe(200);
+        await page.waitForURL(/\/xgestao\//);
+        // Carregar a lista ANTES da alteração é essencial para detectar cache velho.
+        await page.goto(`${origemUI}/xgestao/dashboard`);
+        const dashboard = page.getByTestId('xgestao-dashboard-page');
+        await expect(dashboard).toBeVisible();
+        await dispensar();
+        // Link real do Next: mantém o mesmo QueryClient durante a navegação.
+        await page.locator(`a[href="/xgestao/obras/${id}"]`).first().click();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await dispensar();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        const card = page.getByTestId('valores-do-contrato');
+        await card.getByRole('button', { name: 'Editar informações', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'Editar valores do contrato' });
+        await dialog.getByLabel('Valor contratado (R$)').fill('1.000.000,99');
+        const patch = page.waitForResponse(r => r.url().endsWith(`/api/obras/${id}`) && r.request().method() === 'PATCH');
+        await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+        expect((await patch).status()).toBe(200);
+        await expect(dialog).not.toBeVisible();
+        await expect(card).toContainText('1.000.000,99');
+        await page.goBack();
+        await expect(dashboard).toBeVisible();
+        await dispensar();
+        await expect(dashboard).toContainText('1.000.000,99');
+        // O cache está atualizado novamente: esta segunda edição deve invalidá-lo
+        // por meio do hook de LANÇAMENTOS, não pelo editor do contrato.
+        await page.locator(`a[href="/xgestao/obras/${id}"]`).first().click();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await dispensar();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        await page.getByTestId('button-nova-saida').click();
+        await page.getByTestId('select-categoria-lancamento').click();
+        await page.getByRole('option', { name: /material/i }).click();
+        await page.getByTestId('input-descricao-lancamento').fill('Material de teste XG41');
+        await page.getByTestId('input-valor-lancamento').fill('47,89');
+        const saida = page.waitForResponse(r => r.url().endsWith(`/api/obras/${id}/financeiro`) && r.request().method() === 'POST');
+        await page.getByTestId('button-salvar-lancamento').click();
+        expect((await saida).status()).toBe(201);
+        await expect(page.getByTestId('input-valor-lancamento')).not.toBeVisible();
+        await page.goBack();
+        await expect(dashboard).toBeVisible();
+        await dispensar();
+        await expect(dashboard).toContainText('47,89');
+        await page.getByRole('link', { name: 'Ver todas', exact: true }).click();
+        await expect(page.getByTestId('xgestao-nova-obra')).toBeVisible();
+        await dispensar();
+        await expect(page.getByText(/1\.000\.000,99/).first()).toBeVisible();
+        await page.locator(`a[href="/xgestao/obras/${id}"]`).first().click();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await dispensar();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        await expect(card).toContainText('1.000.000,99');
+        await page.reload();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await dispensar();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        await expect(card).toContainText('1.000.000,99');
+      } finally {
+        // Apenas a obra que esta própria execução acabou de criar.
+        await request.delete(`/api/obras/${id}`);
+      }
+    });
+  });
+}
+
 // Arquivos pequenos reais, sem dados pessoais e sem simular o serviço de upload.
 function pngDeTeste() {
   const chunk = (tipo: string, dados: Buffer) => {
