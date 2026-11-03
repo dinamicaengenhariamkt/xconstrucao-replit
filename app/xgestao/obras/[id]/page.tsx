@@ -5,6 +5,7 @@ import { obras } from '@shared/db/schema';
 import { ObraConsoleView } from '@features/empreiteiro/minhas-obras/components/ObraConsoleView';
 import { getCurrentXGestaoEntitlement } from '@features/xgestao/lib/entitlement';
 import { resolverAcessoObraXgestao } from '@features/xgestao/equipe/server/access';
+import { planoDaEmpresa } from '@features/xgestao/server/plano-empresa';
 
 export default async function XGestaoObraDetalhePage({
   params,
@@ -32,7 +33,7 @@ export default async function XGestaoObraDetalhePage({
     <ObraConsoleView
       basePath="/xgestao/obras"
       showMarketplaceContact={false}
-      allowOwnWorkEdit={permission === 'editar'}
+      allowOwnWorkEdit={permission === 'editar' && !(await planoDaEmpresa(entitlement.empreiteiraId)).somenteLeitura}
     />
   );
 }

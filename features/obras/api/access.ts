@@ -12,6 +12,7 @@ import type {
   AreasPermitidas,
   CategoriasFinanceiroPermitidas,
 } from "@features/xgestao/equipe/permissions";
+import { planoDaEmpresa } from "@features/xgestao/server/plano-empresa";
 
 /**
  * Resolve acesso de leitura/escrita a uma obra para qualquer persona.
@@ -33,6 +34,7 @@ export type ObraAccess = {
   isDiscoveryOnly: boolean;
   /** Obra própria xgestão: concessão específica (ou acesso integral do dono/gestor). */
   xgestaoPermission?: "visualizar" | "editar";
+  xgestaoSomenteLeitura?: boolean;
   /** null means unrestricted (also the legacy/default behavior). */
   xgestaoAreasPermitidas?: AreasPermitidas;
   /** null means all finance categories are visible and writable. */
@@ -100,6 +102,8 @@ export async function findObraAccess(
       ? await resolverPermissoesObraXgestao(user.id, obraId)
       : null;
     if (isAssigned && isXgestao && !xgestaoAreaPermissions) return null;
+    const somenteLeitura = isAssigned && isXgestao && company
+      ? (await planoDaEmpresa(company.empreiteiraId)).somenteLeitura : false;
     return {
       obra,
       role: "empreiteiro",
@@ -108,6 +112,7 @@ export async function findObraAccess(
       isDiscoveryOnly: !isAssigned,
       ...(isXgestao && xgestaoPermission ? {
         xgestaoPermission,
+        xgestaoSomenteLeitura: somenteLeitura,
         xgestaoAreasPermitidas: xgestaoAreaPermissions?.areasPermitidas ?? null,
         xgestaoCategoriasFinanceiroPermitidas:
           xgestaoAreaPermissions?.categoriasFinanceiroPermitidas ?? null,
@@ -126,6 +131,7 @@ export async function findObraAccess(
  *  - empreiteiro atribuído (NÃO descoberta)
  */
 export function canWriteObraContent(access: ObraAccess): boolean {
+  if (access.xgestaoSomenteLeitura) return false;
   if (access.role === "admin" || access.role === "superadmin") return true;
   if (access.role === "contratante") return true;
   if (access.role === "empreiteiro" && !access.isDiscoveryOnly) {

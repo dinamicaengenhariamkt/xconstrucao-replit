@@ -5,6 +5,7 @@ import { and, eq, gt, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { empreiteiras, obraShareLinks, obras, userRoles } from '@shared/db/schema';
 import { normalizarSecoes, type SecoesPublicas } from '../secoes';
+import { planoDaEmpresa } from '@features/xgestao/server/plano-empresa';
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -28,9 +29,20 @@ export type ObraShareLink = {
 export const LIMITE_LINKS_ATIVOS = 5;
 
 export class LimiteLinksAtingidoError extends Error {
-  constructor() {
-    super(`Limite de ${LIMITE_LINKS_ATIVOS} links ativos por obra.`);
+  constructor(public readonly limite = LIMITE_LINKS_ATIVOS) {
+    super(`Limite de ${limite} links ativos por obra.`);
   }
+}
+
+export async function capacidadesLinkObra(obraId: string, leitor: Pick<typeof db, 'select'> = db) {
+  const [obra] = await leitor.select({ empresaId: obras.empreiteiraId }).from(obras)
+    .where(and(eq(obras.id, obraId), isNull(obras.clienteId)));
+  if (!obra?.empresaId) throw new Error('Obra xgestão não encontrada.');
+  const plano = await planoDaEmpresa(obra.empresaId, leitor);
+  return {
+    limite: plano.limites.linksPorObra ?? LIMITE_LINKS_ATIVOS,
+    valoresPublicos: plano.limites.valoresPublicos === 1,
+  };
 }
 
 function activeLinksWhere(obraId: string) {
@@ -97,11 +109,18 @@ export async function createObraShareLink(
       .select({ total: sql<number>`count(*)::int` })
       .from(obraShareLinks)
       .where(activeLinksWhere(obraId));
-    if (total >= LIMITE_LINKS_ATIVOS) throw new LimiteLinksAtingidoError();
+    const capacidade = await capacidadesLinkObra(obraId, tx);
+    if (capacidade.limite >= 0 && total >= capacidade.limite) throw new LimiteLinksAtingidoError(capacidade.limite);
+    if (secoes?.pagamentos && !capacidade.valoresPublicos) {
+      throw new Error('Seu plano não permite valores no link público.');
+    }
 
     const [created] = await tx
       .insert(obraShareLinks)
-      .values({ obraId, nome, token, criadoPor, expiraEm, secoes })
+      .values({
+        obraId, nome, token, criadoPor, expiraEm,
+        secoes: { ...normalizarSecoes(secoes), pagamentos: capacidade.valoresPublicos && secoes?.pagamentos === true },
+      })
       .returning();
 
     return toShareLink(created);
@@ -117,6 +136,9 @@ export async function updateObraShareLink(
   linkId: string,
   alteracoes: { secoes?: SecoesPublicas; nome?: string },
 ): Promise<ObraShareLink | null> {
+  if (alteracoes.secoes?.pagamentos && !(await capacidadesLinkObra(obraId)).valoresPublicos) {
+    throw new Error('Seu plano não permite valores no link público.');
+  }
   const [updated] = await db
     .update(obraShareLinks)
     .set(alteracoes)

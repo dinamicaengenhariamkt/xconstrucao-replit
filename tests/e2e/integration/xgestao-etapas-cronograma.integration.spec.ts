@@ -5,6 +5,7 @@ import { obraEtapas } from '@shared/db/schema';
 import {
   completarPerfilOperacional,
   loginAs,
+  iniciarTesteOperacionalXgestao,
   logout,
   SEED_ADMIN_EMAIL,
   uniqueEmail,
@@ -63,6 +64,7 @@ async function concederXGestao(request: APIRequestContext, email: string) {
     data: { xgestao: true },
   });
   expect(response.status(), await response.text()).toBe(200);
+  await iniciarTesteOperacionalXgestao(request, email);
   await logout(request);
 }
 

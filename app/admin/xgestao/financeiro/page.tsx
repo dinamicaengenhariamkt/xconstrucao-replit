@@ -15,7 +15,7 @@ import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDas
 import { useXgestaoAdminFinanceiro } from '@features/xgestao/admin/hooks/use-admin-xgestao';
 import { formatCurrency } from '@shared/lib/formatters';
 
-const TIER_LABEL: Record<string, string> = { free: 'Freemium', pro: 'Basic', enterprise: 'Pro' };
+const TIER_LABEL: Record<string, string> = { free: 'Somente leitura', pro: 'Basic anterior', enterprise: 'Pro anterior', basic: 'Basic', basic_plus: 'Basic Plus', premium: 'Premium' };
 
 export default function AdminXgestaoFinanceiroPage() {
   const { data, isLoading, isError, refetch, isFetching } = useXgestaoAdminFinanceiro();

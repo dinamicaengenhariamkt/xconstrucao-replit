@@ -273,6 +273,11 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
   const closeModal = () => setModal({ type: null, membro: null });
 
   const handleSalvar = (data: Omit<MembroEquipe, 'id' | 'ativo' | 'permissao'>) => {
+    if (obra.isObraPropria) {
+      if (modal.type === 'novo') return createMut.mutateAsync({ ...data, ativo: true });
+      if (modal.type === 'editar' && modal.membro) return updateMut.mutateAsync({ id: modal.membro.id, patch: data });
+      return;
+    }
     if (modal.type === 'novo') {
       createMut.mutate({ ...data, ativo: true });
     } else if (modal.type === 'editar' && modal.membro) {
@@ -386,6 +391,7 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
       {/* ─── Modals ─────────────────────────────────────────────────────────── */}
 
       <AdicionarMembroModal
+        moedaXgestao={obra.isObraPropria}
         open={modal.type === 'novo' || modal.type === 'editar'}
         onOpenChange={(open) => { if (!open) closeModal(); }}
         membro={modal.type === 'editar' ? modal.membro : null}

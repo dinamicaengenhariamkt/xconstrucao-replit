@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dinheiroApiValido } from "@features/xgestao/lib/dinheiro";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -75,6 +76,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return r;
   }
   const data = parsed.data;
+  if (access.obra.clienteId === null && data.valorContrato != null && !dinheiroApiValido(data.valorContrato)) {
+    const r = NextResponse.json({ message: "Informe o contrato com no máximo duas casas decimais." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   // XG22 — o arquivo do contrato precisa ser de quem o anexa; sem isto, um
   // `fileId` alheio criaria FK entre tenants.
   const erroContrato = await validarContratoMembro(data.contratoFileId, guard.user.id);

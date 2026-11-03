@@ -3,7 +3,7 @@ import { deflateSync } from 'node:zlib';
 import { eq } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import {
-  financeiro, obraAnexos, obraDiario, obraEquipe, obraEtapas,
+  assinaturas, financeiro, obraAnexos, obraDiario, obraEquipe, obraEtapas,
   obraFotos, obras, obraShareLinks, obraTarefas,
 } from '@shared/db/schema';
 import { novoAssinanteHomologacao } from './helpers-xgestao-homologacao';
@@ -15,6 +15,43 @@ const origemUI = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_D
 for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
   test.describe(`XG41 — financeiro ${tamanho.width}`, () => {
     test.use({ viewport: tamanho });
+    test('XG42 mostra a oferta nova e preserva leitura quando o teste vence', async ({ page, request }) => {
+      const { email, userId } = await novoAssinanteHomologacao(request, `oferta-ui-${tamanho.width}`);
+      const criada = await request.post('/api/xgestao/obras', {
+        data: { nome: 'E2E obra preservada XG42', endereco: 'Rua de Teste, 42' },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const { id } = await criada.json();
+      try {
+        await page.goto(`${origemUI}/login?perfil=xgestao&next=%2Fxgestao%2Fconfiguracoes%3Ftab%3Dplano`);
+        await page.getByTestId('input-email').fill(email);
+        await page.getByTestId('input-password').fill('Xconstr@E2E2026!');
+        await page.waitForTimeout(3500);
+        const login = page.waitForResponse(r => r.url().includes('/api/auth/login') && r.request().method() === 'POST');
+        await page.getByTestId('button-login').click();
+        expect((await login).status()).toBe(200);
+        await page.waitForURL('**/xgestao/**');
+        await page.goto(`${origemUI}/xgestao/planos`);
+        await expect(page).toHaveURL(/\/xgestao\/configuracoes\?tab=plano$/);
+        for (const [tier, valor] of [['basic', '99'], ['basic_plus', '179'], ['premium', '299']]) {
+          await expect(page.getByTestId(`xgestao-plano-${tier}`)).toContainText(valor);
+        }
+        await expect(page.getByTestId('xgestao-planos-section')).not.toContainText('SINAPI');
+        await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) })
+          .where(eq(assinaturas.userId, userId));
+        await page.goto(`${origemUI}/xgestao/obras`);
+        const confirmar = page.getByTestId('button-continuar-free');
+        await expect(confirmar).toBeVisible();
+        await confirmar.click();
+        await expect(confirmar).not.toBeVisible();
+        await expect(page.getByText('E2E obra preservada XG42', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Nova obra', exact: true })).toBeDisabled();
+        await page.goto(`${origemUI}/xgestao/configuracoes?tab=plano`);
+        await expect(page.getByTestId('xgestao-planos-section')).toContainText('Somente leitura');
+      } finally {
+        await db.delete(obras).where(eq(obras.id, id));
+      }
+    });
     test('mostra reservas da equipe por empresa e libera convite revogado', async ({ page, request }) => {
       const { email } = await novoAssinanteHomologacao(request, `vagas-${tamanho.width}`);
       const convite = await request.post('/api/xgestao/membros', {

@@ -4,6 +4,7 @@ import { recordAudit } from '@features/auth/api/audit';
 import {
   createObraShareLink,
   LIMITE_LINKS_ATIVOS,
+  capacidadesLinkObra,
   LimiteLinksAtingidoError,
   listActiveObraShareLinks,
 } from '@features/xgestao/obra-publica/server/token';
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (access.error) return access.error;
 
   const links = await listActiveObraShareLinks(id);
-  return shareResponse({ shares: links.map(sharePayload), limite: LIMITE_LINKS_ATIVOS });
+  return shareResponse({ shares: links.map(sharePayload), ...await capacidadesLinkObra(id) });
 }
 
 /**
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const parsed = createShareSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     return shareResponse({ message: 'Dados do link inválidos.' }, 400);
+  }
+  if (parsed.data.secoes?.pagamentos && !(await capacidadesLinkObra(id)).valoresPublicos) {
+    return shareResponse({ message: 'Valores no link público estão disponíveis no Basic Plus e no Premium.' }, 403);
   }
 
   try {
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   } catch (error) {
     if (error instanceof LimiteLinksAtingidoError) {
       return shareResponse(
-        { message: `Esta obra já tem ${LIMITE_LINKS_ATIVOS} links ativos. Revogue um para criar outro.` },
+        { message: error.message + ' Revogue um link ou escolha um plano com mais links.' },
         409,
       );
     }

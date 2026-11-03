@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dinheiroApiValido } from "@features/xgestao/lib/dinheiro";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -44,7 +45,7 @@ async function autorizar(request: NextRequest, obraId: string) {
     setNoCacheHeaders(r);
     return { error: r };
   }
-  return { userId: guard.user.id };
+  return { userId: guard.user.id, obraPropria: access.obra.clienteId === null };
 }
 
 /** Garante que o aditivo pertence à obra da URL (evita id de outra obra). */
@@ -82,6 +83,11 @@ export async function PATCH(
   }
 
   const updateData: Partial<typeof obraAditivos.$inferInsert> = {};
+  if (auth.obraPropria && parsed.data.valor !== undefined && !dinheiroApiValido(Math.abs(parsed.data.valor))) {
+    const r = NextResponse.json({ message: "Informe o aditivo com no máximo duas casas decimais." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (parsed.data.descricao !== undefined) updateData.descricao = parsed.data.descricao;
   if (parsed.data.valor !== undefined) updateData.valor = String(parsed.data.valor);
   if (parsed.data.data !== undefined) updateData.data = parsed.data.data;

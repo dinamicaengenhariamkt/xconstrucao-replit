@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
+import { getPlanCatalog, PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
 
 /**
  * Bootstrap idempotente da Jornada 11 — Planos & Assinatura.
@@ -96,10 +96,10 @@ export async function bootstrapPlanosSchema(): Promise<void> {
 
     // Seed do catálogo a partir do plans-catalog (idempotente por tier+persona).
     const personas: PlanoPersona[] = ["empreiteiro", "contratante", "xgestao"];
-    const tiers: PlanoTier[] = ["free", "pro", "enterprise"];
     for (const persona of personas) {
+      const tiers = Object.keys(PLANS_CATALOG[persona]) as PlanoTier[];
       for (const tier of tiers) {
-        const c = PLANS_CATALOG[persona][tier];
+        const c = getPlanCatalog(persona, tier);
         await db.execute(sql`
           INSERT INTO planos (tier, persona, nome, descricao, valor_mensal, limites_json, features, ativo)
           VALUES (
@@ -110,6 +110,23 @@ export async function bootstrapPlanosSchema(): Promise<void> {
         `);
       }
     }
+    // Apenas testes internos ativos acompanham a nova oferta. Preserva o fim
+    // original e não toca em cobranças/contratos manuais ou externos.
+    await db.execute(sql`
+      WITH atualizadas AS (
+        UPDATE assinaturas AS a SET plano_id = p.id
+        FROM planos AS p
+        WHERE a.persona = 'xgestao' AND a.gateway_provider = 'trial'
+          AND a.status = 'ativa'
+          AND p.persona = 'xgestao' AND p.tier = 'premium'
+          AND a.plano_id <> p.id
+        RETURNING a.id, a.renova_em
+      )
+      INSERT INTO assinatura_eventos (id, assinatura_id, tipo, payload_json)
+      SELECT gen_random_uuid(), id, 'teste_oferta_atualizada',
+        jsonb_build_object('tier', 'premium', 'fimTestePreservado', renova_em)
+      FROM atualizadas
+    `);
   } catch (err) {
     console.error("[bootstrap-planos] falha:", err);
     return;

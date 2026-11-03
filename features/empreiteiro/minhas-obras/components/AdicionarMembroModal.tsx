@@ -1,4 +1,5 @@
 'use client';
+import { dinheiroDecimal } from '@features/xgestao/lib/dinheiro';
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -102,17 +103,19 @@ function parseValor(bruto: string | undefined): number | undefined {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface AdicionarMembroModalProps {
+  moedaXgestao?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   membro?: MembroEquipe | null;
   /** XG22 — o upload do contrato conta contra a quota da obra. */
   obraId: string;
-  onSalvar: (data: Omit<MembroEquipe, 'id' | 'ativo' | 'permissao'>) => void;
+  onSalvar: (data: Omit<MembroEquipe, 'id' | 'ativo' | 'permissao'>) => void | Promise<unknown>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AdicionarMembroModal({
+  moedaXgestao = false,
   open,
   onOpenChange,
   membro,
@@ -197,7 +200,16 @@ export function AdicionarMembroModal({
     onOpenChange(false);
   };
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
+    let valorContrato: number | null;
+    try {
+      valorContrato = moedaXgestao && data.valorContrato?.trim()
+        ? Number(dinheiroDecimal(data.valorContrato))
+        : parseValor(data.valorContrato) ?? null;
+    } catch (erro) {
+      form.setError('valorContrato', { message: erro instanceof Error ? erro.message : 'Valor inválido.' });
+      return;
+    }
     const link = data.contratoLinkUrl?.trim() || undefined;
     // O servidor recusa os dois juntos; avisar aqui evita a ida e volta.
     if (contrato && link) {
@@ -206,7 +218,8 @@ export function AdicionarMembroModal({
       });
       return;
     }
-    onSalvar({
+    try {
+      await onSalvar({
       nome: data.nome.trim(),
       iniciais: gerarIniciais(data.nome),
       papel: data.papel.trim(),
@@ -220,10 +233,15 @@ export function AdicionarMembroModal({
       // `undefined` significa "não mexer", então limpar o PIX ou remover o
       // contrato não teria efeito nenhum.
       pixChave: data.pixChave?.trim() || null,
-      valorContrato: parseValor(data.valorContrato) ?? null,
+      valorContrato,
       contratoFileId: contrato?.fileId ?? null,
-      contratoLinkUrl: link ?? null,
-    });
+        contratoLinkUrl: link ?? null,
+      });
+    } catch (erro) {
+      if (!moedaXgestao) throw erro;
+      form.setError('root', { message: erro instanceof Error ? erro.message : 'Não foi possível salvar. Revise os dados e tente novamente.' });
+      return;
+    }
     handleClose();
   };
 
@@ -545,7 +563,8 @@ export function AdicionarMembroModal({
           <Button type="button" variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>
-          <Button type="submit" form="form-membro">
+          {form.formState.errors.root?.message && <p role="alert" className="text-sm text-destructive">{form.formState.errors.root.message}</p>}
+          <Button type="submit" form="form-membro" disabled={moedaXgestao && form.formState.isSubmitting}>
             {isEdit ? 'Salvar alterações' : 'Adicionar membro'}
           </Button>
         </DialogFooter>

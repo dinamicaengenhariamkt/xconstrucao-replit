@@ -59,7 +59,7 @@ const DEFAULTS: PlatformSettings = {
   // XG35 — teste grátis do xgestão. Parâmetro comercial: muda sem deploy.
   xgestao: {
     testeDias: "90",
-    testeTier: "enterprise",
+    testeTier: "premium",
     // XG36 — obra em andamento sem nenhum registro há N dias conta como "parada".
     diasObraParada: "14",
   },
@@ -207,13 +207,11 @@ export async function isRelatoriosHabilitado(): Promise<boolean> {
 
 /**
  * XG35 — duração (dias) e tier do teste grátis do xgestão (`xgestao.testeDias`,
- * `xgestao.testeTier`). Fail-open → 90 dias no tier `enterprise` (plano Pro).
+ * `xgestao.testeTier`). A oferta aprovada fixa Premium por 90 dias.
  */
-export async function getConfigTesteXgestao(): Promise<{ dias: number; tier: "pro" | "enterprise" }> {
-  const cfg = await getPlatformSetting("xgestao");
-  const dias = Number(cfg.testeDias);
-  const tier = cfg.testeTier === "pro" ? "pro" : "enterprise";
-  return { dias: Number.isFinite(dias) && dias >= 1 && dias <= 365 ? Math.floor(dias) : 90, tier };
+export async function getConfigTesteXgestao(): Promise<{ dias: number; tier: "premium" }> {
+  // Oferta aprovada: configurações legadas não podem oferecer outro trial.
+  return { dias: 90, tier: "premium" };
 }
 
 /** XG36 — dias sem registro para uma obra em andamento contar como parada. Fail-open → 14. */

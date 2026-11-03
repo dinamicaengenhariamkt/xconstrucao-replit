@@ -521,17 +521,17 @@ export function XGestaoEquipeView() {
                   </div>
                   <div className="flex flex-wrap gap-2 sm:justify-end">
                     {!isRevoked(member.status) && (
-                      <Button variant="outline" size="sm" onClick={() => openEdit(member)} disabled={busy}>
+                      <Button variant="outline" size="sm" onClick={() => openEdit(member)} disabled={busy || data.usoEquipe.limite === 0}>
                         <RiEditLine /> Permissões
                       </Button>
                     )}
                     {isPending(member.status) && (
-                      <Button variant="outline" size="sm" onClick={() => void runMemberAction(member, 'reenviar')} disabled={busy}>
+                      <Button variant="outline" size="sm" onClick={() => void runMemberAction(member, 'reenviar')} disabled={busy || data.usoEquipe.limite === 0}>
                         <RiMailSendLine /> {pendingAction === `${member.id}:reenviar` ? 'Reenviando…' : 'Reenviar convite'}
                       </Button>
                     )}
                     {!isRevoked(member.status) && (
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => void runMemberAction(member, 'revogar')} disabled={busy}>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => void runMemberAction(member, 'revogar')} disabled={busy || data.usoEquipe.limite === 0}>
                         <RiUserForbidLine /> Revogar
                       </Button>
                     )}

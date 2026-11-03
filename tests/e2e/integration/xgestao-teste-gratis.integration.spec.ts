@@ -11,13 +11,13 @@ async function perfil(request: APIRequestContext) {
   return resposta.json();
 }
 
-test.describe('XG35 — Pro por 90 dias, sem apagar dados ou assinatura paga', () => {
-  test('início voluntário concorrente, fim persistente e retorno ao Free uma única vez', async ({ request }) => {
-    const { userId } = await novoAssinanteHomologacao(request, 'trial-free');
+test.describe('XG35 — Premium por 90 dias, sem apagar dados ou assinatura paga', () => {
+  test('início voluntário concorrente, fim persistente e somente leitura uma única vez', async ({ request }) => {
+    const { userId } = await novoAssinanteHomologacao(request, 'trial-free', { iniciarTeste: false });
     const antes = await perfil(request);
     expect(antes.plano).toBe('free');
     expect(antes.teste).toMatchObject({
-      elegivel: true, emTeste: false, duracaoDias: 90, tierTeste: 'enterprise',
+      elegivel: true, emTeste: false, duracaoDias: 90, tierTeste: 'premium',
     });
     expect(await db.select().from(assinaturas).where(eq(assinaturas.userId, userId))).toHaveLength(0);
 
@@ -28,7 +28,7 @@ test.describe('XG35 — Pro por 90 dias, sem apagar dados ou assinatura paga', (
     ]);
     expect(tentativas.map((resposta) => resposta.status()).sort()).toEqual([201, 409]);
     const durante = await perfil(request);
-    expect(durante.plano).toBe('enterprise'); // Pro comercial; "pro" interno é Basic.
+    expect(durante.plano).toBe('premium');
     expect(durante.teste).toMatchObject({ elegivel: false, emTeste: true, avisoFimPendente: false });
     const fim = new Date(durante.teste.fimTeste).getTime();
     const noventaDias = 90 * 86_400_000;
@@ -56,6 +56,7 @@ test.describe('XG35 — Pro por 90 dias, sem apagar dados ou assinatura paga', (
       .where(and(eq(assinaturas.id, trial.id), eq(assinaturas.userId, userId)));
     const encerrado = await perfil(request);
     expect(encerrado.plano).toBe('free');
+    expect(encerrado.somenteLeitura).toBe(true);
     expect(encerrado.teste).toMatchObject({ elegivel: false, emTeste: false, avisoFimPendente: true });
     expect((await perfil(request)).teste.avisoFimPendente).toBe(true);
     expect(await db.select().from(obras).where(eq(obras.id, obraId))).toHaveLength(1);
@@ -74,17 +75,18 @@ test.describe('XG35 — Pro por 90 dias, sem apagar dados ou assinatura paga', (
     expect((await marketplace.json()).plano).toBe('free');
     // Exclusão somente depois de comprovar preservação, restrita à obra deste teste.
     const limpar = await request.delete(`/api/obras/${obraId}`);
-    expect(limpar.status(), await limpar.text()).toBe(200);
+    expect(limpar.status(), await limpar.text()).toBe(403);
+    await db.delete(obras).where(eq(obras.id, obraId));
   });
 
   test('compra antecipada sobrevive ao prazo antigo, cancelamento volta ao Free sem novo trial', async ({ request }) => {
-    const { userId } = await novoAssinanteHomologacao(request, 'trial-pago');
+    const { userId } = await novoAssinanteHomologacao(request, 'trial-pago', { iniciarTeste: false });
     expect((await request.post('/api/xgestao/teste')).status()).toBe(201);
     const [trial] = await db.select().from(assinaturas).where(and(
       eq(assinaturas.userId, userId), eq(assinaturas.gatewayProvider, 'trial'),
     ));
     const catalogo = await request.get('/api/planos?persona=xgestao');
-    const basic = (await catalogo.json() as Array<{ id: string; tier: string }>).find((plano) => plano.tier === 'pro')!;
+    const basic = (await catalogo.json() as Array<{ id: string; tier: string }>).find((plano) => plano.tier === 'basic')!;
     const checkout = await request.post('/api/assinaturas/checkout', {
       data: { planoId: basic.id, ciclo: 'mensal', persona: 'xgestao' },
     });
@@ -94,7 +96,7 @@ test.describe('XG35 — Pro por 90 dias, sem apagar dados ou assinatura paga', (
     await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) })
       .where(and(eq(assinaturas.id, trial.id), eq(assinaturas.userId, userId)));
     await expirarTestesVencidos(userId);
-    expect((await perfil(request)).plano).toBe('pro');
+    expect((await perfil(request)).plano).toBe('basic');
     expect((await perfil(request)).teste.avisoFimPendente).toBe(false);
     const ativas = await db.select().from(assinaturas).where(and(
       eq(assinaturas.userId, userId), eq(assinaturas.persona, 'xgestao'), eq(assinaturas.status, 'ativa'),

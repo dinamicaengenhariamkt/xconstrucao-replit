@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { dinheiroApiValido } from "@features/xgestao/lib/dinheiro";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
@@ -86,6 +87,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   }
 
   const { descricao, valor, data } = parsed.data;
+  if (access.obra.clienteId === null && !dinheiroApiValido(Math.abs(valor))) {
+    const r = NextResponse.json({ message: "Informe o aditivo com no máximo duas casas decimais." }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   const [created] = await db
     .insert(obraAditivos)
     .values({

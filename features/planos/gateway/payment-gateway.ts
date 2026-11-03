@@ -11,7 +11,7 @@ export interface CheckoutInput {
   userId: string;
   planoId: string;
   /** Tier do plano (free/pro/enterprise) — usado pelo adapter manual p/ ativar. */
-  tier: "free" | "pro" | "enterprise";
+  tier: import("@shared/lib/plans-catalog").PlanoTier;
   ciclo: "mensal" | "anual";
   valor: number;
   /** URLs de retorno (usadas por gateways com checkout hospedado). */

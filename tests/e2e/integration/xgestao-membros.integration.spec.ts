@@ -73,6 +73,8 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   await logout(request);
   await loginAs(request, ownerEmail);
 
+  const trial = await request.post("/api/xgestao/teste", { data: {} });
+  expect(trial.status(), await trial.text()).toBe(201);
   const obraA = await createObra(request, "XG31 Obra A");
   const obraB = await createObra(request, "XG31 Obra B");
   const obraC = await createObra(request, "XG31 Obra C");
@@ -86,7 +88,7 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   expect(Array.isArray(initialBody.rows)).toBe(true);
   expect(Array.isArray(initialBody.obras)).toBe(true);
   expect(initialBody).toMatchObject({
-    usoEquipe: { utilizadas: 1, membrosAtivos: 0, convitesPendentes: 0, limite: null },
+    usoEquipe: { utilizadas: 1, membrosAtivos: 0, convitesPendentes: 0, limite: 15 },
   });
 
   const selfInvite = await request.post("/api/xgestao/membros", {
@@ -705,7 +707,7 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
 
   const ownerPlan = await request.get("/api/perfil/plano?persona=xgestao");
   expect(ownerPlan.status(), await ownerPlan.text()).toBe(200);
-  expect(await ownerPlan.json()).toMatchObject({ persona: "xgestao", plano: "free" });
+  expect(await ownerPlan.json()).toMatchObject({ persona: "xgestao", plano: "premium" });
 
   // Revogar a membership corta o acesso na próxima consulta autenticada.
   const revoke = await request.delete(`/api/xgestao/membros/${invited.row.id}`);

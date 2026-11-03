@@ -28,7 +28,7 @@ export const obraAnexoTipoEnum = pgEnum("obra_anexo_tipo", [
   "contrato",
   "outros",
 ]);
-export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise"]);
+export const planoEnum = pgEnum("plano", ["free", "pro", "enterprise", "basic", "basic_plus", "premium"]);
 
 export const atividadeTipoEnum = pgEnum("atividade_tipo", [
   "obra_publicada",

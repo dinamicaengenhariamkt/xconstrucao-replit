@@ -159,7 +159,7 @@ export function NovaObraModal() {
     <>
       <Button
         onClick={handleOpen}
-        disabled={perfilOperacional.isLoading}
+        disabled={perfilOperacional.isLoading || !perfilOperacional.data || perfilOperacional.data.somenteLeitura}
         data-testid="xgestao-nova-obra"
       >
         <RiAddLine />

@@ -780,7 +780,7 @@ export function FinanceiroTab({
         </Card>
       </motion.div>
 
-      {!somenteMaoDeObra && <AditivosCard obraId={obraId} podeLancar={podeLancar} />}
+      {!somenteMaoDeObra && <AditivosCard obraId={obraId} podeLancar={podeLancar} moedaXgestao={isObraPropria} />}
 
       {modalTipo && (
         <LancamentoFinanceiroModal

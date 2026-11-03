@@ -18,6 +18,7 @@ import type { ObraPublicaPagamentos, ObraPublicaView } from '../types';
 import { SECOES_PADRAO, type SecoesPublicas } from '../secoes';
 import { createSignedReadUrl } from '@shared/lib/storage/r2';
 import { ladoDoLancamento } from '@features/empreiteiro/minhas-obras/lib/lado-lancamento';
+import { capacidadesLinkObra } from './token';
 
 const PUBLIC_LINK_MEDIA_TTL_SECONDS = 12 * 60 * 60;
 
@@ -136,6 +137,8 @@ export async function buildObraPublicaView(
   obraId: string,
   secoes: SecoesPublicas = SECOES_PADRAO,
 ): Promise<ObraPublicaView | null> {
+  // Revalida a capacidade a cada abertura, inclusive após downgrade. Nunca
+  // confia só na seleção salva no link ou em componentes escondidos na UI.
   const [obra] = await db
     .select({
       id: obras.id,
@@ -182,6 +185,8 @@ export async function buildObraPublicaView(
     .where(eq(obras.id, obraId));
 
   if (!obra) return null;
+  const capacidade = await capacidadesLinkObra(obraId);
+  secoes = { ...secoes, pagamentos: secoes.pagamentos && capacidade.valoresPublicos };
 
   // Seção desligada não é escondida na renderização: a query nem roda, então o
   // conteúdo não chega a sair do banco. Esconder no cliente deixaria o dado no

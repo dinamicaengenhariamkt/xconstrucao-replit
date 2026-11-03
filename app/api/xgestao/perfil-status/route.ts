@@ -5,6 +5,7 @@ import { assertXgestaoUser } from '@features/xgestao/lib/entitlement';
 import { db } from '@shared/db/db';
 import { empreiteiras } from '@shared/db/schema';
 import { empreiteiroPodeOperar, mensagemPerfilIncompleto } from '@shared/lib/perfil-operacional';
+import { planoDaEmpresa } from '@features/xgestao/server/plano-empresa';
 
 /** GET /api/xgestao/perfil-status — pré-requisitos reais para criar obra própria. */
 export async function GET(request: NextRequest) {
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
   const status = empreiteiroPodeOperar(perfil);
   const response = NextResponse.json({
     ...status,
+    somenteLeitura: (await planoDaEmpresa(entitlement.empreiteiraId)).somenteLeitura,
     message: status.ok ? null : mensagemPerfilIncompleto(status.faltando),
   });
   setNoCacheHeaders(response);

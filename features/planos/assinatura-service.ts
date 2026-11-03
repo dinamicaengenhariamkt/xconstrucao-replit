@@ -42,7 +42,8 @@ export async function getLimitesUsuario(
         naoEhTesteVencido(),
       ))
       .limit(1);
-    tier = (assinaturaXGestao?.tier ?? "free") as PlanoTier;
+    if (!assinaturaXGestao) return { obrasAtivas: 0, pessoasEmpresa: 0, linksPorObra: 0, valoresPublicos: 0 };
+    tier = assinaturaXGestao.tier as PlanoTier;
   }
   return getPlanCatalog(persona, tier).limites;
 }
@@ -95,6 +96,7 @@ export async function getAssinaturaAtiva(
 export async function listarPlanos(persona?: PlanoPersona): Promise<typeof planos.$inferSelect[]> {
   const conds = [eq(planos.ativo, true)];
   if (persona) conds.push(sql`(${planos.persona} = ${persona} OR ${planos.persona} = 'ambos')`);
+  if (persona === "xgestao") conds.push(sql`${planos.tier} IN ('basic','basic_plus','premium')`);
   const rows = await db.select().from(planos).where(and(...conds)).orderBy(planos.valorMensal);
   if (persona !== "xgestao") return rows;
 
@@ -170,6 +172,10 @@ async function _iniciarCheckoutImpl(args: {
   const personaAssinatura: PlanoPersona | null =
     plano.persona === "ambos" ? (args.persona ?? null) : plano.persona;
   if (!personaAssinatura) return { ok: false, code: "PLANO_INVALIDO" };
+  if (personaAssinatura === "xgestao" && (
+    !["basic", "basic_plus", "premium"].includes(plano.tier) ||
+    (args.ciclo !== undefined && args.ciclo !== "mensal")
+  )) return { ok: false, code: "PLANO_INVALIDO" };
 
   // Já tem assinatura paga ativa? (free pode "assinar" um pago; pago→pago troca via cancelar antes.)
   const atual = await getAssinaturaAtiva(args.userId, personaAssinatura);

@@ -13,6 +13,9 @@ import {
 } from "@shared/lib/plans-catalog";
 import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
 import { getEstadoTeste, naoEhTesteVencido, type EstadoTeste } from "@features/xgestao/teste/server/teste-service";
+import { planoDaEmpresa } from "@features/xgestao/server/plano-empresa";
+import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import { consultarVagasEquipe } from "@features/xgestao/equipe/server/vagas-service";
 
 async function computeEmpreiteiroUsage(userId: string): Promise<Record<string, number>> {
   const [emp] = await db.select().from(empreiteiras).where(eq(empreiteiras.userId, userId));
@@ -161,7 +164,7 @@ export async function GET(request: NextRequest) {
     .from(planos)
     .where(and(eq(planos.persona, persona), eq(planos.tier, tier), eq(planos.ativo, true)))
     .limit(1);
-  const catalogo = catalogoPersistido
+  let catalogo = catalogoPersistido
     ? {
         nome: catalogoPersistido.nome,
         precoMensal: Number(catalogoPersistido.precoMensal),
@@ -172,6 +175,12 @@ export async function GET(request: NextRequest) {
         limites: catalogoFallback.limites,
       }
     : catalogoFallback;
+  const empresaXgestao = persona === "xgestao" ? await resolverEmpresaDoUsuario(user.id) : null;
+  const planoEmpresa = empresaXgestao ? await planoDaEmpresa(empresaXgestao.empreiteiraId) : null;
+  const usoEquipe = empresaXgestao ? await consultarVagasEquipe(empresaXgestao.empreiteiraId) : null;
+  if (planoEmpresa?.somenteLeitura) {
+    catalogo = { nome: "Somente leitura", precoMensal: 0, features: ["Dados preservados", "Assine para retomar as edições"], limites: planoEmpresa.limites };
+  }
 
   const usageMap =
     persona === "xgestao"
@@ -185,8 +194,11 @@ export async function GET(request: NextRequest) {
       : persona === "empreiteiro"
         ? EMPREITEIRO_USAGE_LABELS
         : CONTRATANTE_USAGE_LABELS;
+  if (usoEquipe) usageMap.pessoasEmpresa = usoEquipe.utilizadas;
 
-  const uso: PlanUsageItem[] = Object.entries(catalogo.limites).map(([key, max]) => ({
+  const uso: PlanUsageItem[] = Object.entries(catalogo.limites)
+    .filter(([key]) => persona !== "xgestao" || key in XGESTAO_USAGE_LABELS)
+    .map(([key, max]) => ({
     key,
     label: labels[key] ?? key,
     current: usageMap[key] ?? 0,
@@ -250,6 +262,10 @@ export async function GET(request: NextRequest) {
     catalogo,
     uso,
     hasCpfCnpj,
+    ...(planoEmpresa ? {
+      somenteLeitura: planoEmpresa.somenteLeitura,
+      usoEquipe,
+    } : {}),
     ...(teste ? { teste } : {}),
   });
   setNoCacheHeaders(response);

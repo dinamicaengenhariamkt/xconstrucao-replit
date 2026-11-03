@@ -25,7 +25,7 @@ export type ObraShare = {
   secoes: SecoesPublicas;
 };
 
-export type ObraSharesState = { shares: ObraShare[]; limite: number };
+export type ObraSharesState = { shares: ObraShare[]; limite: number; valoresPublicos: boolean };
 
 export function obraShareQueryKey(obraId: string) {
   return ['xgestao', 'obra-share', obraId] as const;

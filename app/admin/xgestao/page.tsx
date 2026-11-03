@@ -26,7 +26,7 @@ import type {
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
 
 function tierLabel(tier: string) {
-  return { free: 'Freemium', pro: 'Basic', enterprise: 'Pro' }[tier] ?? tier;
+  return ({ free: 'Somente leitura', pro: 'Basic anterior', enterprise: 'Pro anterior', basic: 'Basic', basic_plus: 'Basic Plus', premium: 'Premium' } as Record<string, string>)[tier] ?? tier;
 }
 
 const STATUS_LABEL: Record<XgestaoAdminObraStatus, string> = {
@@ -52,7 +52,7 @@ const ALERT_STYLE: Record<XgestaoAdminAlerta['severidade'], string> = {
 export default function AdminXgestaoPage() {
   const { data, isLoading, isError, refetch, isFetching } = useXgestaoAdminDashboard();
   const indicadores = data?.indicadores;
-  const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0 };
+  const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
   const saldoPrevisto = (indicadores?.orcamentoGerenciado ?? 0) - (indicadores?.valorPago ?? 0);
   const cards = [
     { label: 'Responsáveis com acesso', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
@@ -175,9 +175,12 @@ export default function AdminXgestaoPage() {
                 <RiPieChart2Line /> Distribuição dos planos
               </p>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-800/60"><strong className="block">{distribuicao.free}</strong><span className="text-[10px] text-muted-foreground">Freemium</span></div>
-                <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-800/60"><strong className="block">{distribuicao.pro}</strong><span className="text-[10px] text-muted-foreground">Basic</span></div>
-                <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-800/60"><strong className="block">{distribuicao.enterprise}</strong><span className="text-[10px] text-muted-foreground">Pro</span></div>
+                {(['basic', 'basic_plus', 'premium', 'free', 'pro', 'enterprise'] as const).map(tier => (
+                  <div key={tier} className="rounded-lg bg-gray-50 p-2 dark:bg-gray-800/60">
+                    <strong className="block">{distribuicao[tier] ?? 0}</strong>
+                    <span className="text-[10px] text-muted-foreground">{tierLabel(tier)}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </CardContent>

@@ -19,7 +19,7 @@ import {
 } from '@features/planos/ui/use-planos';
 import type { PlanoTier } from '@shared/lib/plans-catalog';
 
-const ORDER: PlanoTier[] = ['free', 'pro', 'enterprise'];
+const ORDER: PlanoTier[] = ['basic', 'basic_plus', 'premium'];
 
 function money(value: string) {
   return new Intl.NumberFormat('pt-BR', {
@@ -36,6 +36,7 @@ function PlanCard({
   pending,
   canChoosePaid,
   emTeste,
+  somenteLeitura,
 }: {
   plano: PlanoApi;
   currentTier: PlanoTier;
@@ -44,12 +45,13 @@ function PlanCard({
   canChoosePaid: boolean;
   /** XG35 — no teste grátis o plano testado continua assinável e o Free fica para o fim do teste. */
   emTeste: boolean;
+  somenteLeitura: boolean;
 }) {
-  const isFree = plano.tier === 'free';
-  const isCurrent = plano.tier === currentTier && !emTeste;
-  const freeDuranteTeste = emTeste && isFree;
-  const isFeatured = plano.tier === 'pro';
-  const blockedByDocument = !isFree && !canChoosePaid;
+  const isFree = false;
+  const isCurrent = plano.tier === currentTier && !emTeste && !somenteLeitura;
+  const freeDuranteTeste = false;
+  const isFeatured = plano.tier === 'basic_plus';
+  const blockedByDocument = !canChoosePaid;
 
   return (
     <article
@@ -125,7 +127,7 @@ export function XGestaoPlanosSection() {
   const emTeste = perfil?.teste?.emTeste === true;
 
   function choosePlan(plano: PlanoApi) {
-    if (checkout.isPending || (plano.tier === currentTier && !emTeste) || (emTeste && plano.tier === 'free')) return;
+    if (checkout.isPending || (plano.tier === currentTier && !emTeste && !perfil?.somenteLeitura)) return;
     if (plano.tier !== 'free' && perfil?.hasCpfCnpj !== true) {
       toast({
         title: 'CNPJ necessário',
@@ -211,7 +213,7 @@ export function XGestaoPlanosSection() {
               <p className="mt-1 text-sm text-muted-foreground">Acompanhe seus limites e escolha o plano ideal para sua operação.</p>
               {emTeste && perfil.teste?.fimTeste && (
                 <p className="mt-1 text-sm font-medium" data-testid="xgestao-plano-fim-teste">
-                  Teste grátis até {new Date(perfil.teste.fimTeste).toLocaleDateString('pt-BR')}. Depois disso, a conta volta para o plano Free.
+                  Teste grátis até {new Date(perfil.teste.fimTeste).toLocaleDateString('pt-BR')}. Sem contratação, sua conta fica somente para leitura, com os dados preservados.
                 </p>
               )}
             </div>
@@ -266,6 +268,7 @@ export function XGestaoPlanosSection() {
                 pending={checkout.isPending && activeRequest === plano.id}
                 canChoosePaid={perfil.hasCpfCnpj}
                 emTeste={emTeste}
+                somenteLeitura={perfil.somenteLeitura === true}
               />
             ) : null;
           })}

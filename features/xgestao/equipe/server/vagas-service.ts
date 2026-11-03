@@ -5,6 +5,7 @@ import { db } from "@shared/db/db";
 import { assinaturas, empreiteiras, planos, xgestaoMembros } from "@shared/db/schema";
 import { naoEhTesteVencido } from "@features/xgestao/teste/server/teste-service";
 import { contarVagasEquipe, limiteVagasEquipe, type UsoEquipe } from "../vagas";
+import { planoDaEmpresa } from "@features/xgestao/server/plano-empresa";
 
 type Leitor = Pick<typeof db, "select">;
 
@@ -20,18 +21,10 @@ export async function consultarVagasEquipe(
     userId: xgestaoMembros.userId,
     status: xgestaoMembros.status,
   }).from(xgestaoMembros).where(eq(xgestaoMembros.empreiteiraId, empreiteiraId));
-  const [assinatura] = await leitor.select({ limites: planos.limitesJson })
-    .from(assinaturas).innerJoin(planos, eq(planos.id, assinaturas.planoId))
-    .where(and(
-      eq(assinaturas.userId, empresa.titular),
-      eq(assinaturas.persona, "xgestao"),
-      eq(planos.persona, "xgestao"),
-      eq(assinaturas.status, "ativa"),
-      naoEhTesteVencido(),
-    )).limit(1);
+  const plano = await planoDaEmpresa(empreiteiraId, leitor);
   return {
     ...contarVagasEquipe(empresa.titular, vinculos),
     // Não mapear o antigo free para Basic pago nem ativar cotas globais.
-    limite: assinatura ? limiteVagasEquipe(assinatura.limites) : null,
+    limite: plano.somenteLeitura ? 0 : limiteVagasEquipe(plano.limites),
   };
 }

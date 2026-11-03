@@ -43,6 +43,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     ? {
         ...filtered,
         permissoesXgestao: {
+          somenteLeitura: access.xgestaoSomenteLeitura === true || access.xgestaoPermission === "visualizar",
           areasPermitidas: (access.xgestaoAreasPermitidas ?? null) as AreasPermitidas,
           categoriasFinanceiroPermitidas:
             (access.xgestaoCategoriasFinanceiroPermitidas ?? null) as CategoriasFinanceiroPermitidas,

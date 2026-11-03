@@ -8,6 +8,7 @@ export const XGESTAO_PERFIL_OPERACIONAL_KEY = ['xgestao', 'perfil-operacional'] 
 
 export interface XGestaoPerfilOperacional extends ResultadoPodeOperar {
   message: string | null;
+  somenteLeitura: boolean;
 }
 
 export function useXGestaoPerfilOperacional() {
@@ -23,7 +24,7 @@ export function useXGestaoPerfilOperacional() {
       }
       return response.json();
     },
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 }

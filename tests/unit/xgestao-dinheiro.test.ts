@@ -1,8 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { QueryClient } from '@tanstack/react-query';
-import { dinheiroDecimal, orcamentoApiValido } from '../../features/xgestao/lib/dinheiro';
+import { dinheiroDecimal, dinheiroComSinalDecimal, orcamentoApiValido } from '../../features/xgestao/lib/dinheiro';
 import { invalidarCarteiraXgestao } from '../../features/xgestao/lib/invalidar-carteira';
+
+test('XG42 supressão e aditivo preservam sinal e centavos sem arredondar', () => {
+  assert.equal(dinheiroComSinalDecimal('-500.01'), '-500.01');
+  assert.equal(dinheiroComSinalDecimal('-1.500,50'), '-1500.50');
+  assert.equal(dinheiroComSinalDecimal('1.500,50'), '1500.50');
+  assert.throws(() => dinheiroComSinalDecimal('-500.0001'));
+});
 
 for (const [entrada, esperado] of [
   ['499,99', '499.99'], ['500', '500.00'], ['500.01', '500.01'],

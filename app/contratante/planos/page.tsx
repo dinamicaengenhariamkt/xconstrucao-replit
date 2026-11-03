@@ -16,7 +16,7 @@ import {
   RiArrowRightLine,
 } from 'react-icons/ri';
 import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
-import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
+import { getPlanCatalog, PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
 import { AvisoAmbienteTeste } from '@features/shared/components/AvisoAmbienteTeste';
 import { useRouter } from 'next/navigation';
@@ -74,7 +74,7 @@ interface Feature {
  * certo, então o mesmo usuário via dois contratos diferentes.
  */
 function limiteLabel(slot: PlanId, chave: string): string {
-  const valor = PLANS_CATALOG.contratante[SLOT_TIER[slot]].limites[chave];
+  const valor = getPlanCatalog('contratante', SLOT_TIER[slot]).limites[chave];
   if (valor === undefined) return '—';
   return valor >= 9999 ? 'Ilimitado' : String(valor);
 }

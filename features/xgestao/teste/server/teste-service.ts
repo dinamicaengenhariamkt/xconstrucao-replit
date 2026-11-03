@@ -40,7 +40,7 @@ export type EstadoTeste = {
   /** Teste venceu e o assinante ainda não respondeu ao aviso. */
   avisoFimPendente: boolean;
   duracaoDias: number;
-  tierTeste: 'pro' | 'enterprise';
+  tierTeste: 'pro' | 'enterprise' | 'premium';
 };
 
 export class TesteError extends Error {

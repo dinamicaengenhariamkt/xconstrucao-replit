@@ -177,7 +177,11 @@ A nova oferta aprovada é Basic R$ 99, Basic Plus R$ 179 e Premium R$ 299; trial
 de 90 dias seguido de somente leitura sem pagamento. Equipe por empresa incluindo titular,
 e valores públicos restritos a contrato, recebimentos e saldo. **Decisão aprovada não significa
 catálogo/cobrança implantados:** a jornada rastreia implementação, testes e impedimentos separadamente.
-Preservar o histórico das jornadas anteriores; não ativar Asaas de produção ou limites globais nesta rodada.
+Preservar o histórico das jornadas anteriores. A aplicação dos novos planos no
+xgestão foi autorizada; não ativar Asaas de produção nem alterar limites do marketplace.
+
+Ver [XG42 — Auditoria de planos, persistência e contexto](42-auditoria-planos-persistencia-contexto.md)
+para implementação, matriz de revisão de todas as áreas e evidências desta rodada.
 
 ## Nota de formato
 

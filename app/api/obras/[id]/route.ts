@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { orcamentoApiValido } from "@features/xgestao/lib/dinheiro";
-import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { planoDaEmpresa } from "@features/xgestao/server/plano-empresa";
 import { db } from "@shared/db/db";
 import {
   candidaturas,
@@ -576,8 +577,33 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   // um banco fora do ar apareceria como "confira os valores informados".
   let updated: typeof obras.$inferSelect;
   try {
-    [updated] = await db.update(obras).set(updateData).where(eq(obras.id, id)).returning();
+    if (isObraPropriaXGestao && access.obra.empreiteiraId) {
+      updated = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${access.obra.empreiteiraId!}))`);
+        const plano = await planoDaEmpresa(access.obra.empreiteiraId!, tx);
+        if (plano.somenteLeitura) throw Object.assign(new Error("Conta somente para leitura."), { code: "XGESTAO_SOMENTE_LEITURA" });
+        const [atual] = await tx.select({ status: obras.status }).from(obras).where(eq(obras.id, id));
+        if (atual.status === "concluida" && updateData.status && updateData.status !== "concluida") {
+          const [{ total }] = await tx.select({ total: count() }).from(obras).where(and(
+            eq(obras.empreiteiraId, access.obra.empreiteiraId!), isNull(obras.clienteId), ne(obras.status, "concluida"),
+          ));
+          if (total >= plano.limites.obrasAtivas) throw Object.assign(new Error("Limite de obras ativas atingido. Conclua uma obra ou escolha um plano maior antes de reabrir."), { code: "XGESTAO_COTA" });
+        }
+        const [row] = await tx.update(obras).set(updateData).where(eq(obras.id, id)).returning();
+        return row;
+      });
+    } else {
+      [updated] = await db.update(obras).set(updateData).where(eq(obras.id, id)).returning();
+    }
   } catch (error) {
+    const erroPlano = error as { code?: string; message?: string };
+    if (erroPlano.code === "XGESTAO_COTA" || erroPlano.code === "XGESTAO_SOMENTE_LEITURA") {
+      const r = NextResponse.json({ code: erroPlano.code, message: erroPlano.message }, {
+        status: erroPlano.code === "XGESTAO_COTA" ? 409 : 403,
+      });
+      setNoCacheHeaders(r);
+      return r;
+    }
     // Classe 22 = data exception, 23 = integrity constraint violation.
     const code = (error as { code?: string })?.code ?? "";
     if (!/^(22|23)/.test(code)) throw error;

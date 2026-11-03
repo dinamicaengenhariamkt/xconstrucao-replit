@@ -101,7 +101,7 @@ export function CompartilharModal({
 
   const shares = sharesQuery.data?.shares ?? [];
   const limite = sharesQuery.data?.limite ?? 5;
-  const noLimite = shares.length >= limite;
+  const noLimite = limite >= 0 && shares.length >= limite;
   const criando = selecionado === 'novo' || (!sharesQuery.isLoading && shares.length === 0);
   const shareLink = criando
     ? null
@@ -399,7 +399,7 @@ export function CompartilharModal({
                         <Switch
                           id={`secao-${secao}`}
                           checked={shareLink.secoes[secao]}
-                          disabled={secoesMutation.isPending}
+                          disabled={secoesMutation.isPending || (secao === 'pagamentos' && !sharesQuery.data?.valoresPublicos)}
                           onCheckedChange={(marcado) =>
                             secoesMutation.mutate(
                               { linkId: shareLink.id, secoes: { ...shareLink.secoes, [secao]: marcado } },

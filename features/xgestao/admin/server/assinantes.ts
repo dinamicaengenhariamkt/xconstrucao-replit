@@ -13,7 +13,7 @@ import {
 } from './escopo';
 import { expirarTestesVencidos, TESTE_PROVIDER } from '@features/xgestao/teste/server/teste-service';
 
-export type XgestaoTier = 'free' | 'pro' | 'enterprise';
+export type XgestaoTier = import('@shared/lib/plans-catalog').PlanoTier;
 
 export interface XgestaoAssinanteDetalhe extends XgestaoAssinanteBase {
   plano: {
@@ -142,8 +142,8 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
       ...assinante,
       plano: {
         tier,
-        nome: assinatura?.nome ?? planoFree[0]?.nome ?? 'Freemium',
-        valorMensal: money(assinatura?.valorMensal ?? planoFree[0]?.valorMensal),
+        nome: assinatura?.nome ?? 'Somente leitura',
+        valorMensal: money(assinatura?.valorMensal ?? 0),
         status: assinatura?.status ?? null,
         renovaEm: assinatura?.renovaEm ? assinatura.renovaEm.toISOString() : null,
         emTeste: assinatura?.provider === TESTE_PROVIDER,
@@ -152,7 +152,7 @@ export async function listarAssinantesDetalhados(): Promise<XgestaoAssinanteDeta
       obrasAtivas: obrasDoAssinante?.ativas ?? 0,
       uso: {
         obrasEmAberto: Number(obrasDoAssinante?.emAberto) || 0,
-        limiteObras: getPlanCatalog('xgestao', tier).limites.obrasAtivas ?? 0,
+        limiteObras: assinatura ? getPlanCatalog('xgestao', tier).limites.obrasAtivas ?? 0 : 0,
       },
       ultimoAcessoEm: acesso ? acesso.toISOString() : null,
       membros: (membrosPorEmpreiteira.get(assinante.empreiteiraId) ?? [])
@@ -179,7 +179,7 @@ export async function faturamentoXgestao(
       receitaRecorrenteMensal: 0,
       assinantesPagantes: 0,
       assinantesFree: 0,
-      distribuicaoPlanos: { free: 0, pro: 0, enterprise: 0 },
+      distribuicaoPlanos: { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 },
     };
   }
 
@@ -202,7 +202,7 @@ export async function faturamentoXgestao(
       eq(assinaturas.persona, 'xgestao'),
     ));
 
-  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0 };
+  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
   let receitaRecorrenteMensal = 0;
   let assinantesPagantes = 0;
 

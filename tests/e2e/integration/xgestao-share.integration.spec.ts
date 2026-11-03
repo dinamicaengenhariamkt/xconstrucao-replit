@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext } from '@playwright/test';
 import {
   completarPerfilOperacional,
   loginAs,
+  iniciarTesteOperacionalXgestao,
   logout,
   SEED_ADMIN_EMAIL,
   uniqueEmail,
@@ -51,6 +52,7 @@ async function concederXGestao(request: APIRequestContext, email: string) {
     data: { xgestao: true },
   });
   expect(response.status(), await response.text()).toBe(200);
+  await iniciarTesteOperacionalXgestao(request, email);
   await logout(request);
   return payload.rows[0].id;
 }
@@ -423,12 +425,13 @@ test.describe('xgestão — link público de obra', () => {
     };
     expect(lista.shares.map((s) => s.id)).toEqual([cliente.share.id]);
 
-    // Teto de links ativos por obra.
-    for (let i = lista.shares.length; i < lista.limite; i++) {
+    // Premium tem links ilimitados; não herda o antigo teto artificial de cinco.
+    expect(lista.limite).toBe(-1);
+    for (let i = 0; i < 6; i++) {
       const extra = await request.post(`/api/xgestao/obras/${obra.id}/share`, { data: { nome: `Extra ${i}` } });
       expect(extra.status(), await extra.text()).toBe(201);
     }
-    expect((await request.post(`/api/xgestao/obras/${obra.id}/share`, { data: { nome: 'Além do teto' } })).status()).toBe(409);
+    expect((await request.post(`/api/xgestao/obras/${obra.id}/share`, { data: { nome: 'Mais um link' } })).status()).toBe(201);
     await logout(request);
     expect((await request.get(arquiteto.share.path)).status()).toBe(404);
     expect((await request.get(cliente.share.path)).status()).toBe(200);

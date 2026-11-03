@@ -1,4 +1,6 @@
-export type PlanoTier = 'free' | 'pro' | 'enterprise';
+import { OFERTA_XGESTAO } from '@features/xgestao/lib/oferta-comercial';
+
+export type PlanoTier = 'free' | 'pro' | 'enterprise' | 'basic' | 'basic_plus' | 'premium';
 
 /**
  * Exceção temporária para os testes do xgestão.
@@ -38,9 +40,10 @@ export const CONTRATANTE_USAGE_LABELS: Record<string, string> = {
 
 export const XGESTAO_USAGE_LABELS: Record<string, string> = {
   obrasAtivas: 'Obras ativas',
+  pessoasEmpresa: 'Pessoas na empresa',
 };
 
-export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEntry>> = {
+export const PLANS_CATALOG = {
   empreiteiro: {
     free: {
       nome: 'Plano Gratuito',
@@ -122,6 +125,25 @@ export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEn
     },
   },
   xgestao: {
+    ...Object.fromEntries(Object.entries(OFERTA_XGESTAO).map(([tier, plano]) => [tier, {
+      nome: plano.nome,
+      precoMensal: plano.mensal,
+      features: [
+        `${plano.obrasAtivas} obra(s) ativa(s)`,
+        `${plano.pessoasEmpresa} pessoas por empresa, incluindo você`,
+        plano.linksPorObra === null ? 'Links públicos ilimitados por obra' : `${plano.linksPorObra} link(s) público(s) por obra`,
+        'Dashboard, etapas, tarefas e cronograma',
+        'Fotos, diário, ocorrências, checklists e timeline',
+        'Documentos e financeiro (gasto × orçamento)',
+        ...(plano.valoresPublicos ? ['Contrato, recebimentos e saldo no link do cliente'] : []),
+      ],
+      limites: {
+        obrasAtivas: plano.obrasAtivas,
+        pessoasEmpresa: plano.pessoasEmpresa,
+        linksPorObra: plano.linksPorObra ?? -1,
+        valoresPublicos: plano.valoresPublicos ? 1 : 0,
+      },
+    }])),
     free: {
       nome: 'Freemium',
       precoMensal: 0,
@@ -141,8 +163,11 @@ export const PLANS_CATALOG: Record<PlanoPersona, Record<PlanoTier, PlanCatalogEn
       limites: { obrasAtivas: 10 },
     },
   },
-};
+} satisfies Record<PlanoPersona, Partial<Record<PlanoTier, PlanCatalogEntry>>>;
 
 export function getPlanCatalog(persona: PlanoPersona, tier: PlanoTier): PlanCatalogEntry {
-  return PLANS_CATALOG[persona][tier];
+  const catalogo: Partial<Record<PlanoTier, PlanCatalogEntry>> = PLANS_CATALOG[persona];
+  const entry = catalogo[tier];
+  if (!entry) throw new Error(`Plano indisponível para o produto ${persona}.`);
+  return entry;
 }

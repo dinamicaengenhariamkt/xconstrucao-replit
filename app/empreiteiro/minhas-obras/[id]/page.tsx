@@ -629,7 +629,7 @@ function DetalhesObraCard({
 export function ObraConsoleView({
   basePath,
   showMarketplaceContact = true,
-  allowOwnWorkEdit = false,
+  allowOwnWorkEdit: permiteEditarObra = false,
 }: {
   basePath: string;
   showMarketplaceContact?: boolean;
@@ -640,6 +640,7 @@ export function ObraConsoleView({
   const user = useAuthStore((state) => state.user);
   const id = params.id as string;
   const { data: obra, isLoading } = useMinhaObraDetalhe(id);
+  const allowOwnWorkEdit = permiteEditarObra && !obra?.permissoesXgestao?.somenteLeitura;
   const [activeTab, setActiveTab] = useState<ObraTab>('atualizacoes');
   /*
    * XG23 — a aba ativa tem de existir na lista visível.

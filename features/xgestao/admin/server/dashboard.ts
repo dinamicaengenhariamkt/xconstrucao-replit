@@ -19,7 +19,7 @@ import { obraAtrasada, obraParada } from './situacao';
 import { getDiasObraParada } from '@features/admin/platform-settings/server/settings-reader';
 import { expirarTestesVencidos, fimTestePorUsuario } from '@features/xgestao/teste/server/teste-service';
 
-export type XgestaoTier = 'free' | 'pro' | 'enterprise';
+export type XgestaoTier = import('@shared/lib/plans-catalog').PlanoTier;
 
 export interface XgestaoAdminAssinante {
   id: string;
@@ -180,7 +180,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
   }
 
   if (empreiteiraIds.length === 0) {
-    const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0 };
+    const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
     const assinantes = entitlements.map((entitlement) => {
       const subscription = activeSubscriptions.get(entitlement.userId);
       const tier = (subscription?.tier ?? 'free') as XgestaoTier;
@@ -192,7 +192,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
         email: entitlement.email,
         membros: [],
         obrasGerenciadas: 0,
-        plano: { tier, nome: subscription?.planoNome ?? freePlan[0]?.nome ?? 'Freemium' },
+        plano: { tier, nome: subscription?.planoNome ?? 'Somente leitura' },
         fimTeste: fimTestes.get(entitlement.userId) ?? null,
         entradaEm: entitlement.entradaEm.toISOString(),
       };
@@ -362,12 +362,12 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
   const obrasPorEmpreiteira = new Map(
     obraCountRows.map((row) => [row.empreiteiraId, Number(row.total) || 0]),
   );
-  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0 };
+  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
   const distribuicaoStatus = { ...STATUS_VAZIO };
   for (const row of statusRows) {
     distribuicaoStatus[row.status] = Number(row.total) || 0;
   }
-  const planoFreeNome = freePlan[0]?.nome ?? 'Freemium';
+  const planoFreeNome = 'Somente leitura';
 
   const assinantes = entitlements.map((entitlement) => {
     const subscription = activeSubscriptions.get(entitlement.userId);

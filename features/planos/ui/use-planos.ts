@@ -38,6 +38,7 @@ export interface PerfilPlano {
   uso: Array<{ key: string; label: string; current: number; max: number }>;
   /** true se o usuário tem CPF/CNPJ cadastrado (pré-requisito para assinar) */
   hasCpfCnpj: boolean;
+  somenteLeitura?: boolean;
   /** XG35 — só na persona xgestão. */
   teste?: {
     elegivel: boolean;
@@ -46,7 +47,7 @@ export interface PerfilPlano {
     diasRestantes: number | null;
     avisoFimPendente: boolean;
     duracaoDias: number;
-    tierTeste: 'pro' | 'enterprise';
+    tierTeste: 'pro' | 'enterprise' | 'premium';
   };
 }
 
@@ -79,6 +80,9 @@ export function usePerfilPlano(
     },
     ...CFG,
     // XG37 — membro do xgestão recebe 403 nesta rota; quem não decide o plano não consulta.
+    staleTime: persona === 'xgestao' ? 0 : CFG.staleTime,
+    refetchOnWindowFocus: persona === 'xgestao',
+    refetchInterval: persona === 'xgestao' ? 30_000 : false,
     enabled: options?.enabled ?? true,
   });
 }

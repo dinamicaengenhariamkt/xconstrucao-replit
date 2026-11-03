@@ -75,6 +75,8 @@ async function criarAssinanteComObra(request: APIRequestContext, label: string) 
   await logout(request);
   await concederXGestao(request, email);
   await loginAs(request, email);
+  const teste = await request.post('/api/xgestao/teste', { data: {} });
+  expect(teste.status(), await teste.text()).toBe(201);
 
   const criada = await request.post('/api/xgestao/obras', {
     data: { nome: `Obra E2E financeiro ${label}`, endereco: 'Rua dos Lançamentos, 100' },

@@ -129,6 +129,15 @@ export async function requireVerifiedUser(request: NextRequest): Promise<AuthGua
     }
   }
 
+  if (!isReadOnlyMethod(request.method)) {
+    const { erroMutacaoXgestao } = await import("@features/xgestao/server/guard-mutacao");
+    const message = await erroMutacaoXgestao(pathname, request.method, actorUser);
+    if (message) {
+      const response = NextResponse.json({ code: "XGESTAO_SOMENTE_LEITURA", message }, { status: 403 });
+      setNoCacheHeaders(response);
+      return { user: null, error: response, impersonation: null, actor: null };
+    }
+  }
   return { user: actorUser, error: null, impersonation: null, actor: actorUser };
 }
 

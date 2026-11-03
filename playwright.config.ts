@@ -83,6 +83,7 @@ export default defineConfig({
         "**/logout-xgestao.spec.ts",
         "**/xgestao-obras.browser.spec.ts",
         "**/xgestao-homologacao.browser.spec.ts",
+        "**/xgestao-admin-homologacao.browser.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },

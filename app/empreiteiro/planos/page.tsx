@@ -16,7 +16,7 @@ import {
   RiArrowRightLine,
 } from 'react-icons/ri';
 import { usePlanos, usePerfilPlano, useCheckout, useCancelarAssinatura, type PlanoApi } from '@features/planos/ui/use-planos';
-import { PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
+import { getPlanCatalog, PLANS_CATALOG, type PlanoTier } from '@shared/lib/plans-catalog';
 import { useToast } from '@shared/hooks/use-toast';
 import { AvisoAmbienteTeste } from '@features/shared/components/AvisoAmbienteTeste';
 import { useRouter } from 'next/navigation';
@@ -73,7 +73,7 @@ interface Feature {
  * o gate aplicava 10).
  */
 function limiteLabel(slot: PlanId, chave: string): string {
-  const valor = PLANS_CATALOG.empreiteiro[SLOT_TIER[slot]].limites[chave];
+  const valor = getPlanCatalog('empreiteiro', SLOT_TIER[slot]).limites[chave];
   if (valor === undefined) return '—';
   return valor >= 9999 ? 'Ilimitado' : String(valor);
 }

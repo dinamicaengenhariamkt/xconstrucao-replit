@@ -4,7 +4,7 @@
 
 Revisão de 02/11/2026, baseada nas duas imagens do cliente e nas confirmações do usuário. Escopo **exclusivo do xgestão**, preservando a identidade visual aprovada e sem alterar preços, permissões, dados ou cobrança do marketplace.
 
-**Em execução, não concluída.** Distinguir a matriz comercial aprovada da oferta efetivamente aplicada no banco e nas APIs. A especificação executável nova não substitui automaticamente o catálogo legado. A homologação externa do Asaas continua pendente, conforme XG40.
+**Implementação aplicada; homologação externa pendente.** A oferta nova foi ligada às telas e às verificações do servidor no xgestão. O inventário e o plano de implementação abaixo preservam o levantamento inicial; o estado atual, os ajustes adicionais e as evidências estão na [XG42 — Auditoria de planos, persistência e contexto](42-auditoria-planos-persistencia-contexto.md). A homologação externa do Asaas continua pendente, conforme XG40.
 
 ## 2. Oferta confirmada
 

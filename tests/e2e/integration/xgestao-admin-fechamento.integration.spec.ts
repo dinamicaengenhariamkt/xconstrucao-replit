@@ -47,14 +47,14 @@ test('XG36 indicadores, custo pago, prazo, trial e CSV correspondem aos dados de
     expect(detalheResponse.status(), await detalheResponse.text()).toBe(200);
     expect((await detalheResponse.json()).obra).toMatchObject({ valorPago: 321, dataPrevisao: previsao });
 
-    expect((await request.post('/api/xgestao/teste')).status()).toBe(201);
+    expect((await request.get('/api/perfil/plano?persona=xgestao')).status()).toBe(200);
     const plano = await request.get('/api/perfil/plano?persona=xgestao');
     const fim = new Date((await plano.json()).teste.fimTeste);
     const detalheAssinanteResponse = await admin.get(`/api/admin/xgestao/assinantes?q=${encodeURIComponent(email)}`);
     expect(detalheAssinanteResponse.status(), await detalheAssinanteResponse.text()).toBe(200);
     const assinantes = await detalheAssinanteResponse.json();
     const assinante = assinantes.rows.find((item: { email: string }) => item.email === email);
-    expect(assinante.plano).toMatchObject({ emTeste: true, tier: 'enterprise' });
+    expect(assinante.plano).toMatchObject({ emTeste: true, tier: 'premium' });
     const csvResponse = await admin.get(`/api/admin/xgestao/export?tipo=assinantes&q=${encodeURIComponent(email)}`);
     expect(csvResponse.status(), await csvResponse.text()).toBe(200);
     expect(csvResponse.headers()['content-type']).toContain('text/csv');

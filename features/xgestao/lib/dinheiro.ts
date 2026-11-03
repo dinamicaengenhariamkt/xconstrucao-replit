@@ -26,4 +26,12 @@ export function dinheiroApiValido(valor: unknown): boolean {
   return /^\d{1,13}(?:\.\d{1,2})?$/.test(texto) && Number.isFinite(Number(texto));
 }
 
+/** Aditivos podem reduzir o contrato; a precisão continua sendo de centavos. */
+export function dinheiroComSinalDecimal(entrada: string): string {
+  const texto = entrada.trim();
+  const negativo = texto.startsWith('-');
+  const valor = dinheiroDecimal(negativo ? texto.slice(1) : texto);
+  return negativo && Number(valor) !== 0 ? `-${valor}` : valor;
+}
+
 export const orcamentoApiValido = dinheiroApiValido;

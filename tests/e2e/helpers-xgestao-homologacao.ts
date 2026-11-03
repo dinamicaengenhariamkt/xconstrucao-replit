@@ -12,7 +12,7 @@ import {
 } from './helpers';
 
 /** Cria apenas dados novos de desenvolvimento; depende dos guards do runner. */
-export async function novoAssinanteHomologacao(request: APIRequestContext, label: string) {
+export async function novoAssinanteHomologacao(request: APIRequestContext, label: string, opcoes: { iniciarTeste?: boolean } = {}) {
   const email = uniqueEmail(`xg-homolog-${label}`);
   const base = `11${Date.now().toString().slice(-10)}`;
   const digito = (digits: string, pesos: number[]) => {
@@ -53,5 +53,9 @@ export async function novoAssinanteHomologacao(request: APIRequestContext, label
   await db.update(users).set({ onboardingConcluido: true }).where(eq(users.id, userId));
   await logout(request);
   await loginAs(request, email);
+  if (opcoes.iniciarTeste !== false) {
+    const iniciar = await request.post('/api/xgestao/teste', { data: {} });
+    expect(iniciar.status(), await iniciar.text()).toBe(201);
+  }
   return { email, userId };
 }

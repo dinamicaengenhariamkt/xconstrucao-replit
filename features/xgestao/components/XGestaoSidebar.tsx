@@ -101,10 +101,10 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
               <RiRocketLine className="mt-0.5 size-4 shrink-0 text-primary" />
               <span className="min-w-0">
                 <span className="block text-xs font-bold text-foreground">
-                  {plano?.plano === 'free' || !plano ? 'Faça upgrade do seu plano' : plano.plano === 'pro' ? 'Mais espaço para sua operação' : 'Plano Enterprise'}
+                  {plano?.catalogo.nome ?? 'Plano xgestão'}
                 </span>
                 <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
-                  {plano?.plano === 'enterprise' ? 'Plano máximo ativo' : 'Veja opções e limites'}
+                  {plano?.somenteLeitura ? 'Assine para voltar a editar' : 'Veja opções e limites'}
                 </span>
               </span>
             </Link>

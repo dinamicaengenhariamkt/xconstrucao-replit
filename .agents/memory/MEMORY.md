@@ -19,7 +19,7 @@
 - [Overlay legal no E2E xgestão](xgestao-e2e-legal-overlay.md) — convite novo pode mostrar diálogo legal em cada navegação; dispense antes de consultar abas por papel.
 - [Ordem de FK composta no Publish](publish-composite-fk-order.md) — o diff pode criar a FK antes da unicidade nova no pai; separar em duas publicações preserva dados.
 - [Rejeição genérica do Git](git-push-rejection.md) — PUSH_REJECTED também pode esconder blobs grandes no histórico local; não presumir divergência nem usar force push.
-- [Diretrizes do MVP xgestão](xgestao-mvp-rules.md) — nova oferta: Premium 90 dias, Basic pago, titular na cota e valores públicos restritos; virada comercial exige OK.
+- [Diretrizes do MVP xgestão](xgestao-mvp-rules.md) — planos/limites autorizados só no xgestão; Premium 90 dias, somente leitura, titular na cota; produção e Asaas exigem OK.
 - [Isolamento dos testes Playwright](playwright-isolated-builds.md) — evitar cache ativo e servidor compartilhado entre runners; validar uploads pela origem pública.
 - [Evidência do checkout Asaas](asaas-checkout-evidence.md) — texto de sucesso pode estar oculto; comprovar pagamento e webhook, não apenas presença no DOM.
 - [TLS da origem pública no Node](replit-public-origin-tls.md) — usar a CA confiada pelo sistema; não desativar verificação TLS para sondar o preview.

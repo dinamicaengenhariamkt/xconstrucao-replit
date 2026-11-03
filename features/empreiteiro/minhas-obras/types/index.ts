@@ -71,6 +71,7 @@ export interface MinhaObra {
 export interface MinhaObraDetalhe extends MinhaObra {
   /** Escopo explícito recebido no detalhe de uma obra própria do xgestão. */
   permissoesXgestao?: {
+    somenteLeitura?: boolean;
     areasPermitidas: AreasPermitidas;
     categoriasFinanceiroPermitidas: CategoriasFinanceiroPermitidas;
   };

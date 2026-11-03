@@ -1,5 +1,20 @@
 import { APIRequestContext, expect } from "@playwright/test";
 
+/** Prepara apenas fixtures operacionais; testes do trial usam seu próprio fluxo. */
+export async function iniciarTesteOperacionalXgestao(request: APIRequestContext, email: string) {
+  await loginAs(request, email);
+  const perfil = await request.get("/api/perfil/plano?persona=xgestao");
+  if (perfil.status() !== 403) {
+    expect(perfil.status(), await perfil.text()).toBe(200);
+    const estado = await perfil.json();
+    if (estado.teste?.elegivel) {
+      const trial = await request.post("/api/xgestao/teste", { data: {} });
+      expect(trial.status(), await trial.text()).toBe(201);
+    }
+  }
+  await logout(request);
+}
+
 /**
  * Emails das personas usadas como default pelos utilitários compartilhados. Um
  * spec pode sobrescrevê-los passando argumentos explícitos.

@@ -1,4 +1,5 @@
 'use client';
+import { dinheiroComSinalDecimal } from '@features/xgestao/lib/dinheiro';
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -91,11 +92,12 @@ function hojeBr(): string {
 }
 
 interface AditivosCardProps {
+  moedaXgestao?: boolean;
   obraId: string;
   podeLancar?: boolean;
 }
 
-export function AditivosCard({ obraId, podeLancar = true }: AditivosCardProps) {
+export function AditivosCard({ obraId, podeLancar = true, moedaXgestao = false }: AditivosCardProps) {
   const { toast } = useToast();
   const { data: aditivos = [], isLoading } = useObraAditivos(obraId);
   const criar = useCriarAditivo(obraId);
@@ -116,7 +118,13 @@ export function AditivosCard({ obraId, podeLancar = true }: AditivosCardProps) {
   const total = aditivos.reduce((acc, a) => acc + Number(a.valor), 0);
 
   const onSubmit = async (data: FormData) => {
-    const valor = parseValorBr(data.valor);
+    let valor: number;
+    try {
+      valor = moedaXgestao ? Number(dinheiroComSinalDecimal(data.valor)) : parseValorBr(data.valor);
+    } catch (erro) {
+      form.setError('valor', { message: erro instanceof Error ? erro.message : 'Valor inválido.' });
+      return;
+    }
     if (!Number.isFinite(valor) || valor === 0) {
       form.setError('valor', { message: 'Informe um valor diferente de zero' });
       return;

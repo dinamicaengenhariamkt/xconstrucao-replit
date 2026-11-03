@@ -75,8 +75,8 @@ export function TesteGratisAviso() {
   if (!perfil || !teste) return null;
 
   const nomePlanoTeste =
-    planos?.find((p) => p.tier === teste.tierTeste)?.nome ?? (teste.tierTeste === 'enterprise' ? 'Pro' : 'Basic');
-  const noFree = perfil.plano === 'free';
+    planos?.find((p) => p.tier === teste.tierTeste)?.nome ?? 'Premium';
+  const noFree = perfil.somenteLeitura === true;
   // Só no dashboard (porta de entrada): no console da obra o diálogo disputaria a tela com o tour guiado.
   const mostrarOferta = pathname === XGESTAO_HOME && noFree && teste.elegivel && !ofertaFechada && !ofertaFoiDispensada();
   const mostrarAvisoFim = teste.avisoFimPendente && !avisoFechado;
@@ -109,8 +109,8 @@ export function TesteGratisAviso() {
           <RiVipCrownLine className="shrink-0" />
           <span className="truncate">
             {teste.elegivel
-              ? `Você está no plano Free. Experimente o plano ${nomePlanoTeste} grátis por ${teste.duracaoDias} dias.`
-              : 'Você está no plano Free. Conheça os planos para gerir mais obras.'}
+              ? `Experimente o plano ${nomePlanoTeste} grátis por ${teste.duracaoDias} dias.`
+              : 'Conta somente para leitura. Assine para voltar a editar; seus dados estão preservados.'}
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-3">
@@ -152,7 +152,7 @@ export function TesteGratisAviso() {
             </DialogTitle>
             <DialogDescription>
               Use o plano {nomePlanoTeste} sem pagar nada por {teste.duracaoDias} dias. Se não assinar até o fim,
-              sua conta volta para o plano Free e suas obras continuam aqui. Se preferir, assine agora.
+              sua conta fica somente para leitura e seus dados continuam aqui. Não há cobrança automática. Se preferir, assine agora.
             </DialogDescription>
           </DialogHeader>
           {iniciar.isError && <p className="text-sm text-red-600">{iniciar.error.message}</p>}
@@ -186,8 +186,8 @@ export function TesteGratisAviso() {
           <DialogHeader>
             <DialogTitle>Seu teste grátis terminou</DialogTitle>
             <DialogDescription>
-              Sua conta voltou para o plano Free. Nada foi apagado: suas obras continuam disponíveis. Para voltar
-              a ter os recursos do plano {nomePlanoTeste}, escolha um plano.
+              Sua conta está somente para leitura. Nada foi apagado: suas obras continuam disponíveis. Para voltar
+              a editar, escolha um plano.
             </DialogDescription>
           </DialogHeader>
           {continuarFree.isError && <p className="text-sm text-red-600">{continuarFree.error.message}</p>}
@@ -198,7 +198,7 @@ export function TesteGratisAviso() {
               disabled={continuarFree.isPending}
               data-testid="button-continuar-free"
             >
-              Continuar no Free
+              Continuar em somente leitura
             </Button>
             <Button
               onClick={() => {
