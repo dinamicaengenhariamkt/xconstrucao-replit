@@ -15,7 +15,7 @@ Revisão de 02/11/2026, baseada nas duas imagens do cliente e nas confirmações
 | Pessoas por empresa, incluindo titular | 2 | 5 | 15 |
 | Links públicos por obra | 1 | 3 | Ilimitados |
 | Valores no link público | Não | Sim | Sim |
-| Orçamento integrado ao SINAPI | Não | Previsto, integração pendente | Previsto, integração pendente |
+| Orçamento integrado ao SINAPI | Fora desta entrega | Fora desta entrega | Fora desta entrega |
 
 - O teste voluntário oferece **90 dias de Premium completo**, sem prometer recursos futuros ainda não implementados.
 - Ao terminar sem assinatura paga: **somente leitura, preservando todos os dados**, com possibilidade de contratar para voltar a editar. Não retornar ao antigo Free comercial nem cobrar automaticamente.
@@ -26,6 +26,8 @@ Revisão de 02/11/2026, baseada nas duas imagens do cliente e nas confirmações
 - O Premium é limitado a dez obras. Apenas seus links por obra são ilimitados.
 - IA, exportações avançadas e suporte prioritário aparecem na imagem como recursos futuros, “quando lançados”; não fazer propaganda de entrega inexistente. Premium não inclui customizações pessoais.
 - O texto “Free” da imagem não define um quarto plano gratuito: o usuário confirmou Basic pago após o teste.
+- **SINAPI permanece congelado**, por confirmação do usuário. A API ainda precisa ser validada em uma entrega futura. A menção nas imagens não autoriza implementação ou anúncio como benefício disponível, nem mesmo durante o teste Premium.
+- **Base atual de testes:** segundo o usuário, os cadastros e assinaturas atuais são usados para testes, sem assinantes pagos reais. Não é necessária uma política de preservação de preço de clientes comerciais para esta base declarada. Isso não autoriza apagar dados, modificar contratos externos ou presumir que a condição continuará verdadeira na futura ativação.
 
 ## 3. Ajustes solicitados no Financeiro
 
@@ -72,8 +74,6 @@ Não elevar todos os máximos sem considerar o tipo persistido e a regra do camp
 
 ## 7. Decisões e impedimentos remanescentes
 
-- **Assinantes existentes:** confirmar manutenção de preços/benefícios atuais ou migração com consentimento. Não atualizar contratos Asaas nem cobrar preços novos silenciosamente.
-- **SINAPI:** XG07 está congelada no histórico do produto. As imagens novas a oferecem; é necessário confirmar a retomada, fornecedor/API, licença, custos, asterisco e ações incluídas antes de anunciar integração pronta.
 - **Equipe:** confirmar reserva de vaga por convite pendente e se prestadores sem login consomem vagas.
 - **Preço anual, cancelamento e inadimplência:** não foram redefinidos pelo material; a divergência contratual de cancelamento da XG40 não foi resolvida.
 - **Asaas:** ciclo sandbox externo, autenticação/destino do webhook na publicação e tratamento dos headers sensíveis no retry continuam pendentes antes da virada comercial.
@@ -94,7 +94,8 @@ Esses pontos não bloqueiam corrigir a edição financeira. Bloqueiam afirmar qu
 - [ ] Auditoria completa das outras abas, permissões e dados simulados.
 - [ ] Catálogo persistido, cobrança, cotas e capacidades novos aplicados de ponta a ponta.
 - [ ] Somente leitura pós-trial aplicado e comprovado em telas e APIs.
-- [ ] Retomada SINAPI e transição de assinantes decididas.
+- [x] SINAPI confirmado fora desta entrega; mantido congelado em todos os planos.
+- [x] Usuário confirmou base atual de testes, sem assinantes pagos reais; nenhuma limpeza ou alteração de contratos autorizada.
 - [ ] Homologação Asaas externa finalizada.
 
 Não marcar toda a jornada como concluída pela existência do botão, do módulo de oferta ou dos testes unitários.
@@ -108,6 +109,7 @@ Não marcar toda a jornada como concluída pela existência do botão, do módul
 - A API rejeitou zero, negativo, excesso de precisão e valores acima do teto do lançamento; o orçamento de R$ 1.000.000,99 foi preservado.
 - No navegador, o teste carregou o dashboard antes de editar o contrato, voltou e confirmou o orçamento completo; carregou novamente o cache, lançou uma saída de R$ 47,89 pela interface e confirmou o custo atualizado no dashboard. Também verificou Minhas Obras e o detalhe após recarga.
 - O sucesso dos testes do catálogo legado não valida os bloqueios da nova oferta: catálogo novo e somente leitura pós-trial continuam pendentes.
+- Após a confirmação sobre SINAPI e a base de testes: quatro testes da especificação comercial passaram, incluindo a indisponibilidade de SINAPI em todos os planos e no trial. Nenhum catálogo persistido, contrato externo ou configuração de produção foi alterado nesta confirmação.
 
 ## 9. Referências
 

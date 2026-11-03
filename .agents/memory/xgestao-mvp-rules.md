@@ -26,3 +26,15 @@ Limites reais de obras/equipe e pagamentos de produção só serão ligados depo
 **Why:** o usuário determinou esse limite de escopo e pediu máximo cuidado para não quebrar o que já funciona.
 
 **How to apply:** testes sandbox e confirmação do trial não autorizam ativação comercial, publicação legal, reconsentimento de usuários reais ou limpeza de produção.
+
+O SINAPI permanece congelado e fora desta entrega, inclusive no Premium e no teste gratuito. A API ainda precisa ser validada.
+
+**Why:** o usuário confirmou que não haverá integração SINAPI agora, apesar de sua menção nas imagens dos planos.
+
+**How to apply:** não prometer SINAPI como recurso disponível nem tratar sua retomada como pré-requisito para entregar os novos planos; qualquer retomada é uma decisão futura.
+
+Segundo o usuário, em 2026-11-02 os cadastros e assinaturas atuais eram usados para testes e não havia assinantes pagos reais.
+
+**Why:** o usuário esclareceu a natureza da base ao definir a transição dos planos.
+
+**How to apply:** considerar essa declaração no planejamento da oferta, sem inferir autorização de exclusão de dados ou alteração de contratos externos. Revalidar a condição antes de uma futura ativação comercial.

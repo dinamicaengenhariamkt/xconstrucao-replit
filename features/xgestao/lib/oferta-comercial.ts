@@ -1,7 +1,8 @@
 /**
  * XG41 — especificação executável da NOVA oferta aprovada.
  * Não substitui o catálogo legado nem altera contratos/linhas persistidas.
- * A ativação depende da transição comercial e da retomada do SINAPI.
+ * A ativação comercial é separada. SINAPI permanece congelado e não integra
+ * esta entrega, inclusive no teste Premium.
  */
 export const OFERTA_XGESTAO = {
   basic: {
@@ -10,11 +11,11 @@ export const OFERTA_XGESTAO = {
   },
   basic_plus: {
     nome: 'Basic Plus', mensal: 179, obrasAtivas: 3, pessoasEmpresa: 5,
-    linksPorObra: 3, valoresPublicos: true, sinapi: true,
+    linksPorObra: 3, valoresPublicos: true, sinapi: false,
   },
   premium: {
     nome: 'Premium', mensal: 299, obrasAtivas: 10, pessoasEmpresa: 15,
-    linksPorObra: null, valoresPublicos: true, sinapi: true,
+    linksPorObra: null, valoresPublicos: true, sinapi: false,
   },
 } as const;
 
