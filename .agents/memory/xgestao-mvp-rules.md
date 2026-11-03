@@ -13,7 +13,9 @@ Os limites de equipe da nova oferta são por empresa assinante e incluem o titul
 
 **Why:** o usuário confirmou a inclusão do titular e a contagem por empresa assinante em 2026-11-02.
 
-**How to apply:** não oferecer 5 ou 15 convidados além do titular nem duplicar a contagem de uma pessoa que participa de várias obras da empresa; confirmar o tratamento de convites/prestadores antes de aplicar cotas.
+**How to apply:** não oferecer 5 ou 15 convidados além do titular nem duplicar a contagem de uma pessoa que participa de várias obras da empresa. Convites pendentes reservam vaga; prestadores sem acesso ao sistema não ocupam vaga.
+
+**Why das reservas:** o usuário confirmou que convites pendentes reservam vaga e prestadores sem acesso não contam na cota.
 
 No link público, os valores autorizados são contrato, recebimentos e saldo, somente nos planos que permitem o recurso.
 

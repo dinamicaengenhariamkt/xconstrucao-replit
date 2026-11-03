@@ -19,6 +19,7 @@ import { Input } from '@shared/components/ui/input';
 import { Label } from '@shared/components/ui/label';
 import { Skeleton } from '@shared/components/ui/skeleton';
 import type { AreaXgestao, CategoriaFinanceiroRestrita } from '@features/xgestao/equipe/permissions';
+import { equipeLotada, type UsoEquipe } from '@features/xgestao/equipe/vagas';
 
 type Papel = 'gestor' | 'colaborador';
 type Permissao = 'visualizar' | 'editar';
@@ -34,7 +35,7 @@ type Membro = {
   areasPermitidas?: AreaXgestao[] | null;
   categoriasFinanceiroPermitidas?: CategoriaFinanceiroRestrita[] | null;
 };
-type EquipeData = { rows: Membro[]; obras: Obra[] };
+type EquipeData = { rows: Membro[]; obras: Obra[]; usoEquipe: UsoEquipe };
 type FormState = {
   nome: string;
   email: string;
@@ -332,9 +333,11 @@ export function XGestaoEquipeView() {
       const result = await apiRequest('/api/xgestao/membros') as {
         rows: Membro[];
         obras: Array<Obra | { obraId: string; nome: string }>;
+        usoEquipe: UsoEquipe;
       };
       setData({
         rows: result.rows,
+        usoEquipe: result.usoEquipe,
         obras: result.obras.map((obra) => ({
           id: 'id' in obra ? obra.id : obra.obraId,
           nome: obra.nome,
@@ -355,6 +358,7 @@ export function XGestaoEquipeView() {
   );
 
   function openInvite() {
+    if (!data || equipeLotada(data.usoEquipe)) return;
     setEditing(null);
     setForm(blankForm());
     setFormError('');
@@ -437,8 +441,26 @@ export function XGestaoEquipeView() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Equipe</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Convide pessoas para acessar as obras da empresa e gerencie suas permissões.</p>
         </div>
-        <Button onClick={openInvite} disabled={loading || Boolean(loadError)}><RiAddLine /> Convidar pessoa</Button>
+        <Button onClick={openInvite} disabled={loading || Boolean(loadError) || !data || equipeLotada(data.usoEquipe)}><RiAddLine /> Convidar pessoa</Button>
       </div>
+
+      {!loading && !loadError && data && (
+        <div className="rounded-xl border bg-card p-4 text-sm" data-testid="xgestao-equipe-vagas">
+          <p className="font-semibold">
+            {data.usoEquipe.utilizadas} {data.usoEquipe.utilizadas === 1 ? 'vaga ocupada' : 'vagas ocupadas'}
+            {data.usoEquipe.limite !== null ? ` de ${data.usoEquipe.limite}` : ''}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            Inclui o titular, {data.usoEquipe.membrosAtivos} membros ativos e {data.usoEquipe.convitesPendentes} convites pendentes.
+            {' '}Prestadores sem acesso ao sistema não ocupam vagas.
+          </p>
+          {equipeLotada(data.usoEquipe) && (
+            <p className="mt-2 text-muted-foreground">
+              Limite atingido. Revogue um acesso ou convite, ou escolha um plano com mais vagas em Configurações.
+            </p>
+          )}
+        </div>
+      )}
 
       {actionError && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{actionError}</p>}
 

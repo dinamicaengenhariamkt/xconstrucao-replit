@@ -21,6 +21,7 @@ Revisão de 02/11/2026, baseada nas duas imagens do cliente e nas confirmações
 - Ao terminar sem assinatura paga: **somente leitura, preservando todos os dados**, com possibilidade de contratar para voltar a editar. Não retornar ao antigo Free comercial nem cobrar automaticamente.
 - Uma assinatura paga antecipadamente não pode ser rebaixada pelo vencimento do trial antigo.
 - A equipe é contada por **empresa assinante**, incluindo o titular; uma pessoa em várias obras não ocupa várias vagas.
+- **Convites pendentes reservam vaga; prestadores sem acesso ao sistema não ocupam vaga**, conforme confirmação do usuário. Aceitar o convite converte a reserva em acesso ativo, sem consumir uma segunda vaga. Revogar libera a vaga; o vencimento do link de definição de senha não cancela automaticamente o convite da empresa.
 - Valores públicos permitidos: **contrato, recebimentos e saldo**. Não expor custos, margem, PIX, contratos de prestadores ou dados pessoais. A capacidade do plano não substitui as permissões e seções escolhidas no link.
 - Recursos de base: dashboard, filtros e busca; etapas, tarefas e cronograma; fotos, diário e ocorrências; checklists e timeline; documentos; financeiro de gasto × orçamento. Basic Plus herda Basic; Premium herda Basic Plus.
 - O Premium é limitado a dez obras. Apenas seus links por obra são ilimitados.
@@ -65,6 +66,16 @@ Não elevar todos os máximos sem considerar o tipo persistido e a regra do camp
 
 ## 6. Plano de implementação comercial ainda pendente
 
+### Contagem de equipe preparada
+
+- A listagem da equipe passa a informar titular, membros ativos, convites pendentes e vagas utilizadas, por empresa. Os vínculos com obras não multiplicam pessoas; prestadores sem acesso não entram nessa consulta.
+- O convite verifica a cota dentro da transação de criação, serializada por empresa, antes de criar usuário ou vínculo. A interface também impede novos convites quando a cota informada está ocupada; leitura, edição de permissões, reenvio do mesmo convite e revogação continuam disponíveis.
+- A cota é lida **exclusivamente da assinatura xgestão vigente do titular**, usando `pessoasEmpresa` no catálogo persistido. Não deriva do plano pessoal do colaborador nem da assinatura do marketplace.
+- **Ainda não ativado globalmente:** o catálogo legado não possui essa cota. Nesse caso a API informa limite não configurado, a tela mostra somente a utilização e não anuncia um plano ilimitado. Nenhuma linha do catálogo foi modificada para ativar os limites 2/5/15 nesta etapa.
+- A aplicação integral das novas cotas ainda depende da implantação coerente do catálogo e do bloqueio pós-trial descritos abaixo. Não considerar o preparativo como aceite de cobrança, cotas ou somente leitura de ponta a ponta.
+
+### Etapas comerciais restantes
+
 1. Resolver a compatibilidade entre o Basic pago e o identificador legado `free`, que participa de decisões de gratuidade. Não renomear tiers globais.
 2. Conciliar catálogo persistido, bootstrap, perfil/plano e apresentação. Um default de código não atualiza linhas já existentes.
 3. Aplicar cotas em obras, convites/equipe e links no servidor, incluindo concorrência e restauração, além das mensagens na interface.
@@ -74,7 +85,6 @@ Não elevar todos os máximos sem considerar o tipo persistido e a regra do camp
 
 ## 7. Decisões e impedimentos remanescentes
 
-- **Equipe:** confirmar reserva de vaga por convite pendente e se prestadores sem login consomem vagas.
 - **Preço anual, cancelamento e inadimplência:** não foram redefinidos pelo material; a divergência contratual de cancelamento da XG40 não foi resolvida.
 - **Asaas:** ciclo sandbox externo, autenticação/destino do webhook na publicação e tratamento dos headers sensíveis no retry continuam pendentes antes da virada comercial.
 
@@ -96,6 +106,9 @@ Esses pontos não bloqueiam corrigir a edição financeira. Bloqueiam afirmar qu
 - [ ] Somente leitura pós-trial aplicado e comprovado em telas e APIs.
 - [x] SINAPI confirmado fora desta entrega; mantido congelado em todos os planos.
 - [x] Usuário confirmou base atual de testes, sem assinantes pagos reais; nenhuma limpeza ou alteração de contratos autorizada.
+- [x] Reserva de vaga por convite e exclusão de prestadores sem acesso confirmadas.
+- [x] Contagem real de vagas da empresa na API e na tela, com reserva, aceite sem duplicação e liberação por revogação.
+- [ ] Bloqueio de convites com as cotas do novo catálogo comprovado de ponta a ponta, incluindo concorrência.
 - [ ] Homologação Asaas externa finalizada.
 
 Não marcar toda a jornada como concluída pela existência do botão, do módulo de oferta ou dos testes unitários.
@@ -110,6 +123,9 @@ Não marcar toda a jornada como concluída pela existência do botão, do módul
 - No navegador, o teste carregou o dashboard antes de editar o contrato, voltou e confirmou o orçamento completo; carregou novamente o cache, lançou uma saída de R$ 47,89 pela interface e confirmou o custo atualizado no dashboard. Também verificou Minhas Obras e o detalhe após recarga.
 - O sucesso dos testes do catálogo legado não valida os bloqueios da nova oferta: catálogo novo e somente leitura pós-trial continuam pendentes.
 - Após a confirmação sobre SINAPI e a base de testes: quatro testes da especificação comercial passaram, incluindo a indisponibilidade de SINAPI em todos os planos e no trial. Nenhum catálogo persistido, contrato externo ou configuração de produção foi alterado nesta confirmação.
+- Após a confirmação sobre vagas: TypeScript, 11 testes unitários (sete de vagas e quatro da oferta), um teste de integração da equipe e dois testes autenticados no navegador (desktop 1440 px e celular 390 px) passaram.
+- A integração conferiu uma vaga do titular, reserva pelo convite, manutenção da utilização após o aceite e liberação por revogação. Os testes de navegador conferiram a contagem de duas vagas com convite pendente e retorno a uma vaga após revogar e recarregar a tela.
+- A regra de lotação 2/5/15 foi verificada em testes unitários. O catálogo legado permaneceu sem cota configurada: esta rodada **não comprova** bloqueio de convites com o catálogo novo, concorrência por API ou bloqueio operacional pós-trial.
 
 ## 9. Referências
 

@@ -85,6 +85,9 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   };
   expect(Array.isArray(initialBody.rows)).toBe(true);
   expect(Array.isArray(initialBody.obras)).toBe(true);
+  expect(initialBody).toMatchObject({
+    usoEquipe: { utilizadas: 1, membrosAtivos: 0, convitesPendentes: 0, limite: null },
+  });
 
   const selfInvite = await request.post("/api/xgestao/membros", {
     data: {
@@ -111,6 +114,9 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   expect(invite.status(), await invite.text()).toBe(201);
   const invited = (await invite.json()) as { row: { id: string; status: string } };
   expect(invited.row.status).toBe("convidado");
+  expect(await (await request.get("/api/xgestao/membros")).json()).toMatchObject({
+    usoEquipe: { utilizadas: 2, membrosAtivos: 0, convitesPendentes: 1 },
+  });
 
   const duplicate = await request.post("/api/xgestao/membros", {
     data: {
@@ -157,7 +163,11 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
 
   const afterSetup = await request.get("/api/xgestao/membros");
   expect(afterSetup.status(), await afterSetup.text()).toBe(200);
-  const rows = (await afterSetup.json() as {
+  const afterSetupBody = await afterSetup.json();
+  expect(afterSetupBody).toMatchObject({
+    usoEquipe: { utilizadas: 2, membrosAtivos: 1, convitesPendentes: 0 },
+  });
+  const rows = (afterSetupBody as {
     rows: Array<{ id: string; status: string; obras: Array<{ obraId: string; permissao: string }> }>;
   }).rows;
   const activeCollaborator = rows.find((row) => row.id === invited.row.id);
@@ -700,6 +710,9 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
   // Revogar a membership corta o acesso na próxima consulta autenticada.
   const revoke = await request.delete(`/api/xgestao/membros/${invited.row.id}`);
   expect(revoke.status(), await revoke.text()).toBe(200);
+  expect(await (await request.get("/api/xgestao/membros")).json()).toMatchObject({
+    usoEquipe: { utilizadas: 2, membrosAtivos: 1, convitesPendentes: 0 },
+  });
   const revokedAccess = await collaboratorRequest.get(`/api/obras/${obraA}`);
   expect(revokedAccess.status()).toBe(404);
   const revokedList = await collaboratorRequest.get("/api/empreiteiro/minhas-obras");

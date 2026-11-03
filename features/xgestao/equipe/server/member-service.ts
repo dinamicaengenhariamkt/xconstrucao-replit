@@ -16,6 +16,8 @@ import { generateStrongPassword } from "@features/auth/api/password-generator";
 import { issueSetupToken } from "@features/auth/api/password-setup-tokens";
 import { getBaseUrl } from "@features/auth/api/auth-utils";
 import { sendPasswordSetupEmail } from "@shared/lib/email";
+import { equipeLotada } from "../vagas";
+import { consultarVagasEquipe } from "./vagas-service";
 import type {
   AreasPermitidas,
   CategoriasFinanceiroPermitidas,
@@ -73,7 +75,7 @@ export async function listarMembros(empreiteiraId: string) {
     .from(obras)
     .where(and(eq(obras.empreiteiraId, empreiteiraId), isNull(obras.clienteId)))
     .orderBy(asc(obras.nome));
-  return { rows, obras: companyObras };
+  return { rows, obras: companyObras, usoEquipe: await consultarVagasEquipe(empreiteiraId) };
 }
 
 async function validarGrants(empreiteiraId: string, grants: ObraGrantInput[]) {
@@ -139,6 +141,13 @@ export async function convidarMembro(input: {
   let member: { id: string; name: string; email: string; memberId: string };
   try {
     member = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`xgestao-equipe:${input.empreiteiraId}`}))`);
+      if (equipeLotada(await consultarVagasEquipe(input.empreiteiraId, tx))) {
+        throw new MemberServiceError(
+          "Limite de pessoas da empresa atingido. Convites pendentes também reservam vaga. Revogue um acesso ou escolha um plano com mais vagas.",
+          409,
+        );
+      }
       const [user] = await tx.insert(users).values({
         name: input.nome,
         email: input.email,

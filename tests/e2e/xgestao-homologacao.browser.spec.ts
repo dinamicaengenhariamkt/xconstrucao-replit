@@ -15,6 +15,41 @@ const origemUI = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_D
 for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
   test.describe(`XG41 — financeiro ${tamanho.width}`, () => {
     test.use({ viewport: tamanho });
+    test('mostra reservas da equipe por empresa e libera convite revogado', async ({ page, request }) => {
+      const { email } = await novoAssinanteHomologacao(request, `vagas-${tamanho.width}`);
+      const convite = await request.post('/api/xgestao/membros', {
+        data: {
+          nome: 'Membro pendente XG41',
+          email: `vaga-${tamanho.width}-${Date.now()}@teste.xconstrucao.com`,
+          papel: 'colaborador',
+          obras: [],
+        },
+      });
+      expect(convite.status(), await convite.text()).toBe(201);
+      const { row } = await convite.json();
+      try {
+        await page.goto(`${origemUI}/login?perfil=xgestao&next=%2Fxgestao%2Fequipe`);
+        await page.getByTestId('input-email').fill(email);
+        await page.getByTestId('input-password').fill('Xconstr@E2E2026!');
+        await page.waitForTimeout(3500);
+        const login = page.waitForResponse(r => r.url().includes('/api/auth/login') && r.request().method() === 'POST');
+        await page.getByTestId('button-login').click();
+        expect((await login).status()).toBe(200);
+        await page.waitForURL('**/xgestao/**');
+        await page.goto(`${origemUI}/xgestao/equipe`);
+        const uso = page.getByTestId('xgestao-equipe-vagas');
+        await expect(uso).toBeVisible();
+        await expect(uso).toContainText('2 vagas ocupadas');
+        await expect(uso).toContainText('1 convites pendentes');
+        await expect(uso).toContainText('Prestadores sem acesso ao sistema não ocupam vagas');
+        expect((await request.delete(`/api/xgestao/membros/${row.id}`)).status()).toBe(200);
+        await page.reload();
+        await expect(uso).toContainText('1 vaga ocupada');
+        await expect(uso).toContainText('0 convites pendentes');
+      } finally {
+        await request.delete(`/api/xgestao/membros/${row.id}`);
+      }
+    });
     test('edita valor grande e conserva centavos no detalhe, dashboard e lista', async ({ page, request }) => {
       const { email } = await novoAssinanteHomologacao(request, `financeiro-${tamanho.width}`);
       const criada = await request.post('/api/xgestao/obras', {
