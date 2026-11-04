@@ -1,5 +1,6 @@
 'use client';
 
+import { tierLabel } from '@features/xgestao/admin/plano-label';
 import Link from 'next/link';
 import { StatsCard } from '@features/shared/components/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@shared/components/ui/card';
@@ -24,10 +25,6 @@ import type {
 } from '@features/xgestao/admin/server/dashboard';
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
-
-function tierLabel(tier: string) {
-  return ({ free: 'Somente leitura', pro: 'Basic anterior', enterprise: 'Pro anterior', basic: 'Basic', basic_plus: 'Basic Plus', premium: 'Premium' } as Record<string, string>)[tier] ?? tier;
-}
 
 const STATUS_LABEL: Record<XgestaoAdminObraStatus, string> = {
   planejamento: 'Planejamento',

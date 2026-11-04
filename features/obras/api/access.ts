@@ -158,6 +158,14 @@ export function canAccessObraFinanceCategory(access: ObraAccess, category: strin
 }
 
 /**
+ * Contract totals and addenda: the same rule as editing `valorTotal`. A member
+ * limited to a finance category (e.g. labor) neither reads nor changes them.
+ */
+export function canAccessObraContrato(access: ObraAccess): boolean {
+  return canAccessObraArea(access, "financeiro") && access.xgestaoCategoriasFinanceiroPermitidas == null;
+}
+
+/**
  * Strip summaries embedded in generic obra payloads when their source area is
  * restricted. Detailed area APIs can still return their scoped rows directly.
  */

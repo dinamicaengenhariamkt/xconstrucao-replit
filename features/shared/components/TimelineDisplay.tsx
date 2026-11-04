@@ -32,6 +32,8 @@ interface TimelineDisplayProps {
   events: TimelineItem[];
   title?: string;
   subtitle?: string;
+  /** Obra própria do xgestão não tem aba Tarefas; o marketplace segue com o filtro. */
+  ocultarFiltroTarefas?: boolean;
 }
 
 type TimelineFilter = 'todos' | TimelineTipo;
@@ -88,7 +90,7 @@ const FILTER_OPTIONS: { key: TimelineFilter; label: string }[] = [
   { key: 'documento', label: 'Documentos' },
 ];
 
-export function TimelineDisplay({ events, title = 'Timeline', subtitle }: TimelineDisplayProps) {
+export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarFiltroTarefas = false }: TimelineDisplayProps) {
   const [activeFilter, setActiveFilter] = useState<TimelineFilter>('todos');
 
   const filtered = activeFilter === 'todos'
@@ -105,7 +107,7 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle }: Timeli
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {FILTER_OPTIONS.map((opt) => {
+        {FILTER_OPTIONS.filter((opt) => !(ocultarFiltroTarefas && opt.key === 'tarefa')).map((opt) => {
           const count = opt.key === 'todos'
             ? events.length
             : events.filter((e) => e.tipo === opt.key).length;

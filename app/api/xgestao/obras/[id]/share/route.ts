@@ -5,6 +5,7 @@ import {
   createObraShareLink,
   LIMITE_LINKS_ATIVOS,
   capacidadesLinkObra,
+  linkConformePlano,
   LimiteLinksAtingidoError,
   listActiveObraShareLinks,
 } from '@features/xgestao/obra-publica/server/token';
@@ -34,7 +35,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (access.error) return access.error;
 
   const links = await listActiveObraShareLinks(id);
-  return shareResponse({ shares: links.map(sharePayload), ...await capacidadesLinkObra(id) });
+  const capacidades = await capacidadesLinkObra(id);
+  return shareResponse({
+    shares: links.map((link) => sharePayload(linkConformePlano(link, capacidades.valoresPublicos))),
+    ...capacidades,
+  });
 }
 
 /**

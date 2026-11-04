@@ -128,15 +128,7 @@ export const PLANS_CATALOG = {
     ...Object.fromEntries(Object.entries(OFERTA_XGESTAO).map(([tier, plano]) => [tier, {
       nome: plano.nome,
       precoMensal: plano.mensal,
-      features: [
-        `${plano.obrasAtivas} obra(s) ativa(s)`,
-        `${plano.pessoasEmpresa} pessoas por empresa, incluindo você`,
-        plano.linksPorObra === null ? 'Links públicos ilimitados por obra' : `${plano.linksPorObra} link(s) público(s) por obra`,
-        'Dashboard, etapas, tarefas e cronograma',
-        'Fotos, diário, ocorrências, checklists e timeline',
-        'Documentos e financeiro (gasto × orçamento)',
-        ...(plano.valoresPublicos ? ['Contrato, recebimentos e saldo no link do cliente'] : []),
-      ],
+      features: [...plano.features],
       limites: {
         obrasAtivas: plano.obrasAtivas,
         pessoasEmpresa: plano.pessoasEmpresa,

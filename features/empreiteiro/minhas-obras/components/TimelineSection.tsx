@@ -9,9 +9,10 @@ interface TimelineSectionProps {
   obraId: string;
   /** Eventos de fallback (derivados do build-detalhe server) — mostrados enquanto a query carrega. */
   fallbackEvents?: TimelineEvent[];
+  ocultarFiltroTarefas?: boolean;
 }
 
-export function TimelineSection({ obraId, fallbackEvents = [] }: TimelineSectionProps) {
+export function TimelineSection({ obraId, fallbackEvents = [], ocultarFiltroTarefas = false }: TimelineSectionProps) {
   const { data, isLoading } = useAtividadesObra(obraId, 100);
 
   const events: TimelineEvent[] = isLoading || !data
@@ -40,6 +41,7 @@ export function TimelineSection({ obraId, fallbackEvents = [] }: TimelineSection
         events={events}
         title="Timeline Operacional"
         subtitle="Histórico real de eventos desta obra"
+        ocultarFiltroTarefas={ocultarFiltroTarefas}
       />
     </div>
   );

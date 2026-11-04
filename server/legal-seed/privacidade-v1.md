@@ -72,7 +72,7 @@ Utilizamos seus dados pessoais para as seguintes finalidades:
 - Criar e gerenciar sua conta na plataforma
 - Processar e executar transações
 - Conectar contratantes e empreiteiros
-- Fornecer acesso às funcionalidades da plataforma (xgestão inteligente, tabela SINAPI, etc.)
+- Fornecer acesso às funcionalidades da plataforma (xgestão inteligente, etc.)
 - Processar pagamentos e emitir recibos
 
 ### Comunicação:

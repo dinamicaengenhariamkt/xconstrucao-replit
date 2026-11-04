@@ -14,7 +14,7 @@ export const metadata: Metadata = genMeta({
   keywords: [
     'xgestão inteligente',
     'gestão de obras IA',
-    'orçamento SINAPI',
+    'orçamento de obras',
     'controle de obras',
     'gestão financeira obras',
   ],

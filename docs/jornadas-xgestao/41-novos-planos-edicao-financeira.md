@@ -101,14 +101,14 @@ Esses pontos não bloqueiam corrigir a edição financeira. Bloqueiam afirmar qu
 - [x] Integração de valores grandes, edição e saldos aprovada nesta rodada.
 - [x] Navegador autenticado desktop/mobile: botão, salvamento, recarga e navegação do orçamento.
 - [x] Navegador autenticado: saída financeira atualiza o dashboard com cache previamente atualizado.
-- [ ] Auditoria completa das outras abas, permissões e dados simulados.
-- [ ] Catálogo persistido, cobrança, cotas e capacidades novos aplicados de ponta a ponta.
-- [ ] Somente leitura pós-trial aplicado e comprovado em telas e APIs.
+- [x] Auditoria completa das outras abas, permissões e dados simulados (XG42, seção 8).
+- [x] Catálogo persistido, cotas e capacidades novos aplicados de ponta a ponta, com gateway manual. Cobrança real segue no item do Asaas.
+- [x] Somente leitura pós-trial aplicado e comprovado em telas e APIs.
 - [x] SINAPI confirmado fora desta entrega; mantido congelado em todos os planos.
 - [x] Usuário confirmou base atual de testes, sem assinantes pagos reais; nenhuma limpeza ou alteração de contratos autorizada.
 - [x] Reserva de vaga por convite e exclusão de prestadores sem acesso confirmadas.
 - [x] Contagem real de vagas da empresa na API e na tela, com reserva, aceite sem duplicação e liberação por revogação.
-- [ ] Bloqueio de convites com as cotas do novo catálogo comprovado de ponta a ponta, incluindo concorrência.
+- [x] Bloqueio de convites com as cotas do novo catálogo comprovado de ponta a ponta, incluindo concorrência.
 - [ ] Homologação Asaas externa finalizada.
 
 Não marcar toda a jornada como concluída pela existência do botão, do módulo de oferta ou dos testes unitários.

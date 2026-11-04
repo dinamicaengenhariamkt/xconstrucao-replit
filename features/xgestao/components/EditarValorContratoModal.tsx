@@ -13,6 +13,7 @@ export function EditarValorContratoModal({ obraId, open, onOpenChange }: {
   obraId: string; open: boolean; onOpenChange: (open: boolean) => void;
 }) {
   const [valor, setValor] = useState('');
+  const [pronto, setPronto] = useState(false);
   const { toast } = useToast();
   const invalidar = useInvalidarObra(obraId);
   const consulta = useQuery({
@@ -24,9 +25,15 @@ export function EditarValorContratoModal({ obraId, open, onOpenChange }: {
     },
     enabled: open,
   });
+  // Preenche uma vez por abertura: uma recarga em segundo plano não apaga o que foi digitado.
   useEffect(() => {
-    if (open && consulta.data) setValor(consulta.data.valorTotal ?? '0');
-  }, [open, consulta.data]);
+    if (!open) {
+      setPronto(false);
+    } else if (!pronto && consulta.data && !consulta.isFetching) {
+      setValor(consulta.data.valorTotal ?? '0');
+      setPronto(true);
+    }
+  }, [open, pronto, consulta.data, consulta.isFetching]);
   const salvar = useMutation({
     mutationFn: () => patchObra(obraId, { valorTotal: dinheiroDecimal(valor) }),
     onSuccess: async () => {
@@ -50,17 +57,17 @@ export function EditarValorContratoModal({ obraId, open, onOpenChange }: {
         {consulta.isError ? <p role="alert">Não foi possível carregar o contrato. Feche e tente novamente.</p> : (
           <form id="editar-valor-contrato" onSubmit={(event) => {
             event.preventDefault();
-            if (!salvar.isPending && consulta.isSuccess) salvar.mutate();
+            if (!salvar.isPending && pronto) salvar.mutate();
           }}>
             <label htmlFor="contrato-valor" className="text-sm font-semibold">Valor contratado (R$)</label>
             <Input id="contrato-valor" inputMode="decimal" value={valor} required
-              placeholder="Ex.: 500.000,50" disabled={consulta.isFetching || salvar.isPending}
+              placeholder="Ex.: 500.000,50" disabled={!pronto || salvar.isPending}
               onChange={(event) => setValor(event.target.value)} />
           </form>
         )}
         <DialogFooter>
           <Button variant="outline" disabled={salvar.isPending} onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button type="submit" form="editar-valor-contrato" disabled={!consulta.isSuccess || consulta.isFetching || salvar.isPending}>
+          <Button type="submit" form="editar-valor-contrato" disabled={!pronto || salvar.isPending}>
             {salvar.isPending ? 'Salvando…' : 'Salvar'}
           </Button>
         </DialogFooter>

@@ -30,7 +30,7 @@ export const LIMITE_LINKS_ATIVOS = 5;
 
 export class LimiteLinksAtingidoError extends Error {
   constructor(public readonly limite = LIMITE_LINKS_ATIVOS) {
-    super(`Limite de ${limite} links ativos por obra.`);
+    super(`Limite de ${limite} ${limite === 1 ? 'link ativo' : 'links ativos'} por obra.`);
   }
 }
 
@@ -43,6 +43,14 @@ export async function capacidadesLinkObra(obraId: string, leitor: Pick<typeof db
     limite: plano.limites.linksPorObra ?? LIMITE_LINKS_ATIVOS,
     valoresPublicos: plano.limites.valoresPublicos === 1,
   };
+}
+
+/**
+ * Depois de rebaixar o plano a página pública já esconde os valores; a tela do
+ * dono precisa dizer o mesmo, e salvar outra seção não pode reenviar `pagamentos`.
+ */
+export function linkConformePlano(link: ObraShareLink, valoresPublicos: boolean): ObraShareLink {
+  return valoresPublicos ? link : { ...link, secoes: { ...link.secoes, pagamentos: false } };
 }
 
 function activeLinksWhere(obraId: string) {

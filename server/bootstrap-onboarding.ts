@@ -14,7 +14,8 @@ import { db } from "@shared/db/db";
  * reescrever a tabela; em seguida trocamos o default para `false`, para que os
  * PRÓXIMOS cadastros nasçam `false` e caiam no wizard. `ADD COLUMN IF NOT EXISTS`
  * torna o passo idempotente; o `ALTER ... SET DEFAULT false` é barato e também
- * idempotente. Não há `UPDATE` em massa.
+ * idempotente. O único `UPDATE` alcança membros convidados do xgestão, que
+ * trabalham na empresa de quem convidou e não têm cadastro de empresa a fazer.
  */
 export async function bootstrapOnboardingSchema(): Promise<void> {
   try {
@@ -28,6 +29,12 @@ export async function bootstrapOnboardingSchema(): Promise<void> {
     await db.execute(
       sql`ALTER TABLE users ALTER COLUMN onboarding_concluido SET DEFAULT false`,
     );
+    // 3) Convidados antes da correção. Roda depois de bootstrapXgestaoMembrosSchema.
+    await db.execute(sql`
+      UPDATE users SET onboarding_concluido = true
+      WHERE onboarding_concluido = false
+        AND id IN (SELECT user_id FROM xgestao_membros)
+    `);
   } catch (err) {
     console.error("[bootstrap-onboarding] falha:", err);
     return;

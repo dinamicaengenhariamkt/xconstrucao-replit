@@ -25,7 +25,6 @@ export const metadata: Metadata = {
     'construção civil',
     'empreiteiros',
     'contratantes',
-    'SINAPI',
     'orçamento de obras',
     'gestão de construção',
     'plataforma de construção',

@@ -157,6 +157,15 @@ export function useCreateDiario(obraId: string) {
   });
 }
 
+export function useUpdateDiario(obraId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, texto }: { id: string; texto: string }) =>
+      sendJSON<ObraDiarioApi>('PATCH', `/api/obras/${obraId}/diario/${id}`, { texto }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'diario'] }),
+  });
+}
+
 export function useDeleteDiario(obraId: string) {
   const qc = useQueryClient();
   return useMutation({

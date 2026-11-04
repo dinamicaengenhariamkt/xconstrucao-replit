@@ -27,6 +27,8 @@ export const SECOES_PUBLICAS = [
 ] as const;
 
 export type SecaoPublica = (typeof SECOES_PUBLICAS)[number];
+/** XG23: a obra própria não tem mais a aba Tarefas, então o link também não oferece a seção. */
+export const SECOES_OFERECIDAS = SECOES_PUBLICAS.filter((secao) => secao !== 'tarefas');
 
 export type SecoesPublicas = Record<SecaoPublica, boolean>;
 

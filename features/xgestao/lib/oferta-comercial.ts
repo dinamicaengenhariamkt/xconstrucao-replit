@@ -8,14 +8,39 @@ export const OFERTA_XGESTAO = {
   basic: {
     nome: 'Basic', mensal: 99, obrasAtivas: 1, pessoasEmpresa: 2,
     linksPorObra: 1, valoresPublicos: false, sinapi: false,
+    features: [
+      '1 obra ativa',
+      'Equipe: você + 1 convidado',
+      '1 link público por obra',
+      'Dashboard, filtros e busca de obras',
+      'Etapas e cronograma',
+      'Fotos, Diário e Ocorrências',
+      'Checklists e Timeline',
+      'Documentos',
+      'Financeiro (gasto x orçamento)',
+    ],
   },
   basic_plus: {
     nome: 'Basic Plus', mensal: 179, obrasAtivas: 3, pessoasEmpresa: 5,
     linksPorObra: 3, valoresPublicos: true, sinapi: false,
+    features: [
+      'Tudo do Basic',
+      'Até 3 obras ativas',
+      'Equipe: até 5 pessoas',
+      'Até 3 links públicos por obra',
+      'Link público com valores (Pagamentos ligado)',
+    ],
   },
   premium: {
     nome: 'Premium', mensal: 299, obrasAtivas: 10, pessoasEmpresa: 15,
     linksPorObra: null, valoresPublicos: true, sinapi: false,
+    features: [
+      'Tudo do Basic Plus',
+      'Até 10 obras ativas',
+      'Equipe: até 15 pessoas',
+      'Links públicos ilimitados por obra',
+      'Link público com valores (Pagamentos ligado)',
+    ],
   },
 } as const;
 

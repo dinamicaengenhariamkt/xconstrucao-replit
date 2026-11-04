@@ -144,3 +144,68 @@ A rodada corrigiu também a preparação dos testes: ativação voluntária ante
 
 Não marcar o pagamento externo como aprovado por uma ativação do gateway manual,
 por um texto de sucesso no DOM ou pela mera existência de um webhook no código.
+
+## 8. Rodada de 04/11/2026
+
+Revisão do que estava marcado como feito, contra o código, nas visões do
+empreiteiro e do admin. Escopo só em obra própria; marketplace sem mudança de
+comportamento.
+
+### Corrigido
+
+- **Enum do banco:** os valores `basic`, `basic_plus` e `premium` agora são criados
+  no bootstrap, antes do seed dos planos.
+- **Admin:** assinantes, painel e CSV mostram Basic Plus, Premium e Somente leitura.
+- **Aditivos:** membro limitado a categorias não lê nem altera aditivos.
+- **Área da obra:** aceita `1.200,50`; texto inválido mostra erro e não salva.
+- **Nome e área na API:** nome com menos de 3 caracteres e área estourada dão 400.
+- **Membro restrito:** via "Editar informações", mas a gravação era recusada. O modal
+  agora esconde e não envia o que ele não pode alterar.
+- **Link rebaixado para Basic:** a tela dizia "mostra pagamentos" sem mostrar, e
+  alterar qualquer seção dava 403. A API agora devolve o que o plano permite.
+- **Membro convidado:** caía no assistente "Sobre sua empresa" no primeiro login.
+  Agora nasce sem esse passo, e o bootstrap corrige os convidados existentes.
+- **Modais de contrato e de informações:** o campo só libera com o valor do banco, e
+  uma recarga em segundo plano não apaga o que foi digitado.
+
+### Teto de R$ 500
+
+Não existe teto de R$ 500 no código. Valores de 500,01 a R$ 1,2 trilhão gravam e
+voltam iguais no contrato. Lançamentos e aditivos vão até 999.999.999. A causa do
+relato não foi reproduzida; a hipótese é o campo numérico antigo do orçamento, que
+já foi substituído.
+
+### Testes
+
+- `tests/unit/xgestao-editar-obra.test.ts` e `tests/unit/xgestao-planos-oferta.test.ts`.
+- `tests/e2e/integration/xgestao-auditoria-campos.integration.spec.ts`: valores altos,
+  recusas, persistência por aba, somente leitura, membro limitado, link rebaixado e admin.
+- `tests/e2e/xgestao-homologacao.browser.spec.ts`: área digitada e membro restrito.
+- `tests/e2e/xgestao-obras.browser.spec.ts`: preparação atualizada para iniciar o
+  teste gratuito, e duas chamadas passaram a sair do navegador. Eram falhas do
+  teste, não do produto.
+
+### Decisões do dono aplicadas
+
+- **Diário:** o autor edita o texto do próprio registro, só na obra própria. Fotos não
+  mudam por essa edição. O texto anterior fica na auditoria (`obras.diario.update`).
+- **Planos:** o texto segue a imagem de monetização, sem SINAPI e sem tarefas. O
+  bootstrap troca no banco só o texto gerado pela oferta anterior; o que o admin
+  editou no painel fica como está.
+- **SINAPI:** saiu da landing do xgestão, do SEO, dos planos e da Política vigente.
+- **Tarefas:** saiu dos planos, do diálogo de exclusão, do filtro da timeline da obra
+  própria, do link público (inclusive em link antigo com a seção ligada) e das
+  minutas. As rotas e os dados continuam; a obra de marketplace não muda.
+- **Minutas v2:** teste de 90 dias no Premium e somente leitura ao vencer.
+
+**Pendente com o jurídico:** os Termos vigentes (v1) ainda citam SINAPI e marketplace.
+Mudam ao publicar a v2 por `/admin/legal`, que tem campos a preencher, exige revisão
+e dispara o re-consentimento.
+
+Resultado: typecheck sem erros, 69 unitários aprovados, 110 cenários de integração
+aprovados e 2 pulados (xgestão e `obras-subrecursos`), 23 cenários de navegador
+aprovados. As demais specs do marketplace não foram executadas nesta rodada.
+
+**Limites da evidência:** executado em desenvolvimento com gateway manual. Asaas
+real e webhook publicado seguem pendentes (AJ-02, AJ-15).
+

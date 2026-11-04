@@ -1268,10 +1268,10 @@ export function ObraConsoleView({
               )}
               {abaAtual === 'tarefas' && <TaskManagerSection obra={obra} />}
               {abaAtual === 'diario' && (
-                <DiarioJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} currentUserId={user?.id ?? null} />
+                <DiarioJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} currentUserId={user?.id ?? null} podeEditar={obra.isObraPropria} />
               )}
               {abaAtual === 'checklists' && <ChecklistsSection obra={obra} readOnly={obra.isObraPropria && !allowOwnWorkEdit} />}
-              {abaAtual === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} />}
+              {abaAtual === 'timeline' && <TimelineSection obraId={obra.id} fallbackEvents={obra.timeline} ocultarFiltroTarefas={obra.isObraPropria} />}
               {abaAtual === 'fotos' && (
                 <FotosJ06Card
                   obraId={obra.id}
@@ -1401,7 +1401,20 @@ export function ObraConsoleView({
             obra={obra}
           />
           <TrocarCapaModal obraId={obra.id} open={showCapa} onOpenChange={setShowCapa} />
-          <EditarInformacoesModal obraId={obra.id} open={showInfo} onOpenChange={setShowInfo} />
+          <EditarInformacoesModal
+            obraId={obra.id}
+            open={showInfo}
+            onOpenChange={setShowInfo}
+            podeEditarValor={
+              (obra.permissoesXgestao?.areasPermitidas == null ||
+                obra.permissoesXgestao.areasPermitidas.includes('financeiro')) &&
+              obra.permissoesXgestao?.categoriasFinanceiroPermitidas == null
+            }
+            podeEditarDatas={
+              obra.permissoesXgestao?.areasPermitidas == null ||
+              obra.permissoesXgestao.areasPermitidas.includes('cronograma')
+            }
+          />
           <EditarLocalizacaoModal obraId={obra.id} open={showLocal} onOpenChange={setShowLocal} />
           <ExcluirObraDialog
             obraId={obra.id}

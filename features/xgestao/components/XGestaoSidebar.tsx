@@ -93,7 +93,7 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
               data-testid="xgestao-sidebar-upgrade"
               className={[
                 'mb-2 flex items-start gap-2 rounded-xl border p-3 transition-colors',
-                plano?.plano === 'enterprise'
+                plano?.plano === 'enterprise' || plano?.plano === 'premium'
                   ? 'border-border bg-background hover:bg-muted'
                   : 'border-primary/25 bg-primary/5 hover:bg-primary/10',
               ].join(' ')}

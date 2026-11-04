@@ -1,5 +1,6 @@
 'use client';
 
+import { tierLabel } from '@features/xgestao/admin/plano-label';
 import Link from 'next/link';
 import { RiArrowLeftLine, RiDownloadLine } from 'react-icons/ri';
 import { Button } from '@shared/components/ui/button';
@@ -10,8 +11,6 @@ import { formatCurrency } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
-
-const TIER_LABEL: Record<string, string> = { free: 'Freemium', pro: 'Basic', enterprise: 'Pro' };
 
 const STATUS_STYLE: Record<string, string> = {
   ativa: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -93,7 +92,7 @@ export default function AdminXgestaoAssinantesPage() {
                       {/* Reinjeta no mobile o que as colunas escondidas mostram. */}
                       <p className="mt-0.5 text-xs text-gray-400 lg:hidden">{assinante.email}</p>
                       <p className="mt-0.5 text-xs text-gray-400 md:hidden">
-                        {TIER_LABEL[assinante.plano.tier] ?? assinante.plano.tier}
+                        {tierLabel(assinante.plano.tier)}
                         {assinante.plano.valorMensal > 0 && ` · ${formatCurrency(assinante.plano.valorMensal)}/mês`}
                       </p>
                       {assinante.membros.length > 0 && (
@@ -133,7 +132,7 @@ export default function AdminXgestaoAssinantesPage() {
                     </td>
                     <td className="hidden px-4 py-3 md:table-cell">
                       <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-                        {TIER_LABEL[assinante.plano.tier] ?? assinante.plano.tier}
+                        {tierLabel(assinante.plano.tier)}
                       </span>
                       {assinante.plano.emTeste ? (
                         <p className="mt-1 text-xs text-gray-400">teste grátis</p>

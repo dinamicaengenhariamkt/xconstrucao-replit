@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
 import { eq } from 'drizzle-orm';
 import { db } from '@shared/db/db';
@@ -6,11 +6,34 @@ import {
   assinaturas, financeiro, obraAnexos, obraDiario, obraEquipe, obraEtapas,
   obraFotos, obras, obraShareLinks, obraTarefas,
 } from '@shared/db/schema';
+import { fetchCapturedEmails, uniqueEmail } from './helpers';
 import { novoAssinanteHomologacao } from './helpers-xgestao-homologacao';
 
 // O upload direto ao R2 deve partir da origem pública usada pelo usuário, não
 // de um loopback que pode não estar permitido no CORS do bucket.
 const origemUI = process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '';
+
+async function entrarNaObra(page: Page, email: string, senha: string, obraId: string) {
+  await page.addInitScript(() => {
+    const original = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (chave: string) {
+      return chave.startsWith('xgestao-tour-') ? '1' : original.call(this, chave);
+    };
+  });
+  await page.goto(`${origemUI}/login?perfil=xgestao&next=%2Fxgestao%2Fobras%2F${obraId}`);
+  await page.getByTestId('input-email').fill(email);
+  await page.getByTestId('input-password').fill(senha);
+  await page.waitForTimeout(3500);
+  const login = page.waitForResponse(r => r.url().includes('/api/auth/login') && r.request().method() === 'POST');
+  await page.getByTestId('button-login').click();
+  expect((await login).status()).toBe(200);
+  await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+  const legal = page.getByRole('dialog', { name: 'Atualizamos nossos documentos' });
+  await legal.waitFor({ state: 'visible', timeout: 3000 }).catch(() => undefined);
+  if (await legal.isVisible()) await legal.getByRole('button', { name: 'Agora não' }).click();
+  const oferta = page.getByTestId('button-oferta-agora-nao');
+  if (await oferta.isVisible().catch(() => false)) await oferta.click();
+}
 
 for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
   test.describe(`XG41 — financeiro ${tamanho.width}`, () => {
@@ -85,6 +108,138 @@ for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }
         await expect(uso).toContainText('0 convites pendentes');
       } finally {
         await request.delete(`/api/xgestao/membros/${row.id}`);
+      }
+    });
+    test('XG42 área e orçamento digitados no formato brasileiro são os valores gravados', async ({ page, request }) => {
+      const { email } = await novoAssinanteHomologacao(request, `informacoes-${tamanho.width}`);
+      const criada = await request.post('/api/xgestao/obras', {
+        data: { nome: `E2E XG42 informações ${tamanho.width}`, endereco: 'Rua de Teste, 42' },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const { id } = await criada.json();
+      try {
+        await entrarNaObra(page, email, 'Xconstr@E2E2026!', id);
+        await page.getByTestId('detalhes-editar-informacoes').click();
+        const dialog = page.getByRole('dialog', { name: 'Informações da obra' });
+        await dialog.locator('#modal-obra-area').fill('abc');
+        await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+        await expect(dialog).toBeVisible();
+        await expect(page.getByText(/Informe a área/).first()).toBeVisible();
+        expect((await (await request.get(`/api/obras/${id}`)).json()).areaM2).toBeNull();
+
+        await dialog.locator('#modal-obra-area').fill('1.200,50');
+        await dialog.locator('#modal-obra-valor').fill('2.345.678,90');
+        const patch = page.waitForResponse(r => r.url().endsWith(`/api/obras/${id}`) && r.request().method() === 'PATCH');
+        await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+        expect((await patch).status()).toBe(200);
+        await expect(dialog).not.toBeVisible();
+        expect(await (await request.get(`/api/obras/${id}`)).json()).toMatchObject({ areaM2: '1200.50', valorTotal: '2345678.90' });
+
+        await page.reload();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        await expect(page.getByTestId('valores-do-contrato')).toContainText('2.345.678,90');
+      } finally {
+        await db.delete(obras).where(eq(obras.id, id));
+      }
+    });
+    test('XG42 Diário editável e sem SINAPI nem Tarefas nas telas do xgestão', async ({ page, request }) => {
+      const { email } = await novoAssinanteHomologacao(request, `diario-${tamanho.width}`);
+      const criada = await request.post('/api/xgestao/obras', {
+        data: { nome: `E2E XG42 diário ${tamanho.width}`, endereco: 'Rua de Teste, 42' },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const { id } = await criada.json();
+      const registro = await request.post(`/api/obras/${id}/diario`, { data: { texto: 'Concretagem da laje' } });
+      expect(registro.status(), await registro.text()).toBe(201);
+      const entrada = (await registro.json()).id;
+      const link = await request.post(`/api/xgestao/obras/${id}/share`, { data: { nome: 'Cliente' } });
+      expect(link.status(), await link.text()).toBe(201);
+      try {
+        await page.goto(`${origemUI}/xgestao-inteligente`);
+        await expect(page.getByText('Link Público para o Cliente')).toBeVisible();
+        await expect(page.locator('body')).not.toContainText('SINAPI');
+
+        await entrarNaObra(page, email, 'Xconstr@E2E2026!', id);
+        await page.getByRole('button', { name: /^Diário/ }).click();
+        await page.getByTestId(`button-edit-diario-${entrada}`).click();
+        const campo = page.getByTestId(`input-edit-diario-${entrada}`);
+        await expect(campo).toHaveValue('Concretagem da laje');
+        await campo.fill('x');
+        await expect(page.getByTestId(`button-salvar-diario-${entrada}`)).toBeDisabled();
+        await campo.fill('Concretagem da laje do térreo');
+        const patch = page.waitForResponse(r => r.url().endsWith(`/diario/${entrada}`) && r.request().method() === 'PATCH');
+        await page.getByTestId(`button-salvar-diario-${entrada}`).click();
+        expect((await patch).status()).toBe(200);
+        await expect(campo).toHaveCount(0);
+        await page.reload();
+        await expect(page.getByTestId('detalhes-obra-card')).toBeVisible();
+        await page.getByRole('button', { name: /^Diário/ }).click();
+        await expect(page.getByTestId(`diario-${entrada}`)).toContainText('Concretagem da laje do térreo');
+
+        await page.getByRole('button', { name: /^Timeline/ }).click();
+        await expect(page.getByRole('button', { name: /^Todos/ })).toBeVisible();
+        await expect(page.getByRole('button', { name: /^Tarefas/ })).toHaveCount(0);
+
+        await page.getByRole('button', { name: /Gerenciar links/i }).first().click();
+        await expect(page.locator('#secao-etapas')).toBeVisible();
+        await expect(page.locator('#secao-tarefas')).toHaveCount(0);
+        await page.keyboard.press('Escape');
+
+        await page.goto(`${origemUI}/xgestao/configuracoes?tab=plano`);
+        const planos = page.getByTestId('xgestao-planos-section');
+        await expect(page.getByTestId('xgestao-plano-basic')).toContainText('Equipe: você + 1 convidado');
+        await expect(page.getByTestId('xgestao-plano-basic_plus')).toContainText('Até 3 obras ativas');
+        await expect(page.getByTestId('xgestao-plano-premium')).toContainText('Links públicos ilimitados por obra');
+        await expect(planos).not.toContainText('SINAPI');
+        await expect(planos).not.toContainText(/tarefa/i);
+      } finally {
+        await db.delete(obras).where(eq(obras.id, id));
+      }
+    });
+    test('XG42 membro limitado salva as informações sem ver o valor nem apagar o contrato', async ({ page, request }) => {
+      await novoAssinanteHomologacao(request, `restrito-${tamanho.width}`);
+      const criada = await request.post('/api/xgestao/obras', {
+        data: { nome: `E2E XG42 restrito ${tamanho.width}`, endereco: 'Rua de Teste, 42' },
+      });
+      expect(criada.status(), await criada.text()).toBe(201);
+      const { id } = await criada.json();
+      expect((await request.patch(`/api/obras/${id}`, { data: { valorTotal: '9000.00' } })).status()).toBe(200);
+      const email = uniqueEmail(`xg42-restrito-${tamanho.width}`);
+      const senha = 'Xconstr@E2E2026!';
+      const convite = await request.post('/api/xgestao/membros', {
+        data: {
+          nome: 'Mão de obra', email, papel: 'colaborador',
+          obras: [{ obraId: id, permissao: 'editar' }],
+          categoriasFinanceiroPermitidas: ['mao_de_obra'],
+        },
+      });
+      expect(convite.status(), await convite.text()).toBe(201);
+      const capturados = await fetchCapturedEmails(request, email);
+      const setupUrl = capturados.find((item) => item.meta?.kind === 'password-setup')?.meta?.setupUrl as string;
+      const definir = await page.request.post('/api/auth/definir-senha-inicial', {
+        data: { token: new URL(setupUrl).searchParams.get('token'), password: senha, confirmPassword: senha },
+      });
+      expect(definir.status(), await definir.text()).toBe(200);
+      await page.context().clearCookies();
+      try {
+        await entrarNaObra(page, email, senha, id);
+        await page.getByTestId('detalhes-editar-informacoes').click();
+        const dialog = page.getByRole('dialog', { name: 'Informações da obra' });
+        await expect(dialog.locator('#modal-obra-nome')).toBeVisible();
+        await expect(dialog.locator('#modal-obra-valor')).toHaveCount(0);
+        await dialog.locator('#modal-obra-tipo').fill('Reforma');
+        const patch = page.waitForResponse(r => r.url().endsWith(`/api/obras/${id}`) && r.request().method() === 'PATCH');
+        await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+        const resposta = await patch;
+        expect(resposta.status(), await resposta.text()).toBe(200);
+        expect(resposta.request().postDataJSON()).not.toHaveProperty('valorTotal');
+        await expect(dialog).not.toBeVisible();
+        await page.getByRole('button', { name: 'Financeiro', exact: true }).click();
+        await expect(page.getByTestId('valores-do-contrato')).toHaveCount(0);
+        expect(await (await request.get(`/api/obras/${id}`)).json()).toMatchObject({ tipo: 'Reforma', valorTotal: '9000.00' });
+      } finally {
+        await db.delete(obras).where(eq(obras.id, id));
       }
     });
     test('edita valor grande e conserva centavos no detalhe, dashboard e lista', async ({ page, request }) => {

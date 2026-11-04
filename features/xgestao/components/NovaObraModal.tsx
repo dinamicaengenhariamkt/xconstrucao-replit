@@ -284,7 +284,7 @@ export function NovaObraModal() {
       <PlanoUpsellDialog
         open={upsellLimite !== null}
         onClose={() => setUpsellLimite(null)}
-        descricaoLimite={`${upsellLimite ?? 1} obra(s) ativa(s)`}
+        descricaoLimite={(upsellLimite ?? 1) === 1 ? '1 obra ativa' : `${upsellLimite} obras ativas`}
         planosHref="/xgestao/configuracoes?tab=plano"
       />
     </>

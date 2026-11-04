@@ -186,7 +186,8 @@ export async function buildObraPublicaView(
 
   if (!obra) return null;
   const capacidade = await capacidadesLinkObra(obraId);
-  secoes = { ...secoes, pagamentos: secoes.pagamentos && capacidade.valoresPublicos };
+  // Link antigo pode ter Tarefas ligada; a seção não existe mais para o cliente.
+  secoes = { ...secoes, pagamentos: secoes.pagamentos && capacidade.valoresPublicos, tarefas: false };
 
   // Seção desligada não é escondida na renderização: a query nem roda, então o
   // conteúdo não chega a sair do banco. Esconder no cliente deixaria o dado no

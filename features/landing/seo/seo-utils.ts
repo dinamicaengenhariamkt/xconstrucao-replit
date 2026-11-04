@@ -114,7 +114,7 @@ export function generateProductSchema() {
     },
     description: 'Sistema completo de gestão de obras com IA para otimizar custos, prazos e recursos',
     featureList: [
-      'Orçamento Inteligente com SINAPI',
+      'Orçamento e gasto por obra',
       'Controle de Obras',
       'Gestão Financeira',
       'Documentação Digital',

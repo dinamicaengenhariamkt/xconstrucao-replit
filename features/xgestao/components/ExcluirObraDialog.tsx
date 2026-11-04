@@ -82,7 +82,7 @@ export function ExcluirObraDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-3">
               <p>
-                Isto apaga <strong>{obraNome}</strong> e tudo que está dentro dela: tarefas,
+                Isto apaga <strong>{obraNome}</strong> e tudo que está dentro dela:
                 etapas, fotos, diário, documentos e lançamentos financeiros.{' '}
                 <strong>Não há como desfazer.</strong>
               </p>

@@ -82,7 +82,7 @@ export default function AdminXgestaoFinanceiroPage() {
             iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
           />
           <StatsCard
-            label="No plano gratuito"
+            label="Sem plano ativo"
             value={String(faturamento.assinantesFree)}
             icon={RiGroupLine}
             iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20"

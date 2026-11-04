@@ -292,6 +292,13 @@ function validarCamposObraPropria(
 
   const texto = (valor: unknown) => (typeof valor === "string" ? valor.trim() : "");
 
+  if ("nome" in body && texto(body.nome).length < 3) {
+    erros.nome = ["Informe um nome com pelo menos 3 caracteres."];
+  }
+  if (body.areaM2 != null && Number(texto(body.areaM2)) >= 100_000_000) {
+    erros.areaM2 = ["Área acima do limite permitido."];
+  }
+
   if ("cep" in body && body.cep != null && texto(body.cep) && !CEP_REGEX.test(texto(body.cep))) {
     erros.cep = ["CEP inválido (use 00000-000)"];
   }

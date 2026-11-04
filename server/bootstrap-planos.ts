@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { getPlanCatalog, PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
+import { OFERTA_XGESTAO } from "@features/xgestao/lib/oferta-comercial";
 
 /**
  * Bootstrap idempotente da Jornada 11 — Planos & Assinatura.
@@ -18,6 +19,11 @@ export async function bootstrapPlanosSchema(): Promise<void> {
     // persona xgestão precisa ser adicionada separadamente para instalações já
     // inicializadas antes do produto existir.
     await db.execute(sql`ALTER TYPE plano_persona ADD VALUE IF NOT EXISTS 'xgestao'`);
+    // Idem para a oferta nova do xgestão: sem estes valores o seed abaixo falha e
+    // os planos e o teste Premium não existem no ambiente publicado.
+    await db.execute(sql`ALTER TYPE plano ADD VALUE IF NOT EXISTS 'basic'`);
+    await db.execute(sql`ALTER TYPE plano ADD VALUE IF NOT EXISTS 'basic_plus'`);
+    await db.execute(sql`ALTER TYPE plano ADD VALUE IF NOT EXISTS 'premium'`);
     await db.execute(sql`DO $$ BEGIN CREATE TYPE assinatura_status AS ENUM ('ativa','cancelada','inadimplente','expirada'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
     // Migração idempotente: adiciona 'pendente_reativacao' ao enum se ainda não existir.
     await db.execute(sql`DO $$ BEGIN ALTER TYPE assinatura_status ADD VALUE IF NOT EXISTS 'pendente_reativacao'; EXCEPTION WHEN others THEN NULL; END $$;`);
@@ -109,6 +115,25 @@ export async function bootstrapPlanosSchema(): Promise<void> {
           ON CONFLICT (tier, persona) DO NOTHING
         `);
       }
+    }
+    // O seed não sobrescreve linhas existentes. Troca só o texto gerado pela
+    // versão anterior da oferta: o que o admin editou no painel fica como está.
+    for (const [tier, plano] of Object.entries(OFERTA_XGESTAO)) {
+      const anterior = [
+        `${plano.obrasAtivas} obra(s) ativa(s)`,
+        `${plano.pessoasEmpresa} pessoas por empresa, incluindo você`,
+        plano.linksPorObra === null ? "Links públicos ilimitados por obra" : `${plano.linksPorObra} link(s) público(s) por obra`,
+        "Dashboard, etapas, tarefas e cronograma",
+        "Fotos, diário, ocorrências, checklists e timeline",
+        "Documentos e financeiro (gasto × orçamento)",
+        ...(plano.valoresPublicos ? ["Contrato, recebimentos e saldo no link do cliente"] : []),
+      ];
+      const lista = (itens: readonly string[]) =>
+        sql.raw(`ARRAY[${itens.map((f) => `'${f.replace(/'/g, "''")}'`).join(",")}]::text[]`);
+      await db.execute(sql`
+        UPDATE planos SET features = ${lista(plano.features)}
+        WHERE persona = 'xgestao' AND tier = ${tier}::plano AND features = ${lista(anterior)}
+      `);
     }
     // Apenas testes internos ativos acompanham a nova oferta. Preserva o fim
     // original e não toca em cobranças/contratos manuais ou externos.

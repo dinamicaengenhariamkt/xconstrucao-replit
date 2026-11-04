@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import {
   completarPerfilOperacional,
   fetchCapturedEmails,
+  iniciarTesteOperacionalXgestao,
   loginAs,
   logout,
   SEED_ADMIN_EMAIL,
@@ -60,6 +61,19 @@ async function concederXGestao(request: APIRequestContext, email: string) {
   });
   expect(response.status(), await response.text()).toBe(200);
   await logout(request);
+  // Sem plano vigente a conta fica somente leitura (XG41); estas jornadas editam.
+  await iniciarTesteOperacionalXgestao(request, email);
+}
+
+/**
+ * Chama a API pelo próprio navegador, como a tela faz. A renovação da sessão grava
+ * cookies Secure, que o Chromium aceita em 127.0.0.1 e `page.request` não reenvia.
+ */
+async function apiNaPagina(page: Page, metodo: "GET" | "POST", url: string) {
+  return page.evaluate(async ([m, u]) => {
+    const resposta = await fetch(u, { method: m, credentials: "include" });
+    return { status: resposta.status, texto: await resposta.text() };
+  }, [metodo, url] as const);
 }
 
 async function abrirDialog(page: Page, titulo: string) {
@@ -584,6 +598,8 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await etapasRecarregadasPromise;
     await expect(page.getByTestId(`etapa-${etapa.id}`)).toBeVisible();
 
+    // Clicar durante o fechamento do modal anterior só dispensa o modal.
+    await expect(novaEtapa).toHaveCount(0);
     await page.getByTestId(`button-edit-etapa-${etapa.id}`).click();
     const edicaoEtapa = await abrirDialog(page, "Editar etapa");
     await edicaoEtapa.getByTestId("input-etapa-nome").fill("Fundação estrutural");
@@ -613,10 +629,10 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(edicaoEtapa.getByTestId("input-etapa-desc")).toHaveValue("Base estrutural preparada");
     await expect(edicaoEtapa.getByTestId("input-etapa-responsavel")).toHaveValue("Equipe estrutural");
     await page.unroute(`**/api/obras/${obra.id}/etapas/${etapa.id}`);
-    const etapasPersistidas = await page.request.get(`/api/obras/${obra.id}/etapas`);
-    expect(etapasPersistidas.status(), await etapasPersistidas.text()).toBe(200);
+    const etapasPersistidas = await apiNaPagina(page, "GET", `/api/obras/${obra.id}/etapas`);
+    expect(etapasPersistidas.status, etapasPersistidas.texto).toBe(200);
     expect(
-      ((await etapasPersistidas.json()) as { rows: Array<{ id: string; nome: string }> }).rows,
+      (JSON.parse(etapasPersistidas.texto) as { rows: Array<{ id: string; nome: string }> }).rows,
     ).toContainEqual(expect.objectContaining({ id: etapa.id, nome: "Fundação" }));
 
     const etapaRenomeadaPromise = page.waitForResponse(
@@ -804,9 +820,9 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(page.getByTestId("badge-status")).toHaveText("Pausada");
 
     // E o mesmo conteúdo precisa chegar ao cliente pelo link público.
-    const link = await page.request.post(`/api/xgestao/obras/${obra.id}/share`);
-    expect(link.status(), await link.text()).toBe(201);
-    const { share } = (await link.json()) as { share: { path: string } };
+    const link = await apiNaPagina(page, "POST", `/api/xgestao/obras/${obra.id}/share`);
+    expect(link.status, link.texto).toBe(201);
+    const { share } = JSON.parse(link.texto) as { share: { path: string } };
 
     const anonima = await page.context().browser()!.newContext();
     const publica = await anonima.newPage();

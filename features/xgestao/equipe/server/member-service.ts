@@ -154,6 +154,8 @@ export async function convidarMembro(input: {
         role: "empreiteiro",
         password: tempPassword,
         mustChangePassword: true,
+        // Trabalha na empresa de quem convidou: o assistente "Sobre sua empresa" não se aplica.
+        onboardingConcluido: true,
         emailVerified: null,
         createdBy: input.donoUserId,
         username: null,

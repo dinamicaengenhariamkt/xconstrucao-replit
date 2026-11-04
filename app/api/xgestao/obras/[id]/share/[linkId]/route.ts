@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { recordAudit } from '@features/auth/api/audit';
-import { capacidadesLinkObra, revokeObraShareLink, updateObraShareLink } from '@features/xgestao/obra-publica/server/token';
+import { capacidadesLinkObra, linkConformePlano, revokeObraShareLink, updateObraShareLink } from '@features/xgestao/obra-publica/server/token';
 import {
   nomeLinkSchema,
   requireXgestaoObraAccess,
@@ -33,7 +33,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return shareResponse({ message: 'Dados do link inválidos.' }, 400);
   }
 
-  if (parsed.data.secoes?.pagamentos && !(await capacidadesLinkObra(id)).valoresPublicos) {
+  const { valoresPublicos } = await capacidadesLinkObra(id);
+  if (parsed.data.secoes?.pagamentos && !valoresPublicos) {
     return shareResponse({ message: 'Valores no link público estão disponíveis no Basic Plus e no Premium.' }, 403);
   }
   const link = await updateObraShareLink(id, linkId, parsed.data);
@@ -45,7 +46,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     payload: { obraId: id, linkId, ...parsed.data },
     request,
   });
-  return shareResponse({ share: sharePayload(link) });
+  return shareResponse({ share: sharePayload(linkConformePlano(link, valoresPublicos)) });
 }
 
 /** DELETE revoga um link e preserva a linha para histórico; os demais seguem. */

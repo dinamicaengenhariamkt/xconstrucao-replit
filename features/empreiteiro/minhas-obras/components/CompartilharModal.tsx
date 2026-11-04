@@ -32,7 +32,7 @@ import {
   useRevogarObraShare,
   type ObraShare,
 } from '@features/xgestao/obra-publica/hooks/use-obra-share';
-import { SECAO_LABELS, SECOES_PUBLICAS } from '@features/xgestao/obra-publica/secoes';
+import { SECAO_LABELS, SECOES_OFERECIDAS } from '@features/xgestao/obra-publica/secoes';
 import { Switch } from '@shared/components/ui/switch';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ export function CompartilharModal({
                 </div>
                 {noLimite && (
                   <p className="mt-2 text-[11px] text-gray-500">
-                    Limite de {limite} links ativos. Revogue um para criar outro.
+                    Limite de {limite} {limite === 1 ? 'link ativo' : 'links ativos'}. Revogue um para criar outro.
                   </p>
                 )}
               </div>
@@ -382,7 +382,7 @@ export function CompartilharModal({
                     endereço.
                   </p>
                   <div className="mt-3 grid gap-2">
-                    {SECOES_PUBLICAS.map((secao) => (
+                    {SECOES_OFERECIDAS.map((secao) => (
                       <label
                         key={secao}
                         htmlFor={`secao-${secao}`}
@@ -393,7 +393,9 @@ export function CompartilharModal({
                             {SECAO_LABELS[secao].titulo}
                           </span>
                           <span className="mt-0.5 block text-xs text-gray-500">
-                            {SECAO_LABELS[secao].descricao}
+                            {secao === 'pagamentos' && sharesQuery.data?.valoresPublicos === false
+                            ? 'Disponível nos planos Basic Plus e Premium.'
+                            : SECAO_LABELS[secao].descricao}
                           </span>
                         </span>
                         <Switch

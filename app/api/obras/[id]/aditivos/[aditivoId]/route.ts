@@ -6,7 +6,7 @@ import { db } from "@shared/db/db";
 import { obraAditivos } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraContent } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraContrato, canWriteObraContent } from "@features/obras/api/access";
 
 /** XG10 — edição e exclusão de um aditivo da obra. */
 
@@ -32,7 +32,7 @@ async function autorizar(request: NextRequest, obraId: string) {
     setNoCacheHeaders(r);
     return { error: r };
   }
-  if (!canWriteObraContent(access)) {
+  if (!canWriteObraContent(access) || !canAccessObraContrato(access)) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return { error: r };

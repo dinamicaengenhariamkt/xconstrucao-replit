@@ -47,7 +47,7 @@ Para fins destes Termos de Uso, as seguintes definições se aplicam:
 - **Usuário:** qualquer pessoa que acesse ou utilize a plataforma, independentemente de ter realizado cadastro.
 - **Assinante:** o usuário titular de uma conta ativa, pessoa física ou jurídica que contrata o xgestão para gerir suas próprias obras.
 - **Serviços:** as funcionalidades de gestão de obras oferecidas pela plataforma, conforme a Seção 4.
-- **Obra:** o registro criado pelo Assinante na plataforma para acompanhar a execução de um empreendimento, com suas etapas, tarefas, lançamentos, fotos e demais informações.
+- **Obra:** o registro criado pelo Assinante na plataforma para acompanhar a execução de um empreendimento, com suas etapas, lançamentos, fotos e demais informações.
 - **Cliente do Assinante:** o terceiro para quem o Assinante executa a obra. **Não é usuário da plataforma** e não mantém relação contratual conosco.
 - **Link público:** endereço de acesso à visualização de uma obra, gerado pelo Assinante e acessível sem autenticação por quem o possua, conforme a Seção 6.
 - **Conta:** o registro único de cada usuário na plataforma.
@@ -73,7 +73,7 @@ O xgestão é uma **ferramenta de gestão de obras** destinada a profissionais e
 **Os serviços incluem:**
 
 - **Gestão da obra:** cadastro de obras, etapas, cronograma e acompanhamento de progresso
-- **Tarefas e equipe:** organização das atividades de execução e registro dos profissionais envolvidos
+- **Equipe:** registro dos profissionais envolvidos na execução
 - **Registro de avanços:** lançamento de atualizações de progresso, com descrição, percentual e fotos
 - **Diário e ocorrências:** anotações do dia a dia e registro de problemas
 - **Controle financeiro da obra:** registro de custos, recebimentos e saldo, **para fins de controle gerencial do Assinante**
@@ -100,15 +100,15 @@ A responsabilidade pela veracidade e pela exatidão de todo conteúdo lançado n
 
 ### 5.1 Planos e cobrança
 
-O acesso à plataforma é oferecido mediante **assinatura**, nas modalidades e valores informados na página de planos no momento da contratação. Pode haver plano gratuito com funcionalidades ou limites reduzidos.
+O acesso à plataforma é oferecido mediante **assinatura**, nas modalidades e valores informados na página de planos no momento da contratação.
 
 A cobrança é **recorrente** e realizada por meio de processador de pagamentos terceirizado. O Assinante autoriza a cobrança automática no meio de pagamento informado, a cada ciclo, até que a assinatura seja cancelada.
 
 ### 5.1-A Teste grátis
 
-A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. A oferta vigente do MVP é de **90 dias no plano Pro**, iniciado por escolha do Assinante e disponível **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
+A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. A oferta vigente do MVP é de **90 dias no plano Premium**, iniciado por escolha do Assinante e disponível **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
 
-Ao fim do prazo, se não houver uma **assinatura paga ativa**, a conta passa **automaticamente para o plano Free gratuito**, que não deve ser confundido com o Basic pago. Uma assinatura paga contratada durante o teste não é encerrada pelo vencimento do teste. **Nenhum dado é excluído** por causa do fim do teste: obras, documentos, equipe e histórico permanecem. Aplicam-se as funcionalidades e os limites do plano gratuito vigente, informados na plataforma; os limites comerciais de lançamento ainda dependem de autorização separada.
+Ao fim do prazo, se não houver uma **assinatura paga ativa**, a conta passa **automaticamente para somente leitura**: o Assinante consulta tudo o que registrou, mas não cria nem altera dados até contratar um plano. Uma assinatura paga contratada durante o teste não é encerrada pelo vencimento do teste. **Nenhum dado é excluído** por causa do fim do teste: obras, documentos, equipe e histórico permanecem.
 
 ### 5.1-B Membros da equipe
 

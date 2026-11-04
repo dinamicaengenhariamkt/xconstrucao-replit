@@ -11,9 +11,9 @@ import { XGESTAO_LOGIN_HREF } from '@features/xgestao/routes';
 const features = [
   {
     Icon: IconPrecisionManufacturing,
-    title: "Orçamento Inteligente",
+    title: "Orçamento da Obra",
     description:
-      "Crie orçamentos detalhados com base na tabela SINAPI, ajustando automaticamente os valores por região.",
+      "Defina o orçamento de cada obra e acompanhe o gasto contra o previsto em um só lugar.",
   },
   {
     Icon: IconMonitoring,
@@ -50,9 +50,9 @@ const features = [
 const differentials = [
   {
     Icon: IconTableChart,
-    title: "SINAPI Integrado",
+    title: "Link Público para o Cliente",
     description:
-      "Tabela SINAPI atualizada automaticamente em todos os planos, sem custos adicionais.",
+      "Compartilhe o andamento da obra por link, sem o cliente precisar criar conta.",
     highlight: true,
   },
   {

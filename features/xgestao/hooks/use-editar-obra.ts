@@ -110,6 +110,18 @@ export type CamposLocalizacao = {
  * Lança `Error` com a primeira mensagem — o padrão que os modais e o formulário
  * já usam no `mutationFn`.
  */
+/** `obras.area_m2` é NUMERIC(10,2): aceita 1.200,50 e no máximo oito dígitos inteiros. */
+function areaDecimal(entrada: string): string {
+  let decimal: string;
+  try {
+    decimal = dinheiroDecimal(entrada);
+  } catch {
+    throw new Error('Informe a área como número, por exemplo 1.200,50.');
+  }
+  if (decimal.split('.')[0].length > 8) throw new Error('A área excede o limite permitido.');
+  return decimal;
+}
+
 export function validarInformacoes(campos: Partial<CamposInformacoes>): void {
   if (campos.nome !== undefined && campos.nome.trim().length < 3) {
     throw new Error('Informe um nome com pelo menos 3 caracteres.');
@@ -121,9 +133,7 @@ export function validarInformacoes(campos: Partial<CamposInformacoes>): void {
   ) {
     throw new Error('A previsão de término não pode ser anterior ao início.');
   }
-  if (campos.areaM2?.trim() && !Number.isFinite(Number(campos.areaM2.trim()))) {
-    throw new Error('Informe a área como número, por exemplo 120.5.');
-  }
+  if (campos.areaM2?.trim()) areaDecimal(campos.areaM2);
   if (campos.valorTotal?.trim()) dinheiroDecimal(campos.valorTotal);
 }
 
@@ -145,7 +155,7 @@ export function payloadInformacoes(campos: CamposInformacoes): Record<string, un
     nome: campos.nome.trim(),
     tipo: campos.tipo.trim() || null,
     descricao: campos.descricao.trim() || null,
-    areaM2: campos.areaM2.trim() || null,
+    areaM2: campos.areaM2.trim() ? areaDecimal(campos.areaM2) : null,
     valorTotal: campos.valorTotal.trim() ? dinheiroDecimal(campos.valorTotal) : '0',
     dataInicio: campos.dataInicio || null,
     dataPrevisao: campos.dataPrevisao || null,

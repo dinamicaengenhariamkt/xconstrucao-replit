@@ -1,3 +1,4 @@
+import { tierLabel } from '@features/xgestao/admin/plano-label';
 import { NextRequest, NextResponse } from 'next/server';
 import { recordAudit } from '@features/auth/api/audit';
 import { requireAdminXgestao } from '@features/xgestao/admin/server/guard';
@@ -13,7 +14,6 @@ const STATUS_LABEL: Record<XgestaoObraStatus, string> = {
   pausada: 'Pausada',
   concluida: 'Concluída',
 };
-const TIER_LABEL: Record<string, string> = { free: 'Freemium', pro: 'Basic', enterprise: 'Pro' };
 /** Teto de segurança: a exportação percorre páginas de 100 até esgotar ou chegar aqui. */
 const MAX_LINHAS = 10_000;
 
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     return arquivo('assinantes', montarCsv(
       ['Empresa', 'Responsável', 'E-mail', 'Plano', 'Situação', 'Teste grátis até', 'Obras', 'Obras em aberto', 'Limite de obras', 'Membros', 'Último acesso', 'Entrada'],
       rows.map((a) => [
-        a.empreiteiraNome, a.nome, a.email, TIER_LABEL[a.plano.tier] ?? a.plano.tier,
+        a.empreiteiraNome, a.nome, a.email, tierLabel(a.plano.tier),
         a.plano.emTeste ? 'teste grátis' : (a.plano.status ?? 'sem cobrança'),
         a.plano.emTeste ? dataBr(a.plano.renovaEm) : '',
         a.obrasGerenciadas, a.uso.obrasEmAberto, a.uso.limiteObras >= 9999 ? 'sem limite' : a.uso.limiteObras,

@@ -81,7 +81,7 @@ Coletamos diferentes tipos de dados para fornecer e melhorar nossos serviços:
 
 ### Dados de Transação:
 
-- Histórico de obras, etapas, tarefas e atualizações de progresso
+- Histórico de obras, etapas e atualizações de progresso
 - Lançamentos financeiros que você registra para controle da obra
 - Dados de cobrança da sua assinatura (plano, ciclo, histórico de pagamentos)
 
@@ -174,7 +174,7 @@ A XConstrução não vende seus dados pessoais a terceiros. Compartilhamos seus 
 Você pode gerar **links públicos** para compartilhar o acompanhamento de uma obra, inclusive um link para cada público (por exemplo, o cliente e um fornecedor), cada um com as próprias seções. Quando o faz:
 
 - O conteúdo das seções que você habilitar fica acessível **a qualquer pessoa que tenha o link, sem exigir login**
-- **Você escolhe o que publicar, link a link.** Por padrão, pagamentos, diário de obra, ocorrências, tarefas e endereço vêm **desligados**, e só aparecem se você os habilitar
+- **Você escolhe o que publicar, link a link.** Por padrão, pagamentos, diário de obra, ocorrências e endereço vêm **desligados**, e só aparecem se você os habilitar
 - Mesmo com o endereço habilitado, exibimos **apenas o logradouro** — nunca número, complemento, CEP ou coordenadas
 - Somente as fotos que você marcar para compartilhamento aparecem
 - Você pode **revogar ou substituir** o link a qualquer momento. A revogação bloqueia novos acessos, mas não recupera o que já tenha sido visualizado ou salvo por quem teve acesso

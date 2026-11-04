@@ -77,14 +77,21 @@ export function EditarInformacoesModal({
   obraId,
   open,
   onOpenChange,
+  podeEditarValor = true,
+  podeEditarDatas = true,
 }: {
   obraId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Membro sem acesso aos totais não recebe o valor; enviar um vazio zeraria o contrato. */
+  podeEditarValor?: boolean;
+  /** Membro sem a área de cronograma não altera as datas da obra. */
+  podeEditarDatas?: boolean;
 }) {
   const { toast } = useToast();
   const invalidarObra = useInvalidarObra(obraId);
   const [form, setForm] = useState<CamposInformacoes>(VAZIO);
+  const [pronto, setPronto] = useState(false);
 
   const obraQuery = useQuery({
     queryKey: ['xgestao', 'obra-editavel', obraId],
@@ -93,9 +100,14 @@ export function EditarInformacoesModal({
   });
 
   // Recarrega ao abrir: o valor em tela tem que ser o que está no banco, não o
-  // rascunho de uma abertura anterior que o usuário cancelou.
+  // rascunho de uma abertura anterior que o usuário cancelou. Só uma vez por
+  // abertura, para uma recarga em segundo plano não apagar o que foi digitado.
   useEffect(() => {
-    if (!open || !obraQuery.data) return;
+    if (!open) {
+      setPronto(false);
+      return;
+    }
+    if (pronto || !obraQuery.data || obraQuery.isFetching) return;
     const obra = obraQuery.data;
     setForm({
       nome: obra.nome ?? '',
@@ -107,7 +119,8 @@ export function EditarInformacoesModal({
       dataPrevisao: obra.dataPrevisao ?? '',
       status: obra.status ?? 'planejamento',
     });
-  }, [open, obraQuery.data]);
+    setPronto(true);
+  }, [open, pronto, obraQuery.data, obraQuery.isFetching]);
 
   const update = (key: keyof CamposInformacoes, value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -115,7 +128,13 @@ export function EditarInformacoesModal({
   const salvar = useMutation({
     mutationFn: () => {
       validarInformacoes(form);
-      return patchObra(obraId, payloadInformacoes(form));
+      const payload = payloadInformacoes(form);
+      if (!podeEditarValor) delete payload.valorTotal;
+      if (!podeEditarDatas) {
+        delete payload.dataInicio;
+        delete payload.dataPrevisao;
+      }
+      return patchObra(obraId, payload);
     },
     onSuccess: async () => {
       await invalidarObra();
@@ -141,7 +160,9 @@ export function EditarInformacoesModal({
           </DialogDescription>
         </DialogHeader>
 
-        {obraQuery.isLoading ? (
+        {obraQuery.isError && !pronto ? (
+          <p role="alert">Não foi possível carregar a obra. Feche e tente novamente.</p>
+        ) : !pronto ? (
           <div className="h-72 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
         ) : (
           <form
@@ -149,7 +170,7 @@ export function EditarInformacoesModal({
             className="grid gap-5 sm:grid-cols-2"
             onSubmit={(event) => {
               event.preventDefault();
-              if (!salvar.isPending) salvar.mutate();
+              if (!salvar.isPending && pronto) salvar.mutate();
             }}
           >
             <Campo label="Nome da obra" htmlFor="modal-obra-nome">
@@ -188,13 +209,13 @@ export function EditarInformacoesModal({
             <Campo label="Área (m²)" htmlFor="modal-obra-area" optional>
               <Input
                 id="modal-obra-area"
-                type="number"
-                min="0"
-                step="0.01"
+                inputMode="decimal"
+                placeholder="Ex.: 1.200,50"
                 value={form.areaM2}
                 onChange={(e) => update('areaM2', e.target.value)}
               />
             </Campo>
+            {podeEditarValor && (
             <Campo label="Orçamento previsto (R$)" htmlFor="modal-obra-valor" optional>
               <Input
                 id="modal-obra-valor"
@@ -205,6 +226,9 @@ export function EditarInformacoesModal({
                 onChange={(e) => update('valorTotal', e.target.value)}
               />
             </Campo>
+            )}
+            {podeEditarDatas && (
+              <>
             <Campo label="Data de início" htmlFor="modal-obra-inicio" optional>
               <Input
                 id="modal-obra-inicio"
@@ -221,6 +245,8 @@ export function EditarInformacoesModal({
                 onChange={(e) => update('dataPrevisao', e.target.value)}
               />
             </Campo>
+              </>
+            )}
             <Campo label="Status" htmlFor="modal-obra-status">
               <select
                 id="modal-obra-status"
@@ -244,7 +270,7 @@ export function EditarInformacoesModal({
           <Button
             type="submit"
             form="form-editar-informacoes"
-            disabled={salvar.isPending || obraQuery.isLoading}
+            disabled={salvar.isPending || !pronto}
             data-testid="modal-salvar-informacoes"
           >
             {salvar.isPending ? 'Salvando…' : 'Salvar'}
