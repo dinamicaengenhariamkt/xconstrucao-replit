@@ -7,9 +7,10 @@ export type CelulaCsv = string | number | null | undefined;
 function celula(valor: CelulaCsv): string {
   if (valor === null || valor === undefined) return '';
   const texto = typeof valor === 'number' ? String(valor).replace('.', ',') : valor;
-  // Neutraliza injeção de fórmula ao abrir no Excel (=, +, -, @ no início).
-  const seguro = /^[=+\-@]/.test(texto) && typeof valor !== 'number' ? `'${texto}` : texto;
-  return /[;"\n\r]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
+  // Neutraliza injeção de fórmula ao abrir no Excel: =, +, -, @ e também Tab e
+  // CR no início (TST-11), que o Excel descarta antes de avaliar a fórmula.
+  const seguro = /^[=+\-@\t\r]/.test(texto) && typeof valor !== 'number' ? `'${texto}` : texto;
+  return /[;"\n\r\t]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 export function montarCsv(cabecalho: string[], linhas: CelulaCsv[][]): string {

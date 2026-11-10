@@ -21,6 +21,9 @@ import {
   RiHeartPulseLine,
   RiDashboardLine,
   RiGroupLine,
+  RiLineChartLine,
+  RiPulseLine,
+  RiCalendar2Line,
 } from 'react-icons/ri';
 import type { NavItem } from './types';
 
@@ -30,7 +33,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { title: 'xgestão', url: '/admin/xgestao', icon: RiDashboardLine, escopos: ['global', 'xgestao'] },
   { title: 'Obras xgestão', url: '/admin/xgestao/obras', icon: RiHammerLine, escopos: ['global', 'xgestao'] },
   { title: 'Assinantes xgestão', url: '/admin/xgestao/assinantes', icon: RiGroupLine, escopos: ['global', 'xgestao'] },
+  { title: 'Conversão xgestão', url: '/admin/xgestao/conversao', icon: RiLineChartLine, escopos: ['global', 'xgestao'] },
   { title: 'Financeiro xgestão', url: '/admin/xgestao/financeiro', icon: RiMoneyDollarCircleLine, escopos: ['global', 'xgestao'] },
+  { title: 'Engajamento xgestão', url: '/admin/xgestao/engajamento', icon: RiPulseLine, escopos: ['global', 'xgestao'] },
+  { title: 'Mês a mês xgestão', url: '/admin/xgestao/historico', icon: RiCalendar2Line, escopos: ['global', 'xgestao'] },
   { title: 'Cliente', url: '/admin/clientes', icon: RiUserLine },
   { title: 'Empreiteira', url: '/admin/empreiteiras', icon: RiBuilding2Line },
   { title: 'Obras', url: '/admin/obras', icon: RiHammerLine },

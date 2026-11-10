@@ -19,6 +19,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import {
   asaasRequest,
+  exigirChaveAsaasCoerente,
   getAsaasCheckoutUrl,
   type AsaasCheckout,
   type AsaasCustomer,
@@ -29,6 +30,7 @@ import {
 import type {
   CheckoutInput,
   CheckoutResult,
+  CobrancaPendente,
   GatewayPaymentStatus,
   NormalizedWebhookEvent,
   PaymentGateway,
@@ -89,9 +91,17 @@ const CYCLE_MAP: Record<string, string> = {
   anual: "YEARLY",
 };
 
-/** O Asaas exige data/hora no formato YYYY-MM-DD HH:mm:ss para a primeira cobrança. */
-function nextDueDate(): string {
-  return new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 19).replace("T", " ");
+/**
+ * O Asaas exige data/hora no formato YYYY-MM-DD HH:mm:ss para a primeira cobrança.
+ * Sem data informada, cobra em 5 minutos. Com data futura (XG43: bônus de +1 mês
+ * do teste xgestão), usa o dia no fuso de São Paulo, às 00:00.
+ */
+export function nextDueDate(primeiraCobrancaEm?: Date, agora = new Date()): string {
+  if (primeiraCobrancaEm && primeiraCobrancaEm.getTime() > agora.getTime() + 24 * 60 * 60 * 1000) {
+    const dia = primeiraCobrancaEm.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    return `${dia} 00:00:00`;
+  }
+  return new Date(agora.getTime() + 5 * 60 * 1000).toISOString().slice(0, 19).replace("T", " ");
 }
 
 // ── Mapeamento de eventos ────────────────────────────────────────────────────
@@ -105,9 +115,67 @@ const EVENT_TYPE_MAP: Record<string, NormalizedWebhookEvent["type"]> = {
   PAYMENT_CONFIRMED: "payment_succeeded",
   PAYMENT_RECEIVED: "payment_succeeded",
   PAYMENT_OVERDUE: "payment_failed",
-  PAYMENT_DELETED: "payment_failed",
+  // PAYMENT_DELETED: ver `tipoDoEventoAsaas` (depende de quem é a cobrança).
   SUBSCRIPTION_DELETED: "subscription_canceled",
 };
+
+/**
+ * PAG-04 — estorno e chargeback. Só valem para cobranças de assinatura da
+ * plataforma; para obra e anúncio continuam ignorados (comportamento anterior).
+ * Estorno parcial (PAYMENT_PARTIALLY_REFUNDED) fica de fora de propósito: não
+ * encerra assinatura.
+ *
+ * REV-08 — só o pedido de estorno/chargeback encerra. A disputa
+ * (PAYMENT_CHARGEBACK_DISPUTE) e a espera da reversão
+ * (PAYMENT_AWAITING_CHARGEBACK_REVERSAL) são etapas de um chargeback já
+ * recebido como CHARGEBACK_REQUESTED: tratá-las de novo encerraria (ou
+ * registraria estorno) duas vezes, e a disputa pode terminar a favor da
+ * plataforma. Ficam ignoradas.
+ */
+export const EVENTOS_ESTORNO: Readonly<Record<string, "estorno" | "chargeback">> = {
+  PAYMENT_REFUNDED: "estorno",
+  PAYMENT_REFUND_IN_PROGRESS: "estorno",
+  PAYMENT_CHARGEBACK_REQUESTED: "chargeback",
+};
+
+/** Motivo do `payment_refunded` (para o admin distinguir estorno de chargeback). */
+export function motivoDoEstornoAsaas(event: string): "estorno" | "chargeback" | undefined {
+  return Object.prototype.hasOwnProperty.call(EVENTOS_ESTORNO, event) ? EVENTOS_ESTORNO[event] : undefined;
+}
+
+/**
+ * Cobrança de assinatura da plataforma (`xconstrucao|...`). Sem
+ * externalReference também conta: o Asaas pode omitir o campo em cobranças
+ * geradas pela assinatura, e obra/anúncio sempre mandam o seu prefixo
+ * (`xconstrucao-obra|`, `xconstrucao-anuncio|`).
+ */
+export function ehCobrancaDeAssinatura(externalReference: string | undefined): boolean {
+  return !externalReference || externalReference.startsWith("xconstrucao|");
+}
+
+/**
+ * Tipo normalizado de um evento de pagamento do Asaas. Função pura, exportada
+ * para teste (TST-01) e para o gateway manual seguir a mesma regra.
+ */
+export function tipoDoEventoAsaas(
+  event: string,
+  externalReference: string | undefined,
+  temAssinatura: boolean,
+): NormalizedWebhookEvent["type"] {
+  // XG43 — PAYMENT_CREATED só interessa a assinaturas da plataforma
+  // (`xconstrucao|...`): obra e anúncio continuam ignorando esse evento.
+  if (event === "PAYMENT_CREATED") {
+    return externalReference?.startsWith("xconstrucao|") ? "payment_created" : "ignored";
+  }
+  // PAG-03 — cobrança de assinatura apagada não é inadimplência.
+  if (event === "PAYMENT_DELETED") {
+    return ehCobrancaDeAssinatura(externalReference) ? "payment_deleted" : "payment_failed";
+  }
+  if (motivoDoEstornoAsaas(event)) {
+    return ehCobrancaDeAssinatura(externalReference) && temAssinatura ? "payment_refunded" : "ignored";
+  }
+  return EVENT_TYPE_MAP[event] ?? "ignored";
+}
 
 // ── AsaasGateway ─────────────────────────────────────────────────────────────
 
@@ -115,6 +183,8 @@ export class AsaasGateway implements PaymentGateway {
   readonly provider = "asaas";
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+    // PAG-08 — em produção, chave e ambiente precisam combinar.
+    exigirChaveAsaasCoerente();
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://xconstrucao.com.br";
 
     const externalRef = buildExternalRef(input.userId, input.planoId, input.ciclo);
@@ -133,7 +203,7 @@ export class AsaasGateway implements PaymentGateway {
       externalReference: externalRef,
       subscription: {
         cycle: CYCLE_MAP[input.ciclo] ?? "MONTHLY",
-        nextDueDate: nextDueDate(),
+        nextDueDate: nextDueDate(input.primeiraCobrancaEm),
       },
       callback: {
         successUrl: input.successUrl ?? `${baseUrl}/planos/sucesso`,
@@ -169,6 +239,51 @@ export class AsaasGateway implements PaymentGateway {
       if (err instanceof Error && err.message.includes("HTTP 404")) return;
       throw err;
     }
+  }
+
+  /**
+   * XG48 — troca de plano. Homologado no sandbox em 10/11/2026: o PUT com
+   * `updatePendingPayments` muda a assinatura e a cobrança pendente; as
+   * seguintes nascem com o valor novo. Atenção: ele também sobrescreve a soma
+   * da diferença já lançada na cobrança pendente, por isso o service reaplica
+   * a soma (`sincronizarCobrancaPendente`) depois de toda troca.
+   */
+  async atualizarValorAssinatura(gatewaySubscriptionId: string, valor: number): Promise<void> {
+    exigirChaveAsaasCoerente();
+    await asaasRequest<AsaasSubscription>("PUT", `/subscriptions/${encodeURIComponent(gatewaySubscriptionId)}`, {
+      value: valor,
+      updatePendingPayments: true,
+    });
+  }
+
+  async proximaCobrancaPendente(gatewaySubscriptionId: string): Promise<CobrancaPendente | null> {
+    const lista = await asaasRequest<{ data: AsaasPayment[] }>(
+      "GET",
+      `/subscriptions/${encodeURIComponent(gatewaySubscriptionId)}/payments?status=PENDING&limit=20`,
+    );
+    const pendentes = (lista.data ?? [])
+      .filter((p) => p.status === "PENDING" && p.dueDate)
+      .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
+    const proxima = pendentes[0];
+    return proxima ? { id: proxima.id, valor: Number(proxima.value), vencimento: proxima.dueDate!.slice(0, 10) } : null;
+  }
+
+  /**
+   * 10/11/2026 — estorno total (`POST /v3/payments/{id}/refund`, sem `value`
+   * = valor cheio). O Asaas responde com o pagamento já em REFUNDED ou
+   * REFUND_IN_PROGRESS e manda o webhook PAYMENT_REFUNDED depois.
+   */
+  async refundPayment(paymentId: string): Promise<void> {
+    exigirChaveAsaasCoerente();
+    await asaasRequest<AsaasPayment>("POST", `/payments/${encodeURIComponent(paymentId)}/refund`, {
+      description: "Estorno automático: pagamento de assinatura duplicada",
+    });
+  }
+
+  /** Homologado no sandbox: PUT /payments/{id} com `value` aceito em cobrança de cartão de assinatura. */
+  async atualizarValorCobranca(paymentId: string, valor: number): Promise<void> {
+    exigirChaveAsaasCoerente();
+    await asaasRequest<AsaasPayment>("PUT", `/payments/${encodeURIComponent(paymentId)}`, { value: valor });
   }
 
   async checkPaymentStatus(gatewaySubscriptionId: string | null): Promise<GatewayPaymentStatus> {
@@ -314,7 +429,7 @@ export class AsaasGateway implements PaymentGateway {
       (subscription.externalReference as string) ??
       undefined;
 
-    const normalizedType: NormalizedWebhookEvent["type"] = EVENT_TYPE_MAP[event] ?? "ignored";
+    const normalizedType = tipoDoEventoAsaas(event, externalReference, Boolean(subscriptionId));
 
     console.info(`[asaas] webhook event="${event}" mapped="${normalizedType}" paymentId="${paymentId}" subId="${subscriptionId}"`);
 
@@ -325,6 +440,9 @@ export class AsaasGateway implements PaymentGateway {
       gatewayCustomerId: (payment.customer as string) ?? (subscription.customer as string) ?? undefined,
       externalReference,
       valor: typeof payment.value === "number" ? payment.value : undefined,
+      dueDate: typeof payment.dueDate === "string" ? payment.dueDate : undefined,
+      paymentId: paymentId || undefined,
+      ...(normalizedType === "payment_refunded" ? { motivo: motivoDoEstornoAsaas(event) } : {}),
       raw: body,
     };
   }

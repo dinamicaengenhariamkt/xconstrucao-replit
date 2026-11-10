@@ -299,8 +299,8 @@ export function LancamentoFinanceiroModal({
             {isSaida
               ? somenteMaoDeObra
                 ? 'Registre uma saída da obra somente na categoria Mão de obra.'
-                : 'Dinheiro que saiu da obra — mão de obra, material ou outras despesas.'
-              : 'Dinheiro que entrou na obra — pagamento recebido do cliente.'}
+                : 'Dinheiro que saiu da obra: mão de obra, material ou outras despesas.'
+              : 'Dinheiro que entrou na obra: pagamento recebido do cliente.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -366,7 +366,7 @@ export function LancamentoFinanceiroModal({
                       <SelectContent>
                         {membrosElegiveis.map((m) => (
                           <SelectItem key={m.id} value={m.id}>
-                            {m.papel ? `${m.nome} — ${m.papel}` : m.nome}
+                            {m.papel ? `${m.nome} · ${m.papel}` : m.nome}
                           </SelectItem>
                         ))}
                         <SelectItem value={FORNECEDOR_OUTRO}>Outro (digitar nome)</SelectItem>
@@ -374,7 +374,7 @@ export function LancamentoFinanceiroModal({
                     </Select>
                     <FormDescription>
                       {membrosElegiveis.length === 0
-                        ? 'A obra ainda não tem equipe cadastrada — use "Outro" para digitar o nome.'
+                        ? 'A obra ainda não tem equipe cadastrada. Use "Outro" para digitar o nome.'
                         : 'Depois dá para filtrar os lançamentos por pessoa e ver quanto já foi pago a ela.'}
                     </FormDescription>
                     <FormMessage />

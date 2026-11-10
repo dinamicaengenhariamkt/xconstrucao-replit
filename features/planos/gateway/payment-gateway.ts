@@ -37,6 +37,11 @@ export interface CheckoutInput {
    * (que sempre retornam redirect de qualquer forma).
    */
   pendingMode?: boolean;
+  /**
+   * XG43 — data da 1ª cobrança quando ela não é imediata (bônus de +1 mês do
+   * teste xgestão, ou nova assinatura dentro do período já pago).
+   */
+  primeiraCobrancaEm?: Date;
 }
 
 export type CheckoutResult =
@@ -56,6 +61,17 @@ export interface NormalizedWebhookEvent {
     | "subscription_activated"
     | "payment_succeeded"
     | "payment_failed"
+    // XG43 — cobrança criada (PAYMENT_CREATED) de assinatura da plataforma.
+    // Só ativa a assinatura xgestão cuja 1ª cobrança é futura.
+    | "payment_created"
+    // PAG-03 — cobrança de assinatura da plataforma apagada (PAYMENT_DELETED).
+    // O Asaas apaga a cobrança pendente quando a assinatura é cancelada ou
+    // trocada: não é falta de pagamento. Cobranças de obra/anúncio seguem
+    // chegando como `payment_failed`, como antes.
+    | "payment_deleted"
+    // PAG-04 — estorno ou chargeback de cobrança de assinatura da plataforma.
+    // Obra/anúncio continuam ignorando esses eventos.
+    | "payment_refunded"
     | "subscription_canceled"
     // J46 — eventos de status de subconta (KYC). Roteados para
     // aplicarEventoSubconta, NÃO para aplicarEventoWebhook (assinatura).
@@ -71,6 +87,19 @@ export interface NormalizedWebhookEvent {
   externalReference?: string;
   /** Valor pago (em BRL) — usado para criar o lançamento no caixa. */
   valor?: number;
+  /** XG43 — vencimento da cobrança (`YYYY-MM-DD`) nos eventos de pagamento. */
+  dueDate?: string;
+  /**
+   * XG45 — id do pagamento no gateway. CONFIRMED e RECEIVED do mesmo
+   * pagamento chegam com eventIds distintos; é este id que impede contar a
+   * mesma mensalidade duas vezes no caixa.
+   */
+  paymentId?: string;
+  /**
+   * REV-08 — só em `payment_refunded`: estorno (REFUNDED/REFUND_IN_PROGRESS)
+   * ou chargeback (CHARGEBACK_REQUESTED).
+   */
+  motivo?: "estorno" | "chargeback";
   /** J46 — id da subconta Asaas (account.id) nos eventos de conta/KYC. */
   accountId?: string;
   /**
@@ -93,8 +122,32 @@ export interface NormalizedWebhookEvent {
  */
 export type GatewayPaymentStatus = "paid" | "unpaid" | "unknown";
 
+/** XG48 — cobrança ainda não paga de uma assinatura (a próxima fatura). */
+export interface CobrancaPendente {
+  id: string;
+  valor: number;
+  /** Vencimento `YYYY-MM-DD`. */
+  vencimento: string;
+}
+
 export interface PaymentGateway {
   readonly provider: string;
+  /**
+   * XG48 — troca de plano: muda o valor da assinatura e das cobranças ainda
+   * pendentes (`updatePendingPayments`). Opcional: adapters sem cobrança
+   * recorrente remota não implementam.
+   */
+  atualizarValorAssinatura?(gatewaySubscriptionId: string, valor: number): Promise<void>;
+  /** XG48 — a próxima cobrança pendente da assinatura (menor vencimento), se já existir. */
+  proximaCobrancaPendente?(gatewaySubscriptionId: string): Promise<CobrancaPendente | null>;
+  /** XG48 — muda o valor de uma cobrança pendente (soma da diferença proporcional). */
+  atualizarValorCobranca?(paymentId: string, valor: number): Promise<void>;
+  /**
+   * 10/11/2026 — estorna por inteiro um pagamento já confirmado/recebido (ex.:
+   * pagamento de assinatura duplicada, XG50). Opcional: sem ele, o service
+   * registra a falha e avisa o admin para estornar no painel.
+   */
+  refundPayment?(paymentId: string): Promise<void>;
   /** Inicia o checkout de uma assinatura. */
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   /** Cancela a assinatura no gateway (no-op em adapters sem cobrança). */

@@ -12,10 +12,16 @@ import {
   type PlanUsageItem,
 } from "@shared/lib/plans-catalog";
 import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
-import { getEstadoTeste, naoEhTesteVencido, type EstadoTeste } from "@features/xgestao/teste/server/teste-service";
-import { planoDaEmpresa } from "@features/xgestao/server/plano-empresa";
+import { getEstadoTeste, type EstadoTeste } from "@features/xgestao/teste/server/teste-service";
+import { planoDaEmpresa, situacaoPlanoXgestao } from "@features/xgestao/server/plano-empresa";
+import { encerrarCancelamentosVencidos } from "@features/planos/assinatura-service";
+import { acessoAteAoCancelar } from "@features/xgestao/lib/acesso-plano";
+import { documentoXgestaoValido } from "@features/xgestao/lib/documento-fiscal";
 import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
 import { consultarVagasEquipe } from "@features/xgestao/equipe/server/vagas-service";
+import { trocaAgendadaDoUsuario } from "@features/xgestao/server/troca-marcas";
+import { cicloDaAssinatura, valorDoCiclo } from "@features/xgestao/lib/ciclo-plano";
+import { xgestaoAnualAtivo } from "@features/xgestao/server/anual";
 
 async function computeEmpreiteiroUsage(userId: string): Promise<Record<string, number>> {
   const [emp] = await db.select().from(empreiteiras).where(eq(empreiteiras.userId, userId));
@@ -85,7 +91,8 @@ async function computeXGestaoUsage(userId: string): Promise<Record<string, numbe
   const [{ obrasAtivas }] = await db
     .select({ obrasAtivas: sql<number>`COUNT(*)::int` })
     .from(obras)
-    .where(and(eq(obras.empreiteiraId, emp.id), isNull(obras.clienteId), sql`${obras.status} <> 'concluida'`));
+    // XG48 — obra só para visualização pelo plano não ocupa vaga.
+    .where(and(eq(obras.empreiteiraId, emp.id), isNull(obras.clienteId), sql`${obras.status} <> 'concluida'`, eq(obras.xgestaoBloqueadaPorPlano, false)));
   return { obrasAtivas };
 }
 
@@ -140,19 +147,13 @@ export async function GET(request: NextRequest) {
   let tier: PlanoTier = (user.plano as PlanoTier) ?? "free";
   // XG35 — calculado antes do tier: também grava o vencimento preguiçoso do teste.
   const teste: EstadoTeste | null = persona === "xgestao" ? await getEstadoTeste(user.id) : null;
+  // XG43 — mesma regra de vigência da escrita (24h do teste, cancelamento
+  // agendado e carência de inadimplência).
+  let situacaoXgestao: Awaited<ReturnType<typeof situacaoPlanoXgestao>> | null = null;
   if (persona === "xgestao") {
-    const [assinaturaXGestao] = await db
-      .select({ tier: planos.tier })
-      .from(assinaturas)
-      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
-      .where(and(
-        eq(assinaturas.userId, user.id),
-        eq(assinaturas.persona, "xgestao"),
-        eq(assinaturas.status, "ativa"),
-        naoEhTesteVencido(),
-      ))
-      .limit(1);
-    tier = (assinaturaXGestao?.tier as PlanoTier | undefined) ?? "free";
+    await encerrarCancelamentosVencidos(user.id);
+    situacaoXgestao = await situacaoPlanoXgestao(user.id);
+    tier = situacaoXgestao.tier ?? "free";
   }
   const catalogoFallback = getPlanCatalog(persona, tier);
   const [catalogoPersistido] = await db
@@ -208,7 +209,11 @@ export async function GET(request: NextRequest) {
   // Busca status e data de renovação da assinatura ativa, se houver.
   let assinaturaStatus: string | null = null;
   let renovaEm: string | null = null;
-  if (tier !== "free") {
+  if (situacaoXgestao) {
+    const lida = situacaoXgestao.tier ? situacaoXgestao.assinatura : null;
+    assinaturaStatus = lida?.status ?? null;
+    renovaEm = lida?.renovaEm?.toISOString() ?? null;
+  } else if (tier !== "free") {
     const [ass] = await db
       .select({ status: assinaturas.status, renovaEm: assinaturas.renovaEm })
       .from(assinaturas)
@@ -237,7 +242,16 @@ export async function GET(request: NextRequest) {
 
   // Verifica se o usuário tem CPF/CNPJ cadastrado (necessário para assinar).
   let hasCpfCnpj = false;
-  if (persona === "empreiteiro" || persona === "xgestao") {
+  if (persona === "xgestao") {
+    // PAG-14 — mesma regra do checkout: CPF ou CNPJ válido, da empresa ou da conta.
+    const [emp] = await db
+      .select({ cnpj: empreiteiras.cnpj })
+      .from(empreiteiras)
+      .where(eq(empreiteiras.userId, user.id))
+      .limit(1);
+    const [doc] = await db.select({ cpfCnpj: users.cpfCnpj }).from(users).where(eq(users.id, user.id)).limit(1);
+    hasCpfCnpj = Boolean(documentoXgestaoValido(emp?.cnpj, doc?.cpfCnpj));
+  } else if (persona === "empreiteiro") {
     const [emp] = await db
       .select({ cnpj: empreiteiras.cnpj })
       .from(empreiteiras)
@@ -253,6 +267,49 @@ export async function GET(request: NextRequest) {
     hasCpfCnpj = Boolean(cli?.cnpjCpf?.trim());
   }
 
+  // XG48 — descida de plano agendada (aplicada sozinha na data efetiva).
+  let trocaAgendada: { planoParaId: string; tierPara: string; nomePara: string; valorPara: number; efetivaEm: string } | null = null;
+  if (situacaoXgestao) {
+    const agendada = await trocaAgendadaDoUsuario(db, user.id);
+    if (agendada) {
+      const [planoPara] = await db.select({ nome: planos.nome }).from(planos).where(eq(planos.id, agendada.planoParaId)).limit(1);
+      trocaAgendada = {
+        planoParaId: agendada.planoParaId,
+        tierPara: agendada.tierPara,
+        nomePara: planoPara?.nome ?? agendada.tierPara,
+        valorPara: Number(agendada.valorPara),
+        efetivaEm: agendada.efetivaEm.toISOString(),
+      };
+    }
+  }
+
+  // XG50 — cobrança da assinatura paga que vale: ciclo, valor do ciclo (anual
+  // inteiro no anual) e diferença proporcional de subida ainda não paga, que
+  // entra somada na próxima fatura (XG48).
+  let cobranca: { ciclo: "mensal" | "anual"; valor: number; diferencaPendente: number; proximaEm: string | null; primeiraCobranca: boolean } | null = null;
+  if (situacaoXgestao?.tier && situacaoXgestao.assinatura && situacaoXgestao.assinatura.provider !== "trial") {
+    const [linha] = await db
+      .select({ ciclo: assinaturas.ciclo, valorMensal: planos.valorMensal, valorAnual: planos.valorAnual })
+      .from(assinaturas).innerJoin(planos, eq(planos.id, assinaturas.planoId))
+      .where(eq(assinaturas.id, situacaoXgestao.assinatura.id)).limit(1);
+    if (linha) {
+      const pendente = await db.execute<{ total: string | null }>(sql`
+        SELECT COALESCE(SUM(valor_diferenca), 0)::text AS total FROM assinatura_trocas
+         WHERE assinatura_id = ${situacaoXgestao.assinatura.id} AND tipo = 'subir' AND status = 'aplicada' AND quitada_em IS NULL
+      `).catch(() => ({ rows: [{ total: "0" }] }));
+      const agendadaValor = trocaAgendada ? trocaAgendada.valorPara : null;
+      cobranca = {
+        ciclo: cicloDaAssinatura(linha.ciclo),
+        valor: agendadaValor ?? valorDoCiclo(linha, linha.ciclo),
+        diferencaPendente: Number((pendente.rows[0] as { total: string | null } | undefined)?.total ?? 0),
+        // Cancelada: não há próxima cobrança.
+        proximaEm: situacaoXgestao.assinatura.canceladaEm ? null : situacaoXgestao.assinatura.renovaEm?.toISOString() ?? null,
+        // Assinou no teste (ou voltou no período pago) e ainda não pagou nada.
+        primeiraCobranca: !situacaoXgestao.assinatura.primeiroPagamentoEm,
+      };
+    }
+  }
+
   const response = NextResponse.json({
     persona,
     plano: tier,
@@ -265,6 +322,30 @@ export async function GET(request: NextRequest) {
     ...(planoEmpresa ? {
       somenteLeitura: planoEmpresa.somenteLeitura,
       usoEquipe,
+    } : {}),
+    ...(situacaoXgestao ? {
+      // XG43 — assinatura paga cancelada que segue valendo até o fim do período pago.
+      cancelamentoAgendado: Boolean(
+        situacaoXgestao.tier && situacaoXgestao.assinatura?.provider !== "trial"
+        && situacaoXgestao.assinatura?.status === "ativa" && situacaoXgestao.assinatura?.canceladaEm,
+      ),
+      inadimplente: Boolean(situacaoXgestao.tier && situacaoXgestao.assinatura?.status === "inadimplente"),
+      // XG48 — assinatura paga vigente: trocar de plano é "Mudar para este plano"
+      // (sem checkout). Teste sem assinatura e conta somente leitura assinam.
+      assinaturaPaga: Boolean(
+        situacaoXgestao.tier && situacaoXgestao.assinatura?.provider !== "trial"
+        && (situacaoXgestao.assinatura?.status === "ativa" || situacaoXgestao.assinatura?.status === "inadimplente"),
+      ),
+      trocaAgendada,
+      cobranca,
+      // XG50 — anual preparado e desligado: só aparece com a chave ligada.
+      anualDisponivel: await xgestaoAnualAtivo(),
+      // Regra de 10/11/2026: até quando o acesso vale se cancelar agora (o mês
+      // bônus sem 1º pagamento encurta). Usado no texto do diálogo de cancelamento.
+      acessoSeCancelar: situacaoXgestao.tier && situacaoXgestao.assinatura
+        && situacaoXgestao.assinatura.provider !== "trial" && situacaoXgestao.assinatura.status === "ativa"
+        ? acessoAteAoCancelar(situacaoXgestao.assinatura)?.toISOString() ?? null
+        : null,
     } : {}),
     ...(teste ? { teste } : {}),
   });

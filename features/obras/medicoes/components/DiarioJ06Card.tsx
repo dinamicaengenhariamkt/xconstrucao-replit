@@ -97,7 +97,11 @@ export function DiarioJ06Card({ obraId, canWrite, currentUserId, podeEditar = fa
                 buttonVariant="outline"
                 disabled={fotoIds.length >= 8}
                 testId="upload-diario-foto"
-                onUploaded={(r) => { if (r.publicUrl) setFotoIds((arr) => [...arr, { id: r.id, url: r.publicUrl! }]); }}
+                onUploaded={(r) => {
+                  // EMP-02 — na obra do xgestão a foto é privada: a prévia usa a URL assinada.
+                  const url = r.publicUrl ?? r.signedUrl;
+                  if (url) setFotoIds((arr) => [...arr, { id: r.id, url }]);
+                }}
               />
               <Button onClick={handleSubmit} disabled={createMut.isPending || texto.trim().length < 2} data-testid="button-publicar-diario">
                 {createMut.isPending ? <RiLoader4Line className="w-4 h-4 mr-1 animate-spin" /> : <RiSendPlaneFill className="w-4 h-4 mr-1" />}

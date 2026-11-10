@@ -809,7 +809,7 @@ export function FinanceiroTab({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              {paraExcluir?.descricao} — {paraExcluir && formatCurrency(Number(paraExcluir.valor))}.
+              {paraExcluir?.descricao}: {paraExcluir && formatCurrency(Number(paraExcluir.valor))}.
               A receita e o custo da obra serão recalculados.
             </AlertDialogDescription>
           </AlertDialogHeader>

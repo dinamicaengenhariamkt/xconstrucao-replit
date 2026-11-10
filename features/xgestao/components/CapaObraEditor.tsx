@@ -102,6 +102,7 @@ export function CapaObraEditor({
       <div className="mt-4 flex flex-wrap gap-3">
         <FileUploader
           kind="obra_capa"
+          obraId={obraId}
           accept="image/jpeg,image/png,image/webp"
           label="Enviar nova capa"
           helper="PNG, JPG ou WebP, até 8 MB. Prefira imagens horizontais."

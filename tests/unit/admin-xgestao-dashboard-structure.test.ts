@@ -24,7 +24,9 @@ describe('estrutura do painel admin xgestão', () => {
   });
 
   it('separa assinatura do responsável, empresa e vínculos de equipe', () => {
-    assert.match(dashboardServerSource, /isNull\(xgestaoMembros\.id\)/);
+    // ADM-06: o painel parte da mesma lista do admin; o filtro "titular, não membro" fica no escopo.
+    assert.match(escopoSource, /isNull\(xgestaoMembros\.id\)/);
+    assert.match(dashboardServerSource, /listarAssinantesDetalhados|XgestaoAssinanteDetalhe/);
     assert.match(dashboardServerSource, /membrosEquipe/);
     assert.match(escopoSource, /xgestaoMembroObras/);
     assert.match(pageSource, /Responsáveis com acesso/);

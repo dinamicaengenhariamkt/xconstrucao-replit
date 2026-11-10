@@ -139,7 +139,14 @@ export async function PATCH(
     return r;
   }
 
-  const erroComprovante = await validarComprovante(data.comprovanteFileId, auth.userId!);
+  // O comprovante já vinculado passou pela validação quando entrou. Reenviar o
+  // mesmo id (o modal sempre manda o campo) não pode exigir que quem edita seja
+  // quem enviou: o gestor edita o lançamento do colaborador sem trocar a nota.
+  const comprovanteMudou =
+    data.comprovanteFileId !== undefined && data.comprovanteFileId !== existing.comprovanteFileId;
+  const erroComprovante = comprovanteMudou
+    ? await validarComprovante(data.comprovanteFileId, auth.userId!)
+    : null;
   if (erroComprovante) {
     const r = NextResponse.json({ message: erroComprovante }, { status: 400 });
     setNoCacheHeaders(r);

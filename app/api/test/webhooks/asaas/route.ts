@@ -20,7 +20,8 @@
  *     "gatewaySubscriptionId":   string,   // id da assinatura no ASAS
  *     "gatewayCustomerId":       string,   // id do customer no ASAS
  *     "externalReference":       string,   // "xconstrucao|userId|planoId|ciclo"
- *     "valor":                   number    // valor em R$ (ex: 99.90)
+ *     "valor":                   number,   // valor em R$ (ex: 99.90)
+ *     "dueDate":                 string    // XG43: vencimento YYYY-MM-DD
  *   }
  *
  * ── Resposta ────────────────────────────────────────────────────────────────
@@ -54,11 +55,11 @@ import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
 import { parseExternalRefObra } from "@features/marketplace/split-service";
 import { aplicarEventoAnuncioPago } from "@features/anuncios/self-service/aplicar-evento-anuncio-pago";
 import { parseExternalRefAnuncio } from "@features/anuncios/self-service/asaas-ad-billing";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
   // Hard deny in production regardless of any test env vars.
-  if (process.env.NODE_ENV === "production") return false;
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 function generateEventId(): string {
@@ -70,6 +71,11 @@ const VALID_TYPES = new Set([
   "payment_failed",
   "subscription_canceled",
   "subscription_activated",
+  // XG43 — cobrança futura criada (bônus de +1 mês do teste xgestão).
+  "payment_created",
+  // PAG-03/PAG-04 — cobrança de assinatura apagada; estorno/chargeback.
+  "payment_deleted",
+  "payment_refunded",
   // J46 — evento de status de subconta (KYC). Aceita accountId + accountStatus.
   "account_status_changed",
   "ignored",
@@ -129,6 +135,8 @@ export async function POST(request: NextRequest) {
   const externalReference =
     typeof body.externalReference === "string" ? body.externalReference : undefined;
   const valor = typeof body.valor === "number" ? body.valor : undefined;
+  const dueDate = typeof body.dueDate === "string" ? body.dueDate : undefined;
+  const paymentId = typeof body.paymentId === "string" ? body.paymentId : undefined;
 
   // J31 — pagamento de ANÚNCIO (externalReference `xconstrucao-anuncio|pedidoId`):
   // roteia para o handler de anúncio pago, espelhando o route.ts real.
@@ -164,6 +172,8 @@ export async function POST(request: NextRequest) {
       gatewayCustomerId,
       externalReference,
       valor,
+      dueDate,
+      paymentId,
     });
     return NextResponse.json({ received: true, processed: result.processed });
   } catch (err) {

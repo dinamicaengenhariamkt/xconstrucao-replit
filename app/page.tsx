@@ -192,7 +192,7 @@ export default function HomePage() {
                     Controle e previsibilidade desde o primeiro dia.
                   </p>
                   <p className="text-slate-700 dark:text-slate-200 text-sm font-bold mb-8">
-                    Comece pelo plano Freemium
+                    Teste grátis por 3 meses
                   </p>
                   <div className="mt-auto">
                     <Link

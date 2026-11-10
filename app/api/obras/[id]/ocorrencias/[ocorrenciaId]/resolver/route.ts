@@ -6,6 +6,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
+import { ocorrenciaResolverSchema } from "@features/obras/api/ocorrencia-schemas";
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string; ocorrenciaId: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -22,10 +23,27 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     setNoCacheHeaders(r);
     return r;
   }
+  // Corpo opcional: clientes antigos resolvem sem enviar nada.
+  const texto = await request.text().catch(() => "");
+  let body: unknown = {};
+  try { body = texto ? JSON.parse(texto) : {}; } catch { body = null; }
+  const parsed = ocorrenciaResolverSchema.safeParse(body);
+  if (!parsed.success) {
+    const r = NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  const agora = new Date();
   // UPDATE atômico: só fecha se estava aberta. Resposta 409 se já resolvida.
   const result = await db
     .update(obraOcorrencias)
-    .set({ status: "resolvida", resolvidoPorId: guard.user.id, resolvidoEm: new Date() })
+    .set({
+      status: "resolvida",
+      resolvidoPorId: guard.user.id,
+      resolvidoEm: agora,
+      observacaoResolucao: parsed.data.observacaoResolucao ?? null,
+      atualizadoEm: agora,
+    })
     .where(and(eq(obraOcorrencias.id, ocorrenciaId), eq(obraOcorrencias.obraId, id), eq(obraOcorrencias.status, "aberta")))
     .returning();
   if (result.length === 0) {

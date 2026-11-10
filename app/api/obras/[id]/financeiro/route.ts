@@ -13,7 +13,8 @@ import {
   canWriteObraArea,
 } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
-import { getLancamentoCreatorNames } from "@features/financeiro/lancamentos-service";
+import { getLancamentoCreatorNames, signedUrlForComprovante } from "@features/financeiro/lancamentos-service";
+import { ehObraXgestao } from "@features/xgestao/server/arquivos-obra";
 import { validarComprovante } from "@features/financeiro/api/validar-comprovante";
 import { resolverFornecedor } from "@features/financeiro/api/resolver-fornecedor";
 import {
@@ -102,9 +103,17 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const rows = allRows.filter((row) => canAccessObraFinanceCategory(access, row.categoria));
 
   const creatorNames = await getLancamentoCreatorNames(rows.map((row) => row.id));
-  const r = NextResponse.json({
-    rows: rows.map((row) => ({ ...row, actorName: creatorNames.get(row.id) ?? null })),
-  });
+  // EMP-01 — obra do xgestão: o comprovante (privado) vem com URL assinada,
+  // para quem tem acesso à área abrir sem depender de ser quem o enviou.
+  const xgestao = ehObraXgestao(access.obra);
+  const comAssinatura = await Promise.all(rows.map(async (row) => ({
+    ...row,
+    actorName: creatorNames.get(row.id) ?? null,
+    ...(xgestao
+      ? { comprovanteUrlAssinada: await signedUrlForComprovante(row.comprovanteFileId).catch(() => null) }
+      : {}),
+  })));
+  const r = NextResponse.json({ rows: comAssinatura });
   setNoCacheHeaders(r);
   return r;
 }
@@ -212,7 +221,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   });
 
   const r = NextResponse.json(
-    { ...created, actorName: guard.user.name?.trim() || null },
+    {
+      ...created,
+      actorName: guard.user.name?.trim() || null,
+      ...(ehObraXgestao(access.obra)
+        ? { comprovanteUrlAssinada: await signedUrlForComprovante(created.comprovanteFileId).catch(() => null) }
+        : {}),
+    },
     { status: 201 },
   );
   setNoCacheHeaders(r);

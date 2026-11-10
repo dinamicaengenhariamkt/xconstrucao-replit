@@ -3,7 +3,6 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { atividades, chatThreads, clientes, empreiteiras, financeiro, medicoes, obras, users, xgestaoMembroObras } from "@shared/db/schema";
 import {
-  CNPJ_VALIDO,
   completarPerfilOperacional,
   fetchCapturedEmails,
   loginAs,
@@ -15,6 +14,21 @@ import {
 
 const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
 const SETUP_PASSWORD = "Xconstr@E2E2026!";
+// XG50: teste grátis uma vez por CPF/CNPJ (JA_USOU_TESTE); prefixo por execução evita repetir documento.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
+let cnpjSequence = 3100;
+
+function proximoCnpjValido() {
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, "0")}`;
+  const digito = (digits: string, pesos: number[]) => {
+    const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
+    const resto = soma % 11;
+    return String(resto < 2 ? 0 : 11 - resto);
+  };
+  const primeiro = digito(base, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const segundo = digito(`${base}${primeiro}`, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return `${base}${primeiro}${segundo}`;
+}
 
 async function setupMemberPassword(request: APIRequestContext, email: string) {
   const captured = await fetchCapturedEmails(request, email);
@@ -52,7 +66,7 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
       password: "Xconstr@E2E2026!",
       role: "empreiteiro",
       phone: "11988880000",
-      cpfCnpj: CNPJ_VALIDO,
+      cpfCnpj: proximoCnpjValido(),
       acceptTerms: true,
       ...ANTI_BOT,
     },
@@ -75,6 +89,12 @@ test("XG31 escopa obras por grants, aplica revogação imediata e dá acesso tot
 
   const trial = await request.post("/api/xgestao/teste", { data: {} });
   expect(trial.status(), await trial.text()).toBe(201);
+  // XG43 — o teste é Basic (1 obra); este cenário usa 3 obras: assina o Premium (gateway manual de dev).
+  const catalogo = (await (await request.get("/api/planos?persona=xgestao")).json()) as Array<{ id: string; tier: string }>;
+  const premium = await request.post("/api/assinaturas/checkout", {
+    data: { planoId: catalogo.find((plano) => plano.tier === "premium")!.id, persona: "xgestao", ciclo: "mensal" },
+  });
+  expect(premium.status(), await premium.text()).toBe(201);
   const obraA = await createObra(request, "XG31 Obra A");
   const obraB = await createObra(request, "XG31 Obra B");
   const obraC = await createObra(request, "XG31 Obra C");

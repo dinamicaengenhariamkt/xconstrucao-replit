@@ -15,6 +15,8 @@
   ║   6. "Total conformidade" → "observa a legislação" (§1)                  ║
   ║   7. Placeholders do DPO/controlador sinalizados (§10)                   ║
   ║   8. Removidos: "carrinho de compras" e formulário inexistente           ║
+  ║   9. XG52: e-mail de marketing por consentimento e Brevo como operador  ║
+  ║      (§2.2, §3 e §4)                                                     ║
   ║                                                                          ║
   ║  AÇÃO NECESSÁRIA: preencher todos os campos [ENTRE COLCHETES] e revisar  ║
   ║  com o jurídico. Publicar por /admin/legal (dispara o re-consentimento). ║
@@ -116,7 +118,8 @@ Tratamos dados com fundamento em:
 | Cumprir obrigações fiscais, contábeis e legais | Obrigação legal (inciso II) |
 | Segurança, prevenção a fraude e registro de acessos | Legítimo interesse (inciso IX) e obrigação legal |
 | Melhorias no produto e métricas agregadas | Legítimo interesse (inciso IX) |
-| Comunicações de marketing | Consentimento (inciso I), revogável a qualquer momento |
+| Avisos sobre a conta e a assinatura (fim do teste, cobrança, cancelamento) | Execução de contrato (inciso V) |
+| Comunicações de marketing (dicas e novidades por e-mail) | Consentimento (inciso I), revogável a qualquer momento |
 | Exercício regular de direitos em processo | Inciso VI |
 
 Quando o tratamento se basear em **consentimento**, você pode revogá-lo a qualquer momento, na forma da Seção 7.
@@ -154,13 +157,14 @@ Utilizamos seus dados pessoais para as seguintes finalidades:
 - Cumprir obrigações legais e regulatórias
 - Resolver disputas e fazer cumprir nossos termos
 
-### Marketing (mediante consentimento):
+### Marketing (somente com o seu consentimento):
 
-- Enviar newsletters e materiais promocionais
-- Ofertas personalizadas de serviços
-- Convites para eventos e webinars
+- Enviar dicas de uso e novidades do xgestão por e-mail
+- Convidar quem saiu a voltar, sem oferecer novo teste grátis ou bônus
 
-Você pode cancelar o recebimento de comunicações de marketing a qualquer momento através do link de descadastramento incluído em cada email.
+O consentimento é opcional e fica desmarcado no cadastro. Ele não é condição para criar a conta nem para assinar. Você pode dar ou retirar o consentimento quando quiser em Configurações, na aba Notificações, ou pelo link de descadastro que vai no fim de cada e-mail de marketing, sem precisar entrar na conta. Registramos quando você aceitou, quando retirou e por qual caminho.
+
+Os avisos sobre a sua conta e a sua assinatura (fim do teste, pagamento pendente, cancelamento) não são marketing: continuam sendo enviados mesmo sem o consentimento acima, porque fazem parte do serviço contratado. Os avisos de prazo da assinatura podem ser desligados em Configurações, na aba Notificações.
 
 ## 4. Compartilhamento de Dados
 
@@ -196,6 +200,8 @@ Compartilhamos dados com empresas terceirizadas que nos auxiliam na operação d
 - Ferramentas de análise e monitoramento
 
 Para viabilizar a cobrança da **assinatura**, um **processador de pagamentos terceirizado** recebe dados como seu CPF ou CNPJ, nome e e-mail, necessários ao cadastro e à cobrança recorrente. Os dados do meio de pagamento são tratados diretamente por esse processador, sob a política de privacidade dele. Esse compartilhamento ocorre apenas na medida necessária à cobrança da assinatura.
+
+O envio de e-mails é feito pela **Brevo** (Sendinblue SAS), que atua como **operadora** em nosso nome. Ela recebe seu nome e e-mail para entregar os avisos da conta. Para quem consentiu com o marketing, também recebe a situação da assinatura, o plano e a data de fim do teste, usados só para escolher qual mensagem enviar. Se você retirar o consentimento, seu contato é removido da lista de marketing. Os servidores da Brevo podem ficar fora do Brasil; nesse caso, a transferência observa o art. 33 da LGPD. [REVISAR COM O JURÍDICO: cláusulas do contrato com a Brevo.]
 
 Todos os prestadores de serviço são contratualmente obrigados a proteger seus dados e usá-los apenas para os fins especificados.
 

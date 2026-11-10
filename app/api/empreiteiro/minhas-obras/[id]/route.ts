@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
-import { canAccessObraArea, filterObraPayloadByAreas, findObraAccess } from "@features/obras/api/access";
+import { canAccessObraArea, canAccessObraContrato, filterObraPayloadByAreas, findObraAccess } from "@features/obras/api/access";
+import { ocultarContratoMembro } from "@features/obras/api/equipe-contrato-visibilidade";
 import { buildMinhaObraDetalheReal } from "@features/empreiteiro/minhas-obras/api/build-detalhe-server";
 import type { AreasPermitidas, CategoriasFinanceiroPermitidas } from "@features/xgestao/equipe/permissions";
 
@@ -39,11 +40,16 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   if (!canAccessObraArea(access, "diario")) {
     (filtered as Partial<typeof detalhe>).imagemUrl = "";
   }
+  // EMP-06 — o acordo com cada prestador é dado financeiro.
+  if (!canAccessObraContrato(access) && Array.isArray(filtered.equipe)) {
+    filtered.equipe = filtered.equipe.map(ocultarContratoMembro);
+  }
   const payload = access.xgestaoPermission
     ? {
         ...filtered,
         permissoesXgestao: {
           somenteLeitura: access.xgestaoSomenteLeitura === true || access.xgestaoPermission === "visualizar",
+          bloqueadaPorPlano: access.xgestaoBloqueadaPorPlano === true,
           areasPermitidas: (access.xgestaoAreasPermitidas ?? null) as AreasPermitidas,
           categoriasFinanceiroPermitidas:
             (access.xgestaoCategoriasFinanceiroPermitidas ?? null) as CategoriasFinanceiroPermitidas,

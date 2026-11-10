@@ -12,14 +12,16 @@ test('XG41 oferta aprovada tem preços e cotas separados do catálogo legado', (
   assert.equal(OFERTA_XGESTAO.basic.valoresPublicos, false);
   assert.equal(OFERTA_XGESTAO.premium.valoresPublicos, true);
 });
-test('XG41 SINAPI continua congelado em todos os planos, inclusive no Premium do teste', () => {
+test('XG41 SINAPI continua congelado em todos os planos, inclusive no plano do teste', () => {
   for (const plano of Object.values(OFERTA_XGESTAO)) {
     assert.equal(plano.sinapi, false);
   }
   assert.equal(OFERTA_XGESTAO[TESTE_NOVA_OFERTA.plano].sinapi, false);
 });
-test('XG41 teste Premium por 90 dias termina somente em leitura', () => {
-  assert.deepEqual(TESTE_NOVA_OFERTA, { dias: 90, plano: 'premium', aoVencer: 'somente_leitura' });
+test('XG43 teste Basic por 90 dias, 24h de tolerância e +1 mês para quem assina', () => {
+  assert.deepEqual(TESTE_NOVA_OFERTA, {
+    dias: 90, plano: 'basic', aoVencer: 'somente_leitura', toleranciaHoras: 24, bonusMesesAoAssinar: 1,
+  });
   assert.deepEqual(VALORES_PUBLICOS_APROVADOS, ['contrato', 'recebimentos', 'saldo']);
 });
 test('XG41 titular e pessoa em várias obras não duplicam vagas', () => {

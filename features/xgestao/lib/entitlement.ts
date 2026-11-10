@@ -19,6 +19,8 @@ export type XGestaoEntitlement = {
   hasXgestao: true;
   donoUserId: string;
   papel: 'dono' | 'gestor' | 'colaborador';
+  /** Superadmin vendo a conta de outra pessoa: nada deve agir em nome do titular. */
+  visualizadoPorAdmin?: boolean;
 };
 
 /**
@@ -80,5 +82,6 @@ export async function getCurrentXGestaoEntitlement(): Promise<XGestaoEntitlement
     return null;
   }
 
-  return assertXgestaoUser(subject.id);
+  const entitlement = await assertXgestaoUser(subject.id);
+  return entitlement && subjectId !== actor.id ? { ...entitlement, visualizadoPorAdmin: true } : entitlement;
 }

@@ -28,9 +28,13 @@ import { cn } from '@shared/lib/utils';
 import { useAuth } from '@features/auth/hooks/use-auth';
 import { useToast } from '@shared/hooks/use-toast';
 import { CepInput } from '@features/perfil/components/CepInput';
-import { formatCnpj, isCepValid, isCnpjValid, unformatCnpj } from '@shared/lib/masks';
+import { formatCpfCnpj, isCepValid, isCpfCnpjValid, unformatCpfCnpj } from '@shared/lib/masks';
 import { XGESTAO_PERFIL_OPERACIONAL_KEY } from '@features/xgestao/hooks/use-perfil-operacional';
 import { ESPECIALIDADES_PERMITIDAS } from '@shared/lib/especialidades';
+import {
+  useAlterarConsentimentoMarketing,
+  useConsentimentoMarketing,
+} from '@features/xgestao/marketing/hooks/use-consentimento-marketing';
 
 type Section = 'perfil' | 'empresa' | 'notificacoes' | 'seguranca' | 'plano';
 
@@ -77,6 +81,9 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
   const updatePerfil = useUpdatePerfilEmpreiteiro();
   const { data: preferencias } = usePreferencias();
   const updatePreferencias = useUpdatePreferencias();
+  // XG52 — e-mail de dicas e novidades (consentimento LGPD), só do responsável.
+  const { data: marketing } = useConsentimentoMarketing({ enabled: isOwner });
+  const alterarMarketing = useAlterarConsentimentoMarketing();
   const [form, setForm] = useState({
     nome: '',
     responsavel: '',
@@ -127,7 +134,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
 
   const saveProfile = async () => {
     const errors: Record<string, string> = {};
-    if (form.cnpj && !isCnpjValid(form.cnpj)) errors.cnpj = 'Informe um CNPJ válido.';
+    if (form.cnpj && !isCpfCnpjValid(form.cnpj)) errors.cnpj = 'Informe um CPF ou CNPJ válido.';
     if (form.cep && !isCepValid(form.cep)) errors.cep = 'Informe um CEP com 8 dígitos.';
     if (form.endereco.trim() && form.endereco.trim().length < 3) {
       errors.endereco = 'Informe um endereço válido.';
@@ -141,7 +148,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
     try {
       await updatePerfil.mutateAsync({
         ...form,
-        cnpj: form.cnpj ? unformatCnpj(form.cnpj) : null,
+        cnpj: form.cnpj ? unformatCpfCnpj(form.cnpj) : null,
         cep: form.cep || null,
         endereco: form.endereco.trim() || null,
         raioKm: form.raioKm ? Number(form.raioKm) : null,
@@ -158,6 +165,15 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
     try {
       await updatePreferencias.mutateAsync({ notificacoes: notifications });
       toast({ title: 'Preferências salvas' });
+    } catch {
+      toast({ title: 'Não foi possível salvar', variant: 'destructive' });
+    }
+  };
+
+  const salvarMarketing = async (aceitar: boolean) => {
+    try {
+      await alterarMarketing.mutateAsync(aceitar);
+      toast({ title: aceitar ? 'Pronto, você vai receber dicas e novidades' : 'Pronto, você não vai mais receber dicas e novidades' });
     } catch {
       toast({ title: 'Não foi possível salvar', variant: 'destructive' });
     }
@@ -233,11 +249,11 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                   <CardHeader><CardTitle>Dados da empresa</CardTitle></CardHeader>
                   <CardContent className="grid gap-5 sm:grid-cols-2">
                     <Field label="Nome da empresa"><Input value={form.nome} onChange={setField('nome')} /></Field>
-                    <Field label="CNPJ">
+                    <Field label="CPF ou CNPJ">
                       <Input
-                        value={formatCnpj(form.cnpj)}
+                        value={formatCpfCnpj(form.cnpj)}
                         onChange={(event) => {
-                          setForm((current) => ({ ...current, cnpj: unformatCnpj(event.target.value) }));
+                          setForm((current) => ({ ...current, cnpj: unformatCpfCnpj(event.target.value) }));
                           setFieldErrors((current) => ({ ...current, cnpj: '' }));
                         }}
                         inputMode="numeric"
@@ -352,6 +368,30 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                       </div>
                     ))}
                     <div className="flex justify-end pt-5"><Button onClick={saveNotifications} disabled={updatePreferencias.isPending}><RiSave3Line className="mr-2 size-4" />Salvar preferências</Button></div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* XG52 — consentimento de e-mail de marketing (LGPD): liga e desliga na hora. */}
+              {section === 'notificacoes' && isOwner && (
+                <Card className="mt-6" data-testid="xgestao-marketing-card">
+                  <CardHeader><CardTitle>Dicas e novidades</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between gap-4 py-2">
+                      <div>
+                        <p className="text-sm font-medium">Receber dicas e novidades do xgestão por e-mail</p>
+                        <p className="text-xs text-muted-foreground">
+                          Opcional. Você pode sair quando quiser, aqui ou pelo link no fim de cada e-mail. Os avisos sobre a sua conta não dependem desta opção.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={marketing?.ativo ?? false}
+                        disabled={!marketing || alterarMarketing.isPending}
+                        onCheckedChange={salvarMarketing}
+                        aria-label="Receber dicas e novidades do xgestão por e-mail"
+                        data-testid="xgestao-marketing-switch"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               )}

@@ -112,7 +112,7 @@ export function generateProductSchema() {
       availability: 'https://schema.org/InStock',
       description: 'Teste gratuito por 3 meses',
     },
-    description: 'Sistema completo de gestão de obras com IA para otimizar custos, prazos e recursos',
+    description: 'Gestão de obras com diário, financeiro, fotos, equipe e link para o cliente acompanhar o andamento',
     featureList: [
       'Orçamento e gasto por obra',
       'Controle de Obras',

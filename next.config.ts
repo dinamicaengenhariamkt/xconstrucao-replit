@@ -29,6 +29,18 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // PUB-06 — link público da obra: o token está na URL. Não indexar, não
+        // vazar a URL por Referer ao abrir links externos e não deixar a página
+        // ser embutida em iframe de terceiros.
+        source: "/publico/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+        ],
+      },
+      {
         source: "/acesso-plataforma",
         headers: [
           {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, type MouseEvent } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -34,12 +35,44 @@ function ehPdf(mime?: string) {
 interface DocumentoPreviewModalProps {
   doc: ObraDocumento | null;
   onOpenChange: (open: boolean) => void;
+  /**
+   * E2E-08 — gera uma URL assinada nova. A da abertura vale 15 min; com o
+   * modal aberto mais que isso, a imagem falha e os botões dariam erro.
+   */
+  onAssinar?: (doc: ObraDocumento) => Promise<string | null>;
 }
 
-export function DocumentoPreviewModal({ doc, onOpenChange }: DocumentoPreviewModalProps) {
-  if (!doc) return null;
+export function DocumentoPreviewModal(props: DocumentoPreviewModalProps) {
+  if (!props.doc) return null;
+  // `key` zera o estado (URL renovada, tentativa feita) a cada documento.
+  return <PreviewConteudo key={`${props.doc.id}:${props.doc.url ?? ''}`} {...props} doc={props.doc} />;
+}
 
-  const url = doc.url ?? null;
+function PreviewConteudo({
+  doc,
+  onOpenChange,
+  onAssinar,
+}: DocumentoPreviewModalProps & { doc: ObraDocumento }) {
+  const [urlRenovada, setUrlRenovada] = useState<string | null>(null);
+  const [jaRenovou, setJaRenovou] = useState(false);
+
+  const url = urlRenovada ?? doc.url ?? null;
+
+  // Imagem que falhou ao carregar: assina de novo uma vez só.
+  const aoFalharImagem = () => {
+    if (jaRenovou || !onAssinar) return;
+    setJaRenovou(true);
+    void onAssinar(doc).then((nova) => {
+      if (nova && nova !== url) setUrlRenovada(nova);
+    });
+  };
+
+  const abrirAssinado = async (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!onAssinar || doc.isLink) return;
+    e.preventDefault();
+    const nova = (await onAssinar(doc)) ?? url;
+    if (nova) window.open(nova, '_blank', 'noopener,noreferrer');
+  };
   const podeExibir = Boolean(url) && (ehImagem(doc.mime) || ehPdf(doc.mime));
 
   return (
@@ -68,6 +101,7 @@ export function DocumentoPreviewModal({ doc, onOpenChange }: DocumentoPreviewMod
             alt={doc.nome}
             className="w-full max-h-[65vh] object-contain rounded-lg bg-gray-50 dark:bg-gray-900"
             data-testid="preview-imagem"
+            onError={aoFalharImagem}
           />
         ) : ehPdf(doc.mime) ? (
           <iframe
@@ -95,13 +129,13 @@ export function DocumentoPreviewModal({ doc, onOpenChange }: DocumentoPreviewMod
             {url && (
               <>
                 <Button variant="outline" asChild>
-                  <a href={url} target="_blank" rel="noopener noreferrer">
+                  <a href={url} target="_blank" rel="noopener noreferrer" onClick={abrirAssinado}>
                     <IconOpenInNew className="w-4 h-4 mr-1" />
                     Abrir em nova aba
                   </a>
                 </Button>
                 <Button asChild>
-                  <a href={url} download={doc.nome}>
+                  <a href={url} download={doc.nome} onClick={abrirAssinado}>
                     <IconDownload className="w-4 h-4 mr-1" />
                     Baixar
                   </a>

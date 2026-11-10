@@ -23,6 +23,8 @@ export type ObraShare = {
   visualizacoes: number;
   ultimoAcessoEm: string | null;
   secoes: SecoesPublicas;
+  /** E2E-03 — pausado pela troca de plano: não abre para o cliente, só revoga. */
+  pausadoPorPlano?: boolean;
 };
 
 export type ObraSharesState = { shares: ObraShare[]; limite: number; valoresPublicos: boolean };

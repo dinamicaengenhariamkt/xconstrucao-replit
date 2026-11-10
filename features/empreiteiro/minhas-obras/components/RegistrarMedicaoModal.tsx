@@ -160,7 +160,9 @@ export function RegistrarMedicaoModal({
   };
 
   const handleUploaded = (file: CommitResponse) => {
-    if (!file.publicUrl) {
+    // EMP-02 — obra do xgestão: a foto é privada e chega com URL assinada.
+    const url = file.publicUrl ?? file.signedUrl;
+    if (!url) {
       toast({
         title: 'Falha no upload',
         description: 'A foto foi enviada, mas a URL pública não retornou. Tente novamente.',
@@ -170,7 +172,7 @@ export function RegistrarMedicaoModal({
     }
     setFotos((prev) => [
       ...prev,
-      { fileId: file.id, url: file.publicUrl as string, name: file.originalName },
+      { fileId: file.id, url, name: file.originalName },
     ]);
   };
 
@@ -345,6 +347,7 @@ export function RegistrarMedicaoModal({
               )}
               <FileUploader
                 kind="obra_foto"
+                obraId={obraId}
                 accept="image/jpeg,image/png,image/webp"
                 label="Adicionar foto"
                 helper="JPEG, PNG ou WEBP — até 8 MB cada, no máximo 20 fotos."

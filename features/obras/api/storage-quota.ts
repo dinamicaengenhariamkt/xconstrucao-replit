@@ -1,6 +1,6 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { obraAnexos, obraFotos, userFiles } from "@shared/db/schema";
+import { obraAnexos, obraFotos, obras, userFiles } from "@shared/db/schema";
 import { QUOTA_OBRA_BYTES } from "@shared/lib/storage/validation";
 
 /**
@@ -24,7 +24,32 @@ export interface ObraStorageUso {
   disponivelBytes: number;
 }
 
+function montarUso(usadoBytes: number, arquivos: number): ObraStorageUso {
+  const limiteBytes = QUOTA_OBRA_BYTES;
+  return {
+    usadoBytes,
+    limiteBytes,
+    arquivos,
+    percentual: Math.min(100, Math.round((usadoBytes / limiteBytes) * 100)),
+    disponivelBytes: Math.max(0, limiteBytes - usadoBytes),
+  };
+}
+
 export async function calcularUsoObra(obraId: string): Promise<ObraStorageUso> {
+  // EMP-04 — numa obra do xgestão a conta inclui todo arquivo ligado a ela
+  // (fotos de diário e de ocorrência, capa, contratos da equipe, comprovantes),
+  // sem contar duas vezes o mesmo arquivo. O marketplace segue com a regra
+  // original (anexos + galeria).
+  const [obra] = await db
+    .select({ clienteId: obras.clienteId, empreiteiraId: obras.empreiteiraId })
+    .from(obras)
+    .where(eq(obras.id, obraId));
+  if (obra && obra.clienteId === null && obra.empreiteiraId !== null) {
+    const { usoArquivosDaObra } = await import("@features/xgestao/server/arquivos-obra");
+    const uso = await usoArquivosDaObra(obraId);
+    return montarUso(uso.bytes, uso.arquivos);
+  }
+
   // Uma query por origem; `UNION` exigiria montar SQL cru sem ganho real.
   const [anexos] = await db
     .select({
@@ -46,15 +71,7 @@ export async function calcularUsoObra(obraId: string): Promise<ObraStorageUso> {
 
   const usadoBytes = Number(anexos?.bytes ?? 0) + Number(fotos?.bytes ?? 0);
   const arquivos = (anexos?.total ?? 0) + (fotos?.total ?? 0);
-  const limiteBytes = QUOTA_OBRA_BYTES;
-
-  return {
-    usadoBytes,
-    limiteBytes,
-    arquivos,
-    percentual: Math.min(100, Math.round((usadoBytes / limiteBytes) * 100)),
-    disponivelBytes: Math.max(0, limiteBytes - usadoBytes),
-  };
+  return montarUso(usadoBytes, arquivos);
 }
 
 export interface QuotaCheck {
@@ -84,4 +101,20 @@ export async function verificarQuotaObra(
       `Esta obra já usa ${mb(uso.usadoBytes)} MB de ${mb(uso.limiteBytes)} MB. ` +
       `O arquivo tem ${mb(novoArquivoBytes)} MB e não cabe — remova algum arquivo antes.`,
   };
+}
+
+/**
+ * EMP-04 — reconfere a quota no VÍNCULO (POST fotos/anexos/diário). O presign
+ * e o commit checam com o tamanho do arquivo, mas o vínculo é o que de fato
+ * coloca o arquivo na obra; sem esta checagem, arquivos enviados sem `obraId`
+ * (ou o mesmo arquivo em várias obras) escapavam do limite.
+ */
+export async function verificarQuotaVinculo(obraId: string, fileIds: string[]): Promise<QuotaCheck> {
+  const ids = Array.from(new Set(fileIds));
+  if (ids.length === 0) return { ok: true, uso: await calcularUsoObra(obraId) };
+  const [linha] = await db
+    .select({ bytes: sql<string>`COALESCE(SUM(${userFiles.sizeBytes}), 0)` })
+    .from(userFiles)
+    .where(and(inArray(userFiles.id, ids), isNull(userFiles.deletedAt)));
+  return verificarQuotaObra(obraId, Number(linha?.bytes ?? 0));
 }

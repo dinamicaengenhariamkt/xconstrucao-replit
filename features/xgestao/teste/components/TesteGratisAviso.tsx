@@ -1,18 +1,18 @@
 'use client';
 
 /**
- * XG35 — teste grátis no layout do xgestão (só para o responsável pela conta).
+ * XG35/XG43 — teste grátis no layout do xgestão (só para o responsável pela conta).
  *
- * - Barra fina abaixo do topo: dias restantes do teste, oferta do teste ou o
- *   lembrete do plano Free com chamada para os planos. Plano pago: nada.
- * - Diálogo de primeiro acesso oferecendo o teste (ou assinar direto), só no
- *   dashboard. Dispensar é conveniência por navegador (`localStorage`); a barra
- *   continua oferecendo.
- * - Diálogo de fim do teste: "Continuar no Free" grava a resposta no servidor e
- *   não volta a aparecer; "Ver planos" leva à aba Plano.
+ * - Barra fina abaixo do topo, em toda página: relógio regressivo do teste
+ *   (com segundos nas últimas 24h), as 24h de tolerância depois do fim, o +1 mês
+ *   para quem assina no último mês, cancelamento agendado e pagamento pendente.
+ * - O teste começa sozinho no primeiro acesso (layout do servidor). O diálogo
+ *   de oferta só aparece se esse início falhar ou para ex-assinante sem teste.
+ * - Diálogo de fim do teste: "Continuar em somente leitura" grava a resposta no
+ *   servidor e não volta a aparecer; "Ver planos" leva à aba Plano.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +28,7 @@ import {
 } from '@shared/components/ui/dialog';
 import { usePerfilPlano, usePlanos } from '@features/planos/ui/use-planos';
 import { XGESTAO_HOME } from '../../routes';
+import { formatarContagem } from '../contagem';
 
 const PLANOS_HREF = '/xgestao/configuracoes?tab=plano';
 const OFERTA_DISPENSADA_KEY = 'xgestao:teste-oferta-dispensada';
@@ -46,6 +47,26 @@ function dispensarOferta() {
   } catch {
     // Sem storage (aba privada): a oferta volta no próximo acesso, a barra segue.
   }
+}
+
+const DIA_MS = 86_400_000;
+const CARENCIA_INADIMPLENCIA_MS = 7 * DIA_MS;
+/** Faixa do +1 mês: aparece no último mês do teste (estratégia comercial). */
+const JANELA_BONUS_DIAS = 30;
+
+function dataCurta(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+/** Agora que avança sozinho: a cada segundo perto do fim, a cada 30s no resto. */
+function useAgora(rapido: boolean): number {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    setAgora(Date.now());
+    const id = window.setInterval(() => setAgora(Date.now()), rapido ? 1_000 : 30_000);
+    return () => window.clearInterval(id);
+  }, [rapido]);
+  return agora;
 }
 
 async function postar(url: string) {
@@ -72,10 +93,15 @@ export function TesteGratisAviso() {
   });
 
   const teste = perfil?.teste;
+  const fimMs = teste?.fimTeste ? new Date(teste.fimTeste).getTime() : null;
+  const bloqueioMs = teste?.bloqueioEm ? new Date(teste.bloqueioEm).getTime() : null;
+  // Segundos só quando falta menos de 1 dia para o fim ou para o bloqueio.
+  const alvoMs = teste?.emTeste ? (teste.emTolerancia ? bloqueioMs : fimMs) : null;
+  const agora = useAgora(alvoMs !== null && alvoMs - Date.now() < DIA_MS);
   if (!perfil || !teste) return null;
 
   const nomePlanoTeste =
-    planos?.find((p) => p.tier === teste.tierTeste)?.nome ?? 'Premium';
+    planos?.find((p) => p.tier === teste.tierTeste)?.nome ?? 'Basic';
   const noFree = perfil.somenteLeitura === true;
   // Só no dashboard (porta de entrada): no console da obra o diálogo disputaria a tela com o tour guiado.
   const mostrarOferta = pathname === XGESTAO_HOME && noFree && teste.elegivel && !ofertaFechada && !ofertaFoiDispensada();
@@ -86,20 +112,59 @@ export function TesteGratisAviso() {
     setOfertaFechada(true);
   };
 
+  const linkAssinar = (texto: string) => (
+    <Link href={PLANOS_HREF} className="shrink-0 font-semibold underline underline-offset-2" data-testid="link-teste-assinar">
+      {texto}
+    </Link>
+  );
+
   let barra: ReactNode = null;
-  if (teste.emTeste) {
-    const dias = teste.diasRestantes ?? 0;
+  if (teste.emTeste && fimMs !== null) {
+    const emTolerancia = teste.emTolerancia || agora >= fimMs;
+    const restanteMs = (emTolerancia ? (bloqueioMs ?? fimMs) : fimMs) - agora;
+    // XG50 — sem o +1 mês quando o bônus já foi usado (conta ou CPF/CNPJ).
+    const mostrarBonus = teste.bonusDisponivel !== false && (emTolerancia || fimMs - agora <= JANELA_BONUS_DIAS * DIA_MS);
     barra = (
       <>
         <span className="flex min-w-0 items-center gap-2">
           <RiTimeLine className="shrink-0" />
-          <span className="truncate">
-            Teste grátis do plano {nomePlanoTeste}: {dias === 1 ? 'falta 1 dia' : `faltam ${dias} dias`}.
+          <span className="min-w-0" data-testid="xgestao-barra-contagem">
+            {emTolerancia
+              ? <>Seu teste grátis terminou. A edição será bloqueada em <strong className="tabular-nums">{formatarContagem(restanteMs)}</strong>.</>
+              : <>Teste grátis do plano {nomePlanoTeste}: termina em <strong className="tabular-nums">{formatarContagem(restanteMs)}</strong>.</>}
+            {mostrarBonus && (
+              <span className="font-semibold" data-testid="xgestao-barra-bonus">
+                {' '}Assine agora e ganhe +1 mês grátis.
+              </span>
+            )}
           </span>
         </span>
-        <Link href={PLANOS_HREF} className="shrink-0 font-semibold underline underline-offset-2" data-testid="link-teste-assinar">
-          Assinar agora
-        </Link>
+        {linkAssinar('Assinar agora')}
+      </>
+    );
+  } else if (perfil.cancelamentoAgendado && perfil.renovaEm) {
+    barra = (
+      <>
+        <span className="flex min-w-0 items-center gap-2" data-testid="xgestao-barra-cancelamento">
+          <RiTimeLine className="shrink-0" />
+          <span className="min-w-0">
+            Assinatura cancelada. Você continua com acesso completo até {dataCurta(perfil.renovaEm)}; depois, a conta fica somente para leitura.
+          </span>
+        </span>
+        {linkAssinar('Assinar novamente')}
+      </>
+    );
+  } else if (perfil.inadimplente && perfil.renovaEm) {
+    const limite = new Date(new Date(perfil.renovaEm).getTime() + CARENCIA_INADIMPLENCIA_MS).toISOString();
+    barra = (
+      <>
+        <span className="flex min-w-0 items-center gap-2" data-testid="xgestao-barra-inadimplente">
+          <RiTimeLine className="shrink-0" />
+          <span className="min-w-0">
+            Não conseguimos confirmar o pagamento. Regularize até {dataCurta(limite)} para continuar editando.
+          </span>
+        </span>
+        {linkAssinar('Ver plano')}
       </>
     );
   } else if (noFree) {
@@ -110,7 +175,9 @@ export function TesteGratisAviso() {
           <span className="truncate">
             {teste.elegivel
               ? `Experimente o plano ${nomePlanoTeste} grátis por ${teste.duracaoDias} dias.`
-              : 'Conta somente para leitura. Assine para voltar a editar; seus dados estão preservados.'}
+              : teste.testeNegadoPorDocumento
+                ? 'Esse documento já usou o período de teste. Você pode assinar quando quiser.'
+                : 'Conta somente para leitura. Assine para voltar a editar; seus dados estão preservados.'}
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-3">

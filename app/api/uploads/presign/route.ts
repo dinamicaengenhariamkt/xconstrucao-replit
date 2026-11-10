@@ -10,6 +10,9 @@ import {
 } from "@shared/lib/storage";
 import { findObraAccess, canWriteObraArea, canWriteObraContent } from "@features/obras/api/access";
 import { verificarQuotaObra } from "@features/obras/api/storage-quota";
+import { visibilidadeDoUpload } from "@features/xgestao/server/arquivos-obra";
+import { logError } from "@/server/lib/logger";
+import { erroSomenteLeituraUpload } from "@features/xgestao/server/guard-mutacao";
 
 const bodySchema = z.object({
   kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "obra_capa", "comprovante_pagamento", "candidatura_anexo", "obra_foto", "anuncio_criativo", "cliente_documento"]),
@@ -55,11 +58,30 @@ export async function POST(request: NextRequest) {
     return r;
   }
 
+  // EMP-05 — conta xgestão somente leitura não envia arquivo de obra.
+  const erroLeitura = await erroSomenteLeituraUpload(guard.user, parsed.data.kind, parsed.data.obraId);
+  if (erroLeitura) {
+    const r = NextResponse.json({ code: "XGESTAO_SOMENTE_LEITURA", message: erroLeitura }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // EMP-02 — obra do xgestão: anexo, contrato, foto e capa nascem privados.
+  // Decidido antes da validação porque a allowlist de CAD (EMP-11) só vale lá.
+  const visibility = await visibilidadeDoUpload({
+    kind: parsed.data.kind as UploadKind,
+    obraId: parsed.data.obraId,
+    userId: guard.user.id,
+    role: guard.user.role,
+  });
+
   const v = validateUpload({
     kind: parsed.data.kind as UploadKind,
     mime: parsed.data.mime,
     size: parsed.data.size,
     role: guard.user.role,
+    filename: parsed.data.filename || parsed.data.originalName,
+    restringirCad: visibility === "private",
   });
   if (!v.ok) {
     const r = NextResponse.json({ message: v.message }, { status: 400 });
@@ -99,21 +121,28 @@ export async function POST(request: NextRequest) {
   }
 
   const filename = (parsed.data.filename || parsed.data.originalName)!;
-  const key = buildKey({
-    kind: parsed.data.kind as UploadKind,
-    role: guard.user.role as "admin" | "contratante" | "empreiteiro" | "superadmin",
-    userId: guard.user.id,
-    originalName: filename,
-    extras: parsed.data.extras,
-  });
-
   try {
+    const key = buildKey({
+      kind: parsed.data.kind as UploadKind,
+      role: guard.user.role as "admin" | "contratante" | "empreiteiro" | "superadmin",
+      userId: guard.user.id,
+      originalName: filename,
+      extras: parsed.data.extras,
+      visibility,
+    });
     const uploadUrl = await createSignedUploadUrl({ key, mime: parsed.data.mime });
     const r = NextResponse.json({ uploadUrl, key, headers: { "Content-Type": parsed.data.mime } });
     setNoCacheHeaders(r);
     return r;
   } catch (err) {
     console.error("[uploads/presign]", err);
+    // ADM-04 — erro de upload também vai para `app_errors`.
+    await logError("error", "Falha ao gerar URL de upload", {
+      route: "/api/uploads/presign",
+      userId: guard.user.id,
+      stack: err instanceof Error ? err.stack : undefined,
+      meta: { kind: parsed.data.kind, obraId: parsed.data.obraId ?? null, size: parsed.data.size },
+    });
     const r = NextResponse.json(
       { message: "Falha ao gerar URL de upload." },
       { status: 500 },

@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, username, password, role, phone, cpfCnpj, xgestao } = parsed.data;
+    const { name, email, username, password, role, phone, cpfCnpj, xgestao, marketingOptIn } = parsed.data;
     const userAgent = request.headers.get("user-agent") || null;
 
     // J30 — bloqueio de cadastro por perfil. `anunciante` nunca é bloqueado (porta
@@ -150,6 +150,10 @@ export async function POST(request: NextRequest) {
         role,
         phone: phone || null,
         emailVerified: null,
+        // XG52 — consentimento de marketing só no cadastro do xgestão e só se marcado.
+        ...(xgestao && marketingOptIn === true
+          ? { marketingConsentimentoEm: new Date(), marketingOrigem: "cadastro" as const }
+          : {}),
       },
       { cpfCnpj: cpfCnpj || undefined, xgestao },
     );
@@ -179,6 +183,18 @@ export async function POST(request: NextRequest) {
         { message: "Não foi possível registrar o aceite dos termos. Tente novamente." },
         500
       );
+    }
+
+    // XG52 — prova do opt-in de marketing (quando, IP e navegador) em audit_logs.
+    if (xgestao && marketingOptIn === true) {
+      const { recordAudit } = await import("@features/auth/api/audit");
+      await recordAudit({
+        actorId: user.id,
+        action: "xgestao.marketing.consentiu",
+        targetUserId: user.id,
+        payload: { origem: "cadastro" },
+        request,
+      });
     }
 
     const verificationToken = createEmailVerificationToken(user.id, user.email);

@@ -7,9 +7,11 @@ import { obraEquipe, userFiles } from "@shared/db/schema";
 import { deleteObject } from "@shared/lib/storage";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraContrato, canWriteObraArea } from "@features/obras/api/access";
+import { ocultarContratoMembro } from "@features/obras/api/equipe-contrato-visibilidade";
 import { contratoFields } from "@features/obras/api/equipe-contrato-schema";
 import { validarContratoMembro } from "@features/obras/api/validar-contrato-membro";
+import { descartarArquivos, ehObraXgestao } from "@features/xgestao/server/arquivos-obra";
 
 // Sem `superRefine` aqui de propósito: num PATCH parcial ele só enxergaria o
 // que veio no corpo. Se o membro já tem arquivo e chega um patch com só o link,
@@ -65,6 +67,16 @@ export async function PATCH(
     return r;
   }
   const data = parsed.data;
+  // EMP-06 — PIX, valor e contrato do prestador são dado financeiro. Membro sem
+  // acesso ao contrato da obra não os grava (o modal já não os envia para ele).
+  const podeVerContrato = canAccessObraContrato(access);
+  const mexeNoContrato = (["pixChave", "valorContrato", "contratoFileId", "contratoLinkUrl"] as const)
+    .some((campo) => data[campo] !== undefined);
+  if (mexeNoContrato && !podeVerContrato) {
+    const r = NextResponse.json({ message: "Sem permissão para alterar o contrato do prestador." }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   if (access.obra.clienteId === null && data.valorContrato != null && !dinheiroApiValido(data.valorContrato)) {
     const r = NextResponse.json({ message: "Informe o contrato com no máximo duas casas decimais." }, { status: 400 });
     setNoCacheHeaders(r);
@@ -118,13 +130,26 @@ export async function PATCH(
     .set(updateData)
     .where(eq(obraEquipe.id, membroId))
     .returning();
+  // EMP-12 — contrato trocado ou removido numa obra do xgestão: o arquivo
+  // antigo sai do banco e do R2 (antes ficava órfão, ocupando a quota).
+  if (
+    ehObraXgestao(access.obra) &&
+    data.contratoFileId !== undefined &&
+    existing.contratoFileId &&
+    existing.contratoFileId !== updated.contratoFileId
+  ) {
+    await descartarArquivos([existing.contratoFileId], {
+      route: "/api/obras/[id]/equipe/[membroId]",
+      userId: guard.user.id,
+    });
+  }
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.equipe.update",
     payload: { obraId: id, membroId, changes: Object.keys(data) },
     request,
   });
-  const r = NextResponse.json(updated);
+  const r = NextResponse.json(podeVerContrato ? updated : ocultarContratoMembro(updated));
   setNoCacheHeaders(r);
   return r;
 }
@@ -154,6 +179,11 @@ export async function DELETE(
     .from(obraEquipe)
     .leftJoin(userFiles, eq(userFiles.id, obraEquipe.contratoFileId))
     .where(and(eq(obraEquipe.id, membroId), eq(obraEquipe.obraId, id)));
+  if (!alvo) {
+    const r = NextResponse.json({ message: "Item não encontrado" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
 
   await db.delete(obraEquipe).where(and(eq(obraEquipe.id, membroId), eq(obraEquipe.obraId, id)));
 

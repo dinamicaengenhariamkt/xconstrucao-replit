@@ -56,6 +56,49 @@ export function isAsaasSandbox(): boolean {
   return getAsaasEnvironment() === "sandbox";
 }
 
+/**
+ * PAG-08 — confere se a chave do Asaas combina com o ambiente configurado.
+ * Chave de sandbox (homologação) contém `_hmlg_`; a de produção não. Chave
+ * de um ambiente com URL do outro faz o Asaas recusar tudo com 401, ou pior,
+ * deixa a plataforma "no ar" cobrando no ambiente errado sem ninguém notar.
+ *
+ * Função pura sobre o env: nunca devolve nem loga a chave, só o motivo.
+ * Só confere quando `PAYMENT_GATEWAY=asaas`.
+ */
+export type ConferenciaChaveAsaas = { ok: true } | { ok: false; motivo: string };
+
+export function conferirChaveAsaas(
+  env: Record<string, string | undefined> = process.env,
+): ConferenciaChaveAsaas {
+  if ((env.PAYMENT_GATEWAY ?? "").toLowerCase() !== "asaas") return { ok: true };
+  const ambiente = env.ASAAS_ENVIRONMENT;
+  if (ambiente !== "sandbox" && ambiente !== "production") {
+    return { ok: false, motivo: `ASAAS_ENVIRONMENT ausente ou inválido ("${ambiente ?? ""}"); use sandbox ou production.` };
+  }
+  const chave = env.ASAAS_API_KEY ?? "";
+  if (!chave) return { ok: false, motivo: "ASAAS_API_KEY não configurada." };
+  const chaveDeSandbox = chave.includes("_hmlg_");
+  if (ambiente === "sandbox" && !chaveDeSandbox) {
+    return { ok: false, motivo: "ASAAS_ENVIRONMENT=sandbox, mas a ASAAS_API_KEY é de produção." };
+  }
+  if (ambiente === "production" && chaveDeSandbox) {
+    return { ok: false, motivo: "ASAAS_ENVIRONMENT=production, mas a ASAAS_API_KEY é de sandbox (_hmlg_)." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Em produção, configuração incoerente recusa o checkout (decisão PAG-08):
+ * melhor não abrir pagamento do que abrir no ambiente errado. Fora de produção
+ * só confere no boot (aviso). Lança com prefixo `[asaas]`, que o checkout
+ * converte em GATEWAY_ERROR com mensagem genérica ao usuário.
+ */
+export function exigirChaveAsaasCoerente(env: Record<string, string | undefined> = process.env): void {
+  if (env.NODE_ENV !== "production") return;
+  const conferencia = conferirChaveAsaas(env);
+  if (!conferencia.ok) throw new Error(`[asaas] configuração incoerente: ${conferencia.motivo}`);
+}
+
 /** URL hospedada do Checkout a partir do ID retornado pelo Asaas. */
 export function getAsaasCheckoutUrl(checkoutId: string): string {
   const host = isAsaasSandbox() ? "https://sandbox.asaas.com" : "https://asaas.com";

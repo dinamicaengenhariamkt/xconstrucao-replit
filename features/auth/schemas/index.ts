@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { evaluatePasswordPolicy } from "./password";
 import { isCpfCnpjValid, unformatCpfCnpj } from "@shared/lib/masks";
+import { MENSAGEM_TELEFONE_INVALIDO, somenteDigitosTelefone, telefoneBrValido } from "@shared/lib/telefone-br";
 
 const emailField = z
   .string()
@@ -33,7 +34,17 @@ export const registerSchema = z
     // Produto adicional: mantém users.role como empreiteiro e provisiona o
     // entitlement xgestão separadamente no registro.
     xgestao: z.boolean().optional(),
-    phone: z.string().optional(),
+    // XG52 — telefone segue opcional (o Asaas não exige), mas se vier tem de ser
+    // BR com DDD (10 ou 11 dígitos). Vazio vira ausente; gravado só com dígitos.
+    phone: z
+      .string()
+      .optional()
+      .transform((v) => (v && v.trim() ? v : undefined))
+      .refine((v) => v === undefined || telefoneBrValido(v), MENSAGEM_TELEFONE_INVALIDO)
+      .transform((v) => (v === undefined ? v : somenteDigitosTelefone(v))),
+    // XG52 — e-mail de dicas e novidades do xgestão (LGPD, consentimento).
+    // Opt-in desmarcado por padrão e nunca condição para cadastrar.
+    marketingOptIn: z.boolean().optional(),
     // CPF/CNPJ é OPCIONAL no cadastro (J61). A primeira tela pede só os dados
     // básicos; o documento é coletado depois, no wizard de onboarding (J51) ou
     // nas Configurações, e só vira obrigatório na porta da ação que precisa

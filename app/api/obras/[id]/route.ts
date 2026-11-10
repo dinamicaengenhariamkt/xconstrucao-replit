@@ -41,6 +41,14 @@ import {
   filterObraPayloadByAreas,
 } from "@features/obras/api/access";
 import { resolverEmpresaDoUsuario } from "@features/xgestao/equipe/server/access";
+import {
+  apagarObjetosR2,
+  coletarArquivosDaObra,
+  descartarArquivos,
+  ehObraXgestao,
+  marcarArquivosExcluidos,
+  type ArquivoParaDescartar,
+} from "@features/xgestao/server/arquivos-obra";
 
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireVerifiedUser(request);
@@ -532,7 +540,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     const allowedMedia =
       (f?.kind === "obra_capa" && isOwner) ||
       (f?.kind === "obra_foto" && isAuthorizedWorkMedia && (isOwner || isAdminLike(guard.user.role)));
-    if (!f || !isImage || f.visibility !== "public" || !allowedMedia) {
+    // EMP-02 — na obra do xgestão a capa é privada (o GET devolve URL assinada).
+    const visibilidadeOk = f?.visibility === "public" || ehObraXgestao(access.obra);
+    if (!f || !isImage || !visibilidadeOk || !allowedMedia) {
       const r = NextResponse.json({ message: "Capa inválida." }, { status: 422 });
       setNoCacheHeaders(r);
       return r;
@@ -593,6 +603,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         if (atual.status === "concluida" && updateData.status && updateData.status !== "concluida") {
           const [{ total }] = await tx.select({ total: count() }).from(obras).where(and(
             eq(obras.empreiteiraId, access.obra.empreiteiraId!), isNull(obras.clienteId), ne(obras.status, "concluida"),
+            // XG48 — obra só para visualização pelo plano não ocupa vaga.
+            eq(obras.xgestaoBloqueadaPorPlano, false),
           ));
           if (total >= plano.limites.obrasAtivas) throw Object.assign(new Error("Limite de obras ativas atingido. Conclua uma obra ou escolha um plano maior antes de reabrir."), { code: "XGESTAO_COTA" });
         }
@@ -620,6 +632,23 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     );
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // EMP-12 — trocar (ou remover) a capa enviada só para isso apaga o arquivo
+  // antigo. Foto da galeria usada como capa continua na galeria.
+  if (
+    ehObraXgestao(access.obra) &&
+    "fotoCapaFileId" in safeBody &&
+    access.obra.fotoCapaFileId &&
+    access.obra.fotoCapaFileId !== updated.fotoCapaFileId
+  ) {
+    const [antiga] = await db
+      .select({ kind: userFiles.kind })
+      .from(userFiles)
+      .where(eq(userFiles.id, access.obra.fotoCapaFileId));
+    if (antiga?.kind === "obra_capa") {
+      await descartarArquivos([access.obra.fotoCapaFileId], { route: "/api/obras/[id]", userId: guard.user.id });
+    }
   }
 
   await recordAudit({
@@ -701,6 +730,8 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
   // for criada concorrentemente, ou ela vê a row travada e espera (e o count
   // posterior a enxerga → 409) ou o DELETE roda primeiro e o INSERT da
   // candidatura falha por FK.
+  const obraXgestao = ehObraXgestao(access.obra);
+  let arquivosParaApagar: ArquivoParaDescartar[] = [];
   const txResult = await db.transaction(async (tx) => {
     const locked = await tx
       .select({ id: obras.id })
@@ -717,6 +748,15 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
       .where(and(eq(candidaturas.obraId, id), eq(candidaturas.status, "pendente")));
     if (pendentes.length > 0) {
       return { kind: "conflict" as const, count: pendentes.length };
+    }
+
+    // EMP-03 — arquivos da obra do xgestão (galeria, documentos, capa, diário,
+    // ocorrências, contratos da equipe, comprovantes). Coletados antes de os
+    // vínculos sumirem e marcados como excluídos NA MESMA transação; o R2 só é
+    // tocado depois do commit.
+    if (obraXgestao) {
+      arquivosParaApagar = await coletarArquivosDaObra(id, tx);
+      await marcarArquivosExcluidos(arquivosParaApagar.map((a) => a.id), tx);
     }
 
     // XG10 — limpeza explícita dos filhos da obra.
@@ -793,6 +833,12 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     );
     setNoCacheHeaders(r);
     return r;
+  }
+
+  // EMP-03 — objetos do R2 só depois do commit; falha vira registro em
+  // `app_errors` e não desfaz a exclusão.
+  if (arquivosParaApagar.length > 0) {
+    await apagarObjetosR2(arquivosParaApagar, { route: "/api/obras/[id]", userId: guard.user.id });
   }
 
   await recordAudit({

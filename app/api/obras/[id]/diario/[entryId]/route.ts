@@ -6,6 +6,7 @@ import { atividades, obraDiario } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders, isAdminLike } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
+import { descartarArquivos, ehGestorDaObraXgestao, ehObraXgestao } from "@features/xgestao/server/arquivos-obra";
 
 const updateSchema = z.object({ texto: z.string().trim().min(2).max(2000) });
 
@@ -76,13 +77,19 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     return r;
   }
   // Autor pode deletar o próprio. Admin/contratante dono também.
-  const canDelete = entry.autorId === guard.user.id || isAdminLike(guard.user.role) || access.role === "contratante";
+  // EMP-07 — no xgestão, dono e gestor da empresa moderam o diário da equipe.
+  const canDelete = entry.autorId === guard.user.id || isAdminLike(guard.user.role) || access.role === "contratante" ||
+    (access.role === "empreiteiro" && await ehGestorDaObraXgestao(guard.user.id, access.obra));
   if (!canDelete) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);
     return r;
   }
   await db.delete(obraDiario).where(eq(obraDiario.id, entryId));
+  // EMP-12 — na obra do xgestão as fotos do registro saem junto (banco + R2).
+  if (ehObraXgestao(access.obra) && entry.fotoFileIds?.length) {
+    await descartarArquivos(entry.fotoFileIds, { route: "/api/obras/[id]/diario/[entryId]", userId: guard.user.id });
+  }
   await recordAudit({ actorId: guard.user.id, action: "obras.diario.delete", payload: { obraId: id, diarioId: entryId }, request });
   const r = NextResponse.json({ ok: true });
   setNoCacheHeaders(r);

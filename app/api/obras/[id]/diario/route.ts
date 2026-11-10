@@ -7,7 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
-import { publicUrlForKey } from "@shared/lib/storage";
+import { ehObraXgestao, erroVinculoArquivoXgestao, urlDeArquivo } from "@features/xgestao/server/arquivos-obra";
 
 const createSchema = z.object({
   texto: z.string().trim().min(2).max(2000),
@@ -52,10 +52,11 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       .select({ id: userFiles.id, bucketKey: userFiles.bucketKey, publicUrl: userFiles.publicUrl, visibility: userFiles.visibility })
       .from(userFiles)
       .where(and(inArray(userFiles.id, allFileIds), isNull(userFiles.deletedAt)));
-    for (const f of files) {
-      const url = f.visibility === "public" ? (f.publicUrl ?? publicUrlForKey(f.bucketKey)) : "";
+    // EMP-02 — foto de diário de obra do xgestão é privada: devolve URL assinada.
+    await Promise.all(files.map(async (f) => {
+      const url = await urlDeArquivo(f);
       if (url) fileMap.set(f.id, { url });
-    }
+    }));
   }
 
   const out = rows.map((r) => ({
@@ -113,6 +114,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         setNoCacheHeaders(r);
         return r;
       }
+    }
+  }
+  // EMP-04 — fotos do diário contam na quota da obra do xgestão e não podem
+  // vir de outra obra.
+  if (fileIds.length > 0 && ehObraXgestao(access.obra)) {
+    const erro = await erroVinculoArquivoXgestao(id, fileIds);
+    if (erro) {
+      const r = NextResponse.json(erro.body, { status: erro.status });
+      setNoCacheHeaders(r);
+      return r;
     }
   }
   const [created] = await db.insert(obraDiario).values({

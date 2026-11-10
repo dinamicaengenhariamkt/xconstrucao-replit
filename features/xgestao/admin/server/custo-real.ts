@@ -41,3 +41,21 @@ export async function custoRealTotal(escopoObras: SQL | undefined): Promise<numb
     .where(and(escopoObras, SAIDA_PAGA_DO_DONO));
   return Number(linha?.total) || 0;
 }
+
+/**
+ * XG44 — custo real somado por empreiteira, em lote (consolidado por
+ * assinante). Mesma regra de `custoRealPorObra`; empreiteira sem saída paga
+ * fica fora do mapa (= 0).
+ */
+export async function custoRealPorEmpreiteira(escopoObras: SQL): Promise<Map<string, number>> {
+  const linhas = await db
+    .select({ empreiteiraId: obras.empreiteiraId, total: sql<string>`coalesce(sum(${financeiro.valor}), 0)` })
+    .from(financeiro)
+    .innerJoin(obras, eq(obras.id, financeiro.obraId))
+    .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+    .where(and(escopoObras, SAIDA_PAGA_DO_DONO))
+    .groupBy(obras.empreiteiraId);
+  const mapa = new Map<string, number>();
+  for (const linha of linhas) if (linha.empreiteiraId) mapa.set(linha.empreiteiraId, Number(linha.total));
+  return mapa;
+}

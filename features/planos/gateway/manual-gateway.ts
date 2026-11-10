@@ -1,10 +1,12 @@
 import type {
   CheckoutInput,
   CheckoutResult,
+  CobrancaPendente,
   GatewayPaymentStatus,
   NormalizedWebhookEvent,
   PaymentGateway,
 } from "./payment-gateway";
+import { motivoDoEstornoAsaas, tipoDoEventoAsaas } from "./asaas-gateway";
 
 /**
  * Adapter MANUAL (stub ativo) — J11.
@@ -85,29 +87,47 @@ export class ManualGateway implements PaymentGateway {
       PAYMENT_CONFIRMED: "payment_succeeded",
       PAYMENT_RECEIVED: "payment_succeeded",
       PAYMENT_OVERDUE: "payment_failed",
-      PAYMENT_DELETED: "payment_failed",
       SUBSCRIPTION_CANCELED: "subscription_canceled",
       SUBSCRIPTION_INACTIVATED: "subscription_canceled",
       SUBSCRIPTION_ACTIVATED: "subscription_activated",
+      PAYMENT_CREATED: "payment_created",
     };
+    // Mesma regra do adapter Asaas para apagada/estorno (PAG-03/PAG-04).
+    const eventosPorReferencia = new Set([
+      "PAYMENT_DELETED",
+      "PAYMENT_REFUNDED",
+      "PAYMENT_REFUND_IN_PROGRESS",
+      "PAYMENT_CHARGEBACK_REQUESTED",
+      "PAYMENT_CHARGEBACK_DISPUTE",
+      "PAYMENT_AWAITING_CHARGEBACK_REVERSAL",
+    ]);
 
-    if (typeof parsed.event === "string" && parsed.event in asaasEventMap) {
+    if (typeof parsed.event === "string" && (parsed.event in asaasEventMap || eventosPorReferencia.has(parsed.event))) {
       const payment = (parsed.payment ?? {}) as Record<string, unknown>;
       const subscription = typeof payment.subscription === "string" ? payment.subscription : undefined;
-      const eventId =
-        typeof payment.id === "string" ? `asaas_${payment.id}` : `manual_asaas_${Date.now()}`;
+      const paymentId = typeof payment.id === "string" && payment.id ? payment.id : undefined;
+      // Como no Asaas: o tipo do evento entra no id, senão CONFIRMED e RECEIVED
+      // do mesmo pagamento viravam um evento só e a dedup por pagamento (XG45)
+      // nunca era exercitada pela rota real nos testes.
+      const eventId = paymentId ? `${parsed.event}:${paymentId}` : `manual_asaas_${Date.now()}`;
       const extRef =
         typeof payment.externalReference === "string" ? payment.externalReference : undefined;
       const valor =
         typeof payment.value === "number" ? payment.value :
         typeof payment.value === "string" ? Number(payment.value) : undefined;
+      const type = eventosPorReferencia.has(parsed.event)
+        ? tipoDoEventoAsaas(parsed.event, extRef, Boolean(subscription))
+        : asaasEventMap[parsed.event];
 
       return {
         eventId,
-        type: asaasEventMap[parsed.event],
+        type,
         gatewaySubscriptionId: subscription,
         externalReference: extRef,
         valor: valor !== undefined && !Number.isNaN(valor) ? valor : undefined,
+        dueDate: typeof payment.dueDate === "string" ? payment.dueDate : undefined,
+        paymentId,
+        ...(type === "payment_refunded" ? { motivo: motivoDoEstornoAsaas(parsed.event) } : {}),
         raw: parsed,
       };
     }
@@ -127,9 +147,24 @@ export class ManualGateway implements PaymentGateway {
       gatewayCustomerId: typeof parsed.gatewayCustomerId === "string" ? parsed.gatewayCustomerId : undefined,
       externalReference: extRef,
       valor: valor !== undefined && !Number.isNaN(valor) ? valor : undefined,
+      dueDate: typeof parsed.dueDate === "string" ? parsed.dueDate : undefined,
       raw: parsed,
     };
   }
+
+  // XG48 — sem assinatura remota: trocar de plano não tem o que atualizar e
+  // não existe cobrança pendente. A diferença proporcional fica pendente até
+  // chegar um PAYMENT_CREATED (testes simulam pelo webhook).
+  async atualizarValorAssinatura(_gatewaySubscriptionId: string, _valor: number): Promise<void> {}
+
+  async proximaCobrancaPendente(_gatewaySubscriptionId: string): Promise<CobrancaPendente | null> {
+    return null;
+  }
+
+  async atualizarValorCobranca(_paymentId: string, _valor: number): Promise<void> {}
+
+  /** Sem cobrança real: nada a estornar. */
+  async refundPayment(_paymentId: string): Promise<void> {}
 
   async checkPaymentStatus(_gatewaySubscriptionId: string | null): Promise<GatewayPaymentStatus> {
     // O adapter manual não tem gateway real para consultar. Retorna "unknown" para

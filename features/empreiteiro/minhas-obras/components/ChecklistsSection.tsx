@@ -44,6 +44,7 @@ import {
   IconUndo,
 } from '@shared/components/icons';
 import { rotuloRecorrencia } from '../lib/checklist-periodo';
+import { formatarMomentoChecklist, preposicaoMomento } from '../lib/checklist-momento';
 import {
   CHECKLIST_CONFIG,
   TIPO_ICON,
@@ -302,11 +303,12 @@ function ChecklistCard({
           <span className="text-xs text-success font-medium flex items-center gap-1">
             <IconDraw className="text-sm" />
             Assinado por {checklist.assinadoPor}
+            {checklist.assinadoEm && <> {preposicaoMomento(checklist.assinadoEm)} {formatarMomentoChecklist(checklist.assinadoEm)}</>}
           </span>
         ) : isCompleto && checklist.completadoEm ? (
           <span className="text-xs text-success font-medium flex items-center gap-1">
             <IconCheckCircle className="text-sm" />
-            Concluído às {checklist.completadoEm}
+            Concluído {preposicaoMomento(checklist.completadoEm)} {formatarMomentoChecklist(checklist.completadoEm)}
           </span>
         ) : eRecorrente && concluidos === 0 ? (
           /*

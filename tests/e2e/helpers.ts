@@ -10,6 +10,16 @@ export async function iniciarTesteOperacionalXgestao(request: APIRequestContext,
     if (estado.teste?.elegivel) {
       const trial = await request.post("/api/xgestao/teste", { data: {} });
       expect(trial.status(), await trial.text()).toBe(201);
+      // XG43 — o teste passou a ser Basic (1 obra, 2 pessoas, 1 link). As suítes
+      // operacionais exercitam várias obras, membros e links, como faziam no
+      // teste Premium: assina o Premium pelo gateway manual (dev, sem cobrança).
+      const catalogo = await (await request.get("/api/planos?persona=xgestao")).json() as Array<{ id: string; tier: string }>;
+      const premium = catalogo.find((plano) => plano.tier === "premium");
+      expect(premium, "plano premium do xgestão no catálogo").toBeTruthy();
+      const checkout = await request.post("/api/assinaturas/checkout", {
+        data: { planoId: premium!.id, persona: "xgestao", ciclo: "mensal" },
+      });
+      expect(checkout.status(), await checkout.text()).toBe(201);
     }
   }
   await logout(request);

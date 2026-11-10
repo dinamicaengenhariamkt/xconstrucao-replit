@@ -17,9 +17,10 @@ import { encode } from "next-auth/jwt";
 import { db } from "@shared/db/db";
 import { users } from "@shared/db/schema";
 import { eq } from "drizzle-orm";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 export async function POST(request: NextRequest) {

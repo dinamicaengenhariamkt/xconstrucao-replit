@@ -7,7 +7,8 @@ import { obras, obraAnexos } from "@shared/db/schema";
  * Feature compartilhada usada por admin, contratante e empreiteiro
  */
 
-export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
+// XG48 — a marca de somente leitura por plano só é escrita pela troca de plano.
+export const insertObraSchema = createInsertSchema(obras).omit({ id: true, xgestaoBloqueadaPorPlano: true });
 
 const UF_REGEX = /^[A-Z]{2}$/;
 const CEP_REGEX = /^\d{5}-?\d{3}$/;

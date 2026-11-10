@@ -143,6 +143,54 @@ test.describe("Jornada 01 — Cadastro & Onboarding", () => {
     await expect(page.getByTestId("banner-email-unverified")).toHaveCount(0);
   });
 
+  // 10/11/2026 — conta do xgestão: CPF ou CNPJ obrigatório no 1º passo.
+  test("xgestão: wizard pede CPF ou CNPJ antes de deixar pular", async ({ page, request }) => {
+    test.skip(!BROWSER_DISPONIVEL, MOTIVO_BROWSER_INDISPONIVEL);
+    const email = uniqueEmail("xgestao-onb");
+    const criada = await page.request.post("/api/auth/register", {
+      data: {
+        name: "xgestão E2E Wizard",
+        email,
+        username: uniqueUsername("xgonb"),
+        password: "Senha@123",
+        role: "empreiteiro",
+        xgestao: true,
+        phone: "11955550000",
+        acceptTerms: true,
+        website: "",
+        mountedAt: Date.now() - 5_000,
+      },
+    });
+    expect(criada.status(), await criada.text()).toBeLessThan(300);
+    const verification = await waitForVerificationEmail(request, email);
+    const verifyParsed = new URL(verification.meta?.verificationUrl as string);
+    await page.goto(`${verifyParsed.pathname}${verifyParsed.search}`);
+    const login = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(login.ok()).toBeTruthy();
+
+    // Abrir o xgestão direto cai no wizard: o teste ainda não começou.
+    await page.goto("/xgestao/dashboard");
+    await expect(page).toHaveURL(/\/onboarding/);
+    await expect(page.getByTestId("text-onboarding-documento-xgestao")).toContainText("CPF ou CNPJ");
+    // Sem documento salvo não há "Pular por agora".
+    await expect(page.getByTestId("button-onboarding-skip")).toHaveCount(0);
+
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    await expect(page.getByTestId("text-onboarding-documento-error")).toBeVisible();
+    await page.getByTestId("input-onboarding-documento").fill("52998224724"); // dígito errado
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    await expect(page.getByTestId("text-onboarding-documento-error")).toContainText("inválido");
+
+    // CPF vale no xgestão (pessoa física também assina).
+    await page.getByTestId("input-onboarding-documento").fill("52998224725");
+    await page.getByTestId("button-onboarding-empresa-next").click();
+    await expect(page.getByTestId("button-onboarding-skip")).toBeVisible();
+    await Promise.all([
+      page.waitForURL(/\/xgestao/),
+      page.getByTestId("button-onboarding-skip").click(),
+    ]);
+  });
+
   test("sem verificar email: criar obra é bloqueada (banner + 403)", async ({
     page,
     request,

@@ -35,6 +35,9 @@ export default function XGestaoPlanoSucessoPage() {
   // XG35 — no teste do Pro, assinar o Pro não muda o tier: a ativação aparece
   // como "deixou de estar em teste" com plano pago.
   const [estavaEmTeste, setEstavaEmTeste] = useState(false);
+  // XG50 — quem volta com cancelamento agendado ou inadimplente assina o mesmo
+  // plano: a ativação aparece como a saída desses estados.
+  const [estavaCancelandoOuAtrasado, setEstavaCancelandoOuAtrasado] = useState(false);
 
   const { data, isError } = useQuery<PerfilPlano, Error>({
     queryKey: ['xgestao', 'plano', 'sucesso-poll'],
@@ -51,11 +54,13 @@ export default function XGestaoPlanoSucessoPage() {
     if (tierInicial === null) {
       setTierInicial(data.plano);
       setEstavaEmTeste(Boolean(data.teste?.emTeste));
+      setEstavaCancelandoOuAtrasado(Boolean(data.cancelamentoAgendado || data.inadimplente || data.somenteLeitura));
       return;
     }
 
     const saiuDoTeste = estavaEmTeste && !data.teste?.emTeste;
-    if (data.plano !== 'free' && (data.plano !== tierInicial || saiuDoTeste)) {
+    const voltou = estavaCancelandoOuAtrasado && !data.cancelamentoAgendado && !data.inadimplente && !data.somenteLeitura;
+    if (data.plano !== 'free' && (data.plano !== tierInicial || saiuDoTeste || voltou)) {
       setStatus('activated');
       return;
     }
@@ -63,7 +68,7 @@ export default function XGestaoPlanoSucessoPage() {
     if (Date.now() - startTimeRef.current >= POLL_TIMEOUT_MS) {
       setStatus('timeout');
     }
-  }, [data, tierInicial, estavaEmTeste]);
+  }, [data, tierInicial, estavaEmTeste, estavaCancelandoOuAtrasado]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -82,10 +87,10 @@ export default function XGestaoPlanoSucessoPage() {
             </div>
             <div className="space-y-2">
               <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                Pagamento recebido!
+                Pagamento registrado!
               </h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                Sua assinatura será ativada em instantes. Aguarde enquanto confirmamos o pagamento.
+                Sua assinatura será ativada em instantes. Aguarde enquanto confirmamos com a operadora.
               </p>
             </div>
             <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
@@ -110,6 +115,14 @@ export default function XGestaoPlanoSucessoPage() {
                 </span>{' '}
                 já está ativo.
               </p>
+              {data?.cobranca?.proximaEm && (
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed" data-testid="xgestao-sucesso-cobranca">
+                  {data.cobranca.primeiraCobranca ? '1ª cobrança' : 'Próxima cobrança'} em{' '}
+                  {new Date(data.cobranca.proximaEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}:{' '}
+                  {(data.cobranca.valor + data.cobranca.diferencaPendente).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  {' '}por {data.cobranca.ciclo === 'anual' ? 'ano' : 'mês'}.
+                </p>
+              )}
             </div>
             <Link
               href={XGESTAO_HOME}
@@ -134,7 +147,7 @@ export default function XGestaoPlanoSucessoPage() {
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
                 {isError
                   ? 'Não foi possível verificar a assinatura agora. Confira o seu plano em instantes.'
-                  : 'Seu pagamento foi recebido. A ativação pode levar alguns instantes, dependendo do método de pagamento.'}
+                  : 'Seu pagamento foi registrado. A ativação pode levar alguns instantes.'}
                 <br /><br />
                 Se o plano não aparecer ativo em alguns minutos, entre em contato com o suporte.
               </p>

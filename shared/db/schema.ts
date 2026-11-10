@@ -105,6 +105,17 @@ export const users = pgTable("users", {
   // concluir OU pular o wizard. Distinto de clientes/empreiteiras.perfilCompleto
   // (que é derivado e exige perfil rico); esta flag é só "já viu o onboarding".
   onboardingConcluido: boolean("onboarding_concluido").notNull().default(false),
+  // ADM-02 — conta interna ou de teste (equipe, QA, demonstração). Fica fora de
+  // todas as métricas e listas do admin xgestão; marcada pelo admin no detalhe
+  // do assinante, com registro em `audit_logs`. Ver server/bootstrap-conta-interna.ts.
+  contaInterna: boolean("conta_interna").notNull().default(false),
+  // XG52 — e-mail de marketing do xgestão (LGPD, consentimento, art. 7º, I).
+  // Opt-in: tudo nulo = nunca aceitou. Ativo quando há consentimento e não há
+  // revogação depois dele. `marketing_origem` guarda de onde veio a última
+  // mudança. Ver features/xgestao/marketing e migrations/0016.
+  marketingConsentimentoEm: timestamp("marketing_consentimento_em"),
+  marketingRevogadoEm: timestamp("marketing_revogado_em"),
+  marketingOrigem: text("marketing_origem"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -266,6 +277,9 @@ export const obras = pgTable("obras", {
   destaque: boolean("destaque").notNull().default(false),
   destaqueOrdem: integer("destaque_ordem"),
   fotoCapaFileId: varchar("foto_capa_file_id").references(() => userFiles.id, { onDelete: "set null" }),
+  // XG48 — obra própria do xgestão que ficou só para visualização ao descer de
+  // plano (não escolhida). Só vale para obra sem contratante; marketplace ignora.
+  xgestaoBloqueadaPorPlano: boolean("xgestao_bloqueada_por_plano").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
@@ -303,6 +317,9 @@ export const obraShareLinks = pgTable(
     secoes: jsonb("secoes").$type<Record<string, boolean>>(),
     visualizacoes: integer("visualizacoes").notNull().default(0),
     ultimoAcessoEm: timestamp("ultimo_acesso_em"),
+    // XG48 — acima do limite de links do plano depois de descer: responde como
+    // indisponível e não conta no limite. Volta ao subir de plano.
+    pausadoPorPlano: boolean("pausado_por_plano").notNull().default(false),
     criadoEm: timestamp("criado_em").notNull().defaultNow(),
   },
   (t) => ({
@@ -321,7 +338,10 @@ export const xgestaoMembros = pgTable(
     empreiteiraId: varchar("empreiteira_id").notNull().references(() => empreiteiras.id, { onDelete: "cascade" }),
     userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     papel: text("papel").$type<"gestor" | "colaborador">().notNull(),
-    status: text("status").$type<"convidado" | "ativo" | "revogado">().notNull().default("convidado"),
+    // XG48 — "pausado": acima do limite de pessoas depois de descer de plano.
+    // Não entra no xgestão da empresa; volta ao status anterior ao subir.
+    status: text("status").$type<"convidado" | "ativo" | "revogado" | "pausado">().notNull().default("convidado"),
+    statusAntesPausa: text("status_antes_pausa").$type<"convidado" | "ativo">(),
     areasPermitidas: jsonb("areas_permitidas").$type<import("@features/xgestao/equipe/permissions").AreasPermitidas>(),
     categoriasFinanceiroPermitidas: jsonb("categorias_financeiro_permitidas").$type<import("@features/xgestao/equipe/permissions").CategoriasFinanceiroPermitidas>(),
     convidadoPor: varchar("convidado_por").notNull().references(() => users.id, { onDelete: "restrict" }),
@@ -853,7 +873,7 @@ export type EmpreiteiroPortfolioItem = typeof empreiteiroPortfolio.$inferSelect;
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 export const insertClienteSchema = createInsertSchema(clientes).omit({ id: true });
 export const insertEmpreiteiraSchema = createInsertSchema(empreiteiras).omit({ id: true });
-export const insertObraSchema = createInsertSchema(obras).omit({ id: true });
+export const insertObraSchema = createInsertSchema(obras).omit({ id: true, xgestaoBloqueadaPorPlano: true });
 export const insertFinanceiroSchema = createInsertSchema(financeiro).omit({ id: true });
 export const insertCandidaturaSchema = createInsertSchema(candidaturas).omit({ id: true, createdAt: true });
 export const insertMarketplaceLeadSchema = createInsertSchema(marketplaceLeads).omit({ id: true, createdAt: true, status: true });
@@ -947,8 +967,12 @@ export const obraOcorrencias = pgTable("obra_ocorrencias", {
   fotoFileId: varchar("foto_file_id").references(() => userFiles.id, { onDelete: "set null" }),
   resolvidoPorId: varchar("resolvido_por_id").references(() => users.id, { onDelete: "set null" }),
   resolvidoEm: timestamp("resolvido_em"),
+  /** Como o problema foi resolvido. Aparece no link do cliente com a seção ligada. */
+  observacaoResolucao: text("observacao_resolucao"),
   notificacaoDisparada: boolean("notificacao_disparada").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  /** Última edição, reabertura ou resolução. Nulo em registros nunca alterados. */
+  atualizadoEm: timestamp("atualizado_em"),
 });
 
 export const obraFotos = pgTable("obra_fotos", {
@@ -1033,6 +1057,8 @@ export const obraChecklists = pgTable("obra_checklists", {
   completadoEm: text("completado_em"),
   assinadoPor: text("assinado_por"),
   assinadoEm: text("assinado_em"),
+  /** EMP-08: quem estava logado ao assinar. `assinadoPor` segue como nome exibido. */
+  assinadoPorUserId: varchar("assinado_por_user_id").references(() => users.id, { onDelete: "set null" }),
   registroProfissional: text("registro_profissional"),
   // XG21 — recorrência. `recorrenciaDiaSemana` (0=domingo … 6=sábado) só é
   // lido quando `recorrencia = 'semanal'`; define em que dia o ciclo vira.
@@ -1290,6 +1316,20 @@ export const assinaturas = pgTable(
     // (para ativa ou expirada). Quando atinge PENDENTE_REATIVACAO_MAX_RETRIES,
     // a assinatura é expirada com evento "gateway_unreachable_too_long".
     gatewayRetryCount: integer("gateway_retry_count").notNull().default(0),
+    // xgestão (regra de 10/11/2026): o mês bônus de quem assina no teste só vale
+    // com o 1º pagamento e uma vez por conta. `fimTesteEm` = fim do teste de
+    // origem, preenchido só na assinatura que recebeu o bônus.
+    fimTesteEm: timestamp("fim_teste_em"),
+    // 1º pagamento confirmado da assinatura (webhook ou cobrança imediata).
+    primeiroPagamentoEm: timestamp("primeiro_pagamento_em"),
+    // CRM-03 — motivo informado pelo assinante ao cancelar (opcional): código da
+    // lista fechada (`features/xgestao/lib/motivo-cancelamento.ts`) e texto livre
+    // de até 500 caracteres. Ver server/bootstrap-xgestao-admin-crm.ts.
+    motivoCancelamento: text("motivo_cancelamento"),
+    motivoCancelamentoTexto: text("motivo_cancelamento_texto"),
+    // 0015 — CPF/CNPJ (só dígitos) usado na assinatura: o teste e o mês bônus
+    // valem uma vez por documento, não só por conta. Ver docs/jornadas-xgestao/50.
+    documentoFiscal: text("documento_fiscal"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
@@ -1303,6 +1343,8 @@ export const assinaturaEventos = pgTable(
   {
     id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
     assinaturaId: varchar("assinatura_id").references(() => assinaturas.id, { onDelete: "cascade" }),
+    // 0015 — conta do evento quando ele não tem assinatura (ex.: `teste_negado`).
+    userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
     tipo: text("tipo").notNull(), // checkout | renovacao | falha_cobranca | cancelamento
     // ID único do evento no gateway — chave de idempotência do webhook.
     gatewayEventId: text("gateway_event_id"),
@@ -1311,6 +1353,99 @@ export const assinaturaEventos = pgTable(
   },
   (t) => ({
     uqGatewayEvent: uniqueIndex("uq_assinatura_eventos_gateway").on(t.gatewayEventId),
+  }),
+);
+
+/**
+ * XG48 — troca de plano do xgestão. Subir: `aplicada` na hora, com a diferença
+ * proporcional somada na próxima fatura. Descer: `agendada` até `efetivaEm`
+ * (renovação), com a escolha única de obras e pessoas em `escolhas`.
+ * Schema criado idempotente em server/bootstrap-troca-plano.ts.
+ */
+export const assinaturaTrocas = pgTable(
+  "assinatura_trocas",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    empreiteiraId: varchar("empreiteira_id").references(() => empreiteiras.id, { onDelete: "set null" }),
+    assinaturaId: varchar("assinatura_id").notNull().references(() => assinaturas.id, { onDelete: "cascade" }),
+    planoDeId: varchar("plano_de_id").notNull().references(() => planos.id),
+    planoParaId: varchar("plano_para_id").notNull().references(() => planos.id),
+    tierDe: text("tier_de").notNull(),
+    tierPara: text("tier_para").notNull(),
+    tipo: text("tipo").$type<"subir" | "descer">().notNull(),
+    valorDe: numeric("valor_de", { precision: 15, scale: 2 }).notNull(),
+    valorPara: numeric("valor_para", { precision: 15, scale: 2 }).notNull(),
+    valorDiferenca: numeric("valor_diferenca", { precision: 15, scale: 2 }).notNull().default("0"),
+    diasRestantes: integer("dias_restantes").notNull().default(0),
+    diasCiclo: integer("dias_ciclo").notNull().default(0),
+    // REV-07 — `pendente_gateway`: gravada antes do PUT no gateway, fora da transação.
+    status: text("status").$type<"pendente_gateway" | "agendada" | "aplicada" | "desfeita" | "cancelada" | "falhou">().notNull(),
+    efetivaEm: timestamp("efetiva_em").notNull(),
+    paymentIdAjustado: text("payment_id_ajustado"),
+    // Diferença ainda não lançada na cobrança pendente do gateway (retry).
+    ajustePendente: boolean("ajuste_pendente").notNull().default(false),
+    // Fatura com a diferença paga: a subida não volta mais atrás ao cancelar.
+    quitadaEm: timestamp("quitada_em"),
+    chaveIdempotencia: text("chave_idempotencia"),
+    // `gateway`: valores do PUT enquanto a troca está pendente (compensação, REV-07).
+    escolhas: jsonb("escolhas").$type<{ obras?: string[]; membros?: string[]; gateway?: { anterior: number; novo: number; acao: string } }>().notNull().default({}),
+    erro: text("erro"),
+    criadaEm: timestamp("criada_em").defaultNow().notNull(),
+    aplicadaEm: timestamp("aplicada_em"),
+    atualizadaEm: timestamp("atualizada_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    // REV-10 — chave de idempotência por titular.
+    uqChave: uniqueIndex("uq_assinatura_trocas_user_chave").on(t.userId, t.chaveIdempotencia),
+    idxUserStatus: index("idx_assinatura_trocas_user_status").on(t.userId, t.status),
+    idxAssinatura: index("idx_assinatura_trocas_assinatura").on(t.assinaturaId, t.status),
+  }),
+);
+
+export type AssinaturaTroca = typeof assinaturaTrocas.$inferSelect;
+
+/**
+ * CRM-07 — contatos que o admin fez com o responsável de uma conta xgestão
+ * (WhatsApp, e-mail, telefone). Só o admin lê e grava; cada registro também vai
+ * para `audit_logs`. Schema criado idempotente em server/bootstrap-xgestao-admin-crm.ts.
+ */
+export const xgestaoAdminContatos = pgTable(
+  "xgestao_admin_contatos",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    /** Responsável (titular) contatado. */
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    empreiteiraId: varchar("empreiteira_id").references(() => empreiteiras.id, { onDelete: "set null" }),
+    adminId: varchar("admin_id").references(() => users.id, { onDelete: "set null" }),
+    canal: text("canal").$type<"whatsapp" | "email" | "telefone" | "outro">().notNull(),
+    nota: text("nota"),
+    criadoEm: timestamp("criado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxUserCriado: index("idx_xgestao_admin_contatos_user").on(t.userId, t.criadoEm),
+  }),
+);
+
+export type XgestaoAdminContato = typeof xgestaoAdminContatos.$inferSelect;
+
+/**
+ * XG52 — e-mails automáticos do xgestão já enviados (rotina diária). A chave
+ * única (usuário, tipo, referência) garante que cada aviso sai uma vez só,
+ * mesmo com a rotina chamada várias vezes no dia. Ver migrations/0016.
+ */
+export const xgestaoEmailsEnviados = pgTable(
+  "xgestao_emails_enviados",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tipo: text("tipo").notNull(),
+    referencia: text("referencia").notNull(),
+    enviadoEm: timestamp("enviado_em").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqEnvio: uniqueIndex("uq_xgestao_emails_enviados").on(t.userId, t.tipo, t.referencia),
+    idxEnviadoEm: index("idx_xgestao_emails_enviados_em").on(t.enviadoEm),
   }),
 );
 

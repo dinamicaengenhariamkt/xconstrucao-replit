@@ -36,6 +36,7 @@ interface RegisterData {
   role: string;
   phone?: string;
   cpfCnpj?: string;
+  marketingOptIn?: boolean;
   acceptTerms: true;
 }
 

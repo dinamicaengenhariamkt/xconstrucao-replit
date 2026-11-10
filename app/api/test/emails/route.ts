@@ -11,6 +11,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { clearTestEmails, isEmailTestMode, listTestEmails } from "@shared/lib/test-email-store";
+import { ehProducao } from "@shared/lib/rotas-teste";
+
+// REV-12: em produção responde 404 mesmo com EMAIL_TEST_MODE ligado.
+function habilitada(): boolean {
+  return !ehProducao() && isEmailTestMode();
+}
 
 function disabledResponse(): NextResponse {
   return NextResponse.json(
@@ -20,14 +26,14 @@ function disabledResponse(): NextResponse {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isEmailTestMode()) return disabledResponse();
+  if (!habilitada()) return disabledResponse();
   const to = request.nextUrl.searchParams.get("to") ?? undefined;
   const emails = listTestEmails(to ? { to } : undefined);
   return NextResponse.json({ emails }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function DELETE() {
-  if (!isEmailTestMode()) return disabledResponse();
+  if (!habilitada()) return disabledResponse();
   clearTestEmails();
   return NextResponse.json({ success: true });
 }

@@ -4,7 +4,10 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { isRateLimited } from "@features/auth/api/rate-limit";
 import { recordAudit } from "@features/auth/api/audit";
 import { iniciarCheckout } from "@features/planos/assinatura-service";
+import { conferirGatewayPagamento, MENSAGEM_PAGAMENTOS_INDISPONIVEIS } from "@features/planos/gateway";
 import { assertXgestaoUser } from "@features/xgestao/lib/entitlement";
+import { anualDisponivelXgestao } from "@features/xgestao/lib/ciclo-plano";
+import { xgestaoAnualAtivo } from "@features/xgestao/server/anual";
 import { db } from "@shared/db/db";
 import { planos, xgestaoMembros } from "@shared/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
     return r;
   }
   const [plano] = await db
-    .select({ persona: planos.persona, ativo: planos.ativo })
+    .select({ persona: planos.persona, ativo: planos.ativo, valorAnual: planos.valorAnual })
     .from(planos)
     .where(eq(planos.id, parsed.data.planoId))
     .limit(1);
@@ -88,6 +91,25 @@ export async function POST(request: NextRequest) {
     return r;
   } else {
     personaCheckout = guard.user.role;
+  }
+  // REV-03 — anual só existe para plano com `valorAnual`. Antes, `ciclo:"anual"`
+  // cobrava o valor mensal com ciclo YEARLY. XG50: no xgestão, além do preço
+  // anual, a chave `platform_settings.xgestao.anualAtivo` precisa estar ligada.
+  if (parsed.data.ciclo === "anual" && (
+    plano.valorAnual == null || !(Number(plano.valorAnual) > 0) ||
+    (personaCheckout === "xgestao" && !anualDisponivelXgestao(plano, await xgestaoAnualAtivo()))
+  )) {
+    const r = NextResponse.json({ message: "Este plano só pode ser contratado no ciclo mensal.", code: "CICLO_INVALIDO" }, { status: 400 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+  // REV-02 — sem gateway válido (produção sem PAYMENT_GATEWAY=asaas): 503 claro.
+  const gatewayOk = conferirGatewayPagamento();
+  if (!gatewayOk.ok) {
+    console.error(`[checkout] ERRO de configuração: ${gatewayOk.motivo}`);
+    const r = NextResponse.json({ message: MENSAGEM_PAGAMENTOS_INDISPONIVEIS, code: "GATEWAY_NAO_CONFIGURADO" }, { status: 503 });
+    setNoCacheHeaders(r);
+    return r;
   }
   if (isRateLimited(`assinatura.checkout:user:${guard.user.id}`, 10, 60 * 1000)) {
     const r = NextResponse.json({ message: "Muitas requisições. Aguarde um minuto." }, { status: 429 });
@@ -129,8 +151,17 @@ export async function POST(request: NextRequest) {
       setNoCacheHeaders(r);
       return r;
     }
+    if (result.code === "CICLO_INVALIDO") {
+      const r = NextResponse.json({ message: "Este plano só pode ser contratado no ciclo mensal.", code: result.code }, { status: 400 });
+      setNoCacheHeaders(r);
+      return r;
+    }
     const status = result.code === "PLANO_INVALIDO" ? 404 : 409;
-    const message = result.code === "PLANO_INVALIDO" ? "Plano inválido." : "Você já assina este plano.";
+    const message = result.code === "PLANO_INVALIDO"
+      ? "Plano inválido."
+      : result.code === "USAR_TROCA"
+        ? "Você já tem um plano ativo. Para mudar, use \"Mudar para este plano\" na aba Plano."
+        : "Você já assina este plano.";
     const r = NextResponse.json({ message, code: result.code }, { status });
     setNoCacheHeaders(r);
     return r;

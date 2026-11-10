@@ -11,9 +11,11 @@ import {
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 1;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -113,48 +115,9 @@ test.describe('xgestão — obras próprias', () => {
     await logout(request);
   });
 
-  test('permite completar pela UI todas as pendências e então criar a primeira obra', async ({ page, request }) => {
-    const email = await registrar(request, 'empreiteiro', 'xgestao-ui-perfil-operacional');
-    await concederXGestao(request, email);
-
-    const login = await page.request.post('/api/test/login-as', { data: { email } });
-    expect(login.status(), await login.text()).toBe(200);
-    await page.goto('/xgestao/configuracoes?tab=empresa');
-
-    await page.getByTestId('xgestao-empresa-cep').fill('01310100');
-    await page.getByTestId('xgestao-empresa-endereco').fill('Avenida Paulista, 1000');
-    await page.getByTestId('xgestao-empresa-cidade').fill('São Paulo');
-    await page.getByTestId('xgestao-empresa-estado').fill('SP');
-    await page.getByTestId('xgestao-empresa-raio-km').fill('50');
-    await page.getByTestId('xgestao-especialidade-Pintura').click();
-
-    const saved = page.waitForResponse((response) =>
-      response.url().includes('/api/perfil/empreiteiro') &&
-      response.request().method() === 'PATCH',
-    );
-    await page.getByRole('button', { name: 'Salvar empresa' }).click();
-    expect((await saved).status()).toBe(200);
-
-    // O browser aceita o cookie Secure em loopback, mas page.request no
-    // projeto API não o envia sobre HTTP. Verifique a persistência com o
-    // contexto API independente, sem mudar os cookies da aplicação.
-    await loginAs(request, email);
-    const status = await request.get('/api/xgestao/perfil-status');
-    expect(status.status(), await status.text()).toBe(200);
-    expect(await status.json()).toMatchObject({ ok: true, faltando: [] });
-
-    await page.goto('/xgestao/obras');
-    await page.getByTestId('xgestao-nova-obra').click();
-    await expect(page.getByRole('dialog', { name: 'Nova obra' })).toBeVisible();
-    await page.getByTestId('xgestao-obra-nome').fill('Primeira obra pela interface');
-    await page.getByTestId('xgestao-obra-endereco').fill('Avenida Paulista, 1000');
-    const criada = page.waitForResponse((response) =>
-      response.url().endsWith('/api/xgestao/obras') &&
-      response.request().method() === 'POST',
-    );
-    await page.getByRole('button', { name: 'Criar obra' }).click();
-    expect((await criada).status()).toBe(201);
-  });
+  // TST-12 — o teste de UI "permite completar pela UI todas as pendências e
+  // então criar a primeira obra" usava `page` no project api; mudou para
+  // tests/e2e/xgestao-obras.browser.spec.ts (project browser).
 
   test('informa pendências operacionais reais e valida CEP/endereço da empresa', async ({ request }) => {
     const email = await registrar(request, 'empreiteiro', 'xgestao-perfil-operacional');

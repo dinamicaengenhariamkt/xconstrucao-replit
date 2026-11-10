@@ -101,7 +101,8 @@ export function CompartilharModal({
 
   const shares = sharesQuery.data?.shares ?? [];
   const limite = sharesQuery.data?.limite ?? 5;
-  const noLimite = limite >= 0 && shares.length >= limite;
+  // E2E-03 — link pausado pela troca de plano aparece na lista, mas não conta no limite.
+  const noLimite = limite >= 0 && shares.filter((s) => !s.pausadoPorPlano).length >= limite;
   const criando = selecionado === 'novo' || (!sharesQuery.isLoading && shares.length === 0);
   const shareLink = criando
     ? null
@@ -215,6 +216,14 @@ export function CompartilharModal({
                       data-testid={`xgestao-share-link-${share.id}`}
                     >
                       {share.nome}
+                      {share.pausadoPorPlano && (
+                        <span
+                          className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                          data-testid={`xgestao-share-pausado-${share.id}`}
+                        >
+                          Pausado pelo plano
+                        </span>
+                      )}
                     </button>
                   ))}
                   <button
@@ -302,6 +311,15 @@ export function CompartilharModal({
                 {/* URL + Copiar */}
                 <div>
                   <p className="text-xs font-semibold text-gray-500 mb-2">Link de {shareLink.nome}</p>
+                  {shareLink.pausadoPorPlano && (
+                    <p
+                      className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                      data-testid="xgestao-share-pausado-aviso"
+                    >
+                      Pausado pelo plano: quem abrir vê que a obra não está disponível no momento. Ele volta
+                      a funcionar quando o plano permitir mais links, ou revogue se não precisar mais dele.
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <Input
                       readOnly
@@ -401,7 +419,11 @@ export function CompartilharModal({
                         <Switch
                           id={`secao-${secao}`}
                           checked={shareLink.secoes[secao]}
-                          disabled={secoesMutation.isPending || (secao === 'pagamentos' && !sharesQuery.data?.valoresPublicos)}
+                          disabled={
+                            secoesMutation.isPending ||
+                            shareLink.pausadoPorPlano === true ||
+                            (secao === 'pagamentos' && !sharesQuery.data?.valoresPublicos)
+                          }
                           onCheckedChange={(marcado) =>
                             secoesMutation.mutate(
                               { linkId: shareLink.id, secoes: { ...shareLink.secoes, [secao]: marcado } },

@@ -95,6 +95,8 @@ export default function CadastroPage() {
       role: perfilParaRole(perfil),
       xgestao: perfil === "xgestao",
       phone: "",
+      // XG52 — opt-in de marketing desmarcado por padrão (LGPD).
+      marketingOptIn: false,
       acceptTerms: false,
     },
   });
@@ -121,6 +123,7 @@ export default function CadastroPage() {
           ...values,
           role: perfilParaRole(perfil),
           xgestao: perfil === "xgestao",
+          marketingOptIn: perfil === "xgestao" && values.marketingOptIn === true,
           acceptTerms: true,
           antiBot: antiBot.getPayload(),
         });
@@ -305,6 +308,7 @@ export default function CadastroPage() {
                     type="tel"
                     placeholder="(11) 99999-9999"
                     autoComplete="tel"
+                    inputMode="tel"
                     className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
                     data-testid="input-phone"
                     {...form.register("phone")}
@@ -358,6 +362,21 @@ export default function CadastroPage() {
               </label>
               {termsError && (
                 <p className="text-xs text-red-500 -mt-2" data-testid="text-terms-error">{termsError}</p>
+              )}
+
+              {/* XG52 — e-mail de marketing: opcional, desmarcado e fora da condição de cadastro. */}
+              {perfil === "xgestao" && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-[#333333] focus:ring-[#333333]/20 mt-0.5"
+                    data-testid="checkbox-marketing"
+                    {...form.register("marketingOptIn")}
+                  />
+                  <span className="text-xs text-slate-500 leading-relaxed">
+                    Quero receber dicas e novidades do xgestão por e-mail. Posso sair quando quiser.
+                  </span>
+                </label>
               )}
 
               <button

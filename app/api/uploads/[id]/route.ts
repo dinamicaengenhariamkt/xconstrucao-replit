@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { empreiteiroDocumentos, empreiteiroPortfolio, financeiro, obraAnexos, obraFotos, obras, userFiles, users } from "@shared/db/schema";
+import {
+  empreiteiroDocumentos,
+  empreiteiroPortfolio,
+  financeiro,
+  obraAnexos,
+  obraDiario,
+  obraEquipe,
+  obraFotos,
+  obraOcorrencias,
+  obras,
+  userFiles,
+  users,
+} from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { deleteObject } from "@shared/lib/storage";
+import { erroSomenteLeituraUpload } from "@features/xgestao/server/guard-mutacao";
 import {
   canAccessObraFinanceCategory,
   canWriteObraArea,
@@ -30,23 +43,49 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
 
   // Arquivos pessoais que já foram vinculados a conteúdo de obra não podem ser
   // removidos por um membro somente-leitura apenas por serem seus uploads.
-  const [anexos, fotos, capas, lancamentos] = await Promise.all([
+  // EMP-05 — diário, ocorrência e contrato de equipe também são conteúdo da
+  // obra: sem eles, um membro sem acesso à área apagava o arquivo pelo id.
+  const [anexos, fotos, capas, lancamentos, diarios, ocorrencias, contratos] = await Promise.all([
     db.select({ obraId: obraAnexos.obraId }).from(obraAnexos).where(eq(obraAnexos.fileId, id)),
     db.select({ obraId: obraFotos.obraId }).from(obraFotos).where(eq(obraFotos.fileId, id)),
     db.select({ obraId: obras.id }).from(obras).where(eq(obras.fotoCapaFileId, id)),
     db.select({ obraId: financeiro.obraId, categoria: financeiro.categoria })
       .from(financeiro).where(eq(financeiro.comprovanteFileId, id)),
+    db.select({ obraId: obraDiario.obraId }).from(obraDiario)
+      .where(sql`${id} = ANY(${obraDiario.fotoFileIds})`),
+    db.select({ obraId: obraOcorrencias.obraId }).from(obraOcorrencias).where(eq(obraOcorrencias.fotoFileId, id)),
+    db.select({ obraId: obraEquipe.obraId }).from(obraEquipe).where(eq(obraEquipe.contratoFileId, id)),
   ]);
   const linkedResources = [
     ...anexos.map((row) => ({ obraId: row.obraId, area: "equipe" as const })),
     ...fotos.map((row) => ({ obraId: row.obraId, area: "diario" as const })),
     ...capas.map((row) => ({ obraId: row.obraId, area: "diario" as const })),
+    ...diarios.map((row) => ({ obraId: row.obraId, area: "diario" as const })),
+    ...ocorrencias.map((row) => ({ obraId: row.obraId, area: "ocorrencias" as const })),
+    ...contratos.map((row) => ({ obraId: row.obraId, area: "equipe" as const })),
     ...lancamentos.filter((row) => row.obraId).map((row) => ({
       obraId: row.obraId!,
       area: "financeiro" as const,
       categoria: row.categoria,
     })),
   ];
+  // EMP-05 — conta xgestão somente leitura não apaga arquivo de obra.
+  // REV-06 — decide pelas obras ligadas ao arquivo: só bloqueia se alguma for
+  // obra xgestão; ligado só ao marketplace segue livre. Sem vínculo: arquivo
+  // privado é conteúdo do xgestão (EMP-02) e vale o somente leitura da conta;
+  // público sem vínculo não é bloqueado.
+  const obrasDoArquivo = linkedResources.map((r) => r.obraId);
+  const erroLeitura = await erroSomenteLeituraUpload(
+    guard.user,
+    file.kind,
+    obrasDoArquivo.length > 0 ? obrasDoArquivo : file.visibility === "private" ? undefined : [],
+  );
+  if (erroLeitura) {
+    const r = NextResponse.json({ code: "XGESTAO_SOMENTE_LEITURA", message: erroLeitura }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
   const uniqueResources = new Map(linkedResources.map((resource) => [
     `${resource.obraId}:${resource.area}:${"categoria" in resource ? resource.categoria : ""}`,
     resource,

@@ -44,7 +44,14 @@ export interface ObraOcorrenciaApi {
   resolvidoPorId: string | null;
   resolvidoPorNome: string | null;
   resolvidoEm: string | null;
+  /** Como o problema foi resolvido. Também vai ao link do cliente. */
+  observacaoResolucao?: string | null;
+  atualizadoEm?: string | null;
   createdAt: string;
+  /** Obra própria do xgestão: autor, dono ou gestor podem editar, excluir e reabrir. */
+  podeGerenciar?: boolean;
+  /** Há foto anexada, mesmo que a URL não seja pública. */
+  temFoto?: boolean;
 }
 
 export type ObraFotoFase = 'antes' | 'durante' | 'agora' | null;
@@ -193,12 +200,56 @@ export function useCreateOcorrencia(obraId: string) {
   });
 }
 
+/** Ocorrências alimentam o KPI "Problemas abertos" do detalhe da obra. */
+function invalidarOcorrencias(qc: ReturnType<typeof useQueryClient>, obraId: string) {
+  qc.invalidateQueries({ queryKey: ['obras', obraId, 'ocorrencias'] });
+  qc.invalidateQueries({ queryKey: ['empreiteiro', 'minhas-obras', obraId] });
+}
+
 export function useResolverOcorrencia(obraId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ocorrenciaId: string) =>
-      sendJSON<ObraOcorrenciaApi>('POST', `/api/obras/${obraId}/ocorrencias/${ocorrenciaId}/resolver`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['obras', obraId, 'ocorrencias'] }),
+    mutationFn: (arg: string | { id: string; observacaoResolucao?: string | null }) => {
+      const { id, observacaoResolucao } = typeof arg === 'string' ? { id: arg, observacaoResolucao: undefined } : arg;
+      return sendJSON<ObraOcorrenciaApi>(
+        'POST',
+        `/api/obras/${obraId}/ocorrencias/${id}/resolver`,
+        observacaoResolucao !== undefined ? { observacaoResolucao } : undefined,
+      );
+    },
+    onSuccess: () => invalidarOcorrencias(qc, obraId),
+  });
+}
+
+export function useUpdateOcorrencia(obraId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: {
+      id: string;
+      titulo?: string;
+      descricao?: string;
+      gravidade?: OcorrenciaGravidade;
+      fotoFileId?: string | null;
+      observacaoResolucao?: string | null;
+    }) => sendJSON<ObraOcorrenciaApi>('PATCH', `/api/obras/${obraId}/ocorrencias/${id}`, body),
+    onSuccess: () => invalidarOcorrencias(qc, obraId),
+  });
+}
+
+export function useDeleteOcorrencia(obraId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => sendJSON<{ ok: true }>('DELETE', `/api/obras/${obraId}/ocorrencias/${id}`),
+    onSuccess: () => invalidarOcorrencias(qc, obraId),
+  });
+}
+
+export function useReabrirOcorrencia(obraId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      sendJSON<ObraOcorrenciaApi>('POST', `/api/obras/${obraId}/ocorrencias/${id}/reabrir`),
+    onSuccess: () => invalidarOcorrencias(qc, obraId),
   });
 }
 

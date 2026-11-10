@@ -100,7 +100,8 @@ export async function createObra(
         const [{ abertas }] = await tx
           .select({ abertas: sql<number>`COUNT(*)::int` })
           .from(obras)
-          .where(and(ownerFilter, sql`${obras.status} <> 'concluida'`));
+          // XG48 — obra só para visualização pelo plano não ocupa vaga do xgestão.
+          .where(and(ownerFilter, sql`${obras.status} <> 'concluida'`, ...(owner.kind === "xgestao" ? [eq(obras.xgestaoBloqueadaPorPlano, false)] : [])));
         if (abertas >= limiteObras) throw new ObraLimiteError(limiteObras);
       }
 

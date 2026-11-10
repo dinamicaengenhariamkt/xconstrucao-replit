@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { scrubEvent } from "./lib/sentry-scrub";
+import { scrubEvent, scrubTransaction } from "./lib/sentry-scrub";
 
 const dsn = process.env.SENTRY_DSN;
 
@@ -10,6 +10,9 @@ if (dsn) {
     environment: process.env.NODE_ENV ?? "development",
     beforeSend(event) {
       return scrubEvent(event);
+    },
+    beforeSendTransaction(event) {
+      return scrubTransaction(event);
     },
   });
 }

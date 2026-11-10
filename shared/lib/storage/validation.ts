@@ -161,6 +161,38 @@ export interface ValidateUploadInput {
   mime: string;
   size: number;
   role: string;
+  /** Nome original do arquivo; usado para conferir a extensão de CAD. */
+  filename?: string;
+  /**
+   * EMP-11 — exige extensão de CAD quando o mime é `octet-stream`. Ligado só
+   * para obra do xgestão; o marketplace mantém o comportamento anterior.
+   */
+  restringirCad?: boolean;
+}
+
+/**
+ * EMP-11 — `application/octet-stream` é o "binário desconhecido": o browser o
+ * usa para DWG/RVT/IFC/SKP, mas também para qualquer outra coisa. Só passa
+ * quando a extensão é de projeto CAD.
+ */
+export const CAD_EXTENSOES = ["dwg", "dxf", "rvt", "ifc", "skp"] as const;
+
+export const MENSAGEM_HEIC =
+  "Formato HEIC não é aceito. No iPhone, ajuste Câmera > Formatos > Mais compatível, ou envie em JPG/PNG.";
+
+function extensaoDe(filename: string | undefined): string {
+  if (!filename) return "";
+  const idx = filename.lastIndexOf(".");
+  return idx > 0 ? filename.slice(idx + 1).trim().toLowerCase() : "";
+}
+
+function ehHeic(mime: string, filename: string | undefined): boolean {
+  const m = mime.toLowerCase();
+  if (m === "image/heic" || m === "image/heif" || m === "image/heic-sequence" || m === "image/heif-sequence") {
+    return true;
+  }
+  const ext = extensaoDe(filename);
+  return ext === "heic" || ext === "heif";
 }
 
 export interface ValidationResult {
@@ -198,6 +230,22 @@ export function validateUpload(input: ValidateUploadInput): ValidationResult {
   // XG19 — mesma fonte que o commit usa; ver `KIND_ROLES`.
   if (!roleAllowedForKind(input.kind, input.role)) {
     return { ok: false, message: "Você não tem permissão para enviar arquivos aqui." };
+  }
+  // EMP-11 — foto do iPhone em HEIC: a mensagem genérica ("envie imagem")
+  // confundia, porque para o usuário o arquivo É uma imagem.
+  if (ehHeic(input.mime, input.filename)) {
+    return { ok: false, message: MENSAGEM_HEIC };
+  }
+  if (
+    input.restringirCad &&
+    input.mime.toLowerCase() === "application/octet-stream" &&
+    (rule.mimes as readonly string[]).includes("application/octet-stream") &&
+    !(CAD_EXTENSOES as readonly string[]).includes(extensaoDe(input.filename))
+  ) {
+    return {
+      ok: false,
+      message: `Este tipo de arquivo não é aceito aqui. Envie ${descreverFormatos(rule.mimes)}.`,
+    };
   }
   if (!rule.mimes.includes(input.mime as KindRule["mimes"][number])) {
     // XG19 — listar 20 mime types crus não ajuda ninguém. O usuário pensa em

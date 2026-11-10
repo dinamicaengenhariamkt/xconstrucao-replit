@@ -1,7 +1,8 @@
 /** Vagas de acesso à empresa; prestadores sem login não são membros. */
 export type VinculoEquipe = {
   userId: string;
-  status: 'ativo' | 'convidado' | 'revogado';
+  /** XG48 — `pausado` (acima do limite após descer de plano) não ocupa vaga. */
+  status: 'ativo' | 'convidado' | 'revogado' | 'pausado';
 };
 
 export type UsoEquipe = {

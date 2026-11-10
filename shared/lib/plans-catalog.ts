@@ -2,12 +2,6 @@ import { OFERTA_XGESTAO } from '@features/xgestao/lib/oferta-comercial';
 
 export type PlanoTier = 'free' | 'pro' | 'enterprise' | 'basic' | 'basic_plus' | 'premium';
 
-/**
- * Exceção temporária para os testes do xgestão.
- * Para restaurar a regra comercial original, volte este valor para 1 e ajuste
- * o texto da feature Freemium abaixo.
- */
-export const XGESTAO_FREEMIUM_OBRAS_ATIVAS_TEMP_LIMIT = 9999;
 export type PlanoPersona = 'empreiteiro' | 'contratante' | 'xgestao';
 
 export interface PlanCatalogEntry {
@@ -136,11 +130,15 @@ export const PLANS_CATALOG = {
         valoresPublicos: plano.valoresPublicos ? 1 : 0,
       },
     }])),
+    // Tiers legados do xgestão (PAG-10/PAG-12): fora da oferta e inativos no
+    // banco; ficam só para ler assinaturas antigas do sandbox. Sem plano pago
+    // vigente a conta é somente leitura (`situacaoPlanoXgestao`), então o
+    // Freemium não libera obra nenhuma.
     free: {
       nome: 'Freemium',
       precoMensal: 0,
-      features: ['Obras ativas ilimitadas durante os testes', 'Gestão operacional da obra'],
-      limites: { obrasAtivas: XGESTAO_FREEMIUM_OBRAS_ATIVAS_TEMP_LIMIT },
+      features: ['Somente leitura', 'Dados preservados'],
+      limites: { obrasAtivas: 0 },
     },
     pro: {
       nome: 'Basic',

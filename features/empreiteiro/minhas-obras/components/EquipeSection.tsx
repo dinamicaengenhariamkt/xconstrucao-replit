@@ -247,6 +247,12 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
   const { toast } = useToast();
 
   const obraFinalizada = obra.status === 'finalizada';
+  // EMP-06 — mesma regra de `canAccessObraContrato` no servidor.
+  const permissoes = obra.permissoesXgestao;
+  const mostrarContrato = !permissoes || (
+    (permissoes.areasPermitidas == null || permissoes.areasPermitidas.includes('financeiro')) &&
+    permissoes.categoriasFinanceiroPermitidas == null
+  );
 
   // ─── Stats ──────────────────────────────────────────────────────────────────
 
@@ -396,6 +402,7 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
         onOpenChange={(open) => { if (!open) closeModal(); }}
         membro={modal.type === 'editar' ? modal.membro : null}
         obraId={obra.id}
+        mostrarContrato={mostrarContrato}
         onSalvar={handleSalvar}
       />
 

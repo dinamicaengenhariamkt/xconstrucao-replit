@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
-import { getPaymentGateway } from "@features/planos/gateway";
+import { conferirGatewayPagamento, ehGatewayNaoConfigurado, getPaymentGateway } from "@features/planos/gateway";
 import { aplicarEventoWebhook } from "@features/planos/assinatura-service";
 import { aplicarEventoSubconta } from "@features/marketplace/aplicar-evento-subconta";
 import { aplicarEventoSplit } from "@features/marketplace/aplicar-evento-split";
@@ -42,10 +42,22 @@ export async function POST(request: NextRequest) {
 
   const clientIp = getClientIp(request);
 
+  // REV-02 — erro de configuração não é assinatura inválida: 503 faz o Asaas
+  // reenviar depois, em vez de pausar a fila com 400.
+  const configuracao = conferirGatewayPagamento();
+  if (!configuracao.ok) {
+    console.error(`[webhooks/gateway] ERRO de configuração: ${configuracao.motivo}`);
+    return NextResponse.json({ error: "GATEWAY_NAO_CONFIGURADO", code: "GATEWAY_NAO_CONFIGURADO" }, { status: 503 });
+  }
+
   let evt;
   try {
     evt = await getPaymentGateway().parseWebhook(rawBody, headers, clientIp);
   } catch (err) {
+    if (ehGatewayNaoConfigurado(err)) {
+      console.error("[webhooks/gateway] ERRO de configuração do gateway:", err.message);
+      return NextResponse.json({ error: "GATEWAY_NAO_CONFIGURADO", code: "GATEWAY_NAO_CONFIGURADO" }, { status: 503 });
+    }
     console.error("[webhooks/gateway] assinatura inválida ou payload malformado:", err);
     return NextResponse.json({ error: "INVALID_SIGNATURE" }, { status: 400 });
   }
@@ -60,11 +72,15 @@ export async function POST(request: NextRequest) {
   // como dead-letter / retry queue.
   const evtPayload = {
     eventId: evt.eventId,
+    paymentId: evt.paymentId,
     type: evt.type,
     gatewaySubscriptionId: evt.gatewaySubscriptionId,
     gatewayCustomerId: evt.gatewayCustomerId,
     externalReference: evt.externalReference,
     valor: evt.valor,
+    dueDate: evt.dueDate,
+    // CRM-11 — estorno x chargeback, gravado no evento `payment_refunded`.
+    motivo: evt.motivo,
     // J46 — presentes apenas em eventos de conta/KYC (account_status_changed).
     accountId: evt.accountId,
     accountStatus: evt.accountStatus,

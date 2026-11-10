@@ -28,6 +28,25 @@ async function initializeNodeRuntime() {
       } else {
         console.log(`[boot] pagamentos: gateway=${gateway} asaas_env=${asaasEnv}`);
       }
+
+      // PAG-08 — chave x ambiente. `.replit` não define mais PAYMENT_GATEWAY nem
+      // ASAAS_ENVIRONMENT para produção: vêm dos Secrets do deploy. Só o motivo
+      // é logado, nunca a chave. Em produção o checkout fica recusado enquanto
+      // não combinar (`exigirChaveAsaasCoerente`).
+      // REV-02 — sem gateway válido em produção, checkout/troca/cancelamento
+      // respondem 503 e o webhook 503 GATEWAY_NAO_CONFIGURADO.
+      const { conferirGatewayPagamento } = await import("./features/planos/gateway");
+      const gatewayOk = conferirGatewayPagamento();
+      if (!gatewayOk.ok) console.error(`[boot] ERRO de configuração: ${gatewayOk.motivo}`);
+
+      const { conferirChaveAsaas } = await import("./shared/lib/asaas-client");
+      const conferencia = conferirChaveAsaas();
+      if (!conferencia.ok) {
+        console.error(
+          `[boot] ERRO de configuração do Asaas: ${conferencia.motivo}` +
+            (ehProd ? " Checkout de assinatura recusado até corrigir os Secrets do deploy." : ""),
+        );
+      }
     }
 
     // Seed sempre primeiro (cria tabela users — necessária para FKs dos bootstraps)
@@ -132,6 +151,10 @@ async function initializeNodeRuntime() {
     const { bootstrapXgestaoMembrosSchema } = await import("./server/bootstrap-xgestao-membros");
     await runBootstrap("xgestao-membros", bootstrapXgestaoMembrosSchema);
 
+    // Depois de `medicoes` (obra_ocorrencias) e `obra-operacao` (obra_checklists).
+    const { bootstrapObraOcorrenciasEdicaoSchema } = await import("./server/bootstrap-obra-ocorrencias-edicao");
+    await runBootstrap("obra-ocorrencias-edicao", bootstrapObraOcorrenciasEdicaoSchema);
+
     const { bootstrapNotificacoesSchema } = await import("./server/bootstrap-notificacoes");
     await runBootstrap("notificacoes", bootstrapNotificacoesSchema);
 
@@ -153,6 +176,10 @@ async function initializeNodeRuntime() {
 
     const { bootstrapPlanosSchema } = await import("./server/bootstrap-planos");
     await runBootstrap("planos", bootstrapPlanosSchema);
+
+    // XG48 — troca de plano do xgestão. Depois de `planos` e `xgestao-membros`.
+    const { bootstrapTrocaPlanoSchema } = await import("./server/bootstrap-troca-plano");
+    await runBootstrap("troca-plano", bootstrapTrocaPlanoSchema);
 
     // J42 — fundação marketplace split. Roda DEPOIS de users/obras/financeiro
     // (FKs de pagamentos_split apontam para essas tabelas).
@@ -185,6 +212,14 @@ async function initializeNodeRuntime() {
     const { bootstrapWebhookDeliveryLogSchema } = await import("./server/bootstrap-webhook-delivery-log");
     await runBootstrap("webhook-delivery-log", bootstrapWebhookDeliveryLogSchema);
 
+    // ADM-02 — conta interna/teste fora das métricas do admin xgestão.
+    const { bootstrapContaInternaSchema } = await import("./server/bootstrap-conta-interna");
+    await runBootstrap("conta-interna", bootstrapContaInternaSchema);
+
+    // CRM-03/CRM-07 — motivo do cancelamento e contatos do admin xgestão.
+    const { bootstrapXgestaoAdminCrmSchema } = await import("./server/bootstrap-xgestao-admin-crm");
+    await runBootstrap("xgestao-admin-crm", bootstrapXgestaoAdminCrmSchema);
+
     // ----------------------------------------------------------------
     // Jobs de negócio (periódicos — marcados como job_runs independentes)
     // ----------------------------------------------------------------
@@ -199,6 +234,13 @@ async function initializeNodeRuntime() {
     // leitura do plano também vence de forma preguiçosa, então isto é só higiene.
     const { expirarTestesVencidos } = await import("./features/xgestao/teste/server/teste-service");
     await runBootstrap("expirar-testes-xgestao", () => expirarTestesVencidos().then(() => {}));
+
+    // XG48 — descidas de plano cuja data chegou e diferenças proporcionais que
+    // ainda não entraram na cobrança pendente do Asaas. Idempotentes; a leitura
+    // do plano também aplica a descida de forma preguiçosa.
+    const { aplicarTrocasVencidas, reprocessarAjustesPendentes } = await import("./features/xgestao/server/troca-marcas");
+    await runBootstrap("aplicar-trocas-xgestao", () => aplicarTrocasVencidas().then(() => {}));
+    await runBootstrap("ajustes-troca-xgestao", () => reprocessarAjustesPendentes().then(() => {}));
 
     const { snapshotKpisJob } = await import("./features/financeiro/snapshot-kpis-job");
     await runBootstrap("snapshot-kpis", () => snapshotKpisJob().then(() => {}));
@@ -291,6 +333,24 @@ async function initializeNodeRuntime() {
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // REV-01 — colunas e tabelas que o código já lê com `select()` sem lista.
+    // Rápido e com `await`: o servidor só atende depois disto. Nunca derruba o
+    // processo; o bootstrap completo e o health check de schema cobrem o resto.
+    try {
+      const { bootstrapColunasEssenciais } = await import("./server/bootstrap-colunas-essenciais");
+      const r = await bootstrapColunasEssenciais();
+      if (r.falhas.length > 0) {
+        console.error(
+          `[instrumentation] ERRO no bootstrap de colunas essenciais (${r.falhas.length} passo(s)): ` +
+            r.falhas.map((f) => `${f.nome}: ${f.erro}`).join(" | "),
+        );
+      } else {
+        console.info(`[instrumentation] colunas essenciais ok (${r.rodados.length} passos, ${r.pulados.length} pulados)`);
+      }
+    } catch (err) {
+      console.error("[instrumentation] ERRO no bootstrap de colunas essenciais:", err instanceof Error ? err.message : err);
+    }
+
     if (process.env.NODE_ENV === "production") {
       console.info("[instrumentation] starting production bootstrap in background");
       void initializeNodeRuntime()

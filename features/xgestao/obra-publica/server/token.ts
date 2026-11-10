@@ -7,7 +7,7 @@ import { empreiteiras, obraShareLinks, obras, userRoles } from '@shared/db/schem
 import { normalizarSecoes, type SecoesPublicas } from '../secoes';
 import { planoDaEmpresa } from '@features/xgestao/server/plano-empresa';
 
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+import { TOKEN_PATTERN } from '../token-formato';
 
 export type ObraShareLink = {
   id: string;
@@ -19,6 +19,8 @@ export type ObraShareLink = {
   visualizacoes: number;
   ultimoAcessoEm: Date | null;
   secoes: SecoesPublicas;
+  /** XG48/E2E-03 — pausado pela descida de plano: listado, mas não abre. */
+  pausadoPorPlano: boolean;
 };
 
 /**
@@ -57,6 +59,9 @@ function activeLinksWhere(obraId: string) {
   return and(
     eq(obraShareLinks.obraId, obraId),
     eq(obraShareLinks.ativo, true),
+    // XG48 — link pausado pela descida de plano: fora do limite e da lista do
+    // dono até a empresa subir de plano (não é revogado nem excluído).
+    eq(obraShareLinks.pausadoPorPlano, false),
     or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
   );
 }
@@ -80,15 +85,27 @@ function toShareLink(row: typeof obraShareLinks.$inferSelect): ObraShareLink {
     visualizacoes: row.visualizacoes,
     ultimoAcessoEm: row.ultimoAcessoEm,
     secoes: normalizarSecoes(row.secoes),
+    pausadoPorPlano: row.pausadoPorPlano,
   };
 }
 
-/** Os links ativos que o dono pode reexibir, do mais antigo ao mais novo. */
+/**
+ * Os links que o dono pode reexibir, do mais antigo ao mais novo.
+ *
+ * E2E-03 — inclui os pausados pela troca de plano (`pausadoPorPlano`). Antes
+ * eles sumiam da lista e o dono não tinha como revogá-los: voltariam a abrir
+ * sozinhos quando a empresa subisse de plano. Continuam fora do limite
+ * (`activeLinksWhere`) e da edição (`activeLinkByIdWhere`).
+ */
 export async function listActiveObraShareLinks(obraId: string): Promise<ObraShareLink[]> {
   const links = await db
     .select()
     .from(obraShareLinks)
-    .where(activeLinksWhere(obraId))
+    .where(and(
+      eq(obraShareLinks.obraId, obraId),
+      eq(obraShareLinks.ativo, true),
+      or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
+    ))
     .orderBy(obraShareLinks.criadoEm);
   return links.map(toShareLink);
 }
@@ -172,13 +189,24 @@ export async function revokeObraShareLink(obraId: string, linkId: string): Promi
 /**
  * Resolve o token para a página pública. Retornar null intencionalmente une
  * token malformado, inexistente, expirado e revogado no mesmo estado externo.
+ *
+ * `indisponivel`: o link é válido, mas a empresa dona da obra está em somente
+ * leitura (plano vencido de vez). A página mostra um aviso neutro em vez da
+ * obra e volta sozinha quando a conta regulariza, pois a situação é relida a
+ * cada abertura pela mesma regra da escrita (`planoDaEmpresa`).
  */
 export async function resolveActiveObraShareToken(
   token: string,
-): Promise<{ linkId: string; obraId: string; secoes: SecoesPublicas } | null> {
+): Promise<{ linkId: string; obraId: string; secoes: SecoesPublicas; indisponivel: boolean } | null> {
   if (!TOKEN_PATTERN.test(token)) return null;
   const [link] = await db
-    .select({ linkId: obraShareLinks.id, obraId: obraShareLinks.obraId, secoes: obraShareLinks.secoes })
+    .select({
+      linkId: obraShareLinks.id,
+      obraId: obraShareLinks.obraId,
+      secoes: obraShareLinks.secoes,
+      empresaId: empreiteiras.id,
+      pausadoPorPlano: obraShareLinks.pausadoPorPlano,
+    })
     .from(obraShareLinks)
     .innerJoin(obras, eq(obras.id, obraShareLinks.obraId))
     .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
@@ -193,7 +221,14 @@ export async function resolveActiveObraShareToken(
       or(isNull(obraShareLinks.expiraEm), gt(obraShareLinks.expiraEm, new Date())),
     ));
   if (!link) return null;
-  return { linkId: link.linkId, obraId: link.obraId, secoes: normalizarSecoes(link.secoes) };
+  const { somenteLeitura } = await planoDaEmpresa(link.empresaId);
+  return {
+    linkId: link.linkId,
+    obraId: link.obraId,
+    secoes: normalizarSecoes(link.secoes),
+    // XG48 — link acima do limite do plano atual responde como indisponível.
+    indisponivel: somenteLeitura || link.pausadoPorPlano,
+  };
 }
 
 /** Contador best-effort: não deve atrasar nem impedir a página pública. */

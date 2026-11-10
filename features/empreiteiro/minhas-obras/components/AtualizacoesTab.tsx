@@ -91,17 +91,20 @@ function BotaoAdicionar({ onClick }: { onClick: () => void }) {
 }
 
 /**
- * Sem prop de permissão: quem abre esta tela é o empreiteiro da obra — dono no
- * xgestão, atribuído no marketplace — e nos dois casos ele registra. É a mesma
- * regra do botão no hero. O contratante tem outra tela.
+ * Quem abre esta tela é o empreiteiro da obra (dono no xgestão, atribuído no
+ * marketplace). E2E-02: `canWrite` vem da página, a mesma regra das outras
+ * abas; conta somente leitura, obra bloqueada pela troca de plano ou membro
+ * só de visualização não veem o botão. No marketplace o valor é sempre true.
  */
 export function AtualizacoesTab({
   obraId,
   isOwnWork,
+  canWrite = true,
   onRegistrar,
 }: {
   obraId: string;
   isOwnWork: boolean;
+  canWrite?: boolean;
   onRegistrar: () => void;
 }) {
   const { data, isLoading, isError, refetch } = useObraMedicoes(obraId);
@@ -117,7 +120,7 @@ export function AtualizacoesTab({
             : 'Medições enviadas ao contratante, com o parecer de cada uma.'}
         </p>
       </div>
-      <BotaoAdicionar onClick={onRegistrar} />
+      {canWrite && <BotaoAdicionar onClick={onRegistrar} />}
     </div>
   );
 
@@ -173,12 +176,14 @@ export function AtualizacoesTab({
           </p>
           <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
             {isOwnWork
-              ? 'Registre o que foi executado — percentual, descrição e fotos. O progresso da obra sobe a partir daqui.'
+              ? 'Registre o que foi executado: percentual, descrição e fotos. O progresso da obra sobe a partir daqui.'
               : 'As medições enviadas ao contratante aparecem nesta lista.'}
           </p>
-          <div className="mt-5 flex justify-center">
-            <BotaoAdicionar onClick={onRegistrar} />
-          </div>
+          {canWrite && (
+            <div className="mt-5 flex justify-center">
+              <BotaoAdicionar onClick={onRegistrar} />
+            </div>
+          )}
         </div>
       </div>
     );

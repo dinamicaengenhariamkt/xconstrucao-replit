@@ -13,7 +13,12 @@ export function useConcluirOnboarding() {
         method: 'POST',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erro ao concluir onboarding');
+      if (!res.ok) {
+        // 422 DOCUMENTO_OBRIGATORIO (xgestão sem CPF/CNPJ): a mensagem do
+        // servidor já é a que a pessoa deve ler.
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(res.status === 422 && body?.message ? body.message : 'Erro ao concluir onboarding');
+      }
       return res.json();
     },
   });

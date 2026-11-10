@@ -1,7 +1,8 @@
 import 'server-only';
 
-import { and, eq, inArray, isNotNull, isNull, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '@shared/db/db';
+import { marketingAtivo } from '@features/xgestao/marketing/lib/consentimento';
 import {
   empreiteiras,
   obras,
@@ -25,10 +26,31 @@ export interface XgestaoAssinanteBase {
   userId: string;
   email: string;
   nome: string | null;
-  empreiteiraId: string;
+  /** ADM-06 — `null` quando o responsável ainda não cadastrou a empresa. */
+  empreiteiraId: string | null;
   empreiteiraNome: string;
+  /** ADM-06 — tem o entitlement, mas ainda não cadastrou a empresa. */
+  semEmpresa: boolean;
+  /** ADM-02 — conta interna/teste: fora das métricas, vista à parte. */
+  contaInterna: boolean;
   entradaEm: Date;
+  /**
+   * CRM-01 — contato do responsável: telefone do usuário (senão o da empresa),
+   * CPF/CNPJ (CNPJ da empresa, senão o documento do usuário), cidade e UF da empresa.
+   */
+  contato: { telefone: string | null; documento: string | null; cidade: string | null; uf: string | null };
+  /**
+   * XG52 — consentimento de e-mail de marketing (LGPD). O admin vê sem máscara;
+   * o CSV de marketing filtra por `aceito`.
+   */
+  marketing: { aceito: boolean; consentimentoEm: string | null; revogadoEm: string | null; origem: string | null };
 }
+
+/** ADM-02 — como as contas internas entram numa leitura. */
+export type FiltroContasInternas = 'excluir' | 'somente' | 'incluir';
+
+/** Nome mostrado para quem ainda não cadastrou a empresa. */
+export const SEM_EMPRESA_NOME = 'Perfil ainda não concluído';
 
 /** Pessoa vinculada à empresa; não é uma assinatura nem uma empresa própria. */
 export interface XgestaoMembroEmpresa {
@@ -105,39 +127,66 @@ export async function listarMembrosEmpreiteirasXgestao(
  *
  * A fonte é o entitlement, não a tabela de assinaturas, porque o plano free
  * não gera cobrança — olhar só para `assinaturas` esconderia a maior parte da
- * base. Quem ainda não tem empreiteira cadastrada fica de fora: sem ela não há
- * obra para exibir.
+ * base. ADM-06: é a base ÚNICA da home, da lista, do funil e do CSV; quem ainda
+ * não cadastrou a empresa entra com `semEmpresa` (antes a home contava e a lista
+ * não). ADM-02: contas internas ficam de fora por padrão.
  */
-export async function listarAssinantesXgestao(): Promise<XgestaoAssinanteBase[]> {
+export async function listarAssinantesXgestao(
+  opcoes: { internas?: FiltroContasInternas; userIds?: string[] } = {},
+): Promise<XgestaoAssinanteBase[]> {
+  const internas = opcoes.internas ?? 'excluir';
+  if (opcoes.userIds && opcoes.userIds.length === 0) return [];
+  const condicoes: SQL[] = [eq(userRoles.role, 'xgestao'), isNull(xgestaoMembros.id)];
+  if (internas === 'excluir') condicoes.push(eq(users.contaInterna, false));
+  if (internas === 'somente') condicoes.push(eq(users.contaInterna, true));
+  if (opcoes.userIds) condicoes.push(inArray(userRoles.userId, opcoes.userIds));
   const rows = await db
     .select({
       userId: userRoles.userId,
       email: users.email,
       nome: users.name,
+      contaInterna: users.contaInterna,
       empreiteiraId: empreiteiras.id,
       empreiteiraNome: empreiteiras.nome,
       entradaEm: userRoles.criadoEm,
+      telefone: sql<string | null>`coalesce(nullif(trim(${users.phone}), ''), nullif(trim(${empreiteiras.telefone}), ''))`,
+      documento: sql<string | null>`coalesce(nullif(trim(${empreiteiras.cnpj}), ''), nullif(trim(${users.cpfCnpj}), ''))`,
+      cidade: empreiteiras.cidade,
+      uf: empreiteiras.estado,
+      marketingConsentimentoEm: users.marketingConsentimentoEm,
+      marketingRevogadoEm: users.marketingRevogadoEm,
+      marketingOrigem: users.marketingOrigem,
     })
     .from(userRoles)
     .innerJoin(users, eq(users.id, userRoles.userId))
     .leftJoin(xgestaoMembros, eq(xgestaoMembros.userId, userRoles.userId))
-    .innerJoin(empreiteiras, eq(empreiteiras.userId, users.id))
-    .where(and(eq(userRoles.role, 'xgestao'), isNull(xgestaoMembros.id)));
+    .leftJoin(empreiteiras, eq(empreiteiras.userId, users.id))
+    .where(and(...condicoes))
+    .orderBy(desc(userRoles.criadoEm));
 
   return rows.map((row) => ({
     userId: row.userId,
     email: row.email,
     nome: row.nome,
     empreiteiraId: row.empreiteiraId,
-    empreiteiraNome: row.empreiteiraNome,
+    empreiteiraNome: row.empreiteiraNome ?? SEM_EMPRESA_NOME,
+    semEmpresa: row.empreiteiraId === null,
+    contaInterna: row.contaInterna,
     entradaEm: row.entradaEm,
+    contato: { telefone: row.telefone, documento: row.documento, cidade: row.cidade, uf: row.uf },
+    marketing: {
+      aceito: marketingAtivo({ consentimentoEm: row.marketingConsentimentoEm, revogadoEm: row.marketingRevogadoEm }),
+      consentimentoEm: row.marketingConsentimentoEm ? row.marketingConsentimentoEm.toISOString() : null,
+      revogadoEm: row.marketingRevogadoEm ? row.marketingRevogadoEm.toISOString() : null,
+      origem: row.marketingOrigem ?? null,
+    },
   }));
 }
 
 /** Ids das empreiteiras com entitlement — a chave de todo filtro de obra. */
-export async function listarEmpreiteiraIdsXgestao(): Promise<string[]> {
-  const assinantes = await listarAssinantesXgestao();
-  return assinantes.map((assinante) => assinante.empreiteiraId);
+export async function listarEmpreiteiraIdsXgestao(internas: FiltroContasInternas = 'excluir'): Promise<string[]> {
+  const assinantes = await listarAssinantesXgestao({ internas });
+  return assinantes.flatMap((assinante) => (assinante.empreiteiraId ? [assinante.empreiteiraId] : []));
 }
 
 /**

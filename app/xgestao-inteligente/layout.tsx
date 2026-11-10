@@ -7,13 +7,13 @@ export const revalidate = false
 
 // SEO Metadata
 export const metadata: Metadata = genMeta({
-  title: 'xgestão inteligente - Gestão de Obras com Inteligência Artificial',
-  description: 'Sistema completo para gerenciar orçamentos, equipes, financeiro e documentação da sua obra com IA. Teste grátis por 3 meses.',
+  title: 'xgestão inteligente - Gestão de Obras',
+  description: 'Gestão de obras com diário, financeiro, fotos, equipe e link para o cliente acompanhar o andamento. Teste grátis por 3 meses.',
   path: '/xgestao-inteligente',
   ogImage: '/og-images/xgestao.png',
   keywords: [
     'xgestão inteligente',
-    'gestão de obras IA',
+    'diário de obra',
     'orçamento de obras',
     'controle de obras',
     'gestão financeira obras',

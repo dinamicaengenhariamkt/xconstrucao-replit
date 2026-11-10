@@ -76,8 +76,15 @@ for (const arquivo of [
 
 test('XG42 minutas legais seguem a oferta nova', () => {
   const termos = readFileSync('server/legal-seed/termos-v2.md', 'utf8');
-  assert.match(termos, /90 dias no plano Premium/);
-  assert.match(termos, /automaticamente para somente leitura/);
+  assert.match(termos, /90 dias no plano Basic/);
+  assert.match(termos, /automaticamente no primeiro acesso/);
+  assert.match(termos, /automaticamente para somente leitura 24 \(vinte e quatro\) horas depois/);
+  assert.match(termos, /1 \(um\) mês adicional sem cobrança/);
+  assert.match(termos, /acesso completo por \*\*7 \(sete\) dias\*\*/);
+  assert.doesNotMatch(termos, /90 dias no plano Premium|iniciado por escolha do Assinante/);
+  // Encerrada a assinatura, somente leitura sem exclusão por prazo.
+  assert.match(termos, /passa para \*\*somente leitura\*\*: os dados das obras \*\*não são excluídos\*\*/);
+  assert.doesNotMatch(termos, /poderão ser excluídos/);
   assert.doesNotMatch(termos, /plano Pro\b|plano Free|plano gratuito/);
   for (const texto of [termos, readFileSync('server/legal-seed/privacidade-v2.md', 'utf8')]) {
     assert.doesNotMatch(texto, /tarefas?/i);

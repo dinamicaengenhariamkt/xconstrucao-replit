@@ -6,7 +6,8 @@ import { db } from "@shared/db/db";
 import { obraEquipe } from "@shared/db/schema";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
-import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
+import { findObraAccess, canAccessObraArea, canAccessObraContrato, canWriteObraArea } from "@features/obras/api/access";
+import { ocultarContratoMembro } from "@features/obras/api/equipe-contrato-visibilidade";
 import { contratoFields, refineContrato } from "@features/obras/api/equipe-contrato-schema";
 import { validarContratoMembro } from "@features/obras/api/validar-contrato-membro";
 
@@ -46,7 +47,10 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     .from(obraEquipe)
     .where(eq(obraEquipe.obraId, id))
     .orderBy(asc(obraEquipe.createdAt));
-  const r = NextResponse.json({ rows });
+  // EMP-06 — PIX, valor e contrato só para quem vê o contrato da obra.
+  const r = NextResponse.json({
+    rows: canAccessObraContrato(access) ? rows : rows.map(ocultarContratoMembro),
+  });
   setNoCacheHeaders(r);
   return r;
 }

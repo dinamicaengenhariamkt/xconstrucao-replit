@@ -67,6 +67,8 @@ const STATUS_LABEL: Record<string, string> = {
   revogado: 'Acesso revogado',
   revogada: 'Acesso revogado',
   revoked: 'Acesso revogado',
+  // XG48 — acima do limite depois de descer de plano. Volta ao subir de plano.
+  pausado: 'Pausado pelo plano',
 };
 const STATUS_STYLE: Record<string, string> = {
   pendente: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200',
@@ -78,6 +80,7 @@ const STATUS_STYLE: Record<string, string> = {
   revogado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
   revogada: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
   revoked: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  pausado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
 };
 
 const blankForm = (): FormState => ({

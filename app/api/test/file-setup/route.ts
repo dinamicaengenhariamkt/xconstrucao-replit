@@ -28,9 +28,10 @@ import {
   isStorageConfigured,
   type UploadKind,
 } from "@shared/lib/storage";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 const VALID_KINDS: UploadKind[] = [

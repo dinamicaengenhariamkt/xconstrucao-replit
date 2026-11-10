@@ -26,7 +26,7 @@ describe('navegação administrativa do xgestão', () => {
       getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).map(
         (item) => item.title,
       ),
-      ['xgestão', 'Obras xgestão', 'Assinantes xgestão', 'Financeiro xgestão'],
+      ['xgestão', 'Obras xgestão', 'Assinantes xgestão', 'Conversão xgestão', 'Financeiro xgestão', 'Engajamento xgestão', 'Mês a mês xgestão'],
     );
     assert.ok(
       getVisibleAdminNavigationItems(ADMIN_NAV_ITEMS, context).every(

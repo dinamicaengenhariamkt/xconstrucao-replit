@@ -1,5 +1,6 @@
 'use client';
 
+import { ROTULO_PROBLEMA_COBRANCA, TIPOS_PROBLEMA_COBRANCA } from '@features/xgestao/admin/lib/cobranca-rotulos';
 import { tierLabel } from '@features/xgestao/admin/plano-label';
 import Link from 'next/link';
 import { StatsCard } from '@features/shared/components/StatsCard';
@@ -9,6 +10,8 @@ import { useXgestaoAdminDashboard } from '@features/xgestao/admin/hooks/use-admi
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
 import { formatCurrency, formatDate } from '@shared/lib/formatters';
 import { cn } from '@shared/lib/utils';
+import { MotivosAtencao, SITUACAO_STYLE } from '@features/xgestao/admin/components/AssinanteIndicadores';
+import { ROTULO_SITUACAO, SITUACOES_ASSINANTE } from '@features/xgestao/admin/lib/situacao-assinante';
 import {
   RiAlarmWarningLine,
   RiCheckboxCircleLine,
@@ -24,7 +27,6 @@ import type {
   XgestaoAdminObraStatus,
 } from '@features/xgestao/admin/server/dashboard';
 
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' });
 
 const STATUS_LABEL: Record<XgestaoAdminObraStatus, string> = {
   planejamento: 'Planejamento',
@@ -49,10 +51,14 @@ const ALERT_STYLE: Record<XgestaoAdminAlerta['severidade'], string> = {
 export default function AdminXgestaoPage() {
   const { data, isLoading, isError, refetch, isFetching } = useXgestaoAdminDashboard();
   const indicadores = data?.indicadores;
+  const resumo = data?.assinaturas?.resumo;
+  const comercial = data?.comercial;
+  const engajamento = data?.engajamento;
+  const atencao = data?.assinaturas?.atencao ?? [];
   const distribuicao = indicadores?.distribuicaoPlanos ?? { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
   const saldoPrevisto = (indicadores?.orcamentoGerenciado ?? 0) - (indicadores?.valorPago ?? 0);
   const cards = [
-    { label: 'Responsáveis com acesso', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' },
+    { label: 'Responsáveis com acesso', value: String(indicadores?.assinantes ?? 0), icon: RiGroupLine, iconBgColor: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20', href: '/admin/xgestao/assinantes' },
     { label: 'Vínculos de equipe', value: String(indicadores?.membrosEquipe ?? 0), icon: RiGroupLine, iconBgColor: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20' },
     { label: 'Obras ativas', value: String(indicadores?.obrasAtivas ?? 0), icon: RiHammerLine, iconBgColor: 'bg-amber-50 text-amber-600 dark:bg-amber-900/20', href: '/admin/xgestao/obras' },
     // XG34 — era "Progresso médio", lido de `obras.progresso` (coluna sem escritor desde a XG23).
@@ -98,6 +104,9 @@ export default function AdminXgestaoPage() {
           {[
             { href: '/admin/xgestao/obras', label: 'Obras' },
             { href: '/admin/xgestao/assinantes', label: 'Assinantes' },
+            { href: '/admin/xgestao/conversao', label: 'Conversão' },
+            { href: '/admin/xgestao/engajamento', label: 'Engajamento' },
+            { href: '/admin/xgestao/historico', label: 'Mês a mês' },
             { href: '/admin/xgestao/financeiro', label: 'Financeiro' },
           ].map((atalho) => (
             <Link
@@ -250,7 +259,8 @@ export default function AdminXgestaoPage() {
                 {data?.alertas.totais.ocorrenciasAbertas ?? 0} ocorrências
               </span>
               <span className="rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
-                {data?.alertas.totais.pagamentosAtrasados ?? 0} pagamentos
+                {/* ADM-09 — calculado na hora, separado por lado. */}
+                {data?.alertas.totais.recebimentosAtrasados ?? 0} a receber · {data?.alertas.totais.contasAPagarAtrasadas ?? 0} a pagar atrasados
               </span>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {data?.alertas.totais.obrasPausadas ?? 0} pausadas
@@ -290,71 +300,139 @@ export default function AdminXgestaoPage() {
         </Card>
       </section>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Acessos xgestão</h2>
-          <p className="text-sm text-muted-foreground">Uma linha por responsável/empresa com acesso xgestão; membros aparecem vinculados à empresa, sem criar assinatura própria. Na lista de obras, apenas empresas com perfil concluído; o marketplace não é alterado.</p>
-        </div>
-        {data?.assinantes.length ? (
-          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                    <th className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Empresa / responsável</th>
-                    <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">E-mail</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
-                    <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Plano</th>
-                    <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Distribuição</th>
-                    <th className="hidden sm:table-cell text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Entrada</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                  {data.assinantes.map((assinante) => (
-                    <tr key={assinante.id} data-testid={`xgestao-assinante-${assinante.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
-                      <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">
-                        {assinante.empreiteira}
-                        <p className="mt-0.5 text-xs font-normal text-gray-500 dark:text-gray-400">Responsável: {assinante.responsavel || 'não informado'}</p>
-                        <p className="mt-0.5 text-xs font-normal text-gray-400 lg:hidden">{assinante.email}</p>
-                        <p className="mt-0.5 text-xs font-normal text-gray-400 md:hidden">{tierLabel(assinante.plano.tier)}</p>
-                        {assinante.membros.length > 0 && (
-                          <details className="mt-2 text-xs font-normal">
-                            <summary className="cursor-pointer text-primary">{assinante.membros.length} vínculo(s) de equipe</summary>
-                            <ul className="mt-2 space-y-1 pl-3 text-gray-500 dark:text-gray-400">
-                              {assinante.membros.map((membro) => (
-                                <li key={membro.userId}>
-                                  <span>{membro.nome} · {membro.email} · {membro.papel} · {membro.status}</span>
-                                  {membro.obras.length > 0 && (
-                                    <ul className="ml-3 mt-1 list-disc">
-                                      {membro.obras.map((obra) => (
-                                        <li key={obra.obraId}>{obra.nome} · {obra.permissao}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
-                        )}
-                      </td>
-                      <td className="hidden lg:table-cell px-4 py-3 text-gray-600 dark:text-gray-300">{assinante.email}</td>
-                      <td className="px-4 py-3 text-right font-semibold">{assinante.obrasGerenciadas}</td>
-                      <td className="hidden md:table-cell px-4 py-3"><span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{tierLabel(assinante.plano.tier)}</span></td>
-                      <td className="hidden xl:table-cell px-4 py-3 text-gray-500">
-                        {assinante.plano.nome || tierLabel(assinante.plano.tier)}
-                      </td>
-                      <td className="hidden sm:table-cell px-5 py-3 text-gray-500">{dateFormatter.format(new Date(assinante.entradaEm))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* XG45 — números comerciais; o detalhe fica em Conversão e Financeiro. */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-testid="xgestao-comercial-resumo">
+        {[
+          { id: 'conversao', href: '/admin/xgestao/conversao', rotulo: 'Conversão do teste', valor: comercial?.taxaConversao == null ? 'sem dados' : `${comercial.taxaConversao.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, nota: `${comercial?.convertidos ?? 0} assinaram · ${comercial?.emTeste ?? 0} no teste` },
+          { id: 'mrr', href: '/admin/xgestao/financeiro', rotulo: 'Recorrente mensal', valor: formatCurrency(comercial?.mrr ?? 0), nota: comercial?.ticketMedio == null ? 'sem pagantes' : `ticket médio ${formatCurrency(comercial.ticketMedio)}` },
+          { id: 'saidas', href: '/admin/xgestao/conversao', rotulo: 'Saíram no mês', valor: String(comercial?.encerradosNoMes ?? 0), nota: `${formatCurrency(comercial?.mrrPerdidoNoMes ?? 0)} por mês a menos` },
+          { id: 'risco', href: '/admin/xgestao/conversao', rotulo: 'Receita em risco', valor: formatCurrency(comercial?.mrrEmRisco ?? 0), nota: `${comercial?.agendados ?? 0} cancelamento(s) agendado(s) e pendências` },
+          // XG46 — uso: quem paga e usa, e quem parou.
+          { id: 'ativos', href: '/admin/xgestao/engajamento', rotulo: 'Pagantes ativos na semana', valor: engajamento?.pagantes.taxaAtivos7d == null ? 'sem dados' : `${engajamento.pagantes.taxaAtivos7d.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`, nota: `${engajamento?.pagantes.porNivel.ativo_7d ?? 0} de ${engajamento?.pagantes.total ?? 0} usaram nos últimos 7 dias` },
+          { id: 'sem-uso', href: '/admin/xgestao/engajamento', rotulo: 'Pararam de usar', valor: String(engajamento?.semUso ?? 0), nota: 'pagam ou testam e não usam há 14 dias ou mais' },
+          // ADM-03 — cobrança com problema; a lista fica no Financeiro.
+          {
+            id: 'cobranca',
+            href: '/admin/xgestao/financeiro#cobranca',
+            rotulo: 'Cobrança com problema',
+            valor: String(data?.cobranca?.assinantes ?? 0),
+            nota: data?.cobranca
+              ? TIPOS_PROBLEMA_COBRANCA.filter((t) => data.cobranca.totais[t] > 0)
+                .map((t) => `${data.cobranca.totais[t]} ${ROTULO_PROBLEMA_COBRANCA[t].toLowerCase()}`)
+                .join(' · ') || 'nenhuma no momento'
+              : 'nenhuma no momento',
+          },
+        ].map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className="rounded-2xl border border-gray-100 bg-white p-5 transition-colors hover:border-primary/40 dark:border-gray-800 dark:bg-gray-900"
+            data-testid={`xgestao-comercial-${item.id}`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.rotulo}</p>
+            <p className="mt-1 text-2xl font-extrabold">{item.valor}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{item.nota}</p>
+          </Link>
+        ))}
+      </section>
+
+      {/* CRM-06 — atalhos para os segmentos mais urgentes, já filtrados e ordenados na lista. */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="xgestao-segmentos-urgentes">
+        {[
+          { id: 'teste-7d', href: '/admin/xgestao/assinantes?janela=teste_7d&ordem=urgencia', rotulo: 'Teste acaba em 7 dias', valor: resumo?.testeAcabando7d ?? 0, nota: 'em teste grátis; contato antes de acabar' },
+          { id: 'aguardando', href: '/admin/xgestao/assinantes?situacao=aguardando_pagamento&ordem=urgencia', rotulo: 'Aguardando 1º pagamento', valor: resumo?.porSituacao.aguardando_pagamento ?? 0, nota: 'assinaram no teste e ainda não pagaram' },
+          { id: 'inadimplentes', href: '/admin/xgestao/assinantes?situacao=inadimplente&ordem=atraso', rotulo: 'Inadimplentes', valor: resumo?.porSituacao.inadimplente ?? 0, nota: 'pagamento pendente, na carência' },
+          { id: 'cancelamentos', href: '/admin/xgestao/assinantes?situacao=cancelamento_agendado&ordem=urgencia', rotulo: 'Cancelamentos agendados', valor: resumo?.porSituacao.cancelamento_agendado ?? 0, nota: 'ainda usam até o fim do período pago' },
+        ].map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className="rounded-2xl border border-gray-100 bg-white p-5 transition-colors hover:border-primary/40 dark:border-gray-800 dark:bg-gray-900"
+            data-testid={`xgestao-segmento-${item.id}`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.rotulo}</p>
+            <p className="mt-1 text-2xl font-extrabold" data-valor={item.valor}>{item.valor}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{item.nota}</p>
+          </Link>
+        ))}
+      </section>
+
+      {/* XG44 — a home mostra o macro das assinaturas; a lista completa e o
+          detalhe de cada assinante ficam nas páginas próprias. */}
+      <section className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinaturas-resumo">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="text-lg">Situação das assinaturas</CardTitle>
+            <Link href="/admin/xgestao/assinantes" className="text-sm font-bold text-muted-foreground transition-colors hover:text-primary">
+              ver todos ({resumo?.total ?? 0})
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {SITUACOES_ASSINANTE.map((codigo) => (
+              <Link
+                key={codigo}
+                href={`/admin/xgestao/assinantes?situacao=${codigo}`}
+                className="flex items-center justify-between rounded-xl border border-gray-100 px-3 py-2 transition-colors hover:border-primary/40 dark:border-gray-800"
+                data-testid={`xgestao-assinaturas-situacao-${codigo}`}
+              >
+                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', SITUACAO_STYLE[codigo])}>
+                  {ROTULO_SITUACAO[codigo]}
+                </span>
+                <span className="text-lg font-extrabold">{resumo?.porSituacao[codigo] ?? 0}</span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinantes-atencao">
+          <CardHeader className="flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Assinantes que pedem atenção</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pagamento pendente, teste acabando, cancelamento agendado ou plano no limite.
+              </p>
             </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground">
-            Ainda não há assinantes xgestão.
-          </div>
-        )}
+            <Link
+              href="/admin/xgestao/assinantes?situacao=atencao"
+              className="shrink-0 text-sm font-bold text-muted-foreground transition-colors hover:text-primary"
+              data-testid="xgestao-assinantes-atencao-ver-todos"
+            >
+              ver todos ({resumo?.precisamAtencao ?? 0})
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {atencao.length ? (
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                {atencao.map((item) => (
+                  <Link
+                    key={item.userId}
+                    href={`/admin/xgestao/assinantes/${item.userId}`}
+                    className="block py-3 transition-opacity hover:opacity-80"
+                    data-testid={`xgestao-atencao-${item.userId}`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold">{item.empreiteiraNome}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {item.nome || 'Responsável não informado'} · {tierLabel(item.tier)}
+                        </p>
+                      </div>
+                      <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', SITUACAO_STYLE[item.situacao.codigo])}>
+                        {item.situacao.rotulo}
+                      </span>
+                    </div>
+                    <div className="mt-2"><MotivosAtencao motivos={item.atencao} /></div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12 text-center">
+                <RiCheckboxCircleLine className="size-9 text-emerald-500" />
+                <p className="mt-3 text-sm font-bold">Nenhum assinante pede atenção agora</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
     </div>
   );

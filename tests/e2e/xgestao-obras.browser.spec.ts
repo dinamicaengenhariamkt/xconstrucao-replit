@@ -12,9 +12,11 @@ import {
 
 const ANTI_BOT = { website: "", mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 1;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, "0")}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, "0")}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce(
       (total, digit, index) => total + Number(digit) * pesos[index],
@@ -492,9 +494,15 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     page,
   }) => {
     let registerRequests = 0;
+    // TST-14 — a resposta fica presa até os dois envios acontecerem, em vez de
+    // uma espera fixa de 400 ms que podia vencer antes do segundo envio.
+    let liberarResposta!: () => void;
+    const respostaLiberada = new Promise<void>((resolve) => {
+      liberarResposta = resolve;
+    });
     await page.route("**/api/auth/register", async (route) => {
       registerRequests += 1;
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await respostaLiberada;
       await route.fulfill({
         status: 429,
         contentType: "application/json",
@@ -521,6 +529,8 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
       (form as HTMLFormElement).requestSubmit();
       (form as HTMLFormElement).requestSubmit();
     });
+    await expect.poll(() => registerRequests).toBeGreaterThanOrEqual(1);
+    liberarResposta();
 
     await expect(
       page.getByText("Muitas tentativas. Tente novamente em 2 minutos.", { exact: true }),
@@ -750,9 +760,77 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
         response.url().endsWith("/resolver") &&
         response.request().method() === "POST",
     );
+    // Obra própria: resolver abre o diálogo da observação (opcional).
     await resolver.click();
+    await page.getByTestId("button-confirmar-resolver").click();
     expect((await resolvida).status()).toBeLessThan(300);
     await expect(resolver).toHaveCount(0);
+  });
+
+  test("ocorrência: resolver com observação, editar, reabrir e excluir pelo menu", async ({ page, request }) => {
+    const email = await registrarEmpreiteiro(request);
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, "empreiteiro");
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+    const obraResponse = await request.post("/api/xgestao/obras", {
+      data: { nome: `Obra ocorrência menu ${Date.now()}`, endereco: "Rua do Menu, 12" },
+    });
+    expect(obraResponse.status(), await obraResponse.text()).toBe(201);
+    const obra = (await obraResponse.json()) as { id: string };
+    const criada = await request.post(`/api/obras/${obra.id}/ocorrencias`, {
+      data: { titulo: "Infiltração no banheiro", descricao: "Mancha na parede do box.", gravidade: "medio" },
+    });
+    expect(criada.status(), await criada.text()).toBe(201);
+    const { id } = (await criada.json()) as { id: string };
+    await logout(request);
+
+    const pageLogin = await page.request.post("/api/test/login-as", { data: { email } });
+    expect(pageLogin.status(), await pageLogin.text()).toBe(200);
+    await page.goto(`/xgestao/obras/${obra.id}`);
+    await expect(page.getByTestId("hero-minha-obra")).toBeVisible();
+    const tour = page.getByTestId("guided-tour");
+    if (await tour.count()) await page.getByRole("button", { name: "Pular" }).click();
+    await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
+    await expect(page.getByTestId(`ocorrencia-${id}`)).toBeVisible();
+
+    // Resolver com observação.
+    await page.getByTestId(`button-resolver-${id}`).click();
+    await page.getByTestId("input-ocorr-observacao").fill("Rejunte refeito com epóxi.");
+    await page.getByTestId("button-confirmar-resolver").click();
+    await expect(page.getByTestId(`ocorrencia-observacao-${id}`)).toContainText("Rejunte refeito com epóxi.");
+
+    // Editar pelo menu de ações.
+    await page.getByTestId(`button-acoes-ocorrencia-${id}`).click();
+    await page.getByTestId(`menu-editar-ocorrencia-${id}`).click();
+    await page.getByTestId("input-edit-ocorr-titulo").fill("Infiltração no banheiro social");
+    await page.getByTestId("input-edit-ocorr-observacao").fill("Rejunte refeito e parede pintada.");
+    const salvo = page.waitForResponse((r) => r.url().endsWith(`/ocorrencias/${id}`) && r.request().method() === "PATCH");
+    await page.getByTestId("button-salvar-ocorrencia").click();
+    expect((await salvo).status()).toBe(200);
+    await page.reload();
+    if (await page.getByTestId("guided-tour").count()) await page.getByRole("button", { name: "Pular" }).click();
+    await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
+    await expect(page.getByText("Infiltração no banheiro social", { exact: true })).toBeVisible();
+    await expect(page.getByTestId(`ocorrencia-observacao-${id}`)).toContainText("parede pintada");
+
+    // Reabrir: volta o botão Resolver e some a observação.
+    await page.getByTestId(`button-acoes-ocorrencia-${id}`).click();
+    await page.getByTestId(`menu-reabrir-ocorrencia-${id}`).click();
+    await expect(page.getByTestId(`button-resolver-${id}`)).toBeVisible();
+    await expect(page.getByTestId(`ocorrencia-observacao-${id}`)).toHaveCount(0);
+
+    // Excluir com confirmação.
+    await page.getByTestId(`button-acoes-ocorrencia-${id}`).click();
+    await page.getByTestId(`menu-excluir-ocorrencia-${id}`).click();
+    const excluida = page.waitForResponse((r) => r.url().endsWith(`/ocorrencias/${id}`) && r.request().method() === "DELETE");
+    await page.getByTestId("button-confirmar-excluir-ocorrencia").click();
+    expect((await excluida).status()).toBe(200);
+    await expect(page.getByTestId(`ocorrencia-${id}`)).toHaveCount(0);
+    await page.reload();
+    if (await page.getByTestId("guided-tour").count()) await page.getByRole("button", { name: "Pular" }).click();
+    await page.getByRole("button", { name: "Ocorrências", exact: true }).click();
+    await expect(page.getByTestId("empty-ocorrencias")).toBeVisible();
   });
 
   test("edição reflete nos detalhes da obra e no link público", async ({ page, request }) => {
@@ -1031,5 +1109,50 @@ test.describe("xgestão — tarefas e etapas no navegador", () => {
     await expect(
       page.getByTestId("gantt-legenda").getByText("Atrasada", { exact: true }),
     ).toBeVisible();
+  });
+
+  // TST-12 — veio de integration/xgestao-obras.integration.spec.ts, onde rodava
+  // no project api sem navegador.
+  test('permite completar pela UI todas as pendências e então criar a primeira obra', async ({ page, request }) => {
+    const email = await registrarEmpreiteiro(request);
+    await concederXGestao(request, email);
+
+    const login = await page.request.post('/api/test/login-as', { data: { email } });
+    expect(login.status(), await login.text()).toBe(200);
+    await page.goto('/xgestao/configuracoes?tab=empresa');
+
+    await page.getByTestId('xgestao-empresa-cep').fill('01310100');
+    await page.getByTestId('xgestao-empresa-endereco').fill('Avenida Paulista, 1000');
+    await page.getByTestId('xgestao-empresa-cidade').fill('São Paulo');
+    await page.getByTestId('xgestao-empresa-estado').fill('SP');
+    await page.getByTestId('xgestao-empresa-raio-km').fill('50');
+    await page.getByTestId('xgestao-especialidade-Pintura').click();
+
+    const saved = page.waitForResponse((response) =>
+      response.url().includes('/api/perfil/empreiteiro') &&
+      response.request().method() === 'PATCH',
+    );
+    await page.getByRole('button', { name: 'Salvar empresa' }).click();
+    expect((await saved).status()).toBe(200);
+
+    // O browser aceita o cookie Secure em loopback, mas page.request no
+    // projeto API não o envia sobre HTTP. Verifique a persistência com o
+    // contexto API independente, sem mudar os cookies da aplicação.
+    await loginAs(request, email);
+    const status = await request.get('/api/xgestao/perfil-status');
+    expect(status.status(), await status.text()).toBe(200);
+    expect(await status.json()).toMatchObject({ ok: true, faltando: [] });
+
+    await page.goto('/xgestao/obras');
+    await page.getByTestId('xgestao-nova-obra').click();
+    await expect(page.getByRole('dialog', { name: 'Nova obra' })).toBeVisible();
+    await page.getByTestId('xgestao-obra-nome').fill('Primeira obra pela interface');
+    await page.getByTestId('xgestao-obra-endereco').fill('Avenida Paulista, 1000');
+    const criada = page.waitForResponse((response) =>
+      response.url().endsWith('/api/xgestao/obras') &&
+      response.request().method() === 'POST',
+    );
+    await page.getByRole('button', { name: 'Criar obra' }).click();
+    expect((await criada).status()).toBe(201);
   });
 });

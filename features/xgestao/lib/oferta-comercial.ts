@@ -2,7 +2,7 @@
  * XG41 — especificação executável da NOVA oferta aprovada.
  * Não substitui o catálogo legado nem altera contratos/linhas persistidas.
  * A ativação comercial é separada. SINAPI permanece congelado e não integra
- * esta entrega, inclusive no teste Premium.
+ * esta entrega, inclusive no teste grátis.
  */
 export const OFERTA_XGESTAO = {
   basic: {
@@ -45,7 +45,10 @@ export const OFERTA_XGESTAO = {
 } as const;
 
 export type OfertaXgestao = keyof typeof OFERTA_XGESTAO;
-export const TESTE_NOVA_OFERTA = { dias: 90, plano: 'premium', aoVencer: 'somente_leitura' } as const;
+/** Teste de 90 dias no Basic; somente leitura 24h após o fim; quem assina no teste ganha +1 mês. */
+export const TESTE_NOVA_OFERTA = {
+  dias: 90, plano: 'basic', aoVencer: 'somente_leitura', toleranciaHoras: 24, bonusMesesAoAssinar: 1,
+} as const;
 export const VALORES_PUBLICOS_APROVADOS = ['contrato', 'recebimentos', 'saldo'] as const;
 
 /** Contar logins distintos da empresa, e não vínculos com suas obras. */

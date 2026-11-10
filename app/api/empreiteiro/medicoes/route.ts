@@ -9,6 +9,7 @@ import { isRateLimited } from "@features/auth/api/rate-limit";
 import { registrarAtividade } from "@features/atividades/api/registrar";
 import { dispararNotificacaoMedicaoCriada } from "@features/notificacoes/medicao-dispatcher";
 import { publicUrlForKey } from "@shared/lib/storage";
+import { ehObraXgestao, referenciaFotoMedicao, resolverFotosMedicao } from "@features/xgestao/server/arquivos-obra";
 import {
   canAccessObraArea,
   canWriteObraArea,
@@ -119,7 +120,10 @@ export async function GET(request: NextRequest) {
     ) return null;
     return row;
   }));
-  const r = NextResponse.json(readableRows.filter(Boolean));
+  // EMP-02 — referências `xg-file:` (obra do xgestão) viram URL assinada.
+  const r = NextResponse.json(await resolverFotosMedicao(
+    readableRows.filter((row): row is NonNullable<typeof row> => Boolean(row)),
+  ));
   setNoCacheHeaders(r);
   return r;
 }
@@ -190,14 +194,22 @@ export async function POST(request: NextRequest) {
     return r;
   }
   if (fotoFileIds?.length) {
+    // EMP-02 — obra do xgestão aceita foto privada. Em vez de URL (assinada
+    // expiraria), grava a referência `xg-file:<id>`, resolvida na leitura.
+    const aceitaPrivada = ehObraXgestao(access.obra);
     const files = await db
-      .select({ id: userFiles.id, publicUrl: userFiles.publicUrl, bucketKey: userFiles.bucketKey })
+      .select({
+        id: userFiles.id,
+        publicUrl: userFiles.publicUrl,
+        bucketKey: userFiles.bucketKey,
+        visibility: userFiles.visibility,
+      })
       .from(userFiles)
       .where(and(
         inArray(userFiles.id, fotoFileIds),
         eq(userFiles.ownerUserId, guard.user.id),
         eq(userFiles.kind, "obra_foto"),
-        eq(userFiles.visibility, "public"),
+        aceitaPrivada ? undefined : eq(userFiles.visibility, "public"),
         isNull(userFiles.deletedAt),
       ));
     if (files.length !== new Set(fotoFileIds).size) {
@@ -206,10 +218,11 @@ export async function POST(request: NextRequest) {
       return r;
     }
     const byId = new Map(files.map((file) => [file.id, file]));
-    derivedFotoUrls = fotoFileIds.map((id) => {
-      const file = byId.get(id)!;
-      return file.publicUrl ?? publicUrlForKey(file.bucketKey);
-    });
+    derivedFotoUrls = fotoFileIds
+      .map((id) => byId.get(id)!)
+      .map((file) => file.visibility === "public"
+        ? (file.publicUrl ?? publicUrlForKey(file.bucketKey))
+        : referenciaFotoMedicao(file.id));
   }
 
   const ownWork = obra.clienteId === null;

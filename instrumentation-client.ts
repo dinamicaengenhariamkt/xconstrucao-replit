@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
-import { scrubEvent } from "./lib/sentry-scrub";
+import { scrubEvent, scrubTransaction } from "./lib/sentry-scrub";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -13,6 +13,9 @@ export async function register() {
       environment: process.env.NODE_ENV ?? "development",
       beforeSend(event) {
         return scrubEvent(event);
+      },
+      beforeSendTransaction(event) {
+        return scrubTransaction(event);
       },
     });
   }

@@ -59,7 +59,8 @@ export const SECOES_PADRAO: SecoesPublicas = {
   // Nunca esteve no link; entra como novidade desligada.
   tarefas: false,
   // Endereço em link sem login é risco de segurança física do canteiro (XG04 §8).
-  // Mesmo ligado, expõe apenas o logradouro — nunca número, CEP ou coordenadas.
+  // Mesmo ligado, expõe apenas rua e bairro (`enderecoPublico`, PUB-01):
+  // nunca número, complemento, CEP ou coordenadas.
   localizacao: false,
 };
 
@@ -77,7 +78,7 @@ export const SECAO_LABELS: Record<SecaoPublica, { titulo: string; descricao: str
   diario: { titulo: 'Diário de obra', descricao: 'Anotações do dia a dia. Reveja antes de publicar.' },
   ocorrencias: { titulo: 'Ocorrências', descricao: 'Problemas registrados, inclusive os em aberto.' },
   tarefas: { titulo: 'Tarefas', descricao: 'Pendências da equipe, com prazo e situação.' },
-  localizacao: { titulo: 'Endereço', descricao: 'Mostra a rua além da cidade. Número e CEP nunca aparecem.' },
+  localizacao: { titulo: 'Endereço', descricao: 'Mostra a rua e o bairro além da cidade. Número, complemento e CEP nunca aparecem.' },
 };
 
 /**

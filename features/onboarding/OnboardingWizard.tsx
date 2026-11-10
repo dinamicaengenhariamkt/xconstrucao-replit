@@ -19,6 +19,7 @@ import { Label } from '@shared/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@shared/components/ui/radio-group';
 import { getRedirectPathByRole } from '@features/auth/utils/redirect-by-role';
 import {
+  usePerfilEmpreiteiro,
   useUpdatePerfilContratante,
   useUpdatePerfilEmpreiteiro,
 } from '@features/perfil/hooks/use-perfil';
@@ -29,9 +30,14 @@ import {
   unformatCep,
   formatCpfCnpj,
   unformatCpfCnpj,
-  isCpfCnpjValid,
 } from '@shared/lib/masks';
+import { documentoXgestaoValido } from '@features/xgestao/lib/documento-fiscal';
 import { useConcluirOnboarding } from './useConcluirOnboarding';
+import {
+  MENSAGEM_DOCUMENTO_XGESTAO,
+  documentoObrigatorioNoOnboarding,
+  validarDocumentoOnboarding,
+} from './lib/documento-onboarding';
 
 type Persona = 'contratante' | 'empreiteiro' | 'anunciante';
 
@@ -51,11 +57,20 @@ interface OnboardingWizardProps {
  *
  * NÃO cria/toca conta Asaas (isso já ocorre no cadastro, J44). Concluir E pular
  * chamam `POST /api/onboarding/concluir`; o gate pós-login não reabre o wizard.
+ *
+ * 10/11/2026 — conta do xgestão: CPF ou CNPJ obrigatório no 1º passo. "Pular
+ * por agora" só aparece com o documento salvo; o servidor também recusa (422).
  */
 export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const concluir = useConcluirOnboarding();
+
+  // Conta do xgestão: o documento precisa estar salvo antes de pular.
+  const exigeDocumento = documentoObrigatorioNoOnboarding({ role, roles });
+  const perfilEmpreiteiro = usePerfilEmpreiteiro({ enabled: exigeDocumento });
+  const documentoSalvo = Boolean(documentoXgestaoValido(perfilEmpreiteiro.data?.cnpj));
+  const podePular = !exigeDocumento || documentoSalvo;
 
   // Só empreiteiro vê o passo de recebimento, e apenas quando o split está on.
   // Gate o hook para não disparar a consulta (403) em contratante/anunciante.
@@ -81,10 +96,12 @@ export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
     try {
       await concluir.mutateAsync();
       irParaDashboard();
-    } catch {
+    } catch (err) {
       toast({
         title: 'Não foi possível concluir o cadastro',
-        description: 'Tente novamente. Seus dados permanecem nesta página.',
+        description: exigeDocumento && err instanceof Error && err.message !== 'Erro ao concluir onboarding'
+          ? err.message
+          : 'Tente novamente. Seus dados permanecem nesta página.',
         variant: 'destructive',
       });
     }
@@ -108,6 +125,9 @@ export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
           {current === 'empresa' && (
             <StepEmpresa
               role={role}
+              roles={roles}
+              exigeDocumento={exigeDocumento}
+              documentoSalvo={documentoSalvo}
               onNext={avancar}
               onToast={(t) => toast(t)}
             />
@@ -125,16 +145,18 @@ export function OnboardingWizard({ role, roles }: OnboardingWizardProps) {
           )}
         </div>
 
-        <div className="mt-10 flex justify-center">
-          <button
-            type="button"
-            onClick={pular}
-            className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors underline"
-            data-testid="button-onboarding-skip"
-          >
-            Pular por agora
-          </button>
-        </div>
+        {podePular && (
+          <div className="mt-10 flex justify-center">
+            <button
+              type="button"
+              onClick={pular}
+              className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors underline"
+              data-testid="button-onboarding-skip"
+            >
+              Pular por agora
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -165,10 +187,18 @@ type ToastFn = (t: { title: string; description?: string; variant?: 'default' | 
 
 function StepEmpresa({
   role,
+  roles,
+  exigeDocumento,
+  documentoSalvo,
   onNext,
   onToast,
 }: {
   role: Persona;
+  roles?: string[];
+  /** Conta do xgestão: CPF ou CNPJ obrigatório (aceita os dois). */
+  exigeDocumento: boolean;
+  /** O documento válido já está no cadastro (ex.: veio do cadastro). */
+  documentoSalvo: boolean;
   onNext: () => void;
   onToast: ToastFn;
 }) {
@@ -193,29 +223,20 @@ function StepEmpresa({
   // Empreiteiro é sempre pessoa jurídica — só CNPJ. Contratante segue o PF/PJ que
   // acabou de escolher acima, como a tela de Configurações já faz: com "Pessoa
   // Física" selecionada, um CNPJ é incoerente mesmo sendo um documento válido.
-  const somenteCnpj = role === 'empreiteiro' || (isContratante && tipo === 'Pessoa Jurídica');
-  const somenteCpf = isContratante && tipo === 'Pessoa Física';
-  const rotuloDocumento = somenteCnpj ? 'CNPJ' : 'CPF';
+  // PAG-14 — a conta do xgestão aceita CPF ou CNPJ, sem escolha de PF/PJ.
+  const somenteCnpj = !exigeDocumento && (role === 'empreiteiro' || (isContratante && tipo === 'Pessoa Jurídica'));
+  const rotuloDocumento = exigeDocumento ? 'CPF ou CNPJ' : somenteCnpj ? 'CNPJ' : 'CPF';
 
   /**
-   * Vazio é válido — o wizard é pulável e a obrigatoriedade real fica na porta
-   * da ação (gate de `shared/lib/perfil-operacional.ts`). Só o formato errado
-   * barra: gravar documento malformado faz o Asaas recusar a cobrança depois,
-   * longe daqui, onde o usuário não tem como relacionar o erro à causa.
+   * Fora do xgestão, vazio é válido: o wizard é pulável e a obrigatoriedade
+   * real fica na porta da ação (gate de `shared/lib/perfil-operacional.ts`).
+   * Só o formato errado barra: gravar documento malformado faz o Asaas recusar
+   * a cobrança depois, longe daqui. No xgestão o documento é obrigatório,
+   * salvo se já estiver no cadastro (então o campo vazio mantém o salvo).
    */
   const validarDocumento = (): string | null => {
-    const digitos = unformatCpfCnpj(documento);
-    if (!digitos) return null;
-    if (!isCpfCnpjValid(digitos)) return `${rotuloDocumento} inválido`;
-    if (somenteCnpj && digitos.length !== 14) {
-      return role === 'empreiteiro'
-        ? 'Empreiteiro precisa de CNPJ — o cadastro é de pessoa jurídica'
-        : 'Você marcou Pessoa Jurídica — informe um CNPJ';
-    }
-    if (somenteCpf && digitos.length !== 11) {
-      return 'Você marcou Pessoa Física — informe um CPF';
-    }
-    return null;
+    if (exigeDocumento && documentoSalvo && !unformatCpfCnpj(documento)) return null;
+    return validarDocumentoOnboarding(documento, { role, roles, tipoContratante: tipo });
   };
 
   const salvarEavancar = async () => {
@@ -247,7 +268,7 @@ function StepEmpresa({
     } catch {
       onToast({
         title: 'Não foi possível salvar',
-        description: 'Tente novamente ou pule por agora.',
+        description: exigeDocumento && !documentoSalvo ? 'Confira o CPF ou CNPJ e tente novamente.' : 'Tente novamente ou pule por agora.',
         variant: 'destructive',
       });
     }
@@ -332,17 +353,25 @@ function StepEmpresa({
                   if (erroDocumento) setErroDocumento(null);
                 }}
                 inputMode="numeric"
-                placeholder={somenteCnpj ? '00.000.000/0000-00' : '000.000.000-00'}
+                placeholder={exigeDocumento ? '000.000.000-00 ou 00.000.000/0000-00' : somenteCnpj ? '00.000.000/0000-00' : '000.000.000-00'}
                 autoComplete="off"
                 aria-invalid={erroDocumento ? true : undefined}
                 data-testid="input-onboarding-documento"
               />
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                {role === 'empreiteiro'
-                  ? 'Necessário para emitir cobranças e receber pelas obras.'
-                  : 'Necessário para emitir cobranças e assinar planos.'}{' '}
-                Você pode informar depois, nas Configurações.
-              </p>
+              {exigeDocumento ? (
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500" data-testid="text-onboarding-documento-xgestao">
+                  {documentoSalvo
+                    ? 'Seu documento já está salvo. Se quiser trocar, digite o novo aqui.'
+                    : MENSAGEM_DOCUMENTO_XGESTAO}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                  {role === 'empreiteiro'
+                    ? 'Necessário para emitir cobranças e receber pelas obras.'
+                    : 'Necessário para emitir cobranças e assinar planos.'}{' '}
+                  Você pode informar depois, nas Configurações.
+                </p>
+              )}
               {erroDocumento && (
                 <p
                   className="mt-1 text-xs text-red-500"

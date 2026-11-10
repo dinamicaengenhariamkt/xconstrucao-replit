@@ -185,14 +185,14 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
       target: '[data-tour="abas-obra"]',
       title: 'Tudo da obra em um lugar',
       description:
-        'Cada aba guarda um tipo de registro. Vamos passar por todas — leva um minuto, e depois você sabe onde encontrar cada coisa.',
+        'Cada aba guarda um tipo de registro. Vamos passar por todas. Leva um minuto, e depois você sabe onde encontrar cada coisa.',
       onEnter: () => irParaAba('etapas'),
     },
     {
       target: '[data-testid="card-etapas-j06"]',
       title: 'Etapas: as fases da obra',
       description:
-        'Cadastre fundação, alvenaria, acabamento — o que fizer sentido para esta obra. É daqui que sai o cronograma.',
+        'Cadastre fundação, alvenaria, acabamento, o que fizer sentido para esta obra. É daqui que sai o cronograma.',
       onEnter: () => irParaAba('etapas'),
     },
     {
@@ -220,7 +220,7 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
       target: '[data-testid="card-diario-j06"]',
       title: 'Diário de obra',
       description:
-        'O que aconteceu no dia: clima, equipe em campo, o que avançou. Escreve e publica — fica registrado com data e autor.',
+        'O que aconteceu no dia: clima, equipe em campo, o que avançou. Escreve e publica: fica registrado com data e autor.',
       onEnter: () => irParaAba('diario'),
     },
     {
@@ -276,13 +276,13 @@ function tourConsole(irParaAba: (aba: ObraTab) => void): TourStep[] {
       target: '[data-tour="detalhes-obra"]',
       title: 'Detalhes da obra',
       description:
-        'Descrição, tipo, área e prazos — o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela.',
+        'Descrição, tipo, área e prazos: o mesmo conteúdo que o cliente vê. Clique em "Editar informações" para ajustar sem trocar de tela.',
     },
     {
       target: '[data-tour="localizacao-obra"]',
       title: 'Endereço e mapa',
       description:
-        'O endereço do terreno, com mapa. Use "Editar endereço" para corrigir — o cliente vê a região no link, nunca o endereço exato.',
+        'O endereço do terreno, com mapa. Use "Editar endereço" para corrigir. O cliente vê a rua e o bairro no link, sem o número.',
     },
     {
       // XG18 — aponta para o bloco dentro do card de detalhes: o botão que
@@ -407,6 +407,8 @@ function LinkPublicoBloco({
   const shareError = error as (Error & { status?: number }) | null;
   if (shareError?.status === 403 || shareError?.status === 404) return null;
   const shares = data?.shares ?? [];
+  // E2E-03 — o pausado pela troca de plano aparece na lista, mas não está ativo.
+  const ativos = shares.filter((s) => !s.pausadoPorPlano).length;
   const { toast } = useToast();
   const [copiado, setCopiado] = useState<string | null>(null);
 
@@ -431,7 +433,7 @@ function LinkPublicoBloco({
         <span
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
-            shares.length > 0
+            ativos > 0
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
               : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
           )}
@@ -441,9 +443,9 @@ function LinkPublicoBloco({
             ? 'Consultando…'
             : shares.length === 0
               ? 'Nenhum link gerado'
-              : shares.length === 1
+              : ativos === 1
                 ? '1 link ativo'
-                : `${shares.length} links ativos`}
+                : `${ativos} links ativos`}
         </span>
       </div>
 
@@ -459,6 +461,14 @@ function LinkPublicoBloco({
               >
                 <div className="flex min-w-0 items-baseline gap-2 sm:w-40 sm:shrink-0 sm:flex-col sm:gap-0">
                   <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{share.nome}</span>
+                  {share.pausadoPorPlano && (
+                    <span
+                      className="w-fit rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                      data-testid="detalhes-link-pausado"
+                    >
+                      Pausado pelo plano
+                    </span>
+                  )}
                   <span className="text-[11px] text-gray-500" data-testid="detalhes-link-metricas">
                     {share.visualizacoes === 0
                       ? 'Ainda não foi aberto'
@@ -780,6 +790,20 @@ export function ObraConsoleView({
           {allowOwnWorkEdit && obra.isObraPropria && <BotaoAjuda onClick={tour.abrir} />}
         </div>
       </motion.div>
+
+      {/* XG48 — obra não escolhida ao descer de plano: só visualização. */}
+      {obra.isObraPropria && obra.permissoesXgestao?.bloqueadaPorPlano && (
+        <div
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+          data-testid="xgestao-obra-bloqueada-plano"
+        >
+          Esta obra está só para visualização no seu plano atual. Para editar,{' '}
+          <Link href="/xgestao/configuracoes?tab=plano" className="font-semibold underline underline-offset-2">
+            mude para um plano maior
+          </Link>
+          .
+        </div>
+      )}
 
       {/* BLOCO 1: Hero da Obra */}
       {/*
@@ -1263,6 +1287,7 @@ export function ObraConsoleView({
                 <AtualizacoesTab
                   obraId={obra.id}
                   isOwnWork={obra.isObraPropria}
+                  canWrite={podeEscreverConteudo}
                   onRegistrar={() => setShowAtualizacao(true)}
                 />
               )}
@@ -1299,7 +1324,7 @@ export function ObraConsoleView({
                   usuário criava ali evaporava no F5. Quem persiste é este
                   card, que estava escondido no rodapé. O arquivo antigo fica
                   no repo (reversibilidade), fora da árvore de render. */}
-              {abaAtual === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} />}
+              {abaAtual === 'ocorrencias' && <OcorrenciasJ06Card obraId={obra.id} canWrite={podeEscreverConteudo} edicaoCompleta={obra.isObraPropria} />}
               {abaAtual === 'disputas' && <DisputasTab obraId={obra.id} />}
               {/* XG17 — inalcançável na obra própria (`tabsVisiveis` filtra a
                   aba), mas mantido para o marketplace, onde a Saúde continua. */}
@@ -1452,7 +1477,7 @@ function DisputasTab({ obraId }: { obraId: string }) {
       alvos={medicoes.map<DisputaAlvoOption>((m) => ({
         tipo: 'medicao',
         id: m.id,
-        label: `Medição #${m.numero} — ${m.etapa}`,
+        label: `Medição #${m.numero}: ${m.etapa}`,
       }))}
     />
   );

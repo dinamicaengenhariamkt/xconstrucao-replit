@@ -72,6 +72,8 @@ export interface MinhaObraDetalhe extends MinhaObra {
   /** Escopo explícito recebido no detalhe de uma obra própria do xgestão. */
   permissoesXgestao?: {
     somenteLeitura?: boolean;
+    /** XG48 — obra não escolhida ao descer de plano: só visualização. */
+    bloqueadaPorPlano?: boolean;
     areasPermitidas: AreasPermitidas;
     categoriasFinanceiroPermitidas: CategoriasFinanceiroPermitidas;
   };
@@ -200,6 +202,8 @@ export interface ObraDocumento {
   mime?: string;
   /** XG10 — anexo que é link externo (Drive, etc), não arquivo do bucket. */
   isLink?: boolean;
+  /** E2E-08 — arquivo no bucket; permite assinar uma URL nova no clique. */
+  fileId?: string;
 }
 
 export interface ObraAtividade {

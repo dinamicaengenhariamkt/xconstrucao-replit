@@ -15,9 +15,10 @@
   ║   5. §9: conteúdo do Assinante permanece dele                            ║
   ║   6. Removidos: SINAPI (congelado), verificação de ART/RRT de            ║
   ║      profissionais e definições de Contratante/Empreiteiro               ║
+  ║   7. XG52: §3-A comunicações por e-mail (avisos x marketing)            ║
   ║                                                                          ║
   ║  AÇÃO NECESSÁRIA: preencher os campos [ENTRE COLCHETES], confirmar os    ║
-  ║  prazos entre colchetes ([30] dias, [90] dias) e revisar com o jurídico  ║
+  ║  prazos entre colchetes ([30] dias) e revisar com o jurídico             ║
   ║  — em especial §4, §5 e §7. Publicar por /admin/legal (dispara o         ║
   ║  re-consentimento). Remover este bloco antes de publicar.                ║
   ╚══════════════════════════════════════════════════════════════════════════╝
@@ -56,6 +57,8 @@ Para fins destes Termos de Uso, as seguintes definições se aplicam:
 
 Para utilizar a plataforma, você deverá criar uma conta fornecendo informações precisas, completas e atualizadas. Você é responsável por manter a confidencialidade de suas credenciais de acesso e por todas as atividades que ocorram sob sua conta.
 
+A conta pode ser aberta por **pessoa física**, identificada pelo **CPF**, ou por **pessoa jurídica**, identificada pelo **CNPJ**. Para contratar um plano pago é obrigatório informar um CPF ou CNPJ válido, que identifica o titular da assinatura e das cobranças.
+
 **Você concorda em:**
 
 - Fornecer informações verdadeiras, precisas, atuais e completas conforme solicitado no formulário de cadastro
@@ -65,6 +68,12 @@ Para utilizar a plataforma, você deverá criar uma conta fornecendo informaçõ
 - Ser responsável por todas as atividades que ocorram sob sua conta
 
 Reservamo-nos o direito de suspender ou encerrar sua conta se qualquer informação fornecida for imprecisa, falsa ou incompleta.
+
+### 3-A Comunicações por e-mail
+
+Enviamos por e-mail avisos sobre a sua conta e a sua assinatura, como o fim do teste grátis, pagamento pendente e confirmação de cancelamento. Esses avisos fazem parte do serviço; os de prazo da assinatura podem ser desligados em Configurações, na aba Notificações.
+
+Dicas e novidades do xgestão só são enviadas a quem aceitar recebê-las. O aceite é opcional, não é condição para usar a plataforma e pode ser retirado a qualquer momento pelas Configurações ou pelo link no fim de cada e-mail. O tratamento desses dados segue a Política de Privacidade.
 
 ## 4. Serviços Oferecidos
 
@@ -104,11 +113,21 @@ O acesso à plataforma é oferecido mediante **assinatura**, nas modalidades e v
 
 A cobrança é **recorrente** e realizada por meio de processador de pagamentos terceirizado. O Assinante autoriza a cobrança automática no meio de pagamento informado, a cada ciclo, até que a assinatura seja cancelada.
 
+Se um pagamento for **estornado ou contestado** junto ao meio de pagamento (chargeback), a assinatura correspondente é encerrada e a conta passa para **somente leitura**, na forma da Seção 5.7, sem exclusão de dados.
+
 ### 5.1-A Teste grátis
 
-A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. A oferta vigente do MVP é de **90 dias no plano Premium**, iniciado por escolha do Assinante e disponível **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
+A plataforma pode oferecer um **período de teste grátis** de um plano pago, pelo prazo informado na oferta. A oferta vigente do MVP é de **90 dias no plano Basic**, que começa **automaticamente no primeiro acesso** do Assinante à área de gestão e é disponível **uma única vez por conta**. Durante o teste não há cobrança nem é exigido meio de pagamento.
 
-Ao fim do prazo, se não houver uma **assinatura paga ativa**, a conta passa **automaticamente para somente leitura**: o Assinante consulta tudo o que registrou, mas não cria nem altera dados até contratar um plano. Uma assinatura paga contratada durante o teste não é encerrada pelo vencimento do teste. **Nenhum dado é excluído** por causa do fim do teste: obras, documentos, equipe e histórico permanecem.
+Ao fim do prazo, se não houver uma **assinatura paga ativa**, a conta passa **automaticamente para somente leitura 24 (vinte e quatro) horas depois**: o Assinante consulta tudo o que registrou, mas não cria nem altera dados até contratar um plano. **Nenhum dado é excluído** por causa do fim do teste: obras, documentos, equipe e histórico permanecem.
+
+**Bônus de assinatura durante o teste:** quem contrata qualquer plano pago antes de a conta passar para somente leitura ganha **1 (um) mês adicional sem cobrança**: o plano contratado vale desde a contratação, e a **primeira cobrança ocorre 1 mês após o fim do teste**, informada na tela de planos e no checkout. As cobranças seguintes são mensais, pelo valor cheio do plano. O bônus não é convertido em dinheiro nem acumulado com outro teste.
+
+O bônus **só se confirma com o primeiro pagamento** e vale **uma única vez por conta**. Se a assinatura for cancelada antes do primeiro pagamento:
+
+- cancelada **durante o teste**, o acesso completo vai até o **fim do teste mais 24 (vinte e quatro) horas**;
+- cancelada **já no mês bônus** (depois do fim do teste), o acesso completo vai até **24 (vinte e quatro) horas após o cancelamento**;
+- em ambos os casos, nenhuma cobrança é feita, a conta passa depois para **somente leitura**, sem exclusão de dados, e uma nova assinatura da mesma conta **não recebe outro mês bônus**.
 
 ### 5.1-B Membros da equipe
 
@@ -118,31 +137,38 @@ O Assinante pode convidar pessoas para usar a plataforma em nome da sua empresa,
 
 A assinatura é **renovada automaticamente** ao fim de cada ciclo, pelo valor vigente, salvo cancelamento na forma da Seção 5.4.
 
+### 5.2-A Troca de plano
+
+O Assinante pode trocar de plano a qualquer momento pela tela de planos.
+
+- **Para um plano superior:** a mudança vale **na hora**. A diferença de valor, proporcional aos dias que faltam para o fim do ciclo em curso, é **somada à próxima fatura**.
+- **Para um plano inferior:** a mudança vale **na próxima renovação**; até lá, segue o plano atual. Se, na renovação, houver obras, pessoas ou links públicos acima do limite do novo plano, **nada é excluído**: o que exceder o limite fica disponível **somente para visualização** até o Assinante ajustar o uso ou voltar a um plano que o comporte.
+
 ### 5.3 Reajuste e mudança de valores
 
 Alterações de preço serão comunicadas com antecedência mínima de **[30] dias** e passarão a valer no ciclo seguinte à comunicação. O Assinante que não concordar poderá cancelar antes da renovação, sem ônus.
 
 ### 5.4 Cancelamento
 
-> **Pendência de homologação, não publicar esta cláusula como aprovada:** o texto abaixo prevê acesso até o fim do ciclo pago, mas o serviço atual marca a assinatura como cancelada imediatamente. Confirmar a política comercial e alinhar texto e implementação antes da publicação; o ciclo real do Asaas sandbox ainda não foi homologado.
+> **Implementação alinhada em 09/11/2026 (XG43):** o cancelamento no xgestão para as cobranças seguintes e mantém o acesso até o fim do ciclo pago. **Pendência de homologação:** o ciclo real do Asaas (cobrança, renovação e cancelamento com cartão) ainda não foi homologado ponta a ponta no sandbox.
 
 O Assinante pode cancelar a assinatura a qualquer momento, pelo próprio painel da plataforma ou pelos canais de contato da Seção 12.
 
-O cancelamento produz efeito **ao fim do ciclo já pago**: o acesso permanece até lá e não há nova cobrança. Não há reembolso proporcional de ciclo em curso, ressalvado o disposto na Seção 5.5 e os direitos do consumidor previstos em lei.
+O cancelamento produz efeito **ao fim do ciclo já pago**: o acesso permanece até lá e não há nova cobrança. Não há reembolso proporcional de ciclo em curso, ressalvado o disposto na Seção 5.5 e os direitos do consumidor previstos em lei. Para a assinatura contratada durante o teste e cancelada antes do primeiro pagamento, vale a regra do bônus da Seção 5.1-A.
 
 ### 5.5 Direito de arrependimento
 
-Nos termos do **art. 49 do Código de Defesa do Consumidor**, o Assinante pessoa física que contrata fora do estabelecimento comercial pode desistir da contratação em até **7 (sete) dias** contados da contratação, com devolução integral dos valores pagos.
+Nos termos do **art. 49 do Código de Defesa do Consumidor**, o Assinante pessoa física (CPF) que contrata fora do estabelecimento comercial pode desistir da contratação em até **7 (sete) dias** contados da contratação, com devolução integral dos valores pagos. Para o Assinante pessoa jurídica (CNPJ), aplica-se o mesmo prazo quando a contratação se enquadrar como relação de consumo, nos termos da lei.
 
 ### 5.6 Inadimplência
 
-Não sendo confirmado o pagamento, a assinatura poderá ser suspensa após comunicação prévia. Durante a suspensão o acesso às funcionalidades pode ser limitado.
+Não sendo confirmado o pagamento, o Assinante mantém o acesso completo por **7 (sete) dias** contados do vencimento, com aviso na plataforma. Sem regularização nesse prazo, a conta passa para **somente leitura** até a confirmação do pagamento ou nova contratação.
 
-**Não excluiremos os dados das obras em razão de inadimplência** antes de decorrido o prazo da Seção 5.7, e o Assinante poderá solicitar a exportação de seus dados nesse período.
+**Não excluiremos os dados das obras em razão de inadimplência**: a conta fica em somente leitura, como na Seção 5.7, e o Assinante pode consultar seus dados nesse período.
 
 ### 5.7 Encerramento e dados
 
-Encerrada a assinatura, os dados das obras permanecem disponíveis para exportação por **[90] dias**. Decorrido esse prazo, poderão ser excluídos, observados os prazos de guarda legal descritos na Política de Privacidade.
+Encerrada a assinatura ou o teste grátis, a conta passa para **somente leitura**: os dados das obras **não são excluídos** por esse motivo e continuam disponíveis para consulta pelo Assinante, sem criação ou alteração de dados, até nova contratação. A exclusão da conta e dos dados ocorre a pedido do Assinante, nos termos da Política de Privacidade, observados os prazos de guarda legal.
 
 ## 6. Link Público de Acompanhamento
 

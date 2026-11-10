@@ -35,6 +35,8 @@ export type ObraAccess = {
   /** Obra própria xgestão: concessão específica (ou acesso integral do dono/gestor). */
   xgestaoPermission?: "visualizar" | "editar";
   xgestaoSomenteLeitura?: boolean;
+  /** XG48 — obra não escolhida ao descer de plano: só visualização (implica `xgestaoSomenteLeitura`). */
+  xgestaoBloqueadaPorPlano?: boolean;
   /** null means unrestricted (also the legacy/default behavior). */
   xgestaoAreasPermitidas?: AreasPermitidas;
   /** null means all finance categories are visible and writable. */
@@ -102,8 +104,9 @@ export async function findObraAccess(
       ? await resolverPermissoesObraXgestao(user.id, obraId)
       : null;
     if (isAssigned && isXgestao && !xgestaoAreaPermissions) return null;
+    const bloqueadaPorPlano = isAssigned && isXgestao && obra.xgestaoBloqueadaPorPlano === true;
     const somenteLeitura = isAssigned && isXgestao && company
-      ? (await planoDaEmpresa(company.empreiteiraId)).somenteLeitura : false;
+      ? bloqueadaPorPlano || (await planoDaEmpresa(company.empreiteiraId)).somenteLeitura : false;
     return {
       obra,
       role: "empreiteiro",
@@ -113,6 +116,7 @@ export async function findObraAccess(
       ...(isXgestao && xgestaoPermission ? {
         xgestaoPermission,
         xgestaoSomenteLeitura: somenteLeitura,
+        xgestaoBloqueadaPorPlano: bloqueadaPorPlano,
         xgestaoAreasPermitidas: xgestaoAreaPermissions?.areasPermitidas ?? null,
         xgestaoCategoriasFinanceiroPermitidas:
           xgestaoAreaPermissions?.categoriasFinanceiroPermitidas ?? null,

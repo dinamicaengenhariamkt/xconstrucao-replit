@@ -56,6 +56,29 @@ const STATUS_BADGE: Record<NonNullable<ObraDocumento['status']>, { label: string
   novo:     { label: 'Novo',     classes: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400' },
 };
 
+// ─── URL assinada ────────────────────────────────────────────────────────────
+
+/**
+ * E2E-08 — a URL que vem no detalhe da obra é assinada por 15 min
+ * (`createSignedReadUrl`, padrão de `shared/lib/storage/r2.ts`). Com a aba
+ * aberta mais que isso, "Abrir" e "Baixar" davam erro do bucket. Assina de
+ * novo no clique, como o comprovante do `FinanceiroTab`. Se a assinatura falhar
+ * (marketplace, arquivo de outro dono), cai na URL que já veio no detalhe.
+ */
+export async function assinarDocumento(doc: ObraDocumento): Promise<string | null> {
+  if (doc.isLink || !doc.fileId) return doc.url ?? null;
+  try {
+    const response = await fetch(`/api/uploads/sign?id=${encodeURIComponent(doc.fileId)}`, {
+      credentials: 'include',
+    });
+    const body = await response.json().catch(() => ({}));
+    if (response.ok && typeof body?.url === 'string') return body.url as string;
+  } catch {
+    // segue para a URL do detalhe
+  }
+  return doc.url ?? null;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /**
@@ -84,9 +107,10 @@ interface DocumentoRowProps {
   doc: ObraDocumento;
   obraFinalizada: boolean;
   onAcao: (type: ModalType, doc: ObraDocumento) => void;
+  onBaixar: (doc: ObraDocumento) => void;
 }
 
-function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
+function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowProps) {
   const cfg = CATEGORIA_CONFIG[doc.categoria];
   const isVencendo = doc.status === 'vencendo';
 
@@ -173,11 +197,9 @@ function DocumentoRow({ doc, obraFinalizada, onAcao }: DocumentoRowProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             {doc.url && !doc.isLink && (
-              <DropdownMenuItem asChild className="gap-2 cursor-pointer">
-                <a href={doc.url} download={doc.nome}>
-                  <IconDownload className="text-[16px]" />
-                  Baixar
-                </a>
+              <DropdownMenuItem onClick={() => onBaixar(doc)} className="gap-2 cursor-pointer">
+                <IconDownload className="text-[16px]" />
+                Baixar
               </DropdownMenuItem>
             )}
 
@@ -217,13 +239,32 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
 
   const abrirModal = (type: ModalType, doc: ObraDocumento | null, categoria?: ObraDocumento['categoria']) => {
     if (type === 'abrir') {
-      setPreview(doc);
+      // E2E-08 — o preview abre já com uma URL recém-assinada.
+      if (doc && doc.fileId) {
+        void assinarDocumento(doc).then((url) => setPreview({ ...doc, url: url ?? undefined }));
+      } else {
+        setPreview(doc);
+      }
       return;
     }
     setModalState({ type, doc, categoriaParaEnvio: categoria });
   };
 
   const fecharModal = () => setModalState({ type: null, doc: null });
+
+  // E2E-08 — "Baixar" assina no clique; a URL do detalhe pode ter expirado.
+  const baixar = async (doc: ObraDocumento) => {
+    const url = await assinarDocumento(doc);
+    if (!url) {
+      toast({
+        title: 'Não foi possível baixar o documento',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const handleExcluir = async () => {
     if (!modalState.doc) return;
@@ -353,6 +394,7 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
                       doc={doc}
                       obraFinalizada={obraFinalizada}
                       onAcao={(type, d) => abrirModal(type, d)}
+                      onBaixar={(d) => void baixar(d)}
                     />
                   ))}
                 </div>
@@ -371,7 +413,11 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
         obraId={obra.id}
       />
 
-      <DocumentoPreviewModal doc={preview} onOpenChange={(v) => { if (!v) setPreview(null); }} />
+      <DocumentoPreviewModal
+        doc={preview}
+        onOpenChange={(v) => { if (!v) setPreview(null); }}
+        onAssinar={assinarDocumento}
+      />
 
       {/* Excluir AlertDialog */}
       <AlertDialog

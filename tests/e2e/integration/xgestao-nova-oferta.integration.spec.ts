@@ -1,10 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@shared/db/db';
-import { assinaturas, empreiteiras, financeiro, obras, users } from '@shared/db/schema';
+import { assinaturaTrocas, assinaturas, empreiteiras, financeiro, obras, users } from '@shared/db/schema';
 import { novoAssinanteHomologacao } from '../helpers-xgestao-homologacao';
 import { SECOES_PADRAO } from '@features/xgestao/obra-publica/secoes';
 import { loginAs, SEED_ADMIN_EMAIL } from '../helpers';
+
+/** XG43 — o teste só vira somente leitura 24h após o fim; aqui ele venceu há 24h + 1 min. */
+const FIM_TESTE_MAIS_TOLERANCIA_MS = 24 * 60 * 60_000 + 60_000;
 
 for (const oferta of [
   { tier: 'basic', nome: 'Basic', preco: 99, obras: 1, pessoas: 2, links: 1 },
@@ -22,8 +25,9 @@ for (const oferta of [
     const anual = await request.post('/api/assinaturas/checkout', {
       data: { planoId: plano.id, persona: 'xgestao', ciclo: 'anual' },
     });
-    expect(anual.status(), await anual.text()).toBe(404);
-    expect(await anual.json()).toMatchObject({ code: 'PLANO_INVALIDO' });
+    // XG48 — o xgestão só tem ciclo mensal.
+    expect(anual.status(), await anual.text()).toBe(400);
+    expect(await anual.json()).toMatchObject({ code: 'CICLO_INVALIDO' });
     const checkout = await request.post('/api/assinaturas/checkout', {
       data: { planoId: plano.id, persona: 'xgestao', ciclo: 'mensal' },
     });
@@ -104,18 +108,18 @@ for (const oferta of [
   });
 }
 
-test('XG42 teste Premium por 90 dias vence em somente leitura, preserva dados e permite contratar', async ({ request }) => {
+test('XG43 teste Basic por 90 dias vence em somente leitura, preserva dados e permite contratar', async ({ request }) => {
   const { userId, email } = await novoAssinanteHomologacao(request, 'trial-leitura');
   const perfil = await (await request.get('/api/perfil/plano?persona=xgestao')).json();
   expect(perfil).toMatchObject({
-    plano: 'premium', somenteLeitura: false,
-    teste: { emTeste: true, duracaoDias: 90, tierTeste: 'premium' },
+    plano: 'basic', somenteLeitura: false,
+    teste: { emTeste: true, duracaoDias: 90, tierTeste: 'basic' },
   });
   const criada = await request.post('/api/xgestao/obras', { data: { nome: 'E2E preservada', endereco: 'Rua 42' } });
   expect(criada.status(), await criada.text()).toBe(201);
   const { id } = await criada.json();
   try {
-    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) }).where(and(
+    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - FIM_TESTE_MAIS_TOLERANCIA_MS) }).where(and(
       eq(assinaturas.userId, userId), eq(assinaturas.persona, 'xgestao'), eq(assinaturas.gatewayProvider, 'trial'),
     ));
     for (const endpoint of [
@@ -151,7 +155,13 @@ test('XG42 teste Premium por 90 dias vence em somente leitura, preserva dados e 
 });
 
 test('XG42 link antigo perde valores no downgrade sem perder a obra e os recebimentos', async ({ request }) => {
-  await novoAssinanteHomologacao(request, 'privacidade-downgrade');
+  const { userId } = await novoAssinanteHomologacao(request, 'privacidade-downgrade');
+  // XG43 — o teste agora é Basic, sem valores no link: parte do Premium pago.
+  const planos = await (await request.get('/api/planos?persona=xgestao')).json();
+  const premium = await request.post('/api/assinaturas/checkout', {
+    data: { planoId: planos.find((p: { tier: string }) => p.tier === 'premium').id, persona: 'xgestao', ciclo: 'mensal' },
+  });
+  expect(premium.status(), await premium.text()).toBe(201);
   const criada = await request.post('/api/xgestao/obras', { data: { nome: 'E2E privacidade XG42', endereco: 'Rua 42' } });
   expect(criada.status(), await criada.text()).toBe(201);
   const { id } = await criada.json();
@@ -170,11 +180,29 @@ test('XG42 link antigo perde valores no downgrade sem perder a obra e os recebim
     const antes = await request.get(share.path);
     expect(antes.status(), await antes.text()).toBe(200);
     expect(await antes.text()).toContain(descricao);
-    const catalogo = await (await request.get('/api/planos?persona=xgestao')).json();
-    const downgrade = await request.post('/api/assinaturas/checkout', {
-      data: { planoId: catalogo.find((p: { tier: string }) => p.tier === 'basic').id, persona: 'xgestao', ciclo: 'mensal' },
+    // XG48 — com assinatura paga, a descida é pela troca: agendada para `renovaEm`
+    // e efetivada na primeira leitura do plano depois da data.
+    const [viva] = await db.select({ id: assinaturas.id }).from(assinaturas).where(and(
+      eq(assinaturas.userId, userId), eq(assinaturas.persona, 'xgestao'), eq(assinaturas.status, 'ativa'),
+    ));
+    await db.update(assinaturas).set({
+      primeiroPagamentoEm: new Date(Date.now() - 15 * 24 * 60 * 60_000), fimTesteEm: null,
+      renovaEm: new Date(Date.now() + 15 * 24 * 60 * 60_000),
+      gatewaySubscriptionId: `xg42_sub_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    }).where(eq(assinaturas.id, viva.id));
+    const downgrade = await request.post('/api/assinaturas/trocar', {
+      data: {
+        planoId: planos.find((p: { tier: string }) => p.tier === 'basic').id, persona: 'xgestao',
+        chave: `xg42_descer_${Date.now().toString(36)}`, ciente: true,
+      },
     });
-    expect(downgrade.status(), await downgrade.text()).toBe(201);
+    expect(downgrade.status(), await downgrade.text()).toBe(200);
+    expect((await downgrade.json()).status).toBe('agendada');
+    // Até a data efetiva o link segue com os valores.
+    expect(await (await request.get(share.path)).text()).toContain(descricao);
+    await db.update(assinaturaTrocas).set({ efetivaEm: new Date(Date.now() - 60_000) })
+      .where(and(eq(assinaturaTrocas.userId, userId), eq(assinaturaTrocas.status, 'agendada')));
+    expect((await (await request.get('/api/perfil/plano?persona=xgestao')).json()).plano).toBe('basic');
     const depois = await request.get(share.path);
     expect(depois.status()).toBe(200);
     expect(await depois.text()).not.toContain(descricao);

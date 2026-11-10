@@ -1,6 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import {
   completarPerfilOperacional,
+  iniciarTesteOperacionalXgestao,
   loginAs,
   logout,
   SEED_ADMIN_EMAIL,
@@ -22,10 +23,12 @@ import {
  */
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
+// Prefixo por execução: o teste grátis é um por CPF/CNPJ (JA_USOU_TESTE).
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 let cnpjSequence = 1;
 
 function proximoCnpjValido() {
-  const base = `44555666${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -66,6 +69,9 @@ async function concederXGestao(request: APIRequestContext, email: string) {
   });
   expect(response.status(), await response.text()).toBe(200);
   await logout(request);
+  // Sem teste nem plano a conta nasce somente leitura (XG41) e
+  // POST /api/xgestao/obras responde 403: inicia o teste como os outros specs.
+  await iniciarTesteOperacionalXgestao(request, email);
 }
 
 async function criarObra(request: APIRequestContext, nome: string) {

@@ -7,12 +7,14 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { registrarAtividade } from "@features/atividades/api/registrar";
-import { publicUrlForKey } from "@shared/lib/storage";
+import { ehObraXgestao, erroVinculoArquivoXgestao, urlDeArquivo } from "@features/xgestao/server/arquivos-obra";
+import { ocorrenciaDescricao, ocorrenciaGravidade, ocorrenciaTitulo, podeGerenciarOcorrencia } from "@features/obras/api/ocorrencia-schemas";
+import { papelGestaoOcorrencias } from "@features/obras/api/ocorrencia-acesso";
 
 const createSchema = z.object({
-  titulo: z.string().trim().min(3).max(160),
-  descricao: z.string().trim().min(3).max(2000),
-  gravidade: z.enum(["critico", "medio", "baixo"]).default("medio"),
+  titulo: ocorrenciaTitulo,
+  descricao: ocorrenciaDescricao,
+  gravidade: ocorrenciaGravidade.default("medio"),
   fotoFileId: z.string().uuid().nullable().optional(),
 });
 
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       fotoDeletedAt: userFiles.deletedAt,
       resolvidoPorId: obraOcorrencias.resolvidoPorId,
       resolvidoEm: obraOcorrencias.resolvidoEm,
+      observacaoResolucao: obraOcorrencias.observacaoResolucao,
+      atualizadoEm: obraOcorrencias.atualizadoEm,
       createdAt: obraOcorrencias.createdAt,
     })
     .from(obraOcorrencias)
@@ -63,9 +67,13 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     for (const u of resolvers) resolverMap.set(u.id, u.name);
   }
 
-  const out = rows.map((r) => {
+  // Só a obra própria do xgestão ganha editar/excluir/reabrir; no marketplace
+  // `papel` fica undefined e `podeGerenciar` sai sempre false.
+  const papel = await papelGestaoOcorrencias(access, guard.user.id);
+  const out = await Promise.all(rows.map(async (r) => {
+    // EMP-02 — foto de ocorrência de obra do xgestão é privada: URL assinada.
     const fotoUrl = r.fotoFileId && r.fotoDeletedAt === null && r.fotoBucketKey
-      ? (r.fotoVisibility === "public" ? (r.fotoPublicUrl ?? publicUrlForKey(r.fotoBucketKey)) : null)
+      ? await urlDeArquivo({ visibility: r.fotoVisibility, publicUrl: r.fotoPublicUrl, bucketKey: r.fotoBucketKey })
       : null;
     return {
       id: r.id,
@@ -76,12 +84,16 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       autorId: r.autorId,
       autorNome: r.autorNome,
       fotoUrl,
+      temFoto: Boolean(r.fotoFileId && r.fotoDeletedAt === null),
       resolvidoPorId: r.resolvidoPorId,
       resolvidoPorNome: r.resolvidoPorId ? resolverMap.get(r.resolvidoPorId) ?? null : null,
       resolvidoEm: r.resolvidoEm,
+      observacaoResolucao: r.observacaoResolucao,
+      atualizadoEm: r.atualizadoEm,
       createdAt: r.createdAt,
+      podeGerenciar: papel !== undefined && podeGerenciarOcorrencia(guard.user.id, r.autorId, papel),
     };
-  });
+  }));
   const r = NextResponse.json({ rows: out });
   setNoCacheHeaders(r);
   return r;
@@ -116,6 +128,15 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       const r = NextResponse.json({ message: "Foto inválida." }, { status: 400 });
       setNoCacheHeaders(r);
       return r;
+    }
+    // EMP-04 — a foto conta na quota da obra do xgestão e não pode vir de outra obra.
+    if (ehObraXgestao(access.obra)) {
+      const erro = await erroVinculoArquivoXgestao(id, parsed.data.fotoFileId);
+      if (erro) {
+        const r = NextResponse.json(erro.body, { status: erro.status });
+        setNoCacheHeaders(r);
+        return r;
+      }
     }
   }
   const [created] = await db.insert(obraOcorrencias).values({

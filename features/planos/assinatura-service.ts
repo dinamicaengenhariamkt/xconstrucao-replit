@@ -1,13 +1,35 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, sql } from "drizzle-orm";
 import { db } from "@shared/db/db";
-import { assinaturaEventos, assinaturas, clientes, empreiteiras, planos, users } from "@shared/db/schema";
+import { assinaturaEventos, assinaturas, clientes, empreiteiras, financeiro, planos, users } from "@shared/db/schema";
 import { getPlanCatalog, PLANS_CATALOG, type PlanoPersona, type PlanoTier } from "@shared/lib/plans-catalog";
 import { criarLancamentoPlataforma } from "@features/financeiro/lancamentos-service";
-import { getPaymentGateway } from "@features/planos/gateway";
+import { ORIGEM_ESTORNO_MENSALIDADE_XGESTAO, ORIGEM_MENSALIDADE_XGESTAO } from "@features/xgestao/lib/receita";
+import { gatewayDaAssinatura, getPaymentGateway } from "@features/planos/gateway";
 import { dispararNotificacaoAssinaturaAdmin } from "@features/notificacoes/assinatura-admin-dispatcher";
 import { criarNotificacao } from "@features/notificacoes/service";
 import { XGESTAO_PLANO_SUCESSO } from "@features/xgestao/routes";
-import { naoEhTesteVencido, TESTE_PROVIDER } from "@features/xgestao/teste/server/teste-service";
+import { expirarTestesVencidos, TESTE_PROVIDER } from "@features/xgestao/teste/server/teste-service";
+import { situacaoPlanoXgestao } from "@features/xgestao/server/plano-empresa";
+import { acessoAteAoCancelar, primeiraCobrancaAoAssinar, somarMeses } from "@features/xgestao/lib/acesso-plano";
+import { hojeSaoPaulo } from "@features/xgestao/admin/lib/data-sp";
+import { anualDisponivelXgestao, cicloDaAssinatura, mesesDoCiclo, valorDoCiclo } from "@features/xgestao/lib/ciclo-plano";
+import { xgestaoAnualAtivo } from "@features/xgestao/server/anual";
+import {
+  documentoDoUsuario,
+  documentoUsadoEmOutraConta,
+  gravarDocumentoNaAssinatura,
+  registrarTentativaNegada,
+} from "@features/xgestao/server/documento-antiabuso";
+import {
+  cancelarTrocasPendentes,
+  lockTrocaUsuario,
+  marcarSubidasQuitadas,
+  restaurarAposNovaAssinatura,
+  reverterTrocasAoCancelar,
+  sincronizarCobrancaPendente,
+  temDiferencaPendente,
+} from "@features/xgestao/server/troca-marcas";
+import { decidirEstornoDuplicado } from "@features/planos/lib/estorno-duplicado";
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -31,19 +53,11 @@ export async function getLimitesUsuario(
   const persona: PlanoPersona = personaExplicita ?? (u?.role === "empreiteiro" ? "empreiteiro" : "contratante");
   let tier = (u?.plano ?? "free") as PlanoTier;
   if (persona === "xgestao") {
-    const [assinaturaXGestao] = await client
-      .select({ tier: planos.tier })
-      .from(assinaturas)
-      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
-      .where(and(
-        eq(assinaturas.userId, userId),
-        eq(assinaturas.persona, "xgestao"),
-        eq(assinaturas.status, "ativa"),
-        naoEhTesteVencido(),
-      ))
-      .limit(1);
-    if (!assinaturaXGestao) return { obrasAtivas: 0, pessoasEmpresa: 0, linksPorObra: 0, valoresPublicos: 0 };
-    tier = assinaturaXGestao.tier as PlanoTier;
+    // Mesma regra da escrita (tolerância do teste, cancelamento agendado e
+    // carência de inadimplência), para cota e bloqueio nunca discordarem.
+    const situacao = await situacaoPlanoXgestao(userId, client);
+    if (!situacao.tier) return { obrasAtivas: 0, pessoasEmpresa: 0, linksPorObra: 0, valoresPublicos: 0 };
+    tier = situacao.tier;
   }
   return getPlanCatalog(persona, tier).limites;
 }
@@ -111,9 +125,11 @@ export async function listarPlanos(persona?: PlanoPersona): Promise<typeof plano
 
 // ─── Checkout / ativação ────────────────────────────────────────────────────
 export type CheckoutResult =
-  | { ok: true; kind: "activated"; assinaturaId: string; vigenciaEm: string }
-  | { ok: true; kind: "redirect"; url: string; vigenciaEm: string }
-  | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" }
+  | { ok: true; kind: "activated"; assinaturaId: string; vigenciaEm: string; primeiraCobrancaEm?: string }
+  | { ok: true; kind: "redirect"; url: string; vigenciaEm: string; primeiraCobrancaEm?: string }
+  | { ok: false; code: "PLANO_INVALIDO" | "JA_ASSINANTE" | "CICLO_INVALIDO" }
+  /** XG50 — xgestão com plano pago ativo: muda pela troca de plano, não por outro checkout. */
+  | { ok: false; code: "USAR_TROCA" }
   | { ok: false; code: "PERFIL_INCOMPLETO"; detail: string }
   | { ok: false; code: "GATEWAY_ERROR"; detail: string }
   | { ok: false; code: "INTERNAL_ERROR"; detail: string };
@@ -172,20 +188,73 @@ async function _iniciarCheckoutImpl(args: {
   const personaAssinatura: PlanoPersona | null =
     plano.persona === "ambos" ? (args.persona ?? null) : plano.persona;
   if (!personaAssinatura) return { ok: false, code: "PLANO_INVALIDO" };
-  if (personaAssinatura === "xgestao" && (
-    !["basic", "basic_plus", "premium"].includes(plano.tier) ||
-    (args.ciclo !== undefined && args.ciclo !== "mensal")
-  )) return { ok: false, code: "PLANO_INVALIDO" };
+  if (personaAssinatura === "xgestao" && !["basic", "basic_plus", "premium"].includes(plano.tier)) {
+    return { ok: false, code: "PLANO_INVALIDO" };
+  }
+  // XG50 — anual do xgestão só com `valor_anual` e a chave `xgestao.anualAtivo` ligada.
+  if (args.ciclo === "anual" && (
+    plano.valorAnual == null || !(Number(plano.valorAnual) > 0) ||
+    (personaAssinatura === "xgestao" && !anualDisponivelXgestao(plano, await xgestaoAnualAtivo()))
+  )) return { ok: false, code: "CICLO_INVALIDO" };
 
+  // xgestão: grava antes os vencimentos preguiçosos (teste e cancelamento agendado).
+  if (personaAssinatura === "xgestao") {
+    await expirarTestesVencidos(args.userId);
+    await encerrarCancelamentosVencidos(args.userId);
+  }
   // Já tem assinatura paga ativa? (free pode "assinar" um pago; pago→pago troca via cancelar antes.)
   const atual = await getAssinaturaAtiva(args.userId, personaAssinatura);
-  // XG35 — quem está no teste grátis pode assinar o mesmo plano do teste.
-  if (atual && atual.planoId === args.planoId && atual.gatewayProvider !== TESTE_PROVIDER) {
+  const emTesteXgestao = personaAssinatura === "xgestao" && atual?.gatewayProvider === TESTE_PROVIDER;
+  const cancelamentoAgendado = personaAssinatura === "xgestao" && !emTesteXgestao && atual?.canceladaEm != null;
+  // XG35 — quem está no teste grátis pode assinar o mesmo plano do teste; quem
+  // cancelou e ainda está no período pago pode assinar de novo.
+  if (atual && atual.planoId === args.planoId && !emTesteXgestao && !cancelamentoAgendado) {
     return { ok: false, code: "JA_ASSINANTE" };
   }
+  // XG50 — xgestão com plano pago ativo (sem cancelamento agendado): outro
+  // checkout criaria uma 2ª assinatura cobrando no gateway. Mudar de plano é
+  // pela troca (proporcional, XG48). Inadimplente segue podendo assinar (PAG-06).
+  if (personaAssinatura === "xgestao" && atual && !emTesteXgestao && !cancelamentoAgendado) {
+    return { ok: false, code: "USAR_TROCA" };
+  }
+
+  // PAG-14 — xgestão aceita pessoa física ou jurídica: CPF ou CNPJ válido,
+  // do campo da empresa ou do documento da conta. Lido antes do bônus (XG50).
+  const documentoXgestao = personaAssinatura === "xgestao" ? await documentoDoUsuario(args.userId) : undefined;
+
+  // XG43 — data da 1ª cobrança. No teste: +1 mês após o fim do teste (bônus),
+  // uma vez por conta (10/11/2026). Com cancelamento agendado: no fim do
+  // período em que o acesso ainda vale, sem cobrar em dobro.
+  let primeiraCobrancaEm: Date | null = null;
+  let fimTesteDoBonus: Date | null = null;
+  if (personaAssinatura === "xgestao" && atual?.renovaEm && (emTesteXgestao || cancelamentoAgendado)) {
+    // XG50 — bônus uma vez por conta E uma vez por CPF/CNPJ.
+    let bonusJaUsado = true;
+    if (emTesteXgestao) {
+      const naConta = await bonusDoTesteJaUsado(args.userId);
+      const noDocumento = !naConta && documentoXgestao
+        ? await documentoUsadoEmOutraConta(documentoXgestao, args.userId, "bonus")
+        : false;
+      bonusJaUsado = naConta || noDocumento;
+      if (noDocumento) {
+        await registrarTentativaNegada({ userId: args.userId, tipo: "bonus_negado", assinaturaId: atual.id, motivo: "documento_em_outra_conta" });
+      }
+      // O teste desta conta passa a ficar ligado ao documento (some a brecha de
+      // trocar o CPF/CNPJ do cadastro depois).
+      await gravarDocumentoNaAssinatura(atual.id, documentoXgestao);
+    }
+    const calculo = primeiraCobrancaAoAssinar({
+      fimTeste: emTesteXgestao ? atual.renovaEm : null,
+      bonusJaUsado,
+      acessoAte: cancelamentoAgendado ? atual.renovaEm : null,
+    });
+    primeiraCobrancaEm = calculo.primeiraCobrancaEm;
+    if (calculo.comBonus) fimTesteDoBonus = atual.renovaEm;
+  }
+  const primeiraCobrancaIso = primeiraCobrancaEm?.toISOString();
 
   const ciclo = args.ciclo ?? "mensal";
-  const valor = ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal);
+  const valor = valorDoCiclo(plano, ciclo);
   const gateway = getPaymentGateway();
 
   // Busca nome/email/role do usuário para gateways externos (ex: ASAAS) que precisam
@@ -204,7 +273,9 @@ async function _iniciarCheckoutImpl(args: {
   // Busca cpfCnpj do perfil do usuário — exigido pelo ASAAS para cobranças
   // recorrentes (boleto/PIX). Lookup por role para saber qual tabela consultar.
   let userCpfCnpj: string | undefined;
-  if (args.persona === "xgestao" || userRow?.role === "empreiteiro") {
+  if (personaAssinatura === "xgestao") {
+    userCpfCnpj = documentoXgestao;
+  } else if (userRow?.role === "empreiteiro") {
     const [er] = await db
       .select({ cnpj: empreiteiras.cnpj })
       .from(empreiteiras)
@@ -262,6 +333,7 @@ async function _iniciarCheckoutImpl(args: {
     userCpfCnpj,
     userAsaasCustomerId: userRow?.asaasCustomerId ?? undefined,
     pendingMode: args.pendingMode,
+    primeiraCobrancaEm: primeiraCobrancaEm ?? undefined,
   });
 
   if (result.kind === "redirect") {
@@ -307,24 +379,21 @@ async function _iniciarCheckoutImpl(args: {
         // fire-and-forget
       }
     })();
-    return { ok: true, kind: "redirect", url: result.url, vigenciaEm };
+    return {
+      ok: true, kind: "redirect", url: result.url, vigenciaEm,
+      ...(primeiraCobrancaIso ? { primeiraCobrancaEm: primeiraCobrancaIso } : {}),
+    };
   }
 
   // Ativação imediata (adapter manual): persiste tudo numa transação.
   const assinaturaId = await db.transaction(async (tx) => {
-    // Cancela qualquer assinatura ativa anterior (troca de plano).
-    await tx
-      .update(assinaturas)
-      .set({ status: "cancelada", canceladaEm: new Date() })
-      .where(and(
-        eq(assinaturas.userId, args.userId),
-        eq(assinaturas.persona, personaAssinatura),
-        eq(assinaturas.status, "ativa"),
-      ));
+    // Cancela qualquer assinatura anterior (troca de plano). No xgestão também
+    // a inadimplente/pendente: a nova substitui a antiga (PAG-06).
+    await substituirAssinaturasAnteriores(tx, args.userId, personaAssinatura);
 
-    const renova = new Date();
-    if (ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
-    else renova.setMonth(renova.getMonth() + 1);
+    // Com bônus/período já pago, nada é cobrado agora: o ciclo vai até a 1ª cobrança.
+    const renova = primeiraCobrancaEm ? new Date(primeiraCobrancaEm) : new Date();
+    const renovaFinal = primeiraCobrancaEm ? renova : somarMeses(renova, mesesDoCiclo(ciclo));
 
     const [nova] = await tx
       .insert(assinaturas)
@@ -334,10 +403,16 @@ async function _iniciarCheckoutImpl(args: {
         persona: personaAssinatura,
         status: "ativa",
         ciclo,
-        renovaEm: renova,
+        renovaEm: renovaFinal,
         gatewayProvider: gateway.provider,
         gatewayCustomerId: result.gatewayCustomerId ?? null,
         gatewaySubscriptionId: result.gatewaySubscriptionId ?? null,
+        ...(personaAssinatura === "xgestao" ? {
+          fimTesteEm: fimTesteDoBonus,
+          // Cobrado agora = 1º pagamento; com 1ª cobrança futura, ainda não.
+          primeiroPagamentoEm: !primeiraCobrancaEm && valor > 0 ? new Date() : null,
+          documentoFiscal: documentoXgestao ?? null,
+        } : {}),
       })
       .returning({ id: assinaturas.id });
 
@@ -345,6 +420,9 @@ async function _iniciarCheckoutImpl(args: {
     // seu tier pela assinatura da própria persona, sem alterar suas cotas.
     if (personaAssinatura !== "xgestao") {
       await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, args.userId));
+    } else {
+      // XG48 — assinar um plano maior que o da última descida devolve a edição.
+      await restaurarAposNovaAssinatura(tx, args.userId, plano.tier);
     }
 
     // Evento de checkout (idempotência por gatewaySubscriptionId).
@@ -352,11 +430,12 @@ async function _iniciarCheckoutImpl(args: {
       assinaturaId: nova.id,
       tipo: "checkout",
       gatewayEventId: result.gatewaySubscriptionId ? `checkout_${result.gatewaySubscriptionId}` : null,
-      payloadJson: { planoId: plano.id, ciclo, valor },
+      payloadJson: { planoId: plano.id, ciclo, valor, ...(primeiraCobrancaIso ? { primeiraCobrancaEm: primeiraCobrancaIso } : {}) },
     });
 
-    // Receita no caixa (J09) — só se houver valor (free não gera lançamento).
-    if (valor > 0) {
+    // Receita no caixa (J09) — só se houver valor (free não gera lançamento) e
+    // se algo foi cobrado agora: com 1ª cobrança futura não há receita ainda.
+    if (valor > 0 && !primeiraCobrancaEm) {
       await criarLancamentoPlataforma({
         tipo: "entrada",
         descricao: `Assinatura ${plano.nome} (${ciclo})`,
@@ -416,47 +495,65 @@ async function _iniciarCheckoutImpl(args: {
     }
   })();
 
-  return { ok: true, kind: "activated", assinaturaId, vigenciaEm };
+  return {
+    ok: true, kind: "activated", assinaturaId, vigenciaEm,
+    ...(primeiraCobrancaIso ? { primeiraCobrancaEm: primeiraCobrancaIso } : {}),
+  };
+}
+
+/**
+ * XG43 — encerra os cancelamentos agendados do xgestão cujo período pago já
+ * acabou. Preguiçoso e idempotente, como o vencimento do teste: a regra de
+ * vigência já bloqueia antes desta escrita, que só deixa o histórico correto.
+ */
+export async function encerrarCancelamentosVencidos(userId?: string): Promise<number> {
+  const encerradas = await db
+    .update(assinaturas)
+    .set({ status: "cancelada" })
+    .where(and(
+      eq(assinaturas.persona, "xgestao"),
+      eq(assinaturas.status, "ativa"),
+      ne(assinaturas.gatewayProvider, TESTE_PROVIDER),
+      isNotNull(assinaturas.canceladaEm),
+      lt(assinaturas.renovaEm, new Date()),
+      ...(userId ? [eq(assinaturas.userId, userId)] : []),
+    ))
+    .returning({ id: assinaturas.id });
+  if (encerradas.length > 0) {
+    await db.insert(assinaturaEventos).values(
+      encerradas.map((a) => ({ assinaturaId: a.id, tipo: "cancelamento_efetivado", payloadJson: {} })),
+    );
+  }
+  return encerradas.length;
 }
 
 /** Cancela a assinatura ativa da persona solicitada. */
-export async function cancelarAssinatura(userId: string, persona?: PlanoPersona): Promise<{ ok: boolean }> {
+export async function cancelarAssinatura(
+  userId: string,
+  persona?: PlanoPersona,
+  /**
+   * CRM-03 — motivo opcional informado ao cancelar (já normalizado pela rota).
+   * Só gravado no xgestão; o marketplace ignora. Não muda a regra de acesso.
+   */
+  motivo?: { motivo: string | null; texto: string | null },
+): Promise<{ ok: boolean; acessoAte?: string | null; code?: "TROCA_EM_ANDAMENTO" }> {
+  if (persona === "xgestao") return cancelarAssinaturaXgestao(userId, motivo);
   const atual = await getAssinaturaAtiva(userId, persona);
   if (!atual) return { ok: false };
+  if (atual.persona === "xgestao") return cancelarAssinaturaXgestao(userId, motivo);
 
-  // Carrega nome/email antes da transação para o dispatcher.
-  const [userRow] = await db
-    .select({ name: users.name, email: users.email })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  const [planoRow] = await db
-    .select({ nome: planos.nome })
-    .from(planos)
-    .where(eq(planos.id, atual.planoId))
-    .limit(1);
+  const [userRow] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const [planoRow] = await db.select({ nome: planos.nome }).from(planos).where(eq(planos.id, atual.planoId)).limit(1);
 
   const gateway = getPaymentGateway();
   await gateway.cancelSubscription(atual.gatewaySubscriptionId);
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(assinaturas)
-      .set({ status: "cancelada", canceladaEm: new Date() })
-      .where(eq(assinaturas.id, atual.id));
-    // O tier legado não representa xgestão, então seu cancelamento não altera
-    // os limites do marketplace.
-    if (atual.persona !== "xgestao") {
-      await tx.update(users).set({ plano: "free" }).where(eq(users.id, userId));
-    }
-    await tx.insert(assinaturaEventos).values({
-      assinaturaId: atual.id,
-      tipo: "cancelamento",
-      payloadJson: {},
-    });
+    await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, atual.id));
+    await tx.update(users).set({ plano: "free" }).where(eq(users.id, userId));
+    await tx.insert(assinaturaEventos).values({ assinaturaId: atual.id, tipo: "cancelamento", payloadJson: {} });
   });
 
-  // Notifica admins (fire-and-forget).
   if (userRow && planoRow) {
     void dispararNotificacaoAssinaturaAdmin({
       tipo: "cancelamento",
@@ -465,8 +562,103 @@ export async function cancelarAssinatura(userId: string, persona?: PlanoPersona)
       planoNome: planoRow.nome,
     });
   }
-
   return { ok: true };
+}
+
+/**
+ * xgestão. REV-09: com o mesmo lock da troca de plano (`lockTrocaUsuario`) e a
+ * linha da assinatura relida com `FOR UPDATE`, cancelar e trocar ao mesmo
+ * tempo não se cruzam: um espera o outro e relê o estado. Troca ainda no meio
+ * da chamada ao gateway (`pendente_gateway`) faz o cancelamento esperar a
+ * próxima tentativa (409), em vez de cancelar no meio dela.
+ *
+ * O DELETE no gateway roda dentro da transação, com o lock: falhou, nada muda
+ * aqui (o assinante tenta de novo). O lock é por titular, então segura só ele.
+ */
+async function cancelarAssinaturaXgestao(
+  userId: string,
+  motivo?: { motivo: string | null; texto: string | null },
+): Promise<{ ok: boolean; acessoAte?: string | null; code?: "TROCA_EM_ANDAMENTO" }> {
+  await encerrarCancelamentosVencidos(userId);
+
+  const [userRow] = await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+
+  type Resultado = { ok: boolean; acessoAte?: string | null; code?: "TROCA_EM_ANDAMENTO"; planoNome?: string };
+  const resultado: Resultado = await db.transaction(async (tx): Promise<Resultado> => {
+    await lockTrocaUsuario(tx, userId);
+    const [linha] = await tx
+      .select({ a: assinaturas, planoNome: planos.nome })
+      .from(assinaturas)
+      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
+      .where(and(eq(assinaturas.userId, userId), eq(assinaturas.persona, "xgestao"), eq(assinaturas.status, "ativa")))
+      .limit(1)
+      .for("update", { of: assinaturas });
+    if (!linha) return { ok: false };
+    const atual = linha.a;
+    // XG43 — teste grátis não se cancela (vence sozinho), e cancelar de novo não
+    // gera outro evento nem outra chamada ao gateway.
+    if (atual.gatewayProvider === TESTE_PROVIDER) return { ok: false };
+    if (atual.canceladaEm) return { ok: true, acessoAte: atual.renovaEm?.toISOString() ?? null };
+
+    const emAndamento = await tx.execute(sql`
+      SELECT 1 FROM assinatura_trocas WHERE user_id = ${userId} AND status = 'pendente_gateway' LIMIT 1
+    `).catch(() => ({ rows: [] as unknown[] }));
+    if (emAndamento.rows.length > 0) return { ok: false, code: "TROCA_EM_ANDAMENTO" };
+
+    // XG43 — o acesso segue até o fim do período já pago. Regra de 10/11/2026:
+    // com o mês bônus e sem 1º pagamento, só até o fim do teste + 24h (ou 24h
+    // após cancelar, se o teste já acabou). Ver `acessoAteAoCancelar`.
+    const acessoAte = acessoAteAoCancelar(atual);
+    const agendar = acessoAte !== null;
+    const colunasMotivo = motivo
+      ? { motivoCancelamento: motivo.motivo, motivoCancelamentoTexto: motivo.texto }
+      : {};
+
+    await gatewayDaAssinatura(atual.gatewayProvider).cancelSubscription(atual.gatewaySubscriptionId);
+
+    // XG48 — subida cuja fatura com a diferença não foi paga volta ao plano
+    // anterior pelo resto do período; descida agendada é cancelada.
+    await reverterTrocasAoCancelar(tx, atual.id, userId);
+    await tx
+      .update(assinaturas)
+      // `renovaEm` passa a ser o fim do acesso: a regra de vigência e o
+      // encerramento preguiçoso (`encerrarCancelamentosVencidos`) leem dele.
+      .set(agendar
+        ? { canceladaEm: new Date(), renovaEm: acessoAte, ...colunasMotivo }
+        : { status: "cancelada", canceladaEm: new Date(), ...colunasMotivo })
+      .where(eq(assinaturas.id, atual.id));
+    await tx.insert(assinaturaEventos).values({
+      assinaturaId: atual.id,
+      userId,
+      tipo: agendar ? "cancelamento_agendado" : "cancelamento",
+      payloadJson: {
+        ...(agendar
+          ? {
+            acessoAte: acessoAte!.toISOString(),
+            ...(acessoAte!.getTime() !== atual.renovaEm?.getTime()
+              ? { renovaEmAnterior: atual.renovaEm?.toISOString() ?? null, motivo: "bonus_sem_primeiro_pagamento" }
+              : {}),
+          }
+          : {}),
+        // CRM-03 — cópia no histórico; a fonte das contagens é a coluna.
+        ...(motivo && (motivo.motivo || motivo.texto)
+          ? { motivoCancelamento: motivo.motivo, motivoCancelamentoTexto: motivo.texto }
+          : {}),
+      },
+    });
+    return { ok: true, acessoAte: agendar ? acessoAte!.toISOString() : undefined, planoNome: linha.planoNome };
+  });
+
+  if (resultado.ok && resultado.planoNome && userRow) {
+    void dispararNotificacaoAssinaturaAdmin({
+      tipo: "cancelamento",
+      userNome: userRow.name ?? "—",
+      userEmail: userRow.email ?? "—",
+      planoNome: resultado.planoNome,
+    });
+  }
+  const { planoNome: _planoNome, ...publico } = resultado;
+  return publico;
 }
 
 /**
@@ -484,12 +676,29 @@ export async function aplicarEventoWebhook(evt: {
   gatewayCustomerId?: string;
   externalReference?: string;
   valor?: number;
+  /** XG43 — vencimento da cobrança (YYYY-MM-DD) em eventos de pagamento. */
+  dueDate?: string;
+  /** XG45 — id do pagamento no gateway (chave da mensalidade no caixa). */
+  paymentId?: string;
+  /** CRM-11 — em `payment_refunded`: devolução pedida ou contestação no cartão. */
+  motivo?: "estorno" | "chargeback";
 }): Promise<{ processed: boolean }> {
   // Acumula notificações a disparar após o commit da transação.
   type NotifPayload = Parameters<typeof dispararNotificacaoAssinaturaAdmin>[0];
   let notifPayload: NotifPayload | null = null;
-  // gatewaySubscriptionId da assinatura anterior a cancelar no gateway pós-commit.
-  let antigaGatewaySubIdToCancel: string | null = null;
+  // gatewaySubscriptionIds a cancelar no gateway pós-commit (assinaturas
+  // substituídas, ou encerradas por estorno).
+  const gatewaySubIdsToCancel: string[] = [];
+  // XG48 — cobrança nova de assinatura com diferença proporcional a somar.
+  let sincronizarAssinaturaId: string | null = null;
+  // XG50 — assinatura do gateway duplicada (2º checkout com plano pago ativo):
+  // a do próprio evento é cancelada no gateway depois do commit.
+  let cancelarSubDoEvento = false;
+  let duplicadaDe: string | null = null;
+  let pagamentoDuplicado = false;
+  // 10/11/2026 — o pagamento da duplicada sai por estorno automático, pós-commit.
+  let estornarDuplicado = false;
+  let donoDuplicada: string | null = null;
 
   const result = await db.transaction(async (tx) => {
     // Dedup: se o evento já foi registrado, ignora.
@@ -504,18 +713,42 @@ export async function aplicarEventoWebhook(evt: {
     let assinaturaId: string | null = null;
     if (evt.gatewaySubscriptionId) {
       const [a] = await tx
-        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, persona: assinaturas.persona, status: assinaturas.status, ciclo: assinaturas.ciclo, renovaEm: assinaturas.renovaEm })
+        .select({ id: assinaturas.id, userId: assinaturas.userId, planoId: assinaturas.planoId, persona: assinaturas.persona, status: assinaturas.status, ciclo: assinaturas.ciclo, renovaEm: assinaturas.renovaEm, canceladaEm: assinaturas.canceladaEm, gatewaySubscriptionId: assinaturas.gatewaySubscriptionId })
         .from(assinaturas)
         .where(eq(assinaturas.gatewaySubscriptionId, evt.gatewaySubscriptionId))
         .limit(1);
       if (a) {
         assinaturaId = a.id;
-        if (evt.type === "payment_succeeded") {
+        if (evt.type === "payment_succeeded" && a.status === "ativa" && a.persona === "xgestao") {
+          // XG43 — renovação mensal: o período pago passa a ir até o vencimento
+          // pago + 1 ciclo. `max` torna a escrita idempotente entre CONFIRMED e
+          // RECEIVED do mesmo pagamento, que chegam com ids de evento distintos.
+          const vencimento = dataDoVencimento(evt.dueDate);
+          if (vencimento) {
+            const ate = somarMeses(vencimento, a.ciclo === "anual" ? 12 : 1);
+            if (!a.renovaEm || ate.getTime() > a.renovaEm.getTime()) {
+              await tx.update(assinaturas).set({ renovaEm: ate }).where(eq(assinaturas.id, a.id));
+            }
+          }
+          await marcarPrimeiroPagamento(tx, a.id);
+          // XG45 — renovação e 1ª cobrança adiada (bônus) também são receita.
+          // Chave = id do pagamento: CONFIRMED + RECEIVED e retry somam uma vez só.
+          await registrarMensalidadeXgestao(tx, { userId: a.userId, planoId: a.planoId, paymentId: evt.paymentId, valor: evt.valor, ciclo: a.ciclo });
+          // XG48 — fatura com a diferença paga: a subida não volta mais atrás.
+          await marcarSubidasQuitadas(tx, a.id, evt.paymentId);
+        } else if (evt.type === "payment_created" && a.persona === "xgestao" && a.status === "ativa") {
+          // XG48 — o Asaas gerou a próxima cobrança: soma a diferença pendente.
+          if (await temDiferencaPendente(tx, a.id)) sincronizarAssinaturaId = a.id;
+        } else if (evt.type === "payment_succeeded") {
           // Pagamento confirmado (ex: cliente pagou boleto/pix em atraso).
           // Reativa a assinatura se estava inadimplente, expirada OU
           // pendente_reativacao (estado de limbo do job de downgrade enquanto
           // consulta o gateway) e atualiza o tier do usuário.
-          if (a.status === "inadimplente" || a.status === "expirada" || a.status === "pendente_reativacao") {
+          // XG50 — no xgestão, o RECEIVED atrasado de um pagamento já contado
+          // (o CONFIRMED dele já entrou no caixa) não é pagamento novo: não
+          // reativa nem avança `renovaEm` de quem ficou inadimplente depois.
+          const pagamentoRepetido = a.persona === "xgestao" && await pagamentoJaContado(tx, evt.paymentId);
+          if (!pagamentoRepetido && (a.status === "inadimplente" || a.status === "expirada" || a.status === "pendente_reativacao")) {
             // Preserve the original billing anchor: if the existing renovaEm is
             // within 30 days in the past (short overdue window), bump it by one
             // cycle from that date rather than from today. This prevents annual
@@ -526,10 +759,21 @@ export async function aplicarEventoWebhook(evt: {
               a.renovaEm && a.renovaEm.getTime() >= now.getTime() - THIRTY_DAYS_MS
                 ? new Date(a.renovaEm)
                 : now;
-            const renova = new Date(base);
-            if (a.ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
-            else renova.setMonth(renova.getMonth() + 1);
+            let renova = somarMeses(base, mesesDoCiclo(a.ciclo));
+            // XG50 — xgestão: o pagamento libera o período DA cobrança paga
+            // (vencimento + 1 ciclo), sem pular nem repetir mês.
+            const vencimentoPago = a.persona === "xgestao" ? dataDoVencimento(evt.dueDate) : null;
+            if (vencimentoPago) {
+              renova = somarMeses(vencimentoPago, mesesDoCiclo(a.ciclo));
+              if (a.renovaEm && a.renovaEm.getTime() > renova.getTime()) renova = a.renovaEm;
+            }
             await tx.update(assinaturas).set({ status: "ativa", renovaEm: renova }).where(eq(assinaturas.id, a.id));
+            if (a.persona === "xgestao") {
+              // XG45 — pagamento em atraso que reativa também entra no caixa.
+              await registrarMensalidadeXgestao(tx, { userId: a.userId, planoId: a.planoId, paymentId: evt.paymentId, valor: evt.valor, ciclo: a.ciclo });
+              await marcarPrimeiroPagamento(tx, a.id);
+              await marcarSubidasQuitadas(tx, a.id, evt.paymentId);
+            }
             const [plano] = await tx.select({ nome: planos.nome, tier: planos.tier }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
             if (plano && a.persona !== "xgestao") {
               await tx.update(users).set({ plano: plano.tier, planoStartedAt: new Date() }).where(eq(users.id, a.userId));
@@ -541,18 +785,62 @@ export async function aplicarEventoWebhook(evt: {
             }
             console.info(`[asaas] assinatura reativada após pagamento: assinaturaId=${a.id} userId=${a.userId}`);
           }
-        } else if (evt.type === "payment_failed") {
-          await tx.update(assinaturas).set({ status: "inadimplente" }).where(eq(assinaturas.id, a.id));
-          // Prepara notificação de inadimplência.
-          const [plano] = await tx.select({ nome: planos.nome }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
-          const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, a.userId)).limit(1);
-          if (userRow && plano) {
-            notifPayload = { tipo: "inadimplente", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome };
+        } else if (evt.type === "payment_failed" || evt.type === "payment_deleted") {
+          // PAG-03 — nunca reviver assinatura encerrada: cancelar/trocar faz o
+          // Asaas apagar a cobrança pendente, e isso chegava como falha e
+          // voltava a assinatura cancelada para inadimplente (todas as personas).
+          const encerrada = a.status === "cancelada" || a.status === "expirada";
+          // xgestão: cobrança apagada não é inadimplência, e o cancelamento
+          // agendado segue valendo até `renovaEm`. Marketplace mantém o
+          // comportamento anterior para cobrança apagada de assinatura ativa.
+          const xgestaoSemInadimplencia = a.persona === "xgestao" && (
+            evt.type === "payment_deleted" || (a.status === "ativa" && a.canceladaEm !== null)
+            // XG50 — OVERDUE que chega depois do CONFIRMED do mesmo pagamento.
+            || await pagamentoJaContado(tx, evt.paymentId)
+          );
+          if (!encerrada && !xgestaoSemInadimplencia) {
+            await tx.update(assinaturas).set({ status: "inadimplente" }).where(eq(assinaturas.id, a.id));
+            // Prepara notificação de inadimplência.
+            const [plano] = await tx.select({ nome: planos.nome }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
+            const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, a.userId)).limit(1);
+            if (userRow && plano) {
+              notifPayload = { tipo: "inadimplente", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome };
+            }
           }
+        } else if (evt.type === "payment_refunded") {
+          // PAG-04 — estorno/chargeback. Só o xgestão age; o marketplace segue
+          // ignorando (o evento fica só registrado).
+          if (a.persona === "xgestao") {
+            if (a.status !== "cancelada" && a.status !== "expirada") {
+              // Encerra na hora: o acesso cai para somente leitura.
+              await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, a.id));
+              if (a.gatewaySubscriptionId) gatewaySubIdsToCancel.push(a.gatewaySubscriptionId);
+              const [plano] = await tx.select({ nome: planos.nome }).from(planos).where(eq(planos.id, a.planoId)).limit(1);
+              const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, a.userId)).limit(1);
+              if (userRow && plano) {
+                notifPayload = {
+                  tipo: "cancelamento", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome,
+                  descricaoOverride: `Assinatura xgestão ${plano.nome} de ${userRow.name ?? userRow.email} encerrada por estorno ou chargeback do pagamento.`,
+                };
+              }
+            }
+            await registrarEstornoMensalidadeXgestao(tx, { userId: a.userId, planoId: a.planoId, paymentId: evt.paymentId, valor: evt.valor });
+            // XG48 — estorno durante troca pendente: a troca é cancelada.
+            await cancelarTrocasPendentes(tx, a.id, "estorno");
+          }
+        } else if (
+          evt.type === "subscription_canceled" && a.persona === "xgestao" && a.status === "ativa"
+          && a.canceladaEm && a.renovaEm && a.renovaEm.getTime() > Date.now()
+        ) {
+          // XG43 — eco do cancelamento pedido pelo assinante: o período pago
+          // continua; `encerrarCancelamentosVencidos` encerra em `renovaEm`.
         } else if (evt.type === "subscription_canceled") {
           await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, a.id));
           if (a.persona !== "xgestao") {
             await tx.update(users).set({ plano: "free" }).where(eq(users.id, a.userId));
+          } else {
+            // XG48 — cancelada pelo painel do Asaas: troca pendente cancelada.
+            await cancelarTrocasPendentes(tx, a.id, "cancelada_no_gateway");
           }
         }
       }
@@ -560,6 +848,81 @@ export async function aplicarEventoWebhook(evt: {
 
     // Fluxo redirect (ex: ASAS): primeiro pagamento confirmado sem assinatura pré-existente.
     // O externalReference "xconstrucao|userId|planoId|ciclo" permite criar a assinatura agora.
+    // XG43 — assinatura do xgestão com a 1ª cobrança no futuro (bônus de +1 mês
+    // do teste, ou nova assinatura dentro do período já pago). O Asaas só cria a
+    // cobrança futura depois que o checkout foi concluído com cartão válido, e o
+    // pagamento só chega no vencimento: a assinatura vale desde já até lá.
+    if (!assinaturaId && evt.type === "payment_created" && evt.externalReference) {
+      const parsed = parseExternalRef(evt.externalReference);
+      const vencimento = dataDoVencimento(evt.dueDate);
+      if (parsed && vencimento && vencimento.getTime() > Date.now() + 24 * 60 * 60 * 1000) {
+        const { userId, planoId, ciclo } = parsed;
+        const [plano] = await tx.select().from(planos).where(eq(planos.id, planoId)).limit(1);
+        const [atual] = plano?.ativo && plano.persona === "xgestao"
+          ? await tx
+            .select({ id: assinaturas.id, provider: assinaturas.gatewayProvider, renovaEm: assinaturas.renovaEm, canceladaEm: assinaturas.canceladaEm, gatewaySubscriptionId: assinaturas.gatewaySubscriptionId })
+            .from(assinaturas)
+            .where(and(eq(assinaturas.userId, userId), eq(assinaturas.persona, "xgestao"), eq(assinaturas.status, "ativa")))
+            .limit(1)
+          : [];
+        // Só quem estava no teste ou com cancelamento agendado tem 1ª cobrança futura.
+        const elegivel = atual && (
+          atual.provider === TESTE_PROVIDER
+          || (atual.canceladaEm !== null && atual.renovaEm !== null && atual.renovaEm.getTime() > Date.now())
+        );
+        // XG50 — 2º checkout concluído com um plano pago ativo (ex.: dois
+        // checkouts abertos no teste e os dois pagos): a 2ª assinatura do
+        // gateway nasceria cobrando junto. Cancela a nova no gateway.
+        const duplicada = plano && atual && !elegivel && atual.provider !== TESTE_PROVIDER
+          && atual.canceladaEm === null && atual.gatewaySubscriptionId !== (evt.gatewaySubscriptionId ?? null);
+        if (duplicada && evt.gatewaySubscriptionId) {
+          cancelarSubDoEvento = true;
+          duplicadaDe = atual!.id;
+        }
+        if (plano && atual && elegivel) {
+          if (atual.provider !== TESTE_PROVIDER && atual.gatewaySubscriptionId) gatewaySubIdsToCancel.push(atual.gatewaySubscriptionId);
+          await tx.update(assinaturas).set({ status: "cancelada", canceladaEm: new Date() }).where(eq(assinaturas.id, atual.id));
+          // 10/11/2026 — período sem cobrança além do acesso que a conta já
+          // tinha (mês bônus do teste) só vale com o 1º pagamento. Marca o fim
+          // do acesso devido para `acessoAteAoCancelar`. Vale também para um 2º
+          // checkout aberto com bônus: a conta não ganha outro mês de graça.
+          const periodoGratis = atual.renovaEm !== null
+            && vencimento.getTime() > atual.renovaEm.getTime() + 24 * 60 * 60 * 1000;
+          const gateway = getPaymentGateway();
+          const [nova] = await tx.insert(assinaturas).values({
+            userId,
+            planoId: plano.id,
+            persona: "xgestao",
+            status: "ativa",
+            ciclo: ciclo === "anual" ? "anual" : "mensal",
+            renovaEm: vencimento,
+            gatewayProvider: gateway.provider,
+            gatewayCustomerId: evt.gatewayCustomerId ?? null,
+            gatewaySubscriptionId: evt.gatewaySubscriptionId ?? null,
+            fimTesteEm: periodoGratis ? atual.renovaEm : null,
+            documentoFiscal: (await documentoDoUsuario(userId, tx)) ?? null,
+          }).returning({ id: assinaturas.id });
+          assinaturaId = nova.id;
+          await restaurarAposNovaAssinatura(tx, userId, plano.tier);
+          const [userRow] = await tx.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+          if (userRow) {
+            notifPayload = { tipo: "checkout", userNome: userRow.name ?? "—", userEmail: userRow.email ?? "—", planoNome: plano.nome, ciclo: ciclo === "anual" ? "anual" : "mensal" };
+          }
+          const dataCobranca = vencimento.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+          void criarNotificacao({
+            userId,
+            tipo: "sucesso",
+            titulo: `Plano ${plano.nome} ativado`,
+            descricao: `Assinatura confirmada. A 1ª cobrança será em ${dataCobranca}; até lá, o plano ${plano.nome} já está valendo.`,
+            href: null,
+          }).catch(() => {
+            // fire-and-forget: não bloqueia processamento do webhook
+          });
+          console.info(`[asaas] assinatura xgestão com 1ª cobrança futura: userId=${userId} assinaturaId=${nova.id}`);
+        }
+      }
+    }
+
     if (!assinaturaId && (evt.type === "payment_succeeded" || evt.type === "subscription_activated") && evt.externalReference) {
       const parsed = parseExternalRef(evt.externalReference);
       if (parsed) {
@@ -569,32 +932,48 @@ export async function aplicarEventoWebhook(evt: {
           const personaAssinatura: PlanoPersona | null =
             plano.persona === "ambos" ? null : plano.persona;
           if (!personaAssinatura) return { processed: false };
-          // Cancela assinatura ativa anterior (troca de plano).
-          // Guarda o gatewaySubscriptionId da assinatura anterior para cancelar
-          // no gateway APÓS o commit da transação (seguro: nova assinatura já salva).
-          const [antigaAssinatura] = await tx
-            .select({ gatewaySubscriptionId: assinaturas.gatewaySubscriptionId })
-            .from(assinaturas)
-            .where(and(
-              eq(assinaturas.userId, userId),
-              eq(assinaturas.persona, personaAssinatura),
-              eq(assinaturas.status, "ativa"),
-            ))
-            .limit(1);
-          antigaGatewaySubIdToCancel = antigaAssinatura?.gatewaySubscriptionId ?? null;
+          // XG50 — pagamento de um 2º checkout com plano pago ativo (sem
+          // cancelamento agendado): não substitui a assinatura que já vale nem
+          // cobra em dobro dali para frente. A nova sai do gateway e, desde
+          // 10/11/2026, o pagamento é estornado sozinho (ver estorno-duplicado.ts).
+          if (personaAssinatura === "xgestao" && evt.gatewaySubscriptionId) {
+            const [vigentePaga] = await tx
+              .select({ id: assinaturas.id, sub: assinaturas.gatewaySubscriptionId })
+              .from(assinaturas)
+              .where(and(
+                eq(assinaturas.userId, userId), eq(assinaturas.persona, "xgestao"), eq(assinaturas.status, "ativa"),
+                ne(assinaturas.gatewayProvider, TESTE_PROVIDER), isNull(assinaturas.canceladaEm),
+              ))
+              .limit(1);
+            if (vigentePaga && vigentePaga.sub !== evt.gatewaySubscriptionId) {
+              cancelarSubDoEvento = true;
+              duplicadaDe = vigentePaga.id;
+              pagamentoDuplicado = true;
+            }
+          }
+        }
+        if (plano && plano.ativo && !pagamentoDuplicado) {
+          const personaAssinatura = (plano.persona === "ambos" ? null : plano.persona) as PlanoPersona;
+          // Teste que a assinatura nova substitui (CONFIRMED chegou antes do
+          // PAYMENT_CREATED): o mês bônus continua marcado (XG50).
+          const [testeAtivo] = personaAssinatura === "xgestao"
+            ? await tx.select({ renovaEm: assinaturas.renovaEm }).from(assinaturas).where(and(
+              eq(assinaturas.userId, userId), eq(assinaturas.persona, "xgestao"), eq(assinaturas.status, "ativa"),
+              eq(assinaturas.gatewayProvider, TESTE_PROVIDER),
+            )).limit(1)
+            : [];
+          // Cancela assinatura anterior (troca de plano). Os gatewaySubscriptionIds
+          // são cancelados no gateway APÓS o commit (seguro: nova assinatura já
+          // salva). PAG-06: no xgestão inclui inadimplente e pendente_reativacao,
+          // senão a subscription antiga seguia cobrando no Asaas.
+          gatewaySubIdsToCancel.push(...await substituirAssinaturasAnteriores(tx, userId, personaAssinatura));
 
-          await tx
-            .update(assinaturas)
-            .set({ status: "cancelada", canceladaEm: new Date() })
-            .where(and(
-              eq(assinaturas.userId, userId),
-              eq(assinaturas.persona, personaAssinatura),
-              eq(assinaturas.status, "ativa"),
-            ));
-
-          const renova = new Date();
-          if (ciclo === "anual") renova.setFullYear(renova.getFullYear() + 1);
-          else renova.setMonth(renova.getMonth() + 1);
+          // XG50 — o período pago começa no vencimento da cobrança paga.
+          const vencimentoPago = dataDoVencimento(evt.dueDate);
+          const renova = somarMeses(vencimentoPago ?? new Date(), mesesDoCiclo(ciclo));
+          const bonusDoTeste = testeAtivo?.renovaEm && vencimentoPago
+            && vencimentoPago.getTime() > testeAtivo.renovaEm.getTime() + 24 * 60 * 60 * 1000
+            ? testeAtivo.renovaEm : null;
 
           const gateway = getPaymentGateway();
           const [nova] = await tx
@@ -609,6 +988,11 @@ export async function aplicarEventoWebhook(evt: {
               gatewayProvider: gateway.provider,
               gatewayCustomerId: evt.gatewayCustomerId ?? null,
               gatewaySubscriptionId: evt.gatewaySubscriptionId ?? evt.externalReference ?? null,
+              ...(personaAssinatura === "xgestao" ? {
+                primeiroPagamentoEm: new Date(),
+                fimTesteEm: bonusDoTeste,
+                documentoFiscal: (await documentoDoUsuario(userId, tx)) ?? null,
+              } : {}),
             })
             .returning({ id: assinaturas.id });
 
@@ -620,11 +1004,17 @@ export async function aplicarEventoWebhook(evt: {
               .update(users)
               .set({ plano: plano.tier, planoStartedAt: new Date() })
               .where(eq(users.id, userId));
+          } else {
+            await restaurarAposNovaAssinatura(tx, userId, plano.tier);
           }
 
           // Lançamento no caixa (J09).
-          const valorFinal = evt.valor ?? (ciclo === "anual" && plano.valorAnual ? Number(plano.valorAnual) : Number(plano.valorMensal));
-          if (valorFinal > 0) {
+          const valorFinal = evt.valor ?? valorDoCiclo(plano, ciclo);
+          if (personaAssinatura === "xgestao" && evt.paymentId) {
+            // XG45 — no xgestão a chave é o pagamento: o RECEIVED que chega
+            // depois do CONFIRMED cai no ramo de renovação e não pode somar de novo.
+            await registrarMensalidadeXgestao(tx, { userId, planoId: plano.id, paymentId: evt.paymentId, valor: valorFinal, ciclo });
+          } else if (valorFinal > 0) {
             await criarLancamentoPlataforma({
               tipo: "entrada",
               descricao: `Assinatura ${plano.nome} (${ciclo}) — ASAS`,
@@ -661,14 +1051,82 @@ export async function aplicarEventoWebhook(evt: {
       }
     }
 
+    if (cancelarSubDoEvento && duplicadaDe) {
+      const [dona] = await tx.select({ userId: assinaturas.userId }).from(assinaturas).where(eq(assinaturas.id, duplicadaDe)).limit(1);
+      donoDuplicada = dona?.userId ?? null;
+      if (pagamentoDuplicado && evt.paymentId) {
+        // Serializa CONFIRMED e RECEIVED do mesmo pagamento: só um estorna.
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`xgestao-estorno-duplicado:${evt.paymentId}`}))`);
+        const historico = await historicoEstornoDuplicado(tx, evt.paymentId);
+        estornarDuplicado = decidirEstornoDuplicado({ pagamentoConfirmado: true, paymentId: evt.paymentId, historico }) === "estornar";
+      }
+      await tx.insert(assinaturaEventos).values({
+        assinaturaId: duplicadaDe,
+        userId: dona?.userId ?? null,
+        tipo: "assinatura_duplicada_cancelada",
+        payloadJson: {
+          gatewaySubscriptionId: evt.gatewaySubscriptionId ?? null,
+          paymentId: evt.paymentId ?? null,
+          valor: evt.valor ?? null,
+          // Pagamento já feito na assinatura duplicada: precisa de estorno.
+          estornarPagamento: pagamentoDuplicado,
+          // 10/11/2026 — esta entrega tenta o estorno automático (claim).
+          estornoAutomatico: estornarDuplicado,
+        },
+      });
+    }
+
     await tx.insert(assinaturaEventos).values({
       assinaturaId,
       tipo: evt.type,
       gatewayEventId: evt.eventId,
-      payloadJson: {},
+      // PAG-03/PAG-04 — guarda qual pagamento foi apagado/estornado.
+      // CRM-11 — `motivo` ('estorno' | 'chargeback') separa os dois no admin.
+      payloadJson: evt.type === "payment_refunded"
+        ? { paymentId: evt.paymentId ?? null, valor: evt.valor ?? null, motivo: evt.motivo ?? null }
+        : evt.type === "payment_deleted"
+          ? { paymentId: evt.paymentId ?? null, valor: evt.valor ?? null }
+          : {},
     });
     return { processed: true };
   });
+
+  // XG48 — fora da transação (chamada HTTP ao gateway); nunca lança.
+  if (result.processed && sincronizarAssinaturaId) {
+    await sincronizarCobrancaPendente(sincronizarAssinaturaId);
+  }
+
+  // XG50 — assinatura duplicada no gateway: sai já, antes de cobrar de novo.
+  if (result.processed && cancelarSubDoEvento && evt.gatewaySubscriptionId) {
+    try {
+      await getPaymentGateway().cancelSubscription(evt.gatewaySubscriptionId);
+    } catch (err) {
+      console.warn("[webhook] falha ao cancelar assinatura duplicada no gateway:", err);
+    }
+    if (!pagamentoDuplicado) {
+      try {
+        const { logError } = await import("@/server/lib/logger");
+        await logError("error", "[xgestao] assinatura duplicada cancelada no gateway antes da 1ª cobrança", {
+          route: "webhooks.gateway",
+          meta: { assinaturaId: duplicadaDe, gatewaySubscriptionId: evt.gatewaySubscriptionId, paymentId: evt.paymentId ?? null },
+        });
+      } catch {
+        // registro de erro é melhor esforço
+      }
+    }
+  }
+
+  // 10/11/2026 — pagamento já feito na duplicada: estorno automático, fora da
+  // transação (chamada HTTP ao gateway). Nunca lança.
+  if (result.processed && estornarDuplicado && evt.paymentId) {
+    await estornarPagamentoDuplicado({
+      paymentId: evt.paymentId,
+      userId: donoDuplicada,
+      assinaturaValidaId: duplicadaDe,
+      gatewaySubscriptionId: evt.gatewaySubscriptionId ?? null,
+      valor: evt.valor ?? null,
+    });
+  }
 
   // Dispara notificação admin pós-commit (fire-and-forget).
   if (result.processed && notifPayload) {
@@ -679,15 +1137,250 @@ export async function aplicarEventoWebhook(evt: {
   // Feito APÓS o commit para garantir que a nova assinatura já foi persistida antes
   // de cancelar a anterior — elimina o risco de o usuário perder o plano atual
   // caso o checkout ou a criação da nova assinatura falhem.
-  if (result.processed && antigaGatewaySubIdToCancel) {
-    void getPaymentGateway()
-      .cancelSubscription(antigaGatewaySubIdToCancel)
-      .catch((err) => {
-        console.warn("[webhook] falha ao cancelar assinatura anterior no gateway:", err);
-      });
+  if (result.processed) {
+    for (const subId of new Set(gatewaySubIdsToCancel)) {
+      // A própria subscription do evento só sai daqui no estorno (PAG-04).
+      if (subId === evt.gatewaySubscriptionId && evt.type !== "payment_refunded") continue;
+      void getPaymentGateway()
+        .cancelSubscription(subId)
+        .catch((err) => {
+          console.warn("[webhook] falha ao cancelar assinatura anterior no gateway:", err);
+        });
+    }
   }
 
   return result;
+}
+
+/** Histórico de estorno automático de um pagamento duplicado (ver estorno-duplicado.ts). */
+async function historicoEstornoDuplicado(tx: Tx, paymentId: string) {
+  const r = await tx.execute<{ estornado: number; tentativas: number; falhas: number }>(sql`
+    SELECT
+      count(*) FILTER (WHERE tipo = 'pagamento_duplicado_estornado')::int AS estornado,
+      count(*) FILTER (WHERE tipo = 'assinatura_duplicada_cancelada' AND payload_json->>'estornoAutomatico' = 'true')::int AS tentativas,
+      count(*) FILTER (WHERE tipo = 'pagamento_duplicado_estorno_falhou')::int AS falhas
+    FROM assinatura_eventos
+    WHERE tipo IN ('pagamento_duplicado_estornado', 'assinatura_duplicada_cancelada', 'pagamento_duplicado_estorno_falhou')
+      AND payload_json->>'paymentId' = ${paymentId}
+  `);
+  const linha = r.rows[0];
+  return {
+    estornado: Number(linha?.estornado ?? 0) > 0,
+    tentativas: Number(linha?.tentativas ?? 0),
+    falhas: Number(linha?.falhas ?? 0),
+  };
+}
+
+/**
+ * 10/11/2026 — estorna o pagamento da assinatura duplicada pelo gateway e
+ * registra o desfecho. Falha (ou gateway sem estorno) vira evento
+ * `pagamento_duplicado_estorno_falhou` e alerta de erro para o admin estornar
+ * no painel; a próxima entrega do webhook do mesmo pagamento tenta de novo.
+ */
+async function estornarPagamentoDuplicado(args: {
+  paymentId: string;
+  userId: string | null;
+  assinaturaValidaId: string | null;
+  gatewaySubscriptionId: string | null;
+  valor: number | null;
+}): Promise<void> {
+  const payload = {
+    paymentId: args.paymentId,
+    gatewaySubscriptionId: args.gatewaySubscriptionId,
+    valor: args.valor,
+  };
+  try {
+    const gateway = getPaymentGateway();
+    if (!gateway.refundPayment) throw new Error(`gateway ${gateway.provider} sem estorno automático`);
+    await gateway.refundPayment(args.paymentId);
+    await db.insert(assinaturaEventos).values({
+      assinaturaId: args.assinaturaValidaId,
+      userId: args.userId,
+      tipo: "pagamento_duplicado_estornado",
+      payloadJson: payload,
+    });
+    if (args.userId) {
+      void criarNotificacao({
+        userId: args.userId,
+        tipo: "info",
+        titulo: "Pagamento em dobro estornado",
+        descricao: "Recebemos um segundo pagamento da sua assinatura e devolvemos o valor. Seu plano continua ativo normalmente.",
+        href: null,
+      }).catch(() => {
+        // fire-and-forget
+      });
+    }
+    console.info(`[xgestao] pagamento duplicado estornado: paymentId=${args.paymentId}`);
+  } catch (err) {
+    const erro = err instanceof Error ? err.message.slice(0, 300) : "erro desconhecido";
+    try {
+      await db.insert(assinaturaEventos).values({
+        assinaturaId: args.assinaturaValidaId,
+        userId: args.userId,
+        tipo: "pagamento_duplicado_estorno_falhou",
+        payloadJson: { ...payload, erro },
+      });
+    } catch (e) {
+      console.error("[xgestao] falha ao registrar estorno duplicado que falhou:", e);
+    }
+    try {
+      const { logError } = await import("@/server/lib/logger");
+      await logError("error", "[xgestao] estorno automático do pagamento duplicado falhou: estornar no painel do gateway", {
+        route: "webhooks.gateway",
+        meta: { assinaturaId: args.assinaturaValidaId, gatewaySubscriptionId: args.gatewaySubscriptionId, paymentId: args.paymentId, erro },
+      });
+    } catch {
+      // registro de erro é melhor esforço
+    }
+  }
+}
+
+/**
+ * Vencimento do Asaas (`YYYY-MM-DD`, ou com hora) como meio-dia em São Paulo,
+ * para a data não mudar de dia na conversão de fuso.
+ */
+export { ORIGEM_MENSALIDADE_XGESTAO };
+
+/**
+ * XG45 — cada pagamento confirmado de assinatura do xgestão vira uma entrada
+ * paga no caixa, com o id do pagamento como chave (`uq_financeiro_origem`).
+ * Antes só o 1º pagamento era registrado (chave = assinatura), e renovações e a
+ * 1ª cobrança adiada pelo bônus nunca apareciam na receita. Sem id do pagamento
+ * não registra: seria impossível não dobrar CONFIRMED + RECEIVED.
+ */
+async function registrarMensalidadeXgestao(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  args: { userId: string; planoId: string; paymentId?: string; valor?: number; ciclo?: string | null },
+) {
+  if (!args.paymentId) return;
+  const [plano] = await tx
+    .select({ nome: planos.nome, valorMensal: planos.valorMensal, valorAnual: planos.valorAnual, persona: planos.persona })
+    .from(planos).where(eq(planos.id, args.planoId)).limit(1);
+  if (!plano || plano.persona !== "xgestao") return;
+  // XG50 — anual: um lançamento só, com o valor do ano.
+  const anual = cicloDaAssinatura(args.ciclo) === "anual";
+  const valor = args.valor ?? valorDoCiclo(plano, args.ciclo);
+  if (!(valor > 0)) return;
+  await criarLancamentoPlataforma({
+    tipo: "entrada",
+    descricao: `${anual ? "Anuidade" : "Mensalidade"} xgestão ${plano.nome}`,
+    valor,
+    categoria: "assinatura",
+    status: "pago",
+    origemTipo: ORIGEM_MENSALIDADE_XGESTAO,
+    data: hojeSaoPaulo(),
+    origemId: args.paymentId,
+    pagadorUserId: args.userId,
+    recebedorUserId: null,
+    tx,
+  });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * Encerra localmente as assinaturas anteriores da persona e devolve os ids de
+ * gateway a cancelar depois do commit. Marketplace: só a `ativa` (como antes).
+ * xgestão (PAG-06): também `inadimplente` e `pendente_reativacao`, para a nova
+ * assinatura substituir a antiga e nenhuma subscription velha seguir cobrando.
+ */
+async function substituirAssinaturasAnteriores(tx: Tx, userId: string, persona: PlanoPersona): Promise<string[]> {
+  const status: Array<typeof assinaturas.$inferSelect.status> = persona === "xgestao"
+    ? ["ativa", "inadimplente", "pendente_reativacao"]
+    : ["ativa"];
+  const antigas = await tx
+    .update(assinaturas)
+    .set({ status: "cancelada", canceladaEm: new Date() })
+    .where(and(
+      eq(assinaturas.userId, userId),
+      eq(assinaturas.persona, persona),
+      inArray(assinaturas.status, status),
+    ))
+    .returning({ id: assinaturas.id, gatewaySubscriptionId: assinaturas.gatewaySubscriptionId, provider: assinaturas.gatewayProvider });
+  if (persona === "xgestao") {
+    // XG48 — troca pendente da assinatura substituída não vale mais.
+    for (const antiga of antigas) await cancelarTrocasPendentes(tx, antiga.id, "assinatura_substituida");
+  }
+  return antigas
+    .filter((a) => a.provider !== TESTE_PROVIDER && a.gatewaySubscriptionId)
+    .map((a) => a.gatewaySubscriptionId!);
+}
+
+/**
+ * XG50 — o pagamento já entrou no caixa (mensalidade com esse id). Serve para
+ * reconhecer o RECEIVED ou o OVERDUE atrasados de um pagamento já tratado.
+ */
+async function pagamentoJaContado(tx: Tx, paymentId?: string): Promise<boolean> {
+  if (!paymentId) return false;
+  const [linha] = await tx.select({ id: financeiro.id }).from(financeiro)
+    .where(and(eq(financeiro.origemTipo, ORIGEM_MENSALIDADE_XGESTAO), eq(financeiro.origemId, paymentId)))
+    .limit(1);
+  return Boolean(linha);
+}
+
+/** 1º pagamento confirmado da assinatura (idempotente). */
+async function marcarPrimeiroPagamento(tx: Tx, assinaturaId: string) {
+  await tx.update(assinaturas)
+    .set({ primeiroPagamentoEm: new Date() })
+    .where(and(eq(assinaturas.id, assinaturaId), isNull(assinaturas.primeiroPagamentoEm)));
+}
+
+/** 10/11/2026 — o mês bônus do teste vale uma única vez por conta. */
+async function bonusDoTesteJaUsado(userId: string): Promise<boolean> {
+  const [usada] = await db.select({ id: assinaturas.id }).from(assinaturas).where(and(
+    eq(assinaturas.userId, userId),
+    eq(assinaturas.persona, "xgestao"),
+    isNotNull(assinaturas.fimTesteEm),
+  )).limit(1);
+  return Boolean(usada);
+}
+
+/**
+ * PAG-04 — estorno/chargeback de mensalidade do xgestão: saída paga no caixa
+ * da plataforma, chave = id do pagamento (idempotente entre as etapas do
+ * estorno). Valor: o do evento, senão o da mensalidade registrada, senão o
+ * preço do plano. Sem id do pagamento não registra (não teria chave).
+ */
+async function registrarEstornoMensalidadeXgestao(
+  tx: Tx,
+  args: { userId: string; planoId: string; paymentId?: string; valor?: number },
+) {
+  if (!args.paymentId) {
+    console.warn(`[webhook] estorno xgestão sem paymentId — caixa não ajustado (userId=${args.userId})`);
+    return;
+  }
+  const [plano] = await tx
+    .select({ nome: planos.nome, valorMensal: planos.valorMensal, persona: planos.persona })
+    .from(planos).where(eq(planos.id, args.planoId)).limit(1);
+  if (!plano || plano.persona !== "xgestao") return;
+  // Sem valor no evento: o da mensalidade/anuidade registrada (XG50).
+  const [original] = await tx
+    .select({ valor: financeiro.valor })
+    .from(financeiro)
+    .where(and(eq(financeiro.origemTipo, ORIGEM_MENSALIDADE_XGESTAO), eq(financeiro.origemId, args.paymentId)))
+    .limit(1);
+  const valor = args.valor ?? (original ? Number(original.valor) : Number(plano.valorMensal));
+  if (!(valor > 0)) return;
+  await criarLancamentoPlataforma({
+    tipo: "saida",
+    descricao: `Estorno mensalidade xgestão ${plano.nome}`,
+    valor,
+    categoria: "assinatura",
+    status: "pago",
+    origemTipo: ORIGEM_ESTORNO_MENSALIDADE_XGESTAO,
+    data: hojeSaoPaulo(),
+    origemId: args.paymentId,
+    pagadorUserId: null,
+    recebedorUserId: args.userId,
+    tx,
+  });
+}
+
+function dataDoVencimento(valor?: string): Date | null {
+  const m = valor?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const data = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00-03:00`);
+  return Number.isNaN(data.getTime()) ? null : data;
 }
 
 /** Importado do adapter ASAS para parsear externalReference no webhook. */

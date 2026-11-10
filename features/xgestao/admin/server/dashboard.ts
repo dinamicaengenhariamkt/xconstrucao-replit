@@ -2,22 +2,18 @@ import { and, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@shared/db/db';
 import { XGESTAO_OBRA } from './escopo';
 import {
-  assinaturas,
   empreiteiras,
   financeiro,
   obraOcorrencias,
   obraShareLinks,
   obras,
-  planos,
-  userRoles,
-  users,
-  xgestaoMembros,
 } from '@shared/db/schema';
-import { listarMembrosEmpreiteirasXgestao, type XgestaoMembroEmpresa } from './escopo';
+import type { XgestaoMembroEmpresa } from './escopo';
+import type { XgestaoAssinanteDetalhe } from './assinantes';
 import { custoRealPorObra, custoRealTotal } from './custo-real';
-import { obraAtrasada, obraParada } from './situacao';
+import { lancamentoAtrasado, obraAtrasada, obraParada } from './situacao';
 import { getDiasObraParada } from '@features/admin/platform-settings/server/settings-reader';
-import { expirarTestesVencidos, fimTestePorUsuario } from '@features/xgestao/teste/server/teste-service';
+import { fimTestePorUsuario } from '@features/xgestao/teste/server/teste-service';
 
 export type XgestaoTier = import('@shared/lib/plans-catalog').PlanoTier;
 
@@ -86,7 +82,10 @@ export interface XgestaoAdminDashboard {
   alertas: {
     totais: {
       ocorrenciasAbertas: number;
+      /** ADM-09 — vencidos e não pagos agora (a receber + a pagar). */
       pagamentosAtrasados: number;
+      recebimentosAtrasados: number;
+      contasAPagarAtrasadas: number;
       obrasPausadas: number;
     };
     itens: XgestaoAdminAlerta[];
@@ -112,94 +111,36 @@ function iso(value: Date | null | undefined): string | null {
 /**
  * Visão administrativa do produto xgestão.
  *
- * O entitlement (user_roles) é a fonte dos assinantes: quem usa o plano free
- * não precisa ter uma assinatura de cobrança. Uma assinatura xgestão ativa só
- * complementa o tier comercial, sem consultar nem alterar o plano marketplace.
+ * ADM-06/07/10: a base é a MESMA lista da página de assinantes
+ * (`listarAssinantesDetalhados`), carregada uma vez pela rota e repassada aqui.
+ * Antes a home montava a própria base (contava quem não tem empresa, que a
+ * lista escondia), escolhia o plano por outra regra e vencia os testes de novo.
+ * Contas internas (ADM-02) já vêm fora da lista.
  */
-export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard> {
-  const [entitlements, freePlan] = await Promise.all([
-    db
-      .select({
-        userId: userRoles.userId,
-        entradaEm: userRoles.criadoEm,
-        email: users.email,
-        responsavel: users.name,
-        empreiteiraId: empreiteiras.id,
-        empreiteiraNome: empreiteiras.nome,
-      })
-      .from(userRoles)
-      .innerJoin(users, eq(users.id, userRoles.userId))
-      // O convite de equipe concede role xgestao para autenticar o membro, mas
-      // esse entitlement técnico não é uma assinatura/empresa independente.
-      .leftJoin(xgestaoMembros, eq(xgestaoMembros.userId, userRoles.userId))
-      .leftJoin(empreiteiras, eq(empreiteiras.userId, users.id))
-      .where(and(eq(userRoles.role, 'xgestao'), isNull(xgestaoMembros.id)))
-      .orderBy(desc(userRoles.criadoEm)),
-    db
-      .select({ nome: planos.nome })
-      .from(planos)
-      .where(and(eq(planos.persona, 'xgestao'), eq(planos.tier, 'free')))
-      .limit(1),
-  ]);
-
-  const userIds = entitlements.map((item) => item.userId);
-  const empreiteiraIds = [...new Set(entitlements.flatMap((item) => item.empreiteiraId ? [item.empreiteiraId] : []))];
-  await expirarTestesVencidos();
-  const [membros, fimTestes] = await Promise.all([
-    listarMembrosEmpreiteirasXgestao(empreiteiraIds),
-    fimTestePorUsuario(userIds),
-  ]);
-  const membrosPorEmpreiteira = new Map<string, XgestaoMembroEmpresa[]>();
-  for (const membro of membros) {
-    const lista = membrosPorEmpreiteira.get(membro.empreiteiraId) ?? [];
-    lista.push(membro);
-    membrosPorEmpreiteira.set(membro.empreiteiraId, lista);
-  }
-  // Uma assinatura ativa pode anteceder a conclusão do perfil da empreiteira.
-  // Resolver os planos antes do retorno sem obras evita classificar todos como free.
-  const subscriptionRows = userIds.length === 0
-    ? []
-    : await db
-      .select({
-        userId: assinaturas.userId,
-        status: assinaturas.status,
-        iniciadaEm: assinaturas.iniciadaEm,
-        tier: planos.tier,
-        planoNome: planos.nome,
-      })
-      .from(assinaturas)
-      .innerJoin(planos, eq(planos.id, assinaturas.planoId))
-      .where(and(eq(assinaturas.persona, 'xgestao'), inArray(assinaturas.userId, userIds)));
-  const activeSubscriptions = new Map<string, typeof subscriptionRows[number]>();
-  for (const subscription of subscriptionRows) {
-    if (subscription.status !== 'ativa') continue;
-    const current = activeSubscriptions.get(subscription.userId);
-    if (!current || subscription.iniciadaEm > current.iniciadaEm) {
-      activeSubscriptions.set(subscription.userId, subscription);
-    }
-  }
+export async function getXgestaoAdminDashboard(lista: XgestaoAssinanteDetalhe[]): Promise<XgestaoAdminDashboard> {
+  const userIds = lista.map((item) => item.userId);
+  const empreiteiraIds = [...new Set(lista.flatMap((item) => (item.empreiteiraId ? [item.empreiteiraId] : [])))];
+  const fimTestes = await fimTestePorUsuario(userIds);
+  const membrosEquipe = lista.reduce((total, item) => total + item.membros.length, 0);
+  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
+  for (const item of lista) distribuicaoPlanos[item.plano.tier] += 1;
+  const assinantes: XgestaoAdminAssinante[] = lista.map((item) => ({
+    id: item.userId,
+    empreiteira: item.empreiteiraNome,
+    responsavel: item.nome,
+    email: item.email,
+    membros: item.membros,
+    obrasGerenciadas: item.obrasGerenciadas,
+    plano: { tier: item.plano.tier, nome: item.plano.nome },
+    // XG35/XG43 — fim do teste grátis em andamento (`fimTestePorUsuario`).
+    fimTeste: fimTestes.get(item.userId) ?? null,
+    entradaEm: item.entradaEm instanceof Date ? item.entradaEm.toISOString() : String(item.entradaEm),
+  }));
 
   if (empreiteiraIds.length === 0) {
-    const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
-    const assinantes = entitlements.map((entitlement) => {
-      const subscription = activeSubscriptions.get(entitlement.userId);
-      const tier = (subscription?.tier ?? 'free') as XgestaoTier;
-      distribuicaoPlanos[tier] += 1;
-      return {
-        id: entitlement.userId,
-        empreiteira: 'Perfil ainda não concluído',
-        responsavel: entitlement.responsavel,
-        email: entitlement.email,
-        membros: [],
-        obrasGerenciadas: 0,
-        plano: { tier, nome: subscription?.planoNome ?? 'Somente leitura' },
-        fimTeste: fimTestes.get(entitlement.userId) ?? null,
-        entradaEm: entitlement.entradaEm.toISOString(),
-      };
-    });
     return {
       indicadores: {
-        assinantes: entitlements.length,
+        assinantes: lista.length,
         empreiteirasComPerfil: 0,
         membrosEquipe: 0,
         obrasGerenciadas: 0,
@@ -216,7 +157,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       assinantes,
       obras: [],
       alertas: {
-        totais: { ocorrenciasAbertas: 0, pagamentosAtrasados: 0, obrasPausadas: 0 },
+        totais: { ocorrenciasAbertas: 0, pagamentosAtrasados: 0, recebimentosAtrasados: 0, contasAPagarAtrasadas: 0, obrasPausadas: 0 },
         itens: [],
       },
     };
@@ -293,13 +234,17 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
           XGESTAO_OBRA,
           inArray(obras.empreiteiraId, empreiteiraIds),
         )),
+      // ADM-09 — calculado na hora (vencido e não pago, dia de SP), por tipo.
       db
-        .select({ total: sql<number>`count(*)::int` })
+        .select({
+          receber: sql<number>`(count(*) filter (where ${financeiro.tipo} = 'entrada'))::int`,
+          pagar: sql<number>`(count(*) filter (where ${financeiro.tipo} <> 'entrada'))::int`,
+        })
         .from(financeiro)
         .innerJoin(obras, eq(obras.id, financeiro.obraId))
         .where(and(
           eq(financeiro.escopo, 'obra'),
-          eq(financeiro.status, 'atrasado'),
+          lancamentoAtrasado,
           XGESTAO_OBRA,
           inArray(obras.empreiteiraId, empreiteiraIds),
         )),
@@ -325,6 +270,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     db
       .select({
         id: financeiro.id,
+        tipo: financeiro.tipo,
         descricao: financeiro.descricao,
         valor: financeiro.valor,
         obraId: obras.id,
@@ -335,7 +281,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       .innerJoin(obras, eq(obras.id, financeiro.obraId))
       .where(and(
         eq(financeiro.escopo, 'obra'),
-        eq(financeiro.status, 'atrasado'),
+        lancamentoAtrasado,
         XGESTAO_OBRA,
         inArray(obras.empreiteiraId, empreiteiraIds),
       ))
@@ -359,42 +305,10 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       .limit(6),
   ]);
 
-  const obrasPorEmpreiteira = new Map(
-    obraCountRows.map((row) => [row.empreiteiraId, Number(row.total) || 0]),
-  );
-  const distribuicaoPlanos: Record<XgestaoTier, number> = { free: 0, pro: 0, enterprise: 0, basic: 0, basic_plus: 0, premium: 0 };
   const distribuicaoStatus = { ...STATUS_VAZIO };
   for (const row of statusRows) {
     distribuicaoStatus[row.status] = Number(row.total) || 0;
   }
-  const planoFreeNome = 'Somente leitura';
-
-  const assinantes = entitlements.map((entitlement) => {
-    const subscription = activeSubscriptions.get(entitlement.userId);
-    const tier = (subscription?.tier ?? 'free') as XgestaoTier;
-    distribuicaoPlanos[tier] += 1;
-
-    return {
-      id: entitlement.userId,
-      empreiteira: entitlement.empreiteiraNome ?? 'Perfil ainda não concluído',
-      responsavel: entitlement.responsavel,
-      email: entitlement.email,
-      membros: (entitlement.empreiteiraId
-        ? membrosPorEmpreiteira.get(entitlement.empreiteiraId) ?? []
-        : []).map(({ userId, nome, email, papel, status, obras }) => ({ userId, nome, email, papel, status, obras })),
-      obrasGerenciadas: entitlement.empreiteiraId
-        ? obrasPorEmpreiteira.get(entitlement.empreiteiraId) ?? 0
-        : 0,
-      plano: {
-        tier,
-        nome: subscription?.planoNome ?? planoFreeNome,
-      },
-      // Não há período de teste no modelo atual. O campo preserva o contrato
-      // para quando a cobrança passar a registrar essa informação explicitamente.
-      fimTeste: fimTestes.get(entitlement.userId) ?? null,
-      entradaEm: entitlement.entradaEm.toISOString(),
-    };
-  });
 
   const [custoPorObra, custoTotal] = await Promise.all([
     custoRealPorObra(recentWorks.map((obra) => obra.id)),
@@ -432,7 +346,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
       tipo: 'financeiro',
       severidade: 'critica',
       titulo: item.descricao,
-      descricao: `Pagamento atrasado de ${money(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+      descricao: `${item.tipo === 'entrada' ? 'Recebimento atrasado' : 'Conta a pagar atrasada'} de ${money(item.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
       obraId: item.obraId,
       obra: item.obra,
       criadoEm: iso(item.criadoEm),
@@ -457,7 +371,7 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     indicadores: {
       assinantes: assinantes.length,
       empreiteirasComPerfil: empreiteiraIds.length,
-      membrosEquipe: membros.length,
+      membrosEquipe,
       obrasGerenciadas: totalObras,
       obrasAtivas: distribuicaoStatus.em_andamento,
       obrasAtrasadas: Number(obrasAggregate[0]?.atrasadas) || 0,
@@ -474,7 +388,9 @@ export async function getXgestaoAdminDashboard(): Promise<XgestaoAdminDashboard>
     alertas: {
       totais: {
         ocorrenciasAbertas: Number(alertCounts[0][0]?.total) || 0,
-        pagamentosAtrasados: Number(alertCounts[1][0]?.total) || 0,
+        pagamentosAtrasados: (Number(alertCounts[1][0]?.receber) || 0) + (Number(alertCounts[1][0]?.pagar) || 0),
+        recebimentosAtrasados: Number(alertCounts[1][0]?.receber) || 0,
+        contasAPagarAtrasadas: Number(alertCounts[1][0]?.pagar) || 0,
         obrasPausadas: distribuicaoStatus.pausada,
       },
       itens: alertas,

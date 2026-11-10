@@ -183,6 +183,43 @@ xgestão foi autorizada; não ativar Asaas de produção nem alterar limites do 
 Ver [XG42 — Auditoria de planos, persistência e contexto](42-auditoria-planos-persistencia-contexto.md)
 para implementação, matriz de revisão de todas as áreas e evidências desta rodada.
 
+Ver [XG43 — Fim do teste e assinatura](43-fim-teste-assinatura.md): desde 09/11/2026 o teste
+é **Basic** por 90 dias, começa sozinho no 1º acesso, vira somente leitura 24h após o fim;
+quem assina no teste ganha +1 mês; cancelamento vale até o fim do período pago; inadimplência
+tem 7 dias de carência.
+
+Ver [XG44 — Admin: visão por assinante](44-admin-assinantes.md): home com a situação das
+assinaturas e quem pede atenção; lista filtrável por situação; página de detalhe por
+assinante com uso dos 3 limites, obras, lucro e histórico.
+
+Ver [XG45 — Admin: conversão, cancelamentos e receita](45-admin-conversao-receita.md):
+página Conversão (funil do teste, coortes, quem está saindo), receita por plano e quem mais
+pagou no Financeiro; cada mensalidade paga do xgestão entra uma vez no caixa da plataforma.
+
+Ver [XG46 — Admin: engajamento e mês a mês](46-admin-engajamento-historico.md): quem usa,
+quem parou (pago ou teste sem uso há 14 dias pede atenção) e os últimos 12 meses de testes,
+entradas, saídas, recorrente e recebido.
+
+Ver [XG47 — Auditoria pré-lançamento](47-auditoria-pre-lancamento.md): checklist de tudo que falta
+antes de abrir ao público, por prioridade, com a virada do Asaas para produção.
+
+Ver [XG48 — Troca de plano](48-troca-de-plano.md): subir vale na hora, com a diferença proporcional
+somada só na próxima fatura; descer vale na renovação, com escolha única das obras e pessoas que
+continuam editáveis. Nada é excluído. Homologado no Asaas sandbox.
+
+Ver [XG49 · Admin: segmentos e contato](49-admin-segmentos-contato.md): telefone, CPF/CNPJ e
+botões de WhatsApp e e-mail; filtros por prazo (teste acabando, renovação, nunca usou); "Assinou
+no teste, aguardando 1º pagamento" fora do recorrente; motivo opcional do cancelamento; registro
+dos contatos do admin; estorno separado de chargeback; CSV com o recorte da tela.
+
+Ver [XG50 · Fluxo de pagamento: validação final](50-fluxo-pagamento-validacao.md): mensal sem pular
+nem duplicar mês, anual pronto e desligado, teste e mês bônus uma vez por conta e por CPF/CNPJ,
+"Voltou depois de cancelar" e "Cancela e volta com frequência" no admin.
+
 ## Nota de formato
 
 [XG07](07-integracao-sinapi.md) tem **15 seções**, não 13: insere `9. Configuração` e `10. Restrições contratuais`, deslocando as demais. É exceção conhecida e deliberadamente não corrigida — renumerar uma jornada congelada é risco sem retorno. As outras sete seguem o template.
+
+Ver [XG51: publish e Asaas em produção](51-publish-e-asaas-producao.md): Secrets do deploy, verificação depois do publish e passo a passo da conta de produção do Asaas.
+
+Ver [XG52: marketing e e-mails automáticos](52-marketing-e-emails.md): consentimento de e-mail de marketing (LGPD) no cadastro e nas configurações, descadastro sem login, rotina diária `/api/cron/xgestao-diario` (avisos de teste, cobrança e cancelamento, convites com opt-in), lista do Brevo, opt-in no CSV do admin e validação do telefone.

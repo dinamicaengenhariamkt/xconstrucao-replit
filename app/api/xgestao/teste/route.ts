@@ -4,7 +4,7 @@ import { iniciarTeste, TesteError } from "@features/xgestao/teste/server/teste-s
 import { jsonSemCache, requireResponsavelPlanoXgestao } from "@features/xgestao/teste/server/guard";
 
 const MENSAGENS: Record<TesteError["code"], { status: number; message: string }> = {
-  JA_USOU_TESTE: { status: 409, message: "O teste grátis já foi usado nesta conta." },
+  JA_USOU_TESTE: { status: 409, message: "O teste grátis já foi usado nesta conta ou com este CPF/CNPJ." },
   JA_ASSINANTE: { status: 409, message: "Sua conta já tem um plano ativo." },
   PLANO_INDISPONIVEL: { status: 503, message: "Teste grátis indisponível no momento." },
 };

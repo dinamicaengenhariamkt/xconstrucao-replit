@@ -209,9 +209,10 @@ export async function isRelatoriosHabilitado(): Promise<boolean> {
  * XG35 — duração (dias) e tier do teste grátis do xgestão (`xgestao.testeDias`,
  * `xgestao.testeTier`). A oferta aprovada fixa Premium por 90 dias.
  */
-export async function getConfigTesteXgestao(): Promise<{ dias: number; tier: "premium" }> {
-  // Oferta aprovada: configurações legadas não podem oferecer outro trial.
-  return { dias: 90, tier: "premium" };
+export async function getConfigTesteXgestao(): Promise<{ dias: number; tier: "basic" }> {
+  // Oferta aprovada (09/11/2026): 90 dias no plano Basic. Configurações legadas
+  // não podem oferecer outro trial.
+  return { dias: 90, tier: "basic" };
 }
 
 /** XG36 — dias sem registro para uma obra em andamento contar como parada. Fail-open → 14. */

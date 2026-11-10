@@ -42,6 +42,8 @@ export function sharePayload(link: ObraShareLink) {
     visualizacoes: link.visualizacoes,
     ultimoAcessoEm: link.ultimoAcessoEm?.toISOString() ?? null,
     secoes: link.secoes,
+    // E2E-03 — a tela mostra o selo "Pausado pelo plano" e só deixa revogar.
+    pausadoPorPlano: link.pausadoPorPlano,
   };
 }
 

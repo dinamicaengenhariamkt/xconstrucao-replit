@@ -260,4 +260,19 @@ export const CRITICAL_PROBES: HealthProbe[] = [
     columns: ["obra_id", "papel", "user_id", "versao_template"],
     label: "contrato_assinaturas (J58)",
   },
+  // REV-01 — colunas das migrations 0010 a 0013 lidas por `select()` sem lista
+  // (server/bootstrap-colunas-essenciais.ts).
+  { table: "users", columns: ["conta_interna"], label: "users (ADM-02 conta_interna)" },
+  { table: "obras", columns: ["xgestao_bloqueada_por_plano"], label: "obras (XG48 bloqueio por plano)" },
+  { table: "obra_share_links", columns: ["pausado_por_plano"], label: "obra_share_links (XG48 pausado por plano)" },
+  { table: "xgestao_membros", columns: ["status_antes_pausa"], label: "xgestao_membros (XG48 pausa)" },
+  { table: "assinaturas", columns: ["fim_teste_em", "primeiro_pagamento_em"], label: "assinaturas (bônus do teste)" },
+  { table: "obra_ocorrencias", columns: ["observacao_resolucao", "atualizado_em"], label: "obra_ocorrencias (edição)" },
+  { table: "obra_checklists", columns: ["assinado_por_user_id"], label: "obra_checklists (EMP-08 assinante)" },
+  {
+    table: "assinatura_trocas",
+    columns: ["user_id", "assinatura_id", "status", "chave_idempotencia", "escolhas", "ajuste_pendente", "quitada_em"],
+    label: "assinatura_trocas (XG48 troca de plano)",
+  },  { table: "assinaturas", columns: ["motivo_cancelamento", "motivo_cancelamento_texto"], label: "assinaturas (CRM-03 motivo do cancelamento)" },
+  { table: "xgestao_admin_contatos", columns: ["user_id", "admin_id", "canal", "nota"], label: "xgestao_admin_contatos (CRM-07)" },
 ];

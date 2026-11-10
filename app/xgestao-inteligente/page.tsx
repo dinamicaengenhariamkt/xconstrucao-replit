@@ -5,7 +5,7 @@ import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { generateProductSchema, generateBreadcrumbSchema, generateWebPageSchema } from '@features/landing/seo/seo-utils';
-import { IconDashboardCustomize, IconPrecisionManufacturing, IconMonitoring, IconPayments, IconGroups, IconDescription, IconAnalytics, IconTableChart, IconSmartToy, IconSecurity, IconDevices } from '@shared/components/icons';
+import { IconDashboardCustomize, IconPrecisionManufacturing, IconMonitoring, IconPayments, IconGroups, IconDescription, IconAnalytics, IconTableChart, IconSecurity, IconDevices } from '@shared/components/icons';
 import { XGESTAO_LOGIN_HREF } from '@features/xgestao/routes';
 
 const features = [
@@ -19,13 +19,13 @@ const features = [
     Icon: IconMonitoring,
     title: "Controle de Obras",
     description:
-      "Acompanhe o progresso de cada etapa com dashboards interativos e notificações em tempo real.",
+      "Acompanhe cada etapa com cronograma, diário de obra, fotos e registro de problemas.",
   },
   {
     Icon: IconPayments,
     title: "Gestão Financeira",
     description:
-      "Controle entradas, saídas e fluxo de caixa com relatórios automatizados e alertas inteligentes.",
+      "Controle entradas, saídas e o fluxo de caixa de cada obra em um só lugar.",
   },
   {
     Icon: IconGroups,
@@ -56,24 +56,24 @@ const differentials = [
     highlight: true,
   },
   {
-    Icon: IconSmartToy,
-    title: "IA para Construção",
+    Icon: IconDashboardCustomize,
+    title: "Tudo da Obra num Lugar",
     description:
-      "Inteligência artificial aplicada para otimizar custos, prazos e recursos dos seus projetos.",
+      "Diário, fotos, financeiro, equipe e cronograma de cada obra reunidos, sem planilha solta.",
     highlight: false,
   },
   {
     Icon: IconSecurity,
     title: "Segurança Total",
     description:
-      "Dados protegidos com criptografia de ponta e backups automáticos garantem a segurança das informações.",
+      "Acesso protegido por login, permissões por pessoa da equipe e arquivos das obras privados.",
     highlight: false,
   },
   {
     Icon: IconDevices,
     title: "Multiplataforma",
     description:
-      "Acesse de qualquer dispositivo — desktop, tablet ou smartphone — com sincronização em tempo real.",
+      "Acesse de qualquer dispositivo: computador, tablet ou celular, direto no navegador.",
     highlight: false,
   },
 ];
@@ -88,8 +88,8 @@ export default function XGestaoInteligentePage() {
           { name: 'xgestão inteligente', url: '/xgestao-inteligente' }
         ]),
         generateWebPageSchema({
-          title: 'xgestão inteligente - Gestão de Obras com Inteligência Artificial',
-          description: 'Sistema completo para gerenciar orçamentos com IA',
+          title: 'xgestão inteligente - Gestão de Obras',
+          description: 'Gestão de obras com diário, financeiro, fotos e link para o cliente acompanhar',
           url: '/xgestao-inteligente',
           datePublished: '2026-01-01',
         })

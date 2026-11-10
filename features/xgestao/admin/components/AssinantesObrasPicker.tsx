@@ -30,7 +30,10 @@ export function AssinantesObrasPicker({
   const [pagina, setPagina] = useState(1);
   const filtrados = useMemo(() => {
     const termo = normalizar(busca.trim());
-    return [...assinantes]
+    // Conta sem empresa (ADM-10) não tem obras para filtrar: fica fora do seletor.
+    return assinantes
+      .filter((assinante): assinante is XgestaoAssinanteDetalhe & { empreiteiraId: string } =>
+        assinante.empreiteiraId !== null)
       .filter((assinante) =>
         !termo || normalizar(`${assinante.empreiteiraNome} ${assinante.email}`).includes(termo))
       .sort((a, b) => a.empreiteiraNome.localeCompare(b.empreiteiraNome, 'pt-BR'));

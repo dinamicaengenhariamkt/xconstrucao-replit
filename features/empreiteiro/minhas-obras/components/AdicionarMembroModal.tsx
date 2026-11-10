@@ -109,6 +109,12 @@ interface AdicionarMembroModalProps {
   membro?: MembroEquipe | null;
   /** XG22 — o upload do contrato conta contra a quota da obra. */
   obraId: string;
+  /**
+   * EMP-06 — falso para quem não vê o contrato da obra: a seção "Pagamento e
+   * contrato" some e o salvar não envia esses campos (no PATCH, ausente é
+   * "não mexer"), para não apagar o que o dono cadastrou.
+   */
+  mostrarContrato?: boolean;
   onSalvar: (data: Omit<MembroEquipe, 'id' | 'ativo' | 'permissao'>) => void | Promise<unknown>;
 }
 
@@ -120,6 +126,7 @@ export function AdicionarMembroModal({
   onOpenChange,
   membro,
   obraId,
+  mostrarContrato = true,
   onSalvar,
 }: AdicionarMembroModalProps) {
   const isEdit = !!membro;
@@ -218,6 +225,17 @@ export function AdicionarMembroModal({
       });
       return;
     }
+    const contratoPayload = mostrarContrato
+      ? {
+          // XG22 — `null`, e não `undefined`, quando o campo foi esvaziado: no PATCH
+          // `undefined` significa "não mexer", então limpar o PIX ou remover o
+          // contrato não teria efeito nenhum.
+          pixChave: data.pixChave?.trim() || null,
+          valorContrato,
+          contratoFileId: contrato?.fileId ?? null,
+          contratoLinkUrl: link ?? null,
+        }
+      : {};
     try {
       await onSalvar({
       nome: data.nome.trim(),
@@ -229,13 +247,7 @@ export function AdicionarMembroModal({
       email: data.email?.trim() || undefined,
       registro: data.registro?.trim() || undefined,
       membros: data.tipo === 'equipe' ? (data.membros?.trim() || undefined) : undefined,
-      // XG22 — `null`, e não `undefined`, quando o campo foi esvaziado: no PATCH
-      // `undefined` significa "não mexer", então limpar o PIX ou remover o
-      // contrato não teria efeito nenhum.
-      pixChave: data.pixChave?.trim() || null,
-      valorContrato,
-      contratoFileId: contrato?.fileId ?? null,
-        contratoLinkUrl: link ?? null,
+      ...contratoPayload,
       });
     } catch (erro) {
       if (!moedaXgestao) throw erro;
@@ -450,6 +462,7 @@ export function AdicionarMembroModal({
                 outro assunto: os campos acima descrevem quem é a pessoa, estes
                 descrevem o acordo com ela.
               */}
+              {mostrarContrato && (<>
               <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
                 <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   Pagamento e contrato
@@ -554,6 +567,7 @@ export function AdicionarMembroModal({
                   </>
                 )}
               </div>
+              </>)}
             </form>
           </Form>
         </div>

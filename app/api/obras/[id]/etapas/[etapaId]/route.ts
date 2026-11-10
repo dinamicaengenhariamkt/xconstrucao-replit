@@ -147,13 +147,22 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     setNoCacheHeaders(r);
     return r;
   }
-  await db.transaction(async (tx) => {
+  const removida = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM obras WHERE id = ${id} FOR UPDATE`);
+    const [existe] = await tx.select({ id: obraEtapas.id }).from(obraEtapas)
+      .where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)));
+    if (!existe) return false;
     await tx.update(obraTarefas)
       .set({ etapaId: null, etapa: "Geral", updatedAt: new Date() })
       .where(and(eq(obraTarefas.etapaId, etapaId), eq(obraTarefas.obraId, id)));
     await tx.delete(obraEtapas).where(and(eq(obraEtapas.id, etapaId), eq(obraEtapas.obraId, id)));
+    return true;
   });
+  if (!removida) {
+    const r = NextResponse.json({ message: "Item não encontrado" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   await recordAudit({ actorId: guard.user.id, action: "obras.etapa.delete", payload: { obraId: id, etapaId }, request });
   const r = NextResponse.json({ ok: true });
   setNoCacheHeaders(r);

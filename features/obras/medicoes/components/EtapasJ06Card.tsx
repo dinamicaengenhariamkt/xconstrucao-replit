@@ -276,7 +276,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                   {/* XG15 — "alimentam o gráfico" soava opcional; a regra real é
                       exclusão: sem as duas datas a etapa não é desenhada. */}
                   <p className="text-xs text-muted-foreground">
-                    Preencha as duas datas para a etapa aparecer no cronograma —{' '}
+                    Preencha as duas datas para a etapa aparecer no cronograma:{' '}
                     <strong>sem elas ela fica de fora do gráfico</strong>.
                   </p>
                   {/*
@@ -347,7 +347,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
             {canEditScope ? (
               <>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-                  Etapas são as fases da obra — fundação, alvenaria, acabamento. As tarefas
+                  Etapas são as fases da obra: fundação, alvenaria, acabamento. As tarefas
                   ficam dentro delas, e com as datas preenchidas viram o cronograma.
                 </p>
                 <div className="mt-4">
@@ -388,7 +388,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                       </p>
                     ) : (
                       <p className="mt-0.5 text-xs text-amber-600" data-testid={`etapa-sem-datas-${e.id}`}>
-                        Sem datas — não aparece no cronograma
+                        Sem datas, não aparece no cronograma
                       </p>
                     )}
                   </div>

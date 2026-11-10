@@ -1,5 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
-import { obras } from '@shared/db/schema';
+import { financeiro, obras } from '@shared/db/schema';
 
 /**
  * XG36 — situação das obras xgestão para o admin, toda calculada no banco.
@@ -34,7 +34,23 @@ export const ultimaAtividadeObra = sql<Date>`greatest(
  */
 export const previsaoObra = sql`(case when ${obras.dataPrevisao} ~ '^\\d{4}-\\d{2}-\\d{2}' then left(${obras.dataPrevisao}, 10)::date end)`;
 
-export const obraAtrasada = sql`(${previsaoObra} < current_date and ${obras.status} <> 'concluida')`;
+/**
+ * ADM-08 — "hoje" no fuso de São Paulo. `current_date` segue o fuso da sessão
+ * (UTC no servidor): às 22h de Brasília já virou o dia e a obra aparecia
+ * atrasada 3 horas antes. Espelha `hojeSaoPaulo()` de `lib/data-sp.ts`.
+ */
+export const HOJE_SP_SQL = sql`((now() at time zone 'America/Sao_Paulo')::date)`;
+
+export const obraAtrasada = sql`(${previsaoObra} < ${HOJE_SP_SQL} and ${obras.status} <> 'concluida')`;
+
+/**
+ * ADM-09 — lançamento de obra atrasado, calculado na leitura: vencimento antes
+ * de hoje (SP) e ainda pendente, ou já marcado `atrasado`. Não depende do status
+ * `atrasado` que o job diário grava (`mark-overdue-job.ts`), que pode não ter
+ * rodado ou rodar com o dia de UTC. Espelha `lancamentoAtrasadoEm()`.
+ */
+export const lancamentoAtrasado = sql`(${financeiro.status} = 'atrasado' or (${financeiro.status} = 'pendente'
+  and (case when ${financeiro.dataVencimento} ~ '^\\d{4}-\\d{2}-\\d{2}' then left(${financeiro.dataVencimento}, 10)::date end) < ${HOJE_SP_SQL}))`;
 
 export function obraParada(dias: number): SQL {
   return sql`(${obras.status} = 'em_andamento' and ${ultimaAtividadeObra} < now() - make_interval(days => ${dias}))`;

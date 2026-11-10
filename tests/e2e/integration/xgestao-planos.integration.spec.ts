@@ -11,9 +11,11 @@ import {
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 7_000;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -71,7 +73,7 @@ test.describe('xgestão — planos e limites', () => {
     expect(redirect.headers().location).toMatch(/\/xgestao\/configuracoes\?tab=plano$/);
   });
 
-  test('teste Premium permite dez obras e Basic Plus limita novas inclusões a três', async ({ request }) => {
+  test('Premium permite dez obras e Basic Plus limita novas inclusões a três', async ({ request }) => {
     const empreiteiroEmail = await registrar(request, 'empreiteiro', 'xgestao-planos-emp');
     await loginAs(request, empreiteiroEmail);
     await completarPerfilOperacional(request, 'empreiteiro');
@@ -126,6 +128,17 @@ test.describe('xgestão — planos e limites', () => {
     expect(checkoutSemEntitlement.status(), await checkoutSemEntitlement.text()).toBe(403);
     await logout(request);
     await loginAs(request, empreiteiroEmail);
+
+    // XG50 — com plano pago ativo, um 2º checkout criaria outra assinatura
+    // cobrando: mudar de plano é pela troca. Depois de cancelar, assinar outro
+    // plano substitui o anterior.
+    const direto = await request.post('/api/assinaturas/checkout', {
+      data: { planoId: basic!.id, ciclo: 'mensal', persona: 'xgestao' },
+    });
+    expect(direto.status(), await direto.text()).toBe(409);
+    expect((await direto.json()) as { code: string }).toMatchObject({ code: 'USAR_TROCA' });
+    const cancelar = await request.post('/api/assinaturas/cancelar', { data: { persona: 'xgestao' } });
+    expect(cancelar.status(), await cancelar.text()).toBe(200);
 
     const checkout = await request.post('/api/assinaturas/checkout', {
       data: { planoId: basic!.id, ciclo: 'mensal', persona: 'xgestao' },

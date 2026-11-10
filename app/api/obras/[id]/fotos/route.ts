@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
+import { ehObraXgestao, erroVinculoArquivoXgestao } from "@features/xgestao/server/arquivos-obra";
 
 const createSchema = z.object({
   fileId: z.string().uuid(),
@@ -99,6 +100,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     const r = NextResponse.json({ message: "Arquivo inválido." }, { status: 400 });
     setNoCacheHeaders(r);
     return r;
+  }
+  // EMP-04 — obra do xgestão: o mesmo arquivo não entra em duas obras (nem duas
+  // vezes na mesma) e a quota é reconferida no vínculo.
+  if (ehObraXgestao(access.obra)) {
+    const erro = await erroVinculoArquivoXgestao(id, parsed.data.fileId);
+    if (erro) {
+      const r = NextResponse.json(erro.body, { status: erro.status });
+      setNoCacheHeaders(r);
+      return r;
+    }
   }
   const [created] = await db.insert(obraFotos).values({
     obraId: id,

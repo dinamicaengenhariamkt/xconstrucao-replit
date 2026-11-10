@@ -22,9 +22,11 @@ import {
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 500;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;

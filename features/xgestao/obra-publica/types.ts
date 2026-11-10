@@ -36,6 +36,8 @@ export interface ObraPublicaOcorrencia {
   status: 'aberta' | 'resolvida';
   fotoUrl: string | null;
   resolvidoEm?: string;
+  /** Como o problema foi resolvido, escrito pela equipe. */
+  observacaoResolucao?: string | null;
   createdAt: string;
 }
 

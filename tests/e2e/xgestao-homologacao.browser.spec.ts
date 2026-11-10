@@ -60,7 +60,8 @@ for (const tamanho of [{ width: 1440, height: 900 }, { width: 390, height: 844 }
           await expect(page.getByTestId(`xgestao-plano-${tier}`)).toContainText(valor);
         }
         await expect(page.getByTestId('xgestao-planos-section')).not.toContainText('SINAPI');
-        await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) })
+        // XG43 — somente leitura só 24h após o fim do teste: venceu há 24h + 1 min.
+        await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 24 * 60 * 60_000 - 60_000) })
           .where(eq(assinaturas.userId, userId));
         await page.goto(`${origemUI}/xgestao/obras`);
         const confirmar = page.getByTestId('button-continuar-free');

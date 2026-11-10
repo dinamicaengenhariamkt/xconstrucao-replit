@@ -575,6 +575,9 @@ export async function buildMinhaObraDetalheReal(
       // embutidos, link vai direto para a origem (Drive, etc).
       mime: row.mime ?? undefined,
       isLink: row.a.linkUrl !== null,
+      // E2E-08 — a tela assina de novo no clique (`/api/uploads/sign?id=`):
+      // a URL abaixo expira em 15 min e a aba costuma ficar aberta mais que isso.
+      fileId: row.a.linkUrl ? undefined : (row.a.fileId ?? undefined),
       url: row.a.linkUrl
         ? row.a.linkUrl
         : await resolveSignedFotoUrl({

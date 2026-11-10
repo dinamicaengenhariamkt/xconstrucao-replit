@@ -100,6 +100,33 @@ export async function bootstrapPlanosSchema(): Promise<void> {
     // Migração idempotente: adiciona pendente_reativacao_at se ainda não existir.
     await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS pendente_reativacao_at TIMESTAMP`);
 
+    // xgestão (10/11/2026) — bônus do teste só com o 1º pagamento e uma vez por
+    // conta. Espelha migrations/0011_assinaturas_bonus_teste.sql.
+    await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS fim_teste_em TIMESTAMP`);
+    await db.execute(sql`ALTER TABLE assinaturas ADD COLUMN IF NOT EXISTS primeiro_pagamento_em TIMESTAMP`);
+
+    // REV-04 — preenchimento retroativo de `primeiro_pagamento_em`. Assinante
+    // pago de antes de 10/11/2026 tinha a coluna nula e caía em "sem pagamento"
+    // na troca de plano (subia sem pagar o proporcional). Só assinatura paga
+    // (não teste) e que não veio do teste grátis. Ordem: 1º payment_succeeded,
+    // senão 1ª mensalidade no caixa, senão o início. Idempotente (só nulos).
+    // `assinatura_eventos` já existe aqui; `financeiro` vem do bootstrap de obras.
+    await db.execute(sql`
+      UPDATE assinaturas a
+         SET primeiro_pagamento_em = COALESCE(
+               (SELECT min(e.criado_em) FROM assinatura_eventos e
+                 WHERE e.assinatura_id = a.id AND e.tipo = 'payment_succeeded'),
+               (SELECT min(f.created_at) FROM financeiro f
+                 WHERE f.origem_tipo = 'xgestao_mensalidade' AND f.pagador_user_id = a.user_id
+                   AND f.created_at >= a.iniciada_em - interval '1 day'),
+               a.iniciada_em)
+       WHERE a.persona = 'xgestao'
+         AND a.status IN ('ativa', 'inadimplente', 'cancelada')
+         AND a.gateway_provider <> 'trial'
+         AND a.primeiro_pagamento_em IS NULL
+         AND a.fim_teste_em IS NULL
+    `);
+
     // Seed do catálogo a partir do plans-catalog (idempotente por tier+persona).
     const personas: PlanoPersona[] = ["empreiteiro", "contratante", "xgestao"];
     for (const persona of personas) {
@@ -135,21 +162,32 @@ export async function bootstrapPlanosSchema(): Promise<void> {
         WHERE persona = 'xgestao' AND tier = ${tier}::plano AND features = ${lista(anterior)}
       `);
     }
-    // Apenas testes internos ativos acompanham a nova oferta. Preserva o fim
-    // original e não toca em cobranças/contratos manuais ou externos.
+    // PAG-10 — tiers legados do xgestão saem da oferta (o seed acima os cria
+    // ativos em instalação nova). Assinaturas antigas nesses tiers seguem
+    // lidas pelo catálogo em `situacaoPlanoXgestao`; só não são vendidas.
+    await db.execute(sql`
+      UPDATE planos SET ativo = FALSE
+      WHERE persona = 'xgestao' AND tier IN ('free', 'pro', 'enterprise') AND ativo = TRUE
+    `);
+    // Testes ativos em planos fora da oferta (pro/enterprise/free legados) vão
+    // para o plano do teste, que desde 09/11/2026 é o Basic (XG43). Testes já
+    // em basic/basic_plus/premium ficam como estão até o fim: quem começou no
+    // Premium não perde recurso no meio do prazo. Preserva o fim original e não
+    // toca em cobranças/contratos manuais ou externos.
     await db.execute(sql`
       WITH atualizadas AS (
         UPDATE assinaturas AS a SET plano_id = p.id
-        FROM planos AS p
+        FROM planos AS p, planos AS atual
         WHERE a.persona = 'xgestao' AND a.gateway_provider = 'trial'
           AND a.status = 'ativa'
-          AND p.persona = 'xgestao' AND p.tier = 'premium'
-          AND a.plano_id <> p.id
+          AND atual.id = a.plano_id
+          AND atual.tier NOT IN ('basic', 'basic_plus', 'premium')
+          AND p.persona = 'xgestao' AND p.tier = 'basic'
         RETURNING a.id, a.renova_em
       )
       INSERT INTO assinatura_eventos (id, assinatura_id, tipo, payload_json)
       SELECT gen_random_uuid(), id, 'teste_oferta_atualizada',
-        jsonb_build_object('tier', 'premium', 'fimTestePreservado', renova_em)
+        jsonb_build_object('tier', 'basic', 'fimTestePreservado', renova_em)
       FROM atualizadas
     `);
   } catch (err) {

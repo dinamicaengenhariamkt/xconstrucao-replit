@@ -6,7 +6,8 @@ import { empreiteiras, users, xgestaoMembros } from "@shared/db/schema";
 import { getAccessTokenFromCookieHeader, verifyAccessToken } from "@features/auth/api/auth-service";
 import { ensureProfileRow } from "@features/auth/api/auth-storage";
 import { findMunicipio, loadMunicipios } from "@shared/lib/ibge-municipios";
-import { isCepValid, isCnpjValid, unformatCep, unformatCnpj } from "@shared/lib/masks";
+import { isCepValid, isCnpjValid, isCpfValid, unformatCep, unformatCpfCnpj } from "@shared/lib/masks";
+import { userHasRole } from "@features/auth/api/auth-utils";
 import { ESPECIALIDADES_PERMITIDAS } from "@shared/lib/especialidades";
 
 const especialidadesSchema = z
@@ -34,14 +35,17 @@ const updateSchema = z.object({
   // entrada principal do dado. Antes aceitava qualquer string: um PATCH direto
   // à API (fora das telas, que validam no client) gravava documento malformado
   // e o Asaas só recusava depois, ao abrir a subconta, longe da causa.
-  // Empreiteiro é pessoa jurídica — só CNPJ. `null` limpa o campo.
+  // Empreiteiro do marketplace é pessoa jurídica — só CNPJ. PAG-14: a conta
+  // xgestão aceita também CPF (conferido no handler, que sabe o papel).
+  // `null` limpa o campo.
   cnpj: z
     .string()
     .optional()
     .nullable()
-    .transform((v) => (v == null ? v : unformatCnpj(v)))
-    .refine((v) => !v || isCnpjValid(v), {
-      message: "CNPJ inválido — o cadastro de empreiteiro é de pessoa jurídica",
+    .transform((v) => (v == null ? v : unformatCpfCnpj(v)))
+    .refine((v) => !v || isCnpjValid(v) || isCpfValid(v), {
+      // Mensagem do marketplace preservada; a tela do xgestão valida antes.
+      message: "CNPJ inválido: o cadastro de empreiteiro é de pessoa jurídica",
     }),
   cep: z
     .string()
@@ -186,6 +190,15 @@ export async function PATCH(request: NextRequest) {
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ message: "Dados inválidos", errors: parsed.error.flatten() }, { status: 400 });
+  }
+
+  // PAG-14 — CPF só para quem tem o xgestão; o marketplace segue só com CNPJ.
+  if (parsed.data.cnpj && parsed.data.cnpj.length === 11 && !(await userHasRole(payload.sub, "xgestao"))) {
+    const message = "CNPJ inválido: o cadastro de empreiteiro é de pessoa jurídica";
+    return NextResponse.json(
+      { message: "Dados inválidos", errors: { formErrors: [], fieldErrors: { cnpj: [message] } } },
+      { status: 400 },
+    );
   }
 
   const existing = await loadOrCreate(payload.sub);

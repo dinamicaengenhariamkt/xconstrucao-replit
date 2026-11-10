@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '@shared/db/db';
-import { medicoes } from '@shared/db/schema';
+import { medicoes, userFiles, users } from '@shared/db/schema';
 import {
   completarPerfilOperacional,
   loginAs,
@@ -26,9 +26,11 @@ import {
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 900;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -173,9 +175,13 @@ test.describe('XG12 — atualizações da obra', () => {
     );
 
     await registrarAtualizacao(request, obraId, { etapa: 'Fundação', percentual: 10 });
-    // Segundos distintos: `createdAt` é a chave da ordenação.
-    await new Promise((resolve) => setTimeout(resolve, 1100));
     await registrarAtualizacao(request, obraId, { etapa: 'Alvenaria', percentual: 20 });
+    // `createdAt` é a chave da ordenação: fixa instantes distintos no banco em vez
+    // de esperar o relógio virar o segundo entre os dois registros (TST-14).
+    await db.update(medicoes).set({ createdAt: new Date(Date.now() - 60_000) })
+      .where(and(eq(medicoes.obraId, obraId), eq(medicoes.etapa, 'Fundação')));
+    await db.update(medicoes).set({ createdAt: new Date() })
+      .where(and(eq(medicoes.obraId, obraId), eq(medicoes.etapa, 'Alvenaria')));
 
     const resposta = await request.get(`/api/obras/${obraId}/medicoes`);
     expect(resposta.status()).toBe(200);
@@ -221,13 +227,20 @@ test.describe('XG12 — atualizações da obra', () => {
 
     // Arquivo de outra pessoa, do tipo certo.
     const alheio = await registrar(request, 'xg12-comp-alheio', 'Alheio E2E comprovante');
-    const arquivo = await request.post('/api/test/file-setup', {
-      data: { email: alheio, kind: 'comprovante_pagamento', originalName: 'nota-alheia.pdf' },
-    });
-    // O helper só existe com E2E_TEST_AUTH=1; sem ele não há o que testar aqui.
-    test.skip(arquivo.status() === 404, 'helper de arquivo indisponível neste ambiente');
-    expect(arquivo.status(), await arquivo.text()).toBe(200);
-    const { fileId } = (await arquivo.json()) as { fileId: string };
+    // TST-13 — o arquivo alheio é criado direto no banco: não depende do helper
+    // test-only `/api/test/file-setup` existir neste ambiente.
+    const [donoDoArquivo] = await db.select({ id: users.id }).from(users).where(eq(users.email, alheio));
+    const chave = `e2e/xg12-comprovante/${crypto.randomUUID()}.pdf`;
+    const [arquivo] = await db.insert(userFiles).values({
+      ownerUserId: donoDoArquivo!.id,
+      kind: 'comprovante_pagamento',
+      visibility: 'private',
+      bucketKey: chave,
+      originalName: 'nota-alheia.pdf',
+      mime: 'application/pdf',
+      sizeBytes: 1024,
+    }).returning({ id: userFiles.id });
+    const fileId = arquivo!.id;
 
     await loginAs(request, dono.email);
     const recusado = await request.post(`/api/obras/${dono.obraId}/financeiro`, {

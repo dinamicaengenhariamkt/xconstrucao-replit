@@ -13,10 +13,15 @@ import {
   validateKeyForOwner,
   validateUpload,
   visibilityForKind,
+  visibilityFromKey,
+  kindPrivatizavel,
   type UploadKind,
 } from "@shared/lib/storage";
 import { findObraAccess, canWriteObraArea, canWriteObraContent } from "@features/obras/api/access";
 import { verificarQuotaObra } from "@features/obras/api/storage-quota";
+import { visibilidadeDoUpload } from "@features/xgestao/server/arquivos-obra";
+import { logError } from "@/server/lib/logger";
+import { erroSomenteLeituraUpload } from "@features/xgestao/server/guard-mutacao";
 
 const bodySchema = z.object({
   kind: z.enum(["avatar", "portfolio_imagem", "portfolio_doc", "empreiteiro_documento", "obra_anexo", "obra_capa", "comprovante_pagamento", "candidatura_anexo", "obra_foto", "anuncio_criativo", "cliente_documento"]),
@@ -53,7 +58,24 @@ export async function POST(request: NextRequest) {
 
   const { kind, key, mime, size, originalName, extras } = parsed.data;
 
-  const v = validateUpload({ kind: kind as UploadKind, mime, size, role: guard.user.role });
+  // EMP-05 — conta xgestão somente leitura não envia arquivo de obra.
+  const erroLeitura = await erroSomenteLeituraUpload(guard.user, kind, parsed.data.obraId);
+  if (erroLeitura) {
+    const r = NextResponse.json({ code: "XGESTAO_SOMENTE_LEITURA", message: erroLeitura }, { status: 403 });
+    setNoCacheHeaders(r);
+    return r;
+  }
+
+  // EMP-11 — allowlist de CAD só em obra do xgestão (chave privada). A chave é
+  // conferida contra a obra mais abaixo, então não dá para fugir dela por aqui.
+  const v = validateUpload({
+    kind: kind as UploadKind,
+    mime,
+    size,
+    role: guard.user.role,
+    filename: originalName,
+    restringirCad: kindPrivatizavel(kind as UploadKind) && visibilityFromKey(key) === "private",
+  });
   if (!v.ok) {
     const r = NextResponse.json({ message: v.message }, { status: 400 });
     setNoCacheHeaders(r);
@@ -71,6 +93,13 @@ export async function POST(request: NextRequest) {
   if (!keyCheck.ok) {
     // Tenta apagar o objeto subido por uma chave inválida (best-effort).
     await deleteObject(key).catch(() => null);
+    // ADM-04 — recusa no commit é sinal de divergência entre presign e commit
+    // (já aconteceu: XG19). Precisa aparecer no painel, não só no console.
+    await logError("warn", "Upload recusado no commit: chave inválida", {
+      route: "/api/uploads/commit",
+      userId: guard.user.id,
+      meta: { kind, reason: keyCheck.reason ?? null, keyPrefix: key.split("/").slice(0, -1).join("/") },
+    });
     // XG19 — "Chave inválida" é vocabulário de servidor: o usuário não sabe o
     // que é uma chave, nem o que fazer com a informação. A causa mais provável
     // de chegar aqui é permissão; o `reason` segue no corpo para depuração.
@@ -97,6 +126,12 @@ export async function POST(request: NextRequest) {
       kind,
       keyPrefix: key.split("/").slice(0, -1).join("/"),
       errorName: error instanceof Error ? error.name : "unknown",
+    });
+    await logError("error", "Falha ao verificar objeto no storage (commit)", {
+      route: "/api/uploads/commit",
+      userId: guard.user.id,
+      stack: error instanceof Error ? error.stack : undefined,
+      meta: { kind, keyPrefix: key.split("/").slice(0, -1).join("/") },
     });
     const r = NextResponse.json(
       { message: "Armazenamento temporariamente indisponível. Tente confirmar o arquivo novamente." },
@@ -159,25 +194,72 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const visibility = visibilityForKind(kind as UploadKind);
+  // EMP-02 — nos kinds de obra a visibilidade vem da chave, que o presign montou
+  // conforme a obra. Para não aceitar uma chave pública numa obra do xgestão
+  // (presign antigo, cliente adulterado), a decisão é refeita aqui.
+  let visibility = visibilityForKind(kind as UploadKind);
+  if (kindPrivatizavel(kind as UploadKind)) {
+    const esperada = (await visibilidadeDoUpload({
+      kind: kind as UploadKind,
+      obraId: parsed.data.obraId,
+      userId: guard.user.id,
+      role: guard.user.role,
+    })) ?? visibility;
+    const real = visibilityFromKey(key);
+    if (real !== esperada) {
+      await deleteObject(key).catch(() => null);
+      await logError("warn", "Upload recusado no commit: visibilidade divergente", {
+        route: "/api/uploads/commit",
+        userId: guard.user.id,
+        meta: { kind, esperada, real, obraId: parsed.data.obraId ?? null },
+      });
+      const r = NextResponse.json(
+        { message: "Não foi possível confirmar este arquivo. Tente enviar novamente.", reason: "visibilidade" },
+        { status: 400 },
+      );
+      setNoCacheHeaders(r);
+      return r;
+    }
+    visibility = real;
+  }
   const publicUrl = visibility === "public" ? publicUrlForKey(key) : null;
 
-  const [file] = await db
-    .insert(userFiles)
-    .values({
-      ownerUserId: guard.user.id,
-      kind,
-      visibility,
-      bucketKey: key,
-      originalName,
-      mime,
-      sizeBytes: size,
-      publicUrl,
-    })
-    .returning();
+  let file: typeof userFiles.$inferSelect;
+  try {
+    [file] = await db
+      .insert(userFiles)
+      .values({
+        ownerUserId: guard.user.id,
+        kind,
+        visibility,
+        bucketKey: key,
+        originalName,
+        mime,
+        sizeBytes: size,
+        publicUrl,
+      })
+      .returning();
+  } catch (error) {
+    await logError("error", "Falha ao gravar arquivo enviado (commit)", {
+      route: "/api/uploads/commit",
+      userId: guard.user.id,
+      stack: error instanceof Error ? error.stack : undefined,
+      meta: { kind, size },
+    });
+    throw error;
+  }
 
   // Side effects: associar ao perfil/registro correto.
   let signedUrl: string | null = null;
+  // EMP-01/EMP-02 — arquivo de obra privado e comprovante: a tela precisa de
+  // uma URL para a prévia, e não há `publicUrl`.
+  if (
+    visibility === "private" &&
+    (kindPrivatizavel(kind as UploadKind) ||
+      (kind === "comprovante_pagamento" && guard.user.role === "empreiteiro"))
+  ) {
+    signedUrl = await createSignedReadUrl({ key }).catch(() => null);
+  }
   let documentoId: string | null = null;
 
   let portfolioItemId: string | null = null;

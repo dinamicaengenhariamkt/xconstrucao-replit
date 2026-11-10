@@ -7,6 +7,7 @@ import { requireVerifiedUser, setNoCacheHeaders, isAdminLike } from "@features/a
 import { recordAudit } from "@features/auth/api/audit";
 import { findObraAccess, canWriteObraArea } from "@features/obras/api/access";
 import { deleteObject } from "@shared/lib/storage";
+import { ehGestorDaObraXgestao } from "@features/xgestao/server/arquivos-obra";
 
 const patchFotoSchema = z.object({
   enviadaAoContratante: z.boolean(),
@@ -97,7 +98,9 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: 
     return r;
   }
   // Autor, contratante dono ou admin
-  const canDelete = foto.autorId === guard.user.id || isAdminLike(guard.user.role) || access.role === "contratante";
+  // EMP-07 — no xgestão, dono e gestor da empresa moderam a galeria da equipe.
+  const canDelete = foto.autorId === guard.user.id || isAdminLike(guard.user.role) || access.role === "contratante" ||
+    (access.role === "empreiteiro" && await ehGestorDaObraXgestao(guard.user.id, access.obra));
   if (!canDelete) {
     const r = NextResponse.json({ message: "Sem permissão." }, { status: 403 });
     setNoCacheHeaders(r);

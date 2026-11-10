@@ -73,7 +73,8 @@ export async function bootstrapObraOperacaoSchema(): Promise<void> {
               SELECT 1
               FROM unnest(m.fotos) AS foto_url
               WHERE foto_url = uf.public_url
-                 OR foto_url LIKE ('%/' || uf.bucket_key)
+                 -- REV-14: sufixo exato; LIKE trataria _ e % da chave como curinga.
+                 OR right(foto_url, length(uf.bucket_key) + 1) = '/' || uf.bucket_key
             )
         )
     `);

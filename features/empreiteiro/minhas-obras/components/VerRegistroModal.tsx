@@ -9,6 +9,7 @@ import {
   DialogFooter,
 } from '@shared/components/ui/dialog';
 import { Button } from '@shared/components/ui/button';
+import { formatarMomentoChecklist, preposicaoMomento } from '../lib/checklist-momento';
 import { ScrollArea } from '@shared/components/ui/scroll-area';
 import { cn } from '@shared/lib/utils';
 import type { MinhaObraChecklist } from '../types';
@@ -109,8 +110,8 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                 {checklist.completadoEm && (
                   <div className="flex items-center gap-2 text-sm">
                     <IconSchedule className="text-base text-gray-400" />
-                    <span className="text-gray-500">Finalizado às</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{checklist.completadoEm}</span>
+                    <span className="text-gray-500">Finalizado {preposicaoMomento(checklist.completadoEm)}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{formatarMomentoChecklist(checklist.completadoEm)}</span>
                   </div>
                 )}
                 {checklist.assinadoPor && (
@@ -134,7 +135,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                     {checklist.assinadoEm && (
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <IconCalendarToday className="text-sm" />
-                        {checklist.assinadoEm}
+                        {formatarMomentoChecklist(checklist.assinadoEm)}
                       </p>
                     )}
                   </div>

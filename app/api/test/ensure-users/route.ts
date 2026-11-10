@@ -24,9 +24,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@shared/db/db";
 import { users, clientes, empreiteiras } from "@shared/db/schema";
 import { hashPassword } from "@features/auth/api/auth-service";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 /**

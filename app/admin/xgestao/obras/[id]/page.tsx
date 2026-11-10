@@ -9,6 +9,8 @@ import { StatsCard } from '@features/shared/components/StatsCard';
 import { AdminDashboardError } from '@features/xgestao/admin/components/AdminDashboardError';
 import { ObraPublicaShell } from '@features/xgestao/obra-publica/components/ObraPublicaShell';
 import { useXgestaoAdminObra } from '@features/xgestao/admin/hooks/use-admin-xgestao';
+import type { XgestaoObraAdministrativo } from '@features/xgestao/admin/server/obra-detalhe';
+import { cn } from '@shared/lib/utils';
 import { formatCurrency } from '@shared/lib/formatters';
 import {
   RiBuilding2Line,
@@ -54,7 +56,7 @@ export default function AdminXgestaoObraDetalhePage({
     );
   }
 
-  const { obra, assinante, lucro, linkPublico, linksPublicos, conteudo } = data;
+  const { obra, assinante, lucro, linkPublico, linksPublicos, conteudo, administrativo } = data;
 
   return (
     <div className="space-y-6 p-6 md:p-10">
@@ -67,7 +69,14 @@ export default function AdminXgestaoObraDetalhePage({
         </Link>
         <h1 className="text-2xl font-extrabold tracking-tight">{obra.nome}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {assinante.empreiteira}
+          {/* XG44 — da obra (micro) para o assinante (visão da conta inteira). */}
+          <Link
+            href={`/admin/xgestao/assinantes/${assinante.userId}`}
+            className="font-semibold text-primary hover:underline"
+            data-testid="xgestao-obra-assinante-link"
+          >
+            {assinante.empreiteira}
+          </Link>
           {assinante.responsavel && ` · ${assinante.responsavel}`} · {assinante.email}
         </p>
       </div>
@@ -119,16 +128,22 @@ export default function AdminXgestaoObraDetalhePage({
             {linkPublico.ultimoAcessoEm && <span>Último acesso: {formatarData(linkPublico.ultimoAcessoEm)}</span>}
           </p>
         ) : null}
-        {/* XG36 — um link por público (XG30): mostra cada um, não só o mais recente. */}
-        {linksPublicos.length > 1 && (
-          <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800">
+        {/* XG36 — um link por público (XG30). ADM-01: todos, com status e seções. */}
+        {linksPublicos.length > 0 && (
+          <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800" data-testid="xgestao-obra-links">
             {linksPublicos.map((link, index) => (
-              <li key={`${link.nome}-${index}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                <span className="font-medium">{link.nome}</span>
+              <li key={`${link.nome}-${index}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" data-status={link.status}>
+                <span className="font-medium">
+                  {link.nome}
+                  <span className="ml-2 text-xs font-semibold text-muted-foreground">{ROTULO_STATUS_LINK[link.status]}</span>
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {link.visualizacoes} {link.visualizacoes === 1 ? 'visualização' : 'visualizações'}
                   {link.ultimoAcessoEm && ` · último acesso ${formatarData(link.ultimoAcessoEm)}`}
-                  {link.expiraEm && ` · expira ${formatarData(link.expiraEm)}`}
+                  {link.expiraEm && ` · ${link.status === 'expirado' ? 'expirou' : 'expira'} ${formatarData(link.expiraEm)}`}
+                </span>
+                <span className="w-full text-xs text-gray-400">
+                  Mostra: {link.secoes.length ? link.secoes.map((secao) => ROTULO_SECAO[secao] ?? secao).join(', ') : 'nenhuma seção'}
                 </span>
               </li>
             ))}
@@ -138,6 +153,8 @@ export default function AdminXgestaoObraDetalhePage({
           <p className="mt-2 text-sm text-muted-foreground">Nenhum link público ativo para esta obra.</p>
         )}
       </section>
+
+      <ProjecaoAdministrativa dados={administrativo} />
 
       {conteudo && (
         <section>
@@ -150,6 +167,168 @@ export default function AdminXgestaoObraDetalhePage({
           <ObraPublicaShell view={conteudo} />
         </section>
       )}
+    </div>
+  );
+}
+
+const ROTULO_STATUS_LINK: Record<'ativo' | 'expirado' | 'revogado', string> = {
+  ativo: 'Ativo',
+  expirado: 'Expirado',
+  revogado: 'Revogado',
+};
+
+const ROTULO_SECAO: Record<string, string> = {
+  etapas: 'Etapas',
+  cronograma: 'Cronograma',
+  fotos: 'Fotos',
+  pagamentos: 'Pagamentos',
+  diario: 'Diário',
+  ocorrencias: 'Ocorrências',
+  localizacao: 'Localização',
+};
+
+const ROTULO_STATUS_LANCAMENTO: Record<string, string> = {
+  pago: 'Pago',
+  pendente: 'Pendente',
+  atrasado: 'Atrasado',
+  cancelado: 'Cancelado',
+};
+
+const CARTAO = 'rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900';
+const TITULO = 'text-sm font-bold uppercase tracking-wide text-gray-500';
+const LISTA = 'mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800';
+
+/**
+ * ADM-01 — o que a obra tem por dentro, em leitura: financeiro interno, equipe
+ * (PIX mascarado), acessos da empresa, anexos, checklists e ocorrências. Sem
+ * botão de edição: o admin consulta, quem altera é o assinante.
+ */
+function ProjecaoAdministrativa({ dados }: { dados: XgestaoObraAdministrativo }) {
+  const vazio = (texto: string) => <p className="mt-2 text-sm text-muted-foreground">{texto}</p>;
+  return (
+    <div className="space-y-6" data-testid="xgestao-obra-administrativo">
+      <section className={CARTAO} data-testid="xgestao-obra-financeiro">
+        <h2 className={TITULO}>Financeiro da obra</h2>
+        {dados.financeiro.length === 0 ? vazio('Nenhum lançamento.') : (
+          <ul className={LISTA}>
+            {dados.financeiro.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" data-status={l.status} data-lado={l.lado ?? ''}>
+                <span className="min-w-0">
+                  <span className="block font-medium">{l.descricao}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {l.lado === 'receita' ? 'Entrada' : l.lado === 'custo' ? 'Saída' : l.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                    {l.fornecedor && ` · ${l.fornecedor}`}
+                    {l.categoria && ` · ${l.categoria}`}
+                    {l.vencimento && ` · vence ${formatarData(l.vencimento)}`}
+                    {l.pagoEm && ` · pago ${formatarData(l.pagoEm)}`}
+                    {l.metodoPagamento && ` · ${l.metodoPagamento}`}
+                  </span>
+                </span>
+                <span className="flex items-center gap-3 text-right">
+                  {l.comprovanteUrl && (
+                    <a href={l.comprovanteUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-primary hover:underline">
+                      Comprovante
+                    </a>
+                  )}
+                  <span className={cn('text-xs font-semibold', l.status === 'atrasado' && 'text-red-600 dark:text-red-400')}>
+                    {ROTULO_STATUS_LANCAMENTO[l.status] ?? l.status}
+                  </span>
+                  <span className="font-bold">{formatCurrency(l.valor)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {dados.aditivos.length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Aditivos: {dados.aditivos.map((a) => `${a.descricao} (${formatCurrency(a.valor)})`).join(' · ')}
+          </p>
+        )}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className={CARTAO} data-testid="xgestao-obra-equipe">
+          <h2 className={TITULO}>Equipe da obra</h2>
+          {dados.equipe.length === 0 ? vazio('Ninguém cadastrado na equipe.') : (
+            <ul className={LISTA}>
+              {dados.equipe.map((m) => (
+                <li key={m.id} className="px-3 py-2">
+                  <span className="block font-medium">{m.nome}{!m.ativo && <span className="ml-2 text-xs text-muted-foreground">inativo</span>}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {[m.papel, m.telefone, m.email, m.pixMascarado && `PIX ${m.pixMascarado}`, m.valorContrato !== null && `contrato ${formatCurrency(m.valorContrato)}`]
+                      .filter(Boolean).join(' · ')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">Acesso da empresa</h3>
+          {dados.acessos.length === 0 ? vazio('Só o titular acessa esta obra.') : (
+            <ul className={LISTA} data-testid="xgestao-obra-acessos">
+              {dados.acessos.map((a) => (
+                <li key={a.userId} className="px-3 py-2">
+                  <span className="block font-medium">{a.nome}</span>
+                  <span className="block text-xs text-muted-foreground">{a.email} · {a.papel} · {a.status} · {a.permissao}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className={CARTAO} data-testid="xgestao-obra-anexos">
+          <h2 className={TITULO}>Anexos</h2>
+          {dados.anexos.length === 0 ? vazio('Nenhum anexo.') : (
+            <ul className={LISTA}>
+              {dados.anexos.map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <span className="min-w-0">
+                    <span className="block font-medium">{a.nome}</span>
+                    <span className="block text-xs text-muted-foreground">{a.tipo}{a.observacao && ` · ${a.observacao}`}</span>
+                  </span>
+                  {a.url && (
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-primary hover:underline">Abrir</a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className={CARTAO} data-testid="xgestao-obra-checklists">
+          <h2 className={TITULO}>Checklists</h2>
+          {dados.checklists.length === 0 ? vazio('Nenhum checklist.') : (
+            <ul className={LISTA}>
+              {dados.checklists.map((c) => (
+                <li key={c.id} className="px-3 py-2">
+                  <span className="block font-medium">{c.nome}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {c.tipo} · {c.status} · {c.itens.filter((i) => i.concluida).length} de {c.itens.length} itens
+                    {c.recorrencia !== 'nenhuma' && ` · ${c.recorrencia}`}
+                    {c.assinadoPor && ` · assinado por ${c.assinadoPor}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className={CARTAO} data-testid="xgestao-obra-ocorrencias">
+          <h2 className={TITULO}>Ocorrências</h2>
+          {dados.ocorrencias.length === 0 ? vazio('Nenhuma ocorrência.') : (
+            <ul className={LISTA}>
+              {dados.ocorrencias.map((o) => (
+                <li key={o.id} className="px-3 py-2" data-status={o.status}>
+                  <span className="block font-medium">{o.titulo}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {o.gravidade} · {o.status === 'resolvida' ? `resolvida ${formatarData(o.resolvidaEm)}` : 'aberta'} · {formatarData(o.criadaEm)}
+                  </span>
+                  {o.observacaoResolucao && <span className="mt-0.5 block text-xs text-gray-500">Resolução: {o.observacaoResolucao}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

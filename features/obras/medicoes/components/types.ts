@@ -30,7 +30,7 @@ export type DiarioJ06Data = Pick<
 export type OcorrenciaJ06Data = Pick<
   ObraOcorrenciaApi,
   'id' | 'titulo' | 'descricao' | 'gravidade' | 'status' | 'fotoUrl' | 'createdAt'
-> & Partial<Pick<ObraOcorrenciaApi, 'autorId' | 'autorNome' | 'resolvidoPorNome' | 'resolvidoEm'>>;
+> & Partial<Pick<ObraOcorrenciaApi, 'autorId' | 'autorNome' | 'resolvidoPorNome' | 'resolvidoEm' | 'observacaoResolucao' | 'podeGerenciar' | 'temFoto'>>;
 
 export type FotoJ06Data = Pick<
   ObraFotoApi,

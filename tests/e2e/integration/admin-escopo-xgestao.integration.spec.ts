@@ -65,6 +65,84 @@ async function criarAdminDescartavel(
   return body.id ?? body.user?.id ?? null;
 }
 
+const SENHA_ADMIN_DESCARTAVEL = "AdminEscopo@E2E2026!";
+
+/**
+ * TST-13 — em vez de pular quando a criação pela API falha (sessão sem
+ * superadmin, por exemplo), o teste cria a conta descartável direto no banco.
+ */
+async function garantirAdminDescartavel(
+  request: APIRequestContext,
+  email: string,
+): Promise<string> {
+  const id = await criarAdminDescartavel(request, email);
+  if (id) return id;
+  const [admin] = await db.insert(users).values({
+    name: "Admin Escopo E2E",
+    email,
+    password: await hashPassword(SENHA_ADMIN_DESCARTAVEL),
+    role: "admin",
+    ativo: true,
+    emailVerified: new Date(),
+    mustChangePassword: false,
+  }).returning({ id: users.id });
+  return admin.id;
+}
+
+/**
+ * TST-13 — o PATCH de escopo exige superadmin. Se a sessão atual não for, cria
+ * um superadmin descartável só para esta alteração, em vez de pular o teste.
+ */
+async function restringirEscopoXgestao(request: APIRequestContext, id: string): Promise<void> {
+  const patch = await request.patch(`/api/admin/usuarios/${id}`, {
+    data: { adminEscopo: "xgestao" },
+  });
+  if (patch.ok()) return;
+  const email = uniqueEmail("escopo-superadmin");
+  const [sa] = await db.insert(users).values({
+    name: "Superadmin Escopo E2E",
+    email,
+    password: await hashPassword(SENHA_ADMIN_DESCARTAVEL),
+    role: "superadmin",
+    ativo: true,
+    emailVerified: new Date(),
+    mustChangePassword: false,
+  }).returning({ id: users.id });
+  try {
+    await logout(request);
+    await loginAs(request, email);
+    const novo = await request.patch(`/api/admin/usuarios/${id}`, {
+      data: { adminEscopo: "xgestao" },
+    });
+    expect(novo.status(), await novo.text()).toBe(200);
+  } finally {
+    await logout(request);
+    await db.delete(sessions).where(eq(sessions.userId, sa.id));
+    await db.delete(users).where(eq(users.id, sa.id));
+  }
+}
+
+/** TST-13 — sem cookie do login-as, emite o token pelo login real. */
+async function garantirAccessToken(
+  request: APIRequestContext,
+  id: string,
+  email: string,
+): Promise<string> {
+  const token = await accessTokenAtual(request);
+  if (token) return token;
+  await db.update(users).set({
+    password: await hashPassword(SENHA_ADMIN_DESCARTAVEL),
+    mustChangePassword: false,
+  }).where(eq(users.id, id));
+  const login = await request.post("/api/auth/login", {
+    data: { email, password: SENHA_ADMIN_DESCARTAVEL, website: "", mountedAt: Date.now() - 5_000 },
+  });
+  expect(login.status(), await login.text()).toBe(200);
+  const emitido = await accessTokenAtual(request);
+  expect(emitido, "login real deve emitir access_token").toBeTruthy();
+  return emitido!;
+}
+
 async function accessTokenAtual(request: APIRequestContext): Promise<string | null> {
   const state = await request.storageState();
   return state.cookies.find((cookie) => cookie.name === "access_token")?.value ?? null;
@@ -228,8 +306,7 @@ test.describe("XG06 — escopo administrativo", () => {
     await loginAs(request, SEED_ADMIN_EMAIL);
 
     const email = uniqueEmail("escopo-default");
-    const id = await criarAdminDescartavel(request, email);
-    test.skip(!id, "superadmin/criação de usuário indisponível neste ambiente");
+    const id = await garantirAdminDescartavel(request, email);
 
     const res = await request.get(`/api/admin/usuarios/${id}`);
     expect(res.ok()).toBeTruthy();
@@ -249,16 +326,9 @@ test.describe("XG06 — escopo administrativo", () => {
     await loginAs(request, SEED_ADMIN_EMAIL);
 
     const email = uniqueEmail("escopo-xgestao");
-    const id = await criarAdminDescartavel(request, email);
-    test.skip(!id, "superadmin/criação de usuário indisponível neste ambiente");
+    const id = await garantirAdminDescartavel(request, email);
 
-    const patch = await request.patch(`/api/admin/usuarios/${id}`, {
-      data: { adminEscopo: "xgestao" },
-    });
-    test.skip(
-      !patch.ok(),
-      `PATCH de escopo exige superadmin; seed não é superadmin (status ${patch.status()})`,
-    );
+    await restringirEscopoXgestao(request, id);
 
     await logout(request);
     await loginAs(request, email);
@@ -296,13 +366,11 @@ test.describe("XG06 — escopo administrativo", () => {
     await loginAs(request, SEED_ADMIN_EMAIL);
 
     const email = uniqueEmail("escopo-sessao-antiga");
-    const id = await criarAdminDescartavel(request, email);
-    test.skip(!id, "superadmin/criação de usuário indisponível neste ambiente");
+    const id = await garantirAdminDescartavel(request, email);
 
     await logout(request);
     await loginAs(request, email);
-    const tokenAntigo = await accessTokenAtual(request);
-    test.skip(!tokenAntigo, "login do admin descartável não retornou access_token");
+    const tokenAntigo = await garantirAccessToken(request, id, email);
 
     // Confirma que este é um token global emitido ANTES da mudança de escopo.
     const antesDaRestricao = await request.get(ROTA_FORA_DO_ESCOPO);
@@ -310,13 +378,7 @@ test.describe("XG06 — escopo administrativo", () => {
 
     await logout(request);
     await loginAs(request, SEED_ADMIN_EMAIL);
-    const patch = await request.patch(`/api/admin/usuarios/${id}`, {
-      data: { adminEscopo: "xgestao" },
-    });
-    test.skip(
-      !patch.ok(),
-      `PATCH de escopo exige superadmin; seed não é superadmin (status ${patch.status()})`,
-    );
+    await restringirEscopoXgestao(request, id);
     await logout(request);
 
     const staleSessionHeaders = { Cookie: `access_token=${tokenAntigo}` };

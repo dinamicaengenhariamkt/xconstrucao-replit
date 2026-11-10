@@ -24,6 +24,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 // evita depender de `playwright install` manual (e do binário empacotado pelo
 // npm, que pode não iniciar sob o loader do workspace).
 const BROWSER_EXECUTABLE = process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+// XG52 — o servidor E2E sobe com este CRON_SECRET; os specs leem o mesmo valor.
+const E2E_CRON_SECRET = process.env.E2E_CRON_SECRET ?? "e2e-cron-secret-local";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -84,6 +86,16 @@ export default defineConfig({
         "**/xgestao-obras.browser.spec.ts",
         "**/xgestao-homologacao.browser.spec.ts",
         "**/xgestao-admin-homologacao.browser.spec.ts",
+        "**/xgestao-fim-teste.browser.spec.ts",
+        "**/xgestao-planos-sucesso.browser.spec.ts",
+        "**/xgestao-admin-assinantes.browser.spec.ts",
+        "**/xgestao-admin-crm.browser.spec.ts",
+        "**/xgestao-admin-comercial.browser.spec.ts",
+        "**/xgestao-admin-engajamento.browser.spec.ts",
+        "**/xgestao-troca-plano.browser.spec.ts",
+        "**/xgestao-somente-leitura.browser.spec.ts",
+        "**/xgestao-link-publico-mobile.browser.spec.ts",
+        "**/xgestao-marketing.browser.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
@@ -112,6 +124,8 @@ export default defineConfig({
       NEXT_DIST_DIR: ".next-e2e",
       // Força o adapter manual para não chamar gateways reais em testes.
       PAYMENT_GATEWAY: "manual",
+      // XG52 — segredo da rotina diária (/api/cron/xgestao-diario) só do servidor E2E.
+      CRON_SECRET: E2E_CRON_SECRET,
     },
   },
 });

@@ -19,6 +19,7 @@ import { SECOES_PADRAO, type SecoesPublicas } from '../secoes';
 import { createSignedReadUrl } from '@shared/lib/storage/r2';
 import { ladoDoLancamento } from '@features/empreiteiro/minhas-obras/lib/lado-lancamento';
 import { capacidadesLinkObra } from './token';
+import { enderecoPublico } from '../endereco-publico';
 
 const PUBLIC_LINK_MEDIA_TTL_SECONDS = 12 * 60 * 60;
 
@@ -149,7 +150,8 @@ export async function buildObraPublicaView(
       status: obras.status,
       cidade: obras.cidade,
       uf: obras.uf,
-      // Só a rua, e apenas com a seção ligada. Basta para situar a obra, sem
+      // Lido inteiro, mas projetado por `enderecoPublico` (PUB-01): só rua e
+      // bairro, e apenas com a seção ligada. Basta para situar a obra, sem
       // entregar a porta exata de um canteiro com material estocado a quem
       // recebeu um link sem login (XG04 §8).
       endereco: obras.endereco,
@@ -226,6 +228,7 @@ export async function buildObraPublicaView(
         gravidade: obraOcorrencias.gravidade,
         status: obraOcorrencias.status,
         resolvidoEm: obraOcorrencias.resolvidoEm,
+        observacaoResolucao: obraOcorrencias.observacaoResolucao,
         createdAt: obraOcorrencias.createdAt,
       })
       .from(obraOcorrencias)
@@ -282,7 +285,7 @@ export async function buildObraPublicaView(
       status: obra.status,
       cidade: obra.cidade,
       uf: obra.uf,
-      logradouro: secoes.localizacao ? obra.endereco : null,
+      logradouro: secoes.localizacao ? enderecoPublico(obra.endereco, obra.cidade) : null,
       dataInicio: obra.dataInicio,
       dataPrevisao: obra.dataPrevisao,
       imagemUrl: obra.imagemBucketKey ? await signedPublicMediaUrl(obra.imagemBucketKey) : null,
@@ -319,6 +322,8 @@ export async function buildObraPublicaView(
       status: entry.status,
        fotoUrl: null,
       resolvidoEm: toIso(entry.resolvidoEm) ?? undefined,
+      // A observação só vale enquanto a ocorrência está resolvida.
+      observacaoResolucao: entry.status === 'resolvida' ? entry.observacaoResolucao ?? null : null,
       createdAt: toIso(entry.createdAt) ?? '',
     })),
      fotos: fotoRowsWithUrls.map((foto) => ({

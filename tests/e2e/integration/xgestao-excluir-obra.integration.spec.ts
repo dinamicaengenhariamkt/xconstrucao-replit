@@ -11,6 +11,7 @@ import {
 } from '@shared/db/schema';
 import {
   completarPerfilOperacional,
+  ensurePersonas,
   loginAs,
   iniciarTesteOperacionalXgestao,
   logout,
@@ -19,6 +20,7 @@ import {
   uniqueEmail,
   uniqueUsername,
 } from '../helpers';
+import { criarObraVinculadaE2E, limparObraVinculadaE2E } from '../helpers-marketplace';
 
 /**
  * XG10 — exclusão da obra do xgestão.
@@ -30,9 +32,11 @@ import {
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 1100;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -175,22 +179,27 @@ test.describe('XG10 — excluir obra', () => {
     // O empreiteiro do seed é vinculado a obras com contratante. Apagar uma
     // delas destruiria o histórico da outra parte — a liberação do XG10 vale
     // apenas para a obra própria, sem contratante.
-    await loginAs(request, SEED_EMPREITEIRO_EMAIL);
+    // TST-13 — cria a obra de marketplace (com contratante) em vez de depender
+    // de o seed já ter uma vinculada a este empreiteiro.
+    await ensurePersonas(request);
+    const vinculada = await criarObraVinculadaE2E('xg10-del-marketplace');
+    try {
+      await loginAs(request, SEED_EMPREITEIRO_EMAIL);
 
-    const lista = await request.get('/api/empreiteiro/minhas-obras');
-    expect(lista.status()).toBe(200);
-    const rows = (await lista.json()) as Array<{ id: string; isObraPropria?: boolean }>;
-    const doMarketplace = rows.find((o) => o.isObraPropria === false);
+      const lista = await request.get('/api/empreiteiro/minhas-obras');
+      expect(lista.status()).toBe(200);
+      const rows = (await lista.json()) as Array<{ id: string; isObraPropria?: boolean }>;
+      const doMarketplace = rows.find((o) => o.id === vinculada.obraId);
+      expect(doMarketplace?.isObraPropria, 'obra com contratante não é própria').toBe(false);
 
-    if (doMarketplace) {
-      const tentativa = await request.delete(`/api/obras/${doMarketplace.id}`);
+      const tentativa = await request.delete(`/api/obras/${vinculada.obraId}`);
       expect(tentativa.status(), 'obra com contratante → 403').toBe(403);
       expect(
-        await db.select().from(obras).where(eq(obras.id, doMarketplace.id)),
+        await db.select().from(obras).where(eq(obras.id, vinculada.obraId)),
         'a obra do marketplace continua existindo',
       ).toHaveLength(1);
-    } else {
-      test.skip(true, 'seed sem obra de marketplace vinculada a este empreiteiro');
+    } finally {
+      await limparObraVinculadaE2E(vinculada.obraId);
     }
 
     await logout(request);

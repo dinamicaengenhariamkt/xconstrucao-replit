@@ -159,6 +159,9 @@ export async function retryPendingWebhookEvents(
             gatewayCustomerId: retryEvt.gatewayCustomerId,
             externalReference: retryEvt.externalReference,
             valor: retryEvt.valor,
+            dueDate: retryEvt.dueDate,
+            paymentId: retryEvt.paymentId,
+            motivo: retryEvt.motivo,
           });
         }
 

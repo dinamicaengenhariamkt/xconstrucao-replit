@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedUser, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { canAccessObraArea, findObraAccess } from "@features/obras/api/access";
 import { listMedicoesForObra } from "@/app/api/contratante/medicoes/_shared";
+import { ehObraXgestao, resolverFotosMedicao } from "@features/xgestao/server/arquivos-obra";
 
 /**
  * XG12 — as atualizações da obra, para quem trabalha nela.
@@ -36,7 +37,9 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     return r;
   }
 
-  const rows = await listMedicoesForObra(id);
+  // EMP-02 — obra do xgestão: foto de medição privada vira URL assinada aqui.
+  const lidas = await listMedicoesForObra(id);
+  const rows = ehObraXgestao(access.obra) ? await resolverFotosMedicao(lidas) : lidas;
   const r = NextResponse.json({ rows });
   setNoCacheHeaders(r);
   return r;

@@ -15,9 +15,10 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@shared/db/db";
 import { clientes, empreiteiras } from "@shared/db/schema";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 const bodySchema = z.object({

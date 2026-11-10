@@ -5,6 +5,31 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>();
 
+/**
+ * PUB-03 — o Map só crescia: cada chave (IP, IP+token, e-mail…) ficava para
+ * sempre, mesmo vencida. A varredura roda no máximo uma vez por intervalo e
+ * remove as janelas encerradas; uma janela vencida já seria reiniciada no
+ * próximo acesso, então apagá-la não muda nenhum limite.
+ */
+const SWEEP_INTERVAL_MS = 60_000;
+let lastSweepAt = 0;
+
+export function sweepExpiredRateLimits(now = Date.now()): number {
+  let removed = 0;
+  for (const [key, entry] of store) {
+    if (now >= entry.resetAt) {
+      store.delete(key);
+      removed += 1;
+    }
+  }
+  lastSweepAt = now;
+  return removed;
+}
+
+export function rateLimitStoreSizeForTests(): number {
+  return store.size;
+}
+
 export interface RateLimitResult {
   limited: boolean;
   limit: number;
@@ -32,6 +57,8 @@ export function checkRateLimit(
       retryAfterSeconds: 0,
     };
   }
+
+  if (now - lastSweepAt >= SWEEP_INTERVAL_MS) sweepExpiredRateLimits(now);
 
   const current = store.get(key);
   const entry =
@@ -64,6 +91,7 @@ export function isRateLimited(key: string, max: number, windowMs: number): boole
 
 export function resetRateLimitStoreForTests(): void {
   store.clear();
+  lastSweepAt = 0;
 }
 
 /**

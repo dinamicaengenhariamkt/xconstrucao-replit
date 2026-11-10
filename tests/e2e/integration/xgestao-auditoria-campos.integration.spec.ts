@@ -7,6 +7,10 @@ import { SECOES_PADRAO } from '@features/xgestao/obra-publica/secoes';
 import { fetchCapturedEmails, loginAs, logout, SEED_ADMIN_EMAIL, SEED_CONTRATANTE_EMAIL, uniqueEmail } from '../helpers';
 import { criarObraVinculadaE2E, limparObraVinculadaE2E } from '../helpers-marketplace';
 import { novoAssinanteHomologacao } from '../helpers-xgestao-homologacao';
+import { contribuicaoDaConta } from '../helpers-admin-xgestao';
+
+/** XG43 — o teste só vira somente leitura 24h após o fim; aqui ele venceu há 24h + 1 min. */
+const FIM_TESTE_MAIS_TOLERANCIA_MS = 24 * 60 * 60_000 + 60_000;
 
 const HOJE = '2026-11-03';
 const SENHA = 'Xconstr@E2E2026!';
@@ -31,6 +35,24 @@ async function contratar(request: APIRequestContext, tier: string) {
     data: { planoId: catalogo.find((p: { tier: string }) => p.tier === tier).id, persona: 'xgestao', ciclo: 'mensal' },
   });
   expect(r.status(), await r.text()).toBe(201);
+}
+
+/**
+ * XG48 — com plano pago ativo, mudar de plano é pela troca (o checkout responde
+ * USAR_TROCA). Aqui a assinatura ainda está no mês bônus (não paga): a descida vale na hora.
+ */
+async function descerPelaTroca(request: APIRequestContext, tier: string) {
+  const catalogo = await (await request.get('/api/planos?persona=xgestao')).json();
+  const r = await request.post('/api/assinaturas/trocar', {
+    data: {
+      planoId: catalogo.find((p: { tier: string }) => p.tier === tier).id,
+      persona: 'xgestao',
+      chave: `xg42_descer_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      ciente: true,
+    },
+  });
+  expect(r.status(), await r.text()).toBe(200);
+  expect((await (await request.get('/api/perfil/plano?persona=xgestao')).json()).plano).toBe(tier);
 }
 
 test('XG42 valores altos persistem em todos os campos e os totais batem em cada visão', async ({ request }) => {
@@ -197,7 +219,7 @@ test('XG42 somente leitura bloqueia toda escrita das abas e mantém a leitura', 
   const { userId } = await novoAssinanteHomologacao(request, 'auditoria-leitura');
   const id = await novaObra(request, 'E2E auditoria leitura');
   try {
-    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) }).where(and(
+    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - FIM_TESTE_MAIS_TOLERANCIA_MS) }).where(and(
       eq(assinaturas.userId, userId), eq(assinaturas.gatewayProvider, 'trial'),
     ));
     const escritas: Array<[string, string]> = [
@@ -282,7 +304,7 @@ test('XG42 membro limitado a mão de obra não toca no contrato, mas edita o que
 });
 
 test('XG42 link rebaixado para Basic: tela e página pública dizem o mesmo, e as seções seguem editáveis', async ({ request }) => {
-  await novoAssinanteHomologacao(request, 'auditoria-link');
+  await novoAssinanteHomologacao(request, 'auditoria-link', { assinar: 'premium' });
   const id = await novaObra(request, 'E2E auditoria link');
   try {
     expect((await request.patch(`/api/obras/${id}`, { data: { valorTotal: '7654321.00' } })).status()).toBe(200);
@@ -295,7 +317,7 @@ test('XG42 link rebaixado para Basic: tela e página pública dizem o mesmo, e a
     // A aba Pagamentos renderiza no cliente; o valor chega cru no payload da página.
     expect(await (await request.get(share.path)).text()).toContain('7654321');
 
-    await contratar(request, 'basic');
+    await descerPelaTroca(request, 'basic');
     const estado = await (await request.get(`/api/xgestao/obras/${id}/share`)).json();
     expect(estado).toMatchObject({ limite: 1, valoresPublicos: false });
     expect(estado.shares[0].secoes.pagamentos).toBe(false);
@@ -332,21 +354,28 @@ test('XG42 admin mostra os nomes novos no CSV, na lista e receita só de quem pa
       const csv = await (await admin.get('/api/admin/xgestao/export?tipo=assinantes')).text();
       return csv.split('\n').find((linha) => linha.includes(email)) ?? '';
     };
-    const faturamento = async () => (await (await admin.get('/api/admin/xgestao/financeiro')).json()).faturamento;
+    // TST-19 — o peso desta conta no faturamento, não "depois - antes" dos totais globais.
+    const peso = () => contribuicaoDaConta(admin, userId, async () => {
+      const f = (await (await admin.get('/api/admin/xgestao/financeiro')).json()).faturamento;
+      return { recorrente: f.receitaRecorrenteMensal, pagantes: f.assinantesPagantes };
+    });
 
-    const noTeste = await faturamento();
-    expect(await linhaCsv()).toContain(';Premium;');
+    expect(await linhaCsv()).toContain(';Basic;');
+    expect(await peso()).toEqual({ recorrente: 0, pagantes: 0 });
     await contratar(request, 'basic_plus');
     expect(await linhaCsv()).toContain(';Basic Plus;');
-    const pagando = await faturamento();
-    expect(pagando.receitaRecorrenteMensal - noTeste.receitaRecorrenteMensal).toBeCloseTo(179, 2);
-    expect(pagando.assinantesPagantes - noTeste.assinantesPagantes).toBe(1);
+    // CRM-04 — assinou no teste: só entra na receita depois do 1º pagamento.
+    expect(await peso()).toEqual({ recorrente: 0, pagantes: 0 });
+    await db.update(assinaturas).set({ primeiroPagamentoEm: new Date() }).where(and(
+      eq(assinaturas.userId, userId), eq(assinaturas.status, 'ativa'),
+    ));
+    expect(await peso()).toEqual({ recorrente: 179, pagantes: 1 });
 
     await db.update(assinaturas).set({ status: 'cancelada', canceladaEm: new Date() }).where(and(
       eq(assinaturas.userId, userId), eq(assinaturas.status, 'ativa'),
     ));
     expect(await linhaCsv()).toContain(';Somente leitura;');
-    expect((await faturamento()).receitaRecorrenteMensal).toBeCloseTo(noTeste.receitaRecorrenteMensal, 2);
+    expect(await peso()).toEqual({ recorrente: 0, pagantes: 0 });
   } finally {
     await admin.dispose();
   }
@@ -368,7 +397,7 @@ test('XG42 política de privacidade vigente no banco não cita SINAPI', async ()
 });
 
 test('XG42 Diário: o autor corrige o texto, e a correção chega em toda parte', async ({ request, playwright, baseURL }) => {
-  await novoAssinanteHomologacao(request, 'auditoria-diario');
+  await novoAssinanteHomologacao(request, 'auditoria-diario', { assinar: 'premium' });
   const id = await novaObra(request, 'E2E auditoria diário');
   const outra = await novaObra(request, 'E2E auditoria diário outra');
   const membro = await playwright.request.newContext({ baseURL });
@@ -436,7 +465,7 @@ test('XG42 Diário: somente leitura não edita, e a leitura continua', async ({ 
   try {
     const criado = await request.post(`/api/obras/${id}/diario`, { data: { texto: 'Registro original' } });
     const entrada = (await criado.json()).id as string;
-    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - 60_000) }).where(eq(assinaturas.userId, userId));
+    await db.update(assinaturas).set({ renovaEm: new Date(Date.now() - FIM_TESTE_MAIS_TOLERANCIA_MS) }).where(eq(assinaturas.userId, userId));
     const r = await request.patch(`/api/obras/${id}/diario/${entrada}`, { data: { texto: 'Não pode' } });
     expect(r.status()).toBe(403);
     expect(await r.json()).toMatchObject({ code: 'XGESTAO_SOMENTE_LEITURA' });

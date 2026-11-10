@@ -13,6 +13,7 @@ import {
   projetarChecklist,
 } from "@features/obras/api/checklist-recorrencia";
 import { periodoAtual } from "@features/empreiteiro/minhas-obras/lib/checklist-periodo";
+import { carimbarAssinaturaChecklist } from "@features/obras/api/checklist-assinatura";
 
 const itemPatchSchema = z.object({
   id: z.string().optional(),
@@ -159,6 +160,13 @@ export async function PATCH(
   }
   // Trocar para 'semanal' sem dizer o dia ancora na segunda; sair de 'semanal'
   // limpa o dia, para não sobrar dado que ninguém lê.
+  // EMP-08 — obra própria do xgestão: data/hora e autor da assinatura vêm do
+  // servidor; o marketplace segue gravando o que o cliente manda.
+  const obraXgestao = access.obra.clienteId === null && access.obra.empreiteiraId !== null;
+  if (obraXgestao) {
+    for (const k of ["completadoEm", "assinadoPor", "assinadoEm"] as const) delete updateData[k];
+    Object.assign(updateData, carimbarAssinaturaChecklist(data, guard.user.id, new Date()));
+  }
   if (data.recorrencia === "semanal" && diaSemanaEfetivo == null) {
     updateData.recorrenciaDiaSemana = 1;
   } else if (data.recorrencia && data.recorrencia !== "semanal") {
@@ -232,9 +240,15 @@ export async function DELETE(
     setNoCacheHeaders(r);
     return r;
   }
-  await db
+  const removidos = await db
     .delete(obraChecklists)
-    .where(and(eq(obraChecklists.id, checklistId), eq(obraChecklists.obraId, id)));
+    .where(and(eq(obraChecklists.id, checklistId), eq(obraChecklists.obraId, id)))
+    .returning({ id: obraChecklists.id });
+  if (removidos.length === 0) {
+    const r = NextResponse.json({ message: "Item não encontrado" }, { status: 404 });
+    setNoCacheHeaders(r);
+    return r;
+  }
   await recordAudit({
     actorId: guard.user.id,
     action: "obras.checklist.delete",

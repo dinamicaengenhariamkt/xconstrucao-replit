@@ -5,6 +5,10 @@ import {
   listarAssinantesDetalhados,
 } from '@features/xgestao/admin/server/assinantes';
 import { lucroObrasXgestao } from '@features/xgestao/admin/server/obras';
+import { metricasComerciaisXgestao } from '@features/xgestao/admin/server/comercial';
+import { cobrancaComProblemaXgestao } from '@features/xgestao/admin/server/cobranca';
+import { estornosXgestao } from '@features/xgestao/admin/server/estornos';
+import { periodoDaUrl } from '@features/xgestao/admin/lib/estornos';
 
 /**
  * GET /api/admin/xgestao/financeiro — as duas leituras financeiras do produto,
@@ -23,9 +27,17 @@ export async function GET(request: NextRequest) {
   // A lista de assinantes é resolvida uma vez e repassada às duas leituras:
   // cada uma sozinha refaria o mesmo join de entitlement na mesma requisição.
   const assinantes = await listarAssinantesDetalhados();
-  const [lucro, faturamento] = await Promise.all([
-    lucroObrasXgestao(assinantes.map((assinante) => assinante.empreiteiraId)),
+  // CRM-11 — `?estornos=mes|30d|90d` escolhe o período da lista de estornos.
+  const periodo = periodoDaUrl(new URL(request.url).searchParams.get('estornos'));
+  const [lucro, faturamento, comercial, cobranca, estornos] = await Promise.all([
+    lucroObrasXgestao(assinantes.flatMap((assinante) => (assinante.empreiteiraId ? [assinante.empreiteiraId] : []))),
     faturamentoXgestao(assinantes),
+    metricasComerciaisXgestao(assinantes),
+    cobrancaComProblemaXgestao(assinantes),
+    estornosXgestao(assinantes, periodo),
   ]);
-  return adminJson({ lucro, faturamento });
+  // XG45 — receita por plano, ticket médio, recorrente saindo/em risco e quem
+  // mais pagou. Os cancelamentos do mês ficam na página de Conversão.
+  // ADM-03 — lista de cobrança com problema (o card fica na home).
+  return adminJson({ lucro, faturamento, receita: comercial.receita, cobranca, estornos });
 }

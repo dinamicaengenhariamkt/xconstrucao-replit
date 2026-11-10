@@ -20,9 +20,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@shared/db/db";
 import { users, clientes, obras, candidaturas } from "@shared/db/schema";
 import { eq, and, like, inArray } from "drizzle-orm";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 export async function DELETE(request: NextRequest) {

@@ -7,9 +7,12 @@ import {
   uniqueEmail,
   uniqueUsername,
 } from '../helpers';
+import { contribuicaoDaConta } from '../helpers-admin-xgestao';
 
 const ANTI_BOT = { website: '', mountedAt: Date.now() - 5_000 };
 let cnpjSequence = 9_000;
+// XG50: o teste grátis e o mês bônus valem uma vez por CPF/CNPJ; prefixo por execução evita repetir documento entre rodadas.
+const CNPJ_PREFIXO_EXECUCAO = Date.now().toString().slice(-8);
 
 type Dashboard = {
   indicadores: {
@@ -20,7 +23,7 @@ type Dashboard = {
     obrasAtrasadas: number;
     orcamentoGerenciado: number;
     valorPago: number;
-    distribuicaoPlanos: { free: number; pro: number; enterprise: number };
+    distribuicaoPlanos: Record<'free' | 'pro' | 'enterprise' | 'basic' | 'basic_plus' | 'premium', number>;
     distribuicaoStatus: {
       em_andamento: number;
       concluida: number;
@@ -55,7 +58,7 @@ type Dashboard = {
 };
 
 function proximoCnpjValido() {
-  const base = `11222333${String(cnpjSequence++).padStart(4, '0')}`;
+  const base = `${CNPJ_PREFIXO_EXECUCAO}${String(cnpjSequence++).padStart(4, '0')}`;
   const digito = (digits: string, pesos: number[]) => {
     const soma = [...digits].reduce((total, digit, index) => total + Number(digit) * pesos[index], 0);
     const resto = soma % 11;
@@ -95,12 +98,26 @@ async function concederXGestao(request: APIRequestContext, email: string) {
   return payload.rows[0].id;
 }
 
+/**
+ * XG41/XG43 — sem teste ou plano a conta é somente leitura: o responsável
+ * recém-liberado precisa iniciar o teste (Basic, 1 obra) e, para mais obras,
+ * assinar um plano da oferta atual (o antigo `pro` saiu da venda na XG41).
+ */
+async function iniciarTeste(request: APIRequestContext) {
+  const r = await request.post('/api/xgestao/teste', { data: {} });
+  expect(r.status(), await r.text()).toBe(201);
+}
+
+async function assinar(request: APIRequestContext, tier: 'basic' | 'basic_plus' | 'premium') {
+  const planos = (await (await request.get('/api/planos?persona=xgestao')).json()) as Array<{ id: string; tier: string }>;
+  const plano = planos.find((item) => item.tier === tier);
+  expect(plano, `plano ${tier} à venda`).toBeTruthy();
+  const r = await request.post('/api/assinaturas/checkout', { data: { planoId: plano!.id, ciclo: 'mensal', persona: 'xgestao' } });
+  expect(r.status(), await r.text()).toBe(201);
+}
+
 test.describe('XG06 — visão administrativa do xgestão', () => {
   test('conta assinantes, obras, planos e links persistidos e separa obras por produto', async ({ request }) => {
-    await loginAs(request, SEED_ADMIN_EMAIL);
-    const antes = (await (await request.get('/api/admin/xgestao')).json()) as Dashboard;
-    await logout(request);
-
     const tag = `XG06 ${Date.now()}`;
     const empreiteiroEmail = await registrar(request, 'empreiteiro', 'admin-xgestao-emp');
     await loginAs(request, empreiteiroEmail);
@@ -109,6 +126,7 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     const empreiteiroId = await concederXGestao(request, empreiteiroEmail);
 
     await loginAs(request, empreiteiroEmail);
+    await iniciarTeste(request);
     const obraXgestao = await request.post('/api/xgestao/obras', {
       data: { nome: `${tag} obra própria`, endereco: 'Rua xgestão, 10' },
     });
@@ -121,22 +139,30 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     expect(shareExpirado.status(), await shareExpirado.text()).toBe(201);
     await logout(request);
 
+    // TST-19 — o peso desta conta nos números da home, medido por ela mesma
+    // (outros specs criam contas em paralelo, então "depois - antes" não serve).
+    const home = async () => (await (await request.get('/api/admin/xgestao')).json()) as Dashboard;
+    const pesoNaHome = () => contribuicaoDaConta(request, empreiteiroId, async () => {
+      const d = await home();
+      return {
+        assinantes: d.indicadores.assinantes,
+        obras: d.indicadores.obrasGerenciadas,
+        ativas: d.indicadores.obrasAtivas,
+        planejamento: d.indicadores.distribuicaoStatus.planejamento,
+        links: d.indicadores.linksPublicosAtivos,
+        basicPlus: d.indicadores.distribuicaoPlanos.basic_plus,
+      };
+    });
     await loginAs(request, SEED_ADMIN_EMAIL);
-    const aposExpirar = (await (await request.get('/api/admin/xgestao')).json()) as Dashboard;
-    expect(aposExpirar.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos);
+    // Link vencido não conta como ativo.
+    expect((await pesoNaHome()).links).toBe(0);
     await logout(request);
 
     await loginAs(request, empreiteiroEmail);
     const share = await request.post(`/api/xgestao/obras/${obraXgestaoBody.id}/share`, { data: {} });
     expect(share.status(), await share.text()).toBe(201);
 
-    const planos = await request.get('/api/planos?persona=xgestao');
-    const pro = ((await planos.json()) as Array<{ id: string; tier: string }>).find((plano) => plano.tier === 'pro');
-    expect(pro).toBeTruthy();
-    const checkout = await request.post('/api/assinaturas/checkout', {
-      data: { planoId: pro!.id, ciclo: 'mensal', persona: 'xgestao' },
-    });
-    expect(checkout.status(), await checkout.text()).toBe(201);
+    await assinar(request, 'basic_plus');
     await logout(request);
 
     const contratanteEmail = await registrar(request, 'contratante', 'admin-xgestao-cli');
@@ -157,22 +183,16 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     const assinante = dashboard.assinantes.find((item) => item.email === empreiteiroEmail);
     expect(assinante).toMatchObject({
       obrasGerenciadas: 1,
-      plano: { tier: 'pro' },
+      plano: { tier: 'basic_plus' },
+      // Assinou durante o teste: o teste dá lugar ao plano pago.
       fimTeste: null,
     });
-    expect(dashboard.indicadores.assinantes).toBe(antes.indicadores.assinantes + 1);
-    expect(dashboard.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas + 1);
-    expect(dashboard.indicadores.obrasAtivas).toBe(antes.indicadores.obrasAtivas);
+    expect(await pesoNaHome()).toEqual({ assinantes: 1, obras: 1, ativas: 0, planejamento: 1, links: 1, basicPlus: 1 });
     expect(dashboard.indicadores.obrasAtrasadas).toBeGreaterThanOrEqual(0);
     // XG34 — percentual de execução não existe no admin xgestão (coluna sem escritor).
     expect(dashboard.indicadores).not.toHaveProperty('progressoMedio');
     expect(dashboard.indicadores.orcamentoGerenciado).toBeGreaterThanOrEqual(0);
     expect(dashboard.indicadores.valorPago).toBeGreaterThanOrEqual(0);
-    expect(dashboard.indicadores.distribuicaoStatus.planejamento).toBe(
-      antes.indicadores.distribuicaoStatus.planejamento + 1,
-    );
-    expect(dashboard.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos + 1);
-    expect(dashboard.indicadores.distribuicaoPlanos.pro).toBe(antes.indicadores.distribuicaoPlanos.pro + 1);
     expect(dashboard.obras).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: obraXgestaoBody.id,
@@ -215,10 +235,8 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     expect(revogar.status(), await revogar.text()).toBe(200);
     const aposRevogar = (await (await request.get('/api/admin/xgestao')).json()) as Dashboard;
     expect(aposRevogar.assinantes.some((item) => item.email === empreiteiroEmail)).toBe(false);
-    expect(aposRevogar.indicadores.assinantes).toBe(antes.indicadores.assinantes);
-    expect(aposRevogar.indicadores.obrasGerenciadas).toBe(antes.indicadores.obrasGerenciadas);
-    expect(aposRevogar.indicadores.linksPublicosAtivos).toBe(antes.indicadores.linksPublicosAtivos);
-    expect(aposRevogar.indicadores.distribuicaoPlanos.pro).toBe(antes.indicadores.distribuicaoPlanos.pro);
+    // Sem o entitlement a conta nem é mais marcável como interna: saiu do recorte.
+    expect((await request.patch(`/api/admin/xgestao/assinantes/${empreiteiroId}`, { data: { contaInterna: true } })).status()).toBe(404);
     expect(aposRevogar.obras.some((item) => item.id === obraXgestaoBody.id)).toBe(false);
     await logout(request);
   });
@@ -244,6 +262,7 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     await concederXGestao(request, empreiteiroEmail);
 
     await loginAs(request, empreiteiroEmail);
+    await iniciarTeste(request);
     const criada = await request.post('/api/xgestao/obras', {
       data: { nome: `${tag} própria`, endereco: 'Rua da listagem, 100' },
     });
@@ -299,13 +318,15 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
     const assinantes = await request.get('/api/admin/xgestao/assinantes');
     expect(assinantes.status()).toBe(200);
     const assinantesBody = (await assinantes.json()) as {
-      rows: Array<{ email: string; plano: { tier: string; valorMensal: number } }>;
+      rows: Array<{ email: string; plano: { tier: string; valorMensal: number; emTeste: boolean }; situacao: { codigo: string } }>;
     };
     const assinante = assinantesBody.rows.find((linha) => linha.email === empreiteiroEmail);
     expect(assinante).toBeTruthy();
-    // Sem assinatura paga, o assinante aparece no free — e o painel mostra o
-    // valor do plano, que a versão anterior nunca exibia.
-    expect(assinante!.plano.tier).toBe('free');
+    // XG43 — no teste grátis o assinante aparece no Basic, marcado como teste,
+    // e o painel mostra o valor do plano.
+    expect(assinante!.plano.tier).toBe('basic');
+    expect(assinante!.plano.emTeste).toBe(true);
+    expect(assinante!.situacao.codigo).toBe('em_teste');
     expect(assinante!.plano).toHaveProperty('valorMensal');
 
     const financeiro = await request.get('/api/admin/xgestao/financeiro');
@@ -343,6 +364,9 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
       await logout(request);
 
       await loginAs(request, email);
+      // Duas obras por empresa: o Basic do teste aceita uma; o Basic Plus, três.
+      await iniciarTeste(request);
+      await assinar(request, 'basic_plus');
       const obras: string[] = [];
       for (const obraIndex of [1, 2]) {
         const criada = await request.post('/api/xgestao/obras', {
@@ -440,24 +464,61 @@ test.describe('XG06 — visão administrativa do xgestão', () => {
   });
 
   test('as rotas novas do produto exigem administrador', async ({ request }) => {
-    await logout(request);
-    for (const rota of [
+    // ADM-13/TST-06 — CSV e detalhe de obra também: exportam e mostram dado de cliente.
+    const obraQualquer = '00000000-0000-4000-8000-000000000000';
+    const rotas = [
       '/api/admin/xgestao/obras',
       '/api/admin/xgestao/assinantes',
       '/api/admin/xgestao/financeiro',
-    ]) {
+      '/api/admin/xgestao/export?tipo=obras',
+      '/api/admin/xgestao/export?tipo=assinantes',
+      `/api/admin/xgestao/obras/${obraQualquer}`,
+    ];
+    await logout(request);
+    for (const rota of rotas) {
       expect((await request.get(rota)).status(), rota).toBe(401);
     }
+    expect((await request.patch(`/api/admin/xgestao/assinantes/${obraQualquer}`, { data: { contaInterna: true } })).status()).toBe(401);
 
     const email = await registrar(request, 'empreiteiro', 'admin-xgestao-rotas-negadas');
     await loginAs(request, email);
-    for (const rota of [
-      '/api/admin/xgestao/obras',
-      '/api/admin/xgestao/assinantes',
-      '/api/admin/xgestao/financeiro',
-    ]) {
+    for (const rota of rotas) {
       expect((await request.get(rota)).status(), rota).toBe(403);
     }
+    // ADM-02 — marcar conta interna exige admin.
+    expect((await request.patch(`/api/admin/xgestao/assinantes/${obraQualquer}`, { data: { contaInterna: true } })).status()).toBe(403);
+    await logout(request);
+  });
+
+  test('ADM-13 exportação: tipo inválido é 400 e tipo=obras traz cabeçalho e linhas', async ({ request }) => {
+    const tag = `ADM13 ${Date.now()}`;
+    const email = await registrar(request, 'empreiteiro', 'admin-xgestao-export');
+    await loginAs(request, email);
+    await completarPerfilOperacional(request, 'empreiteiro');
+    await logout(request);
+    await concederXGestao(request, email);
+    await loginAs(request, email);
+    await iniciarTeste(request);
+    const criada = await request.post('/api/xgestao/obras', { data: { nome: `${tag} =SOMA(1)`, endereco: 'Rua CSV, 1' } });
+    expect(criada.status(), await criada.text()).toBe(201);
+    await logout(request);
+
+    await loginAs(request, SEED_ADMIN_EMAIL);
+    for (const tipo of ['', 'xpto', 'OBRAS']) {
+      const r = await request.get(`/api/admin/xgestao/export${tipo ? `?tipo=${tipo}` : ''}`);
+      expect(r.status(), tipo).toBe(400);
+    }
+    const r = await request.get(`/api/admin/xgestao/export?tipo=obras&q=${encodeURIComponent(tag)}`);
+    expect(r.status(), await r.text()).toBe(200);
+    expect(r.headers()['content-type']).toContain('text/csv');
+    expect(r.headers()['content-disposition']).toMatch(/attachment; filename="xgestao-obras-\d{4}-\d{2}-\d{2}\.csv"/);
+    const linhas = (await r.text()).replace(/^\uFEFF/, '').split('\r\n');
+    expect(linhas[0]).toBe('Obra;Empreiteira;Status;Cidade;UF;Previsão;Orçamento (R$);Custo real (R$);Última atividade;Link público ativo');
+    expect(linhas).toHaveLength(2);
+    expect(linhas[1].startsWith(`${tag} =SOMA(1)`)).toBe(true);
+    // ADM-12 — a busca acha a obra pelo e-mail do responsável.
+    const porEmail = await request.get(`/api/admin/xgestao/obras?q=${encodeURIComponent(email)}`);
+    expect(((await porEmail.json()) as { rows: Array<{ nome: string }> }).rows.map((o) => o.nome)).toEqual([`${tag} =SOMA(1)`]);
     await logout(request);
   });
 });

@@ -29,6 +29,7 @@ export interface RegisterData {
   phone?: string;
   cpfCnpj?: string;
   xgestao?: boolean;
+  marketingOptIn?: boolean;
   acceptTerms: true;
 }
 

@@ -13,6 +13,9 @@ import NovaObraZonaEmail, {
 import AvisoExpiracaoEmail, {
   type AvisoExpiracaoEmailProps,
 } from '@features/notificacoes/emails/aviso-expiracao';
+import XgestaoCicloEmail, {
+  type XgestaoCicloEmailProps,
+} from '@features/notificacoes/emails/xgestao-ciclo';
 import WebhookDeadAlertEmail, {
   type WebhookDeadAlertEmailProps,
 } from '@features/notificacoes/emails/webhook-dead';
@@ -27,11 +30,14 @@ type SendArgs = {
   subject: string;
   html: string;
   tag: string;
+  /** Cabeçalhos extras (ex.: `List-Unsubscribe`); a API do Brevo aceita `headers`. */
+  headers?: Record<string, string>;
+  senderName?: string;
 };
 
 type BrevoSendResult = { success: true; data: { id: string } };
 
-async function sendViaBrevo({ to, subject, html, tag }: SendArgs): Promise<BrevoSendResult> {
+async function sendViaBrevo({ to, subject, html, tag, headers, senderName }: SendArgs): Promise<BrevoSendResult> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.error(`[email:${tag}] BREVO_API_KEY ausente — não é possível enviar email.`);
@@ -48,10 +54,12 @@ async function sendViaBrevo({ to, subject, html, tag }: SendArgs): Promise<Brevo
       accept: 'application/json',
     },
     body: JSON.stringify({
-      sender: { name: SENDER_NAME, email: senderEmail },
+      sender: { name: senderName ?? SENDER_NAME, email: senderEmail },
       to: [{ email: to }],
       subject,
       htmlContent: html,
+      ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
+      tags: [tag],
     }),
   });
 
@@ -227,6 +235,41 @@ export async function sendAvisoExpiracaoEmail(
     console.error('Erro ao enviar email de aviso de expiração:', error);
     throw error;
   }
+}
+
+/**
+ * XG52 — e-mails automáticos do xgestão (rotina diária). Marketing leva
+ * `List-Unsubscribe` + `List-Unsubscribe-Post` (descadastro em um clique,
+ * RFC 8058) além do link no rodapé.
+ */
+export async function sendXgestaoCicloEmail(
+  to: string,
+  args: {
+    tipo: string;
+    assunto: string;
+    props: XgestaoCicloEmailProps;
+    /** URL do POST de descadastro em um clique; só em marketing. */
+    listUnsubscribeUrl?: string | null;
+  },
+) {
+  const html = await render(XgestaoCicloEmail(args.props));
+  const headers: Record<string, string> = {};
+  if (args.listUnsubscribeUrl) {
+    headers['List-Unsubscribe'] = `<${args.listUnsubscribeUrl}>`;
+    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+  }
+
+  if (isEmailTestMode()) {
+    captureTestEmail({
+      to,
+      subject: args.assunto,
+      html,
+      meta: { kind: `xgestao-${args.tipo}`, tipo: args.tipo, headers, descadastroUrl: args.props.descadastroUrl ?? null },
+    });
+    return { success: true, data: { id: 'test-mode' } };
+  }
+
+  return sendViaBrevo({ to, subject: args.assunto, html, tag: `xgestao-${args.tipo}`, headers, senderName: 'xgestão' });
 }
 
 export async function sendWebhookDeadAlertEmail(

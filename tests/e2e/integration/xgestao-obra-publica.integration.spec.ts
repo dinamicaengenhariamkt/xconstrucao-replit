@@ -59,7 +59,7 @@ test.describe('xgestão — conteúdo público de obra em leitura', () => {
     // o dono liga a seção. Número, complemento, CEP e coordenadas seguem
     // ausentes do contrato — as linhas acima garantem isso.
     expect(types).toContain('logradouro: string | null;');
-    expect(projection).toContain('logradouro: secoes.localizacao ? obra.endereco : null');
+    expect(projection).toContain('logradouro: secoes.localizacao ? enderecoPublico(obra.endereco, obra.cidade) : null');
     expect(projection).not.toMatch(/obras\.lat|obras\.lng/);
 
     // Seção desligada não é filtrada na renderização: a query nem roda.

@@ -37,7 +37,10 @@ export const KIND_ROLES: Record<UploadKind, readonly UploadRole[]> = {
   empreiteiro_documento: ["empreiteiro", "superadmin"],
   obra_anexo: ["contratante", "empreiteiro", "superadmin"],
   obra_capa: ["contratante", "empreiteiro", "superadmin"],
-  comprovante_pagamento: ["contratante", "superadmin"],
+  // EMP-01 — o empreiteiro (dono ou membro da empresa no xgestão) anexa o
+  // comprovante do lançamento financeiro da própria obra. A chave dele mora em
+  // `private/empreiteiro/{userId}/comprovantes/`, separada da do contratante.
+  comprovante_pagamento: ["contratante", "empreiteiro", "superadmin"],
   candidatura_anexo: ["empreiteiro", "superadmin"],
   obra_foto: ["contratante", "empreiteiro", "superadmin"],
   cliente_documento: ["admin", "superadmin"],
@@ -55,6 +58,8 @@ export interface KeyBuilderArgs {
   userId: string;
   originalName: string;
   extras?: { tipoDocumento?: string };
+  /** EMP-02 — força `private` nos kinds de obra (obra do xgestão). */
+  visibility?: UploadVisibility;
 }
 
 /**
@@ -99,6 +104,25 @@ export function visibilityForKind(kind: UploadKind): UploadVisibility {
   if (kind === "cliente_documento") return "private";
   // anuncio_criativo é público (servido na landing/dashboards).
   return "public";
+}
+
+/**
+ * EMP-02 — kinds de arquivo de obra que, numa obra do xgestão, são privados
+ * (LGPD: contrato de prestador, foto de canteiro, documento de projeto). No
+ * marketplace continuam públicos como sempre foram; quem decide é a rota de
+ * presign, que conhece a obra, e passa `visibility` para `buildKey`.
+ */
+export const KINDS_OBRA_PRIVATIZAVEIS: readonly UploadKind[] = ["obra_anexo", "obra_capa", "obra_foto"];
+
+export function kindPrivatizavel(kind: UploadKind): boolean {
+  return KINDS_OBRA_PRIVATIZAVEIS.includes(kind);
+}
+
+/** Visibilidade real de uma chave já montada (com ou sem prefixo dev/prod). */
+export function visibilityFromKey(key: string): UploadVisibility {
+  const prefix = getKeyPrefix();
+  const effective = prefix && key.startsWith(prefix + "/") ? key.slice(prefix.length + 1) : key;
+  return effective.startsWith("private/") ? "private" : "public";
 }
 
 /** Para obra_anexo, o role do contratante que está subindo. */
@@ -199,9 +223,10 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
 
   if (kind === "obra_anexo") {
     // public/obras/{userId}/anexos/<file>
+    // EMP-02 — `private/obras/...` quando a obra é do xgestão.
     if (segments.length !== 5) return { ok: false, reason: "shape obra-anexo" };
     if (
-      segments[0] !== "public" ||
+      (segments[0] !== "public" && segments[0] !== "private") ||
       segments[1] !== "obras" ||
       segments[3] !== "anexos"
     ) {
@@ -217,7 +242,7 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
     // vinculado à obra específica via obras.fotoCapaFileId no commit.
     if (segments.length !== 5) return { ok: false, reason: "shape obra-capa" };
     if (
-      segments[0] !== "public" ||
+      (segments[0] !== "public" && segments[0] !== "private") ||
       segments[1] !== "obras" ||
       segments[3] !== "capa"
     ) {
@@ -229,10 +254,12 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
 
   if (kind === "comprovante_pagamento") {
     // private/contratante/{userId}/comprovantes/<file>
+    // private/empreiteiro/{userId}/comprovantes/<file> (EMP-01, xgestão)
     if (segments.length !== 5) return { ok: false, reason: "shape comprovante" };
+    const donoPrefixo = role === "empreiteiro" ? "empreiteiro" : "contratante";
     if (
       segments[0] !== "private" ||
-      segments[1] !== "contratante" ||
+      segments[1] !== donoPrefixo ||
       segments[3] !== "comprovantes"
     ) {
       return { ok: false, reason: "prefixo comprovante" };
@@ -257,8 +284,11 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
 
   if (kind === "obra_foto") {
     // public/obra-fotos/{userId}/<file>
+    // ou private/obra-fotos/{userId}/<file> numa obra do xgestão (EMP-02)
     if (segments.length !== 4) return { ok: false, reason: "shape obra-foto" };
-    if (segments[0] !== "public" || segments[1] !== "obra-fotos") return { ok: false, reason: "prefixo obra-foto" };
+    if ((segments[0] !== "public" && segments[0] !== "private") || segments[1] !== "obra-fotos") {
+      return { ok: false, reason: "prefixo obra-foto" };
+    }
     if (segments[2] !== userId) return { ok: false, reason: "userId mismatch" };
     return { ok: true };
   }
@@ -310,7 +340,9 @@ export function validateKeyForOwner(args: ValidateKeyArgs): { ok: boolean; reaso
 
 export function buildKey(args: KeyBuilderArgs): string {
   const { kind, role, userId, originalName, extras } = args;
-  const visibility = visibilityForKind(kind);
+  // EMP-02 — só os kinds de obra aceitam override (obra do xgestão → private).
+  const visibility = args.visibility && kindPrivatizavel(kind) ? args.visibility : visibilityForKind(kind);
+  const raizObra = visibility === "private" ? "private" : "public";
   const { name, ext } = splitNameExt(originalName);
   const slug = slugify(name);
   const ts = timestampStamp();
@@ -324,17 +356,18 @@ export function buildKey(args: KeyBuilderArgs): string {
   } else if (kind === "portfolio_doc") {
     base = `public/empreiteiro/${userId}/portfolio-docs/${ts}-${slug}${safeExt}`;
   } else if (kind === "obra_anexo") {
-    base = `public/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
+    base = `${raizObra}/obras/${userId}/anexos/${ts}-${slug}${safeExt}`;
   } else if (kind === "obra_capa") {
     // Nome fixo `capa` (não depende do originalName) para ficar legível ao
     // navegar no bucket: public/obras/{userId}/capa/{ts}-capa.{ext}
-    base = `public/obras/${userId}/capa/${ts}-capa${safeExt}`;
+    base = `${raizObra}/obras/${userId}/capa/${ts}-capa${safeExt}`;
   } else if (kind === "comprovante_pagamento") {
-    base = `private/contratante/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
+    const dono = role === "empreiteiro" ? "empreiteiro" : "contratante";
+    base = `private/${dono}/${userId}/comprovantes/${ts}-${slug}${safeExt}`;
   } else if (kind === "candidatura_anexo") {
     base = `private/empreiteiro/${userId}/candidatura-anexos/${ts}-${slug}${safeExt}`;
   } else if (kind === "obra_foto") {
-    base = `public/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
+    base = `${raizObra}/obra-fotos/${userId}/${ts}-${slug}${safeExt}`;
   } else if (kind === "anuncio_criativo") {
     base = `public/anuncios/${userId}/criativos/${ts}-${slug}${safeExt}`;
   } else if (kind === "cliente_documento") {

@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '@shared/db/db';
-import { empreiteiras, obraShareLinks, obras } from '@shared/db/schema';
+import { empreiteiras, obraShareLinks, obras, users } from '@shared/db/schema';
 import { computeProfitSummaryForObras } from '@features/shared/profit/summary-server';
 import type { ProfitSummaryData } from '@features/shared/profit/types';
 import { filtroObrasXgestao, listarEmpreiteiraIdsXgestao } from './escopo';
@@ -76,9 +76,17 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
   if (filtros.empreiteiraId) condicoes.push(eq(obras.empreiteiraId, filtros.empreiteiraId));
   if (filtros.situacao) condicoes.push(condicaoSituacao(filtros.situacao, await getDiasObraParada()));
   if (filtros.busca?.trim()) {
-    const termo = `%${filtros.busca.trim()}%`;
+    // ILIKE trata % e _ como curinga: escapa para a busca ser literal.
+    const termo = `%${filtros.busca.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     condicoes.push(
-      or(ilike(obras.nome, termo), ilike(empreiteiras.nome, termo), ilike(obras.cidade, termo)) as SQL,
+      or(
+        ilike(obras.nome, termo),
+        ilike(empreiteiras.nome, termo),
+        ilike(obras.cidade, termo),
+        // ADM-12 — e-mail do responsável e nome do link do cliente ("Arquiteto", "Sr. João").
+        ilike(users.email, termo),
+        sql`exists (select 1 from obra_share_links l where l.obra_id = ${obras.id} and l.nome ilike ${termo})`,
+      ) as SQL,
     );
   }
   const where = and(...condicoes) as SQL;
@@ -100,6 +108,7 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
       })
       .from(obras)
       .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+      .innerJoin(users, eq(users.id, empreiteiras.userId))
       .where(where)
       // O desempate por id mantém a ordem estável entre páginas: com
       // `updatedAt` repetido (seed, import em lote) o Postgres não garante
@@ -111,6 +120,7 @@ export async function listarObrasXgestao(filtros: XgestaoObrasFiltros = {}): Pro
       .select({ total: count() })
       .from(obras)
       .innerJoin(empreiteiras, eq(empreiteiras.id, obras.empreiteiraId))
+      .innerJoin(users, eq(users.id, empreiteiras.userId))
       .where(where),
   ]);
 

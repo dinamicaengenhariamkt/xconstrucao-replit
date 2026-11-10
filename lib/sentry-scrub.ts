@@ -6,10 +6,14 @@
 const CPF_FORMATTED = /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g;
 const CPF_RAW = /(?<![0-9])\d{11}(?![0-9])/g;
 const EMAIL = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+// PUB-04 — o token do link público é a própria credencial de leitura da obra.
+// Mascarado em qualquer string: request.url, transaction, breadcrumbs, mensagem.
+const PUBLIC_OBRA_TOKEN = /(\/publico\/obra\/)[^/?#\s"']+/g;
 const SENSITIVE_KEYS = /(password|senha|token|secret|authorization|cookie|cpf|cnpj|api[_-]?key)/i;
 
 function scrubString(value: string): string {
   return value
+    .replace(PUBLIC_OBRA_TOKEN, "$1[TOKEN]")
     .replace(CPF_FORMATTED, "[CPF]")
     .replace(CPF_RAW, "[CPF_RAW]")
     .replace(EMAIL, "[EMAIL]");
@@ -39,4 +43,13 @@ export function scrubEvent(event: any): any {
   } catch {
     return null;
   }
+}
+
+/**
+ * Transações (tracing) carregam a URL em `transaction`, `request.url` e nos
+ * spans; passam pelo mesmo scrub. Use em `beforeSendTransaction`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function scrubTransaction(event: any): any {
+  return scrubEvent(event);
 }

@@ -12,7 +12,16 @@ import {
 } from './helpers';
 
 /** Cria apenas dados novos de desenvolvimento; depende dos guards do runner. */
-export async function novoAssinanteHomologacao(request: APIRequestContext, label: string, opcoes: { iniciarTeste?: boolean } = {}) {
+export async function novoAssinanteHomologacao(
+  request: APIRequestContext,
+  label: string,
+  /**
+   * `assinar`: depois do teste (Basic desde XG43), assina o plano pelo gateway
+   * manual de dev. Para cenários que precisam de mais obras, links ou valores
+   * públicos, como o antigo teste Premium oferecia.
+   */
+  opcoes: { iniciarTeste?: boolean; assinar?: 'basic_plus' | 'premium' } = {},
+) {
   const email = uniqueEmail(`xg-homolog-${label}`);
   const base = `11${Date.now().toString().slice(-10)}`;
   const digito = (digits: string, pesos: number[]) => {
@@ -56,6 +65,13 @@ export async function novoAssinanteHomologacao(request: APIRequestContext, label
   if (opcoes.iniciarTeste !== false) {
     const iniciar = await request.post('/api/xgestao/teste', { data: {} });
     expect(iniciar.status(), await iniciar.text()).toBe(201);
+  }
+  if (opcoes.assinar) {
+    const catalogo = await (await request.get('/api/planos?persona=xgestao')).json() as Array<{ id: string; tier: string }>;
+    const assinatura = await request.post('/api/assinaturas/checkout', {
+      data: { planoId: catalogo.find((plano) => plano.tier === opcoes.assinar)!.id, persona: 'xgestao', ciclo: 'mensal' },
+    });
+    expect(assinatura.status(), await assinatura.text()).toBe(201);
   }
   return { email, userId };
 }

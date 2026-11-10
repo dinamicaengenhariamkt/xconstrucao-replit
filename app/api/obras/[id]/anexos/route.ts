@@ -6,6 +6,7 @@ import { obraAnexos, userFiles } from "@shared/db/schema";
 import { requireVerifiedUser, isAdminLike, setNoCacheHeaders } from "@features/auth/api/auth-utils";
 import { recordAudit } from "@features/auth/api/audit";
 import { createSignedReadUrl, publicUrlForKey } from "@shared/lib/storage";
+import { ehObraXgestao, erroVinculoArquivoXgestao } from "@features/xgestao/server/arquivos-obra";
 import { isRateLimited, getClientIp } from "@features/auth/api/rate-limit";
 import { findObraAccess, canAccessObraArea, canWriteObraArea } from "@features/obras/api/access";
 
@@ -213,6 +214,15 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       const r = NextResponse.json({ message: "Arquivo não pertence ao usuário" }, { status: 403 });
       setNoCacheHeaders(r);
       return r;
+    }
+    // EMP-04 — obra do xgestão: arquivo único por obra e quota no vínculo.
+    if (ehObraXgestao(access.obra)) {
+      const erro = await erroVinculoArquivoXgestao(obraId, parsed.data.fileId);
+      if (erro) {
+        const r = NextResponse.json(erro.body, { status: erro.status });
+        setNoCacheHeaders(r);
+        return r;
+      }
     }
   }
 

@@ -24,9 +24,10 @@ import { users, sessions } from "@shared/db/schema";
 import { eq } from "drizzle-orm";
 import { createAccessToken, createRefreshToken } from "@features/auth/api/auth-service";
 import { createAuthCookies } from "@features/auth/api/auth-utils";
+import { rotasDeTesteHabilitadas } from "@shared/lib/rotas-teste";
 
 function isEnabled(): boolean {
-  return process.env.E2E_TEST_AUTH === "1";
+  return rotasDeTesteHabilitadas();
 }
 
 async function findUser(email: string) {
