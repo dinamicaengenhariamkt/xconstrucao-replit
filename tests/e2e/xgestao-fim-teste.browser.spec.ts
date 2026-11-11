@@ -68,8 +68,15 @@ test.describe('XG43 — cancelamento pela aba Plano', () => {
       data: { planoId: catalogo.find((p) => p.tier === 'basic_plus')!.id, persona: 'xgestao', ciclo: 'mensal' },
     });
     expect(assinou.status(), await assinou.text()).toBe(201);
-    const { primeiraCobrancaEm } = await assinou.json();
-    const dataFim = new Date(primeiraCobrancaEm).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    // XG50 (decisão do Ramon): cancelar antes do 1º pagamento perde o mês bônus,
+    // então o acesso vai até o fim do teste, não até a 1ª cobrança.
+    const [nova] = await db.select().from(assinaturas).where(and(
+      eq(assinaturas.userId, userId), eq(assinaturas.status, 'ativa'),
+    ));
+    expect(nova.fimTesteEm, 'assinatura feita no teste guarda o fim do teste').not.toBeNull();
+    expect(nova.primeiroPagamentoEm).toBeNull();
+    // Mais as 24h de tolerância depois do fim do teste (XG43).
+    const dataFim = new Date(nova.fimTesteEm!.getTime() + 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
     await entrar(page, email, '/xgestao/configuracoes?tab=plano');
     await expect(page.getByTestId('xgestao-plano-bonus')).toHaveCount(0);

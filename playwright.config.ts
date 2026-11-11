@@ -114,8 +114,9 @@ export default defineConfig({
     // Sempre reutiliza um servidor existente na porta — evita EADDRINUSE
     // tanto em CI (onde cada job começa limpo) quanto localmente.
     reuseExistingServer: true,
-    // 300 s: cobre cold-start em checkout limpo (next dev sem cache).
-    timeout: 300_000,
+    // 600 s: o boot a frio medido em 10/11/2026 levou 383 s (disco lento do
+    // workspace, aviso Slow filesystem do Next). 300 s estourava antes de subir.
+    timeout: 600_000,
     env: {
       EMAIL_TEST_MODE: "1",
       E2E_TEST_AUTH: "1",
