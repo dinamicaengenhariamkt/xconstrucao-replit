@@ -1,0 +1,48 @@
+# Rollback de mudanças visuais
+
+## Site público, 12/11/2026 (facelift leve + tema claro/escuro + animação ao rolar)
+
+Pedido do Ramon: melhorar o visual da home, do xgestão inteligente, dos Termos, da Privacidade, do menu e do rodapé, sem mudar textos, fonte nem cores. Se o cliente não gostar, volta assim.
+
+O arquivo `visual-site-antes-2026-11-11.tar.gz` guarda a versão anterior destes arquivos (já com o PWA do dia 11/11):
+
+- app/page.tsx
+- app/xgestao-inteligente/page.tsx
+- app/politica-privacidade/page.tsx
+- app/termos/page.tsx
+- features/landing/components/GlassNav.tsx
+- features/landing/components/SiteFooter.tsx
+- features/landing/components/InstalarAppSecao.tsx
+- features/legal/components/LegalDocumentView.tsx (não foi alterado; está aqui por segurança)
+
+### Voltar tudo
+
+No Shell do Replit, na raiz do projeto:
+
+```bash
+tar xzf docs/rollback/visual-site-antes-2026-11-11.tar.gz
+```
+
+Isso sobrescreve só os arquivos da lista. Os arquivos novos do facelift podem ficar (sem uso, não aparecem):
+`features/landing/components/Reveal.tsx`, `SiteTemaRaiz.tsx`, `SiteTemaBotao.tsx` e `features/landing/lib/site-tema.ts`.
+
+### Voltar só uma página
+
+```bash
+tar xzf docs/rollback/visual-site-antes-2026-11-11.tar.gz app/termos/page.tsx
+```
+
+### Manter uma correção mesmo voltando o visual
+
+O link "Desenvolvido por Ramon Gomes" no rodapé foi corrigido para https://ramongomessilva.com.br/. A versão antiga aponta para ramongomes.com.br. Se voltar o `SiteFooter.tsx`, corrigir esse link de novo.
+
+## Site público, rodada 2, 12/11/2026 (responsividade, breadcrumb, telas de conta)
+
+Pedido do Ramon depois de ver no aparelho: tirar as etiquetas com bolinha acima dos títulos e a bolinha do menu, corrigir os cards espremidos, breadcrumb com imagem de fundo em login/termos/privacidade, tema claro/escuro em todas as telas externas, tirar "Versão 1" do documento legal.
+
+`visual-site-antes-2026-11-12.tar.gz` guarda o estado logo antes da rodada 2 (já com a rodada 1). Inclui também login, cadastro, recuperar senha, nova senha, verificar e-mail, descadastro e a página /instalar.
+
+- Voltar só a rodada 2: `tar xzf docs/rollback/visual-site-antes-2026-11-12.tar.gz`
+- Voltar tudo ao visual original (antes das duas rodadas): rode primeiro o da rodada 2 e depois `tar xzf docs/rollback/visual-site-antes-2026-11-11.tar.gz`. As telas de conta só existem no pacote da rodada 2.
+
+Arquivos novos da rodada 2 (podem ficar sem uso): `features/landing/components/SiteHeroPagina.tsx`, `features/legal/components/IndiceDocumento.tsx`.

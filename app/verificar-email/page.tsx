@@ -4,6 +4,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { SiteTemaRaiz } from "@features/landing/components/SiteTemaRaiz";
+import { SiteHeroPagina } from "@features/landing/components/SiteHeroPagina";
+import { Reveal } from "@features/landing/components/Reveal";
 import { useToast } from "@shared/hooks/use-toast";
 import { IconCheckCircle, IconError, IconMarkEmailUnread } from '@shared/components/icons';
 
@@ -82,14 +85,16 @@ function VerificarEmailContent() {
   };
 
   return (
+    <SiteTemaRaiz>
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
       <GlassNav />
+      <SiteHeroPagina compacto migalhas={[{ nome: 'Verificar e-mail' }]} />
 
-      <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
+      <main className="relative z-10 -mt-2 flex flex-1 justify-center px-4 pb-16 sm:px-6 sm:pb-24">
         <div className="w-full max-w-md">
+        <Reveal y={12}>
           <div
-            className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800 text-center"
-            style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+            className="rounded-3xl border border-black/5 bg-white p-6 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] sm:p-10 dark:border-white/10 dark:bg-[#22262A] dark:shadow-none text-center"
           >
             {status === "verified" && (
               <>
@@ -108,7 +113,7 @@ function VerificarEmailContent() {
                 </p>
                 <button
                   onClick={() => router.push("/login")}
-                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm"
+                  className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 text-sm"
                   data-testid="button-go-login"
                 >
                   Fazer Login
@@ -133,7 +138,7 @@ function VerificarEmailContent() {
                   <button
                     onClick={handleResendEmail}
                     disabled={isResending || cooldown > 0}
-                    className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
+                    className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 text-sm disabled:opacity-50 mb-4"
                     data-testid="button-resend-error"
                   >
                     {cooldown > 0
@@ -145,7 +150,7 @@ function VerificarEmailContent() {
                 )}
                 <button
                   onClick={() => router.push("/login")}
-                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                   data-testid="link-back-login-error"
                 >
                   Voltar ao login
@@ -156,7 +161,7 @@ function VerificarEmailContent() {
             {status === "pending" && (
               <>
                 <div className="flex justify-center mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 dark:bg-white/10 flex items-center justify-center">
                     <IconMarkEmailUnread className="text-3xl text-[#333333] dark:text-white" />
                   </div>
                 </div>
@@ -178,7 +183,7 @@ function VerificarEmailContent() {
                 <button
                   onClick={handleResendEmail}
                   disabled={isResending || !email || cooldown > 0}
-                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 mb-4"
+                  className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 text-sm disabled:opacity-50 mb-4"
                   data-testid="button-resend"
                 >
                   {cooldown > 0
@@ -190,7 +195,7 @@ function VerificarEmailContent() {
 
                 <button
                   onClick={() => router.push("/login")}
-                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                   data-testid="link-back-login"
                 >
                   Voltar ao login
@@ -198,11 +203,13 @@ function VerificarEmailContent() {
               </>
             )}
           </div>
+        </Reveal>
         </div>
       </main>
 
       <SiteFooter />
     </div>
+    </SiteTemaRaiz>
   );
 }
 

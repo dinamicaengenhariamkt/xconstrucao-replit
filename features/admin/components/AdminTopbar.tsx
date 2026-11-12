@@ -258,7 +258,10 @@ export function AdminTopbar() {
         {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-3 cursor-pointer rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors outline-none">
+            <div
+              aria-label="Abrir menu da conta"
+              className="flex items-center gap-3 cursor-pointer rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors outline-none"
+            >
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
                   {user?.name ?? 'Administrador'}

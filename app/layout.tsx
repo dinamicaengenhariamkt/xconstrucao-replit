@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@shared/components/providers";
 import { StructuredData } from "@features/landing/components/StructuredData";
 import { BackToTop } from "@features/landing/components/BackToTop";
 import { generateOrganizationSchema, BASE_URL } from "@features/landing/seo/seo-utils";
+import { SCRIPT_CAPTURA_INSTALACAO } from "@features/pwa/lib/captura-instalacao";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -29,6 +30,9 @@ export const metadata: Metadata = {
     'gestão de construção',
     'plataforma de construção',
   ],
+  applicationName: 'xgestão',
+  // PWA (11/11/2026): nome e barra de status do app instalado no iPhone.
+  appleWebApp: { capable: true, title: 'xgestão', statusBarStyle: 'default' },
   authors: [{ name: 'XConstrução' }],
   creator: 'XConstrução',
   publisher: 'XConstrução',
@@ -51,6 +55,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1C1F22' },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -59,6 +70,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning data-scroll-behavior="smooth" className={manrope.variable}>
       <body suppressHydrationWarning>
+        {/* PWA: guarda o convite de instalação do Android antes de o React montar. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_CAPTURA_INSTALACAO }} />
         <StructuredData data={generateOrganizationSchema()} />
         <Providers>{children}</Providers>
         <BackToTop />

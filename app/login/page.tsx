@@ -23,6 +23,9 @@ import { XGESTAO_HOME } from "@features/xgestao/routes";
 import { useToast } from "@shared/hooks/use-toast";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { SiteTemaRaiz } from "@features/landing/components/SiteTemaRaiz";
+import { SiteHeroPagina } from "@features/landing/components/SiteHeroPagina";
+import { Reveal } from "@features/landing/components/Reveal";
 import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
 import { HoneypotField } from "@features/auth/components/HoneypotField";
 import { PasswordInput } from "@features/auth/components/PasswordInput";
@@ -164,18 +167,20 @@ export default function LoginPage() {
   });
 
   return (
+    <SiteTemaRaiz>
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
       <GlassNav showAccessButton={perfil !== "xgestao"} />
+      <SiteHeroPagina compacto migalhas={[{ nome: 'Entrar' }]} />
 
-      <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
+      <main className="relative z-10 -mt-2 flex flex-1 justify-center px-4 pb-16 sm:px-6 sm:pb-24">
         <div className="w-full max-w-md">
+        <Reveal y={12}>
           <div
-            className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800"
-            style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+            className="rounded-3xl border border-black/5 bg-white p-6 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] sm:p-10 dark:border-white/10 dark:bg-[#22262A] dark:shadow-none"
           >
             {/* Badge de Perfil */}
             <div className="flex justify-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:text-white text-sm font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#333333]/10 text-[#333333] dark:bg-white/10 dark:text-white text-sm font-bold uppercase tracking-wider">
                 <config.Icon className="text-lg" />
                 <span data-testid="text-perfil-badge">{config.text}</span>
               </div>
@@ -193,7 +198,7 @@ export default function LoginPage() {
                 : "Acesse sua conta para continuar"}
             </p>
             {oauthError && (
-              <p role="alert" className="text-sm text-red-600 text-center mb-5">
+              <p role="alert" className="text-sm text-red-600 dark:text-red-400 text-center mb-5">
                 {oauthError === "Configuration"
                   ? "O acesso com Google está indisponível no momento. Você ainda pode entrar com email e senha."
                    : oauthError === "MissingCSRF"
@@ -206,7 +211,7 @@ export default function LoginPage() {
             {challengeToken ? (
               <form onSubmit={handleVerificar2fa} className="space-y-4" data-testid="form-2fa">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Código de verificação</label>
+                  <label className="text-sm font-medium mb-2 block text-[#101819] dark:text-slate-300">Código de verificação</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -215,14 +220,14 @@ export default function LoginPage() {
                     placeholder="000000 ou código de recuperação"
                     value={codigo2fa}
                     onChange={(e) => setCodigo2fa(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    className="w-full px-4 py-3 min-h-12 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors tracking-widest text-center focus:outline-none focus:border-[#333333]/40 focus:ring-2 focus:ring-[#333333]/20 dark:focus:border-white/30 dark:focus:ring-white/20"
                     data-testid="input-codigo-2fa"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={verificando2fa || codigo2fa.trim().length < 6}
-                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm"
+                  className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 disabled:opacity-50 text-sm"
                   data-testid="button-verificar-2fa"
                 >
                   {verificando2fa ? "Verificando..." : "Verificar e entrar"}
@@ -230,7 +235,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => { setChallengeToken(null); setCodigo2fa(""); }}
-                  className="w-full text-sm text-slate-500 hover:opacity-70 transition-opacity"
+                  className="w-full text-sm text-slate-500 dark:text-slate-400 hover:opacity-70 transition-opacity"
                   data-testid="button-voltar-login"
                 >
                   Voltar
@@ -262,7 +267,7 @@ export default function LoginPage() {
                   document.cookie = `x_signup_persona=${persona}; path=/; max-age=600; SameSite=Lax`;
                   signIn("google", { callbackUrl: oauthCallbackUrl });
                 }}
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm font-medium"
+                className="w-full flex items-center justify-center gap-3 min-h-12 py-3 px-4 rounded-xl border border-slate-200 bg-white dark:bg-white/5 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 text-sm font-medium"
                 data-testid="button-google-login"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -277,30 +282,30 @@ export default function LoginPage() {
 
             {/* Divider */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
               <span className="text-xs text-slate-400 font-medium uppercase">ou</span>
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <div className="flex-1 h-px bg-slate-200 dark:bg-white/10" />
             </div>
 
             {/* Login Form */}
             <form onSubmit={onSubmit} className="space-y-4">
               <HoneypotField value={antiBot.website} onChange={antiBot.setWebsite} />
               <div>
-                <label className="text-sm font-medium mb-2 block">Email</label>
+                <label className="text-sm font-medium mb-2 block text-[#101819] dark:text-slate-300">Email</label>
                 <div className="relative">
                   <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                   <input
                     type="email"
                     placeholder="seu@email.com"
                     autoComplete="email"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                    className="w-full pl-10 pr-4 py-3 min-h-12 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors focus:outline-none focus:border-[#333333]/40 focus:ring-2 focus:ring-[#333333]/20 dark:focus:border-white/30 dark:focus:ring-white/20"
                     data-testid="input-email"
                     {...form.register("email")}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Senha</label>
+                <label className="text-sm font-medium mb-2 block text-[#101819] dark:text-slate-300">Senha</label>
                 <PasswordInput
                   placeholder="Sua senha"
                   autoComplete="current-password"
@@ -309,20 +314,20 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-[#333333] focus:ring-[#333333]/20"
+                    className="w-4 h-4 rounded border-slate-300 accent-[#333333] text-[#333333] focus:ring-[#333333]/20 dark:border-white/20 dark:accent-white"
                     data-testid="checkbox-remember"
                   />
-                  <span className="text-sm text-slate-500">Lembrar de mim</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Lembrar de mim</span>
                 </label>
                 <Link
                   href="/recuperar-senha"
-                  className="text-sm font-medium text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  className="text-sm font-medium text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                   data-testid="link-forgot-password"
                 >
                   Esqueci minha senha
@@ -332,7 +337,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm"
+                className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 disabled:opacity-50 text-sm"
                 data-testid="button-login"
               >
                 {isLoading ? "Entrando..." : "Entrar"}
@@ -342,13 +347,13 @@ export default function LoginPage() {
             {/* Cadastro Link */}
             {perfil !== "administrador" && (
               <p
-                className="text-center text-sm text-slate-500 mt-8"
+                className="text-center text-sm text-slate-500 dark:text-slate-400 mt-8"
                 data-testid="cadastro-container"
               >
                 Não tem conta?{" "}
                 <Link
                   href={`/cadastro?perfil=${perfil}`}
-                  className="font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  className="font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                   data-testid="link-register"
                 >
                   Cadastre-se
@@ -358,10 +363,12 @@ export default function LoginPage() {
             </>
             )}
           </div>
+        </Reveal>
         </div>
       </main>
 
       <SiteFooter />
     </div>
+    </SiteTemaRaiz>
   );
 }

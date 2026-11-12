@@ -6,6 +6,7 @@ import { ImpersonationBanner } from '@features/admin/components/ImpersonationBan
 import { XGestaoSidebar } from './XGestaoSidebar';
 import { XGestaoTopbar } from './XGestaoTopbar';
 import { TesteGratisAviso } from '../teste/components/TesteGratisAviso';
+import { InstalarAppAviso } from '@features/pwa/components/InstalarAppAviso';
 
 export function XGestaoLayout({ children, isOwner }: { children: ReactNode; isOwner: boolean }) {
   return (
@@ -24,6 +25,7 @@ export function XGestaoLayout({ children, isOwner }: { children: ReactNode; isOw
           <XGestaoTopbar isOwner={isOwner} />
           {/* XG35 — plano e teste grátis são decisão do responsável, não do membro. */}
           {isOwner && <TesteGratisAviso />}
+          <InstalarAppAviso />
           <main className="min-h-0 flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
             {children}
           </main>

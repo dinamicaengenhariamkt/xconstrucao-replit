@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { GlassNav } from "@features/landing/components/GlassNav";
 import { SiteFooter } from "@features/landing/components/SiteFooter";
+import { SiteTemaRaiz } from "@features/landing/components/SiteTemaRaiz";
+import { SiteHeroPagina } from "@features/landing/components/SiteHeroPagina";
+import { Reveal } from "@features/landing/components/Reveal";
 import { useToast } from "@shared/hooks/use-toast";
 import { useAntiBotPayload } from "@features/auth/hooks/use-anti-bot";
 import { HoneypotField } from "@features/auth/components/HoneypotField";
@@ -89,18 +92,20 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
+    <SiteTemaRaiz>
     <div className="bg-white dark:bg-[#1C1F22] font-sans text-[#101819] dark:text-white transition-colors duration-300 min-h-screen flex flex-col">
       <GlassNav />
+      <SiteHeroPagina compacto migalhas={[{ nome: 'Recuperar senha' }]} />
 
-      <main className="relative pt-32 flex-1 flex items-center justify-center px-6 py-16">
+      <main className="relative z-10 -mt-2 flex flex-1 justify-center px-4 pb-16 sm:px-6 sm:pb-24">
         <div className="w-full max-w-md">
+        <Reveal y={12}>
           {!sent && (
             <div
-              className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800"
-              style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+              className="rounded-3xl border border-black/5 bg-white p-6 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] sm:p-10 dark:border-white/10 dark:bg-[#22262A] dark:shadow-none"
             >
               <div className="flex justify-center mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-[#333333]/10 dark:bg-white/10 flex items-center justify-center">
                   <IconLockReset className="text-3xl text-[#333333] dark:text-white" />
                 </div>
               </div>
@@ -115,7 +120,7 @@ export default function RecuperarSenhaPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <HoneypotField value={antiBot.website} onChange={antiBot.setWebsite} />
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Email</label>
+                  <label className="text-sm font-medium mb-2 block text-[#101819] dark:text-slate-300">Email</label>
                   <div className="relative">
                     <IconMail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                     <input
@@ -125,7 +130,7 @@ export default function RecuperarSenhaPage() {
                       placeholder="seu@email.com"
                       required
                       autoComplete="email"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-[#333333]/20 dark:focus:ring-white/20"
+                      className="w-full pl-10 pr-4 py-3 min-h-12 rounded-xl border border-slate-200 dark:border-white/10 bg-transparent text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors focus:outline-none focus:border-[#333333]/40 focus:ring-2 focus:ring-[#333333]/20 dark:focus:border-white/30 dark:focus:ring-white/20"
                       data-testid="input-email"
                     />
                   </div>
@@ -134,18 +139,18 @@ export default function RecuperarSenhaPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-send-recovery"
                 >
                   {loading ? "Enviando..." : "Enviar link de recuperação"}
                 </button>
               </form>
 
-              <p className="text-center text-sm text-slate-500 mt-8">
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-8">
                 Lembrou a senha?{" "}
                 <Link
                   href="/acesso-plataforma"
-                  className="font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                  className="font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                   data-testid="link-back-login"
                 >
                   Voltar ao login
@@ -156,8 +161,7 @@ export default function RecuperarSenhaPage() {
 
           {sent && (
             <div
-              className="bg-white dark:bg-slate-900/50 rounded-3xl p-10 border border-slate-100 dark:border-slate-800 text-center"
-              style={{ boxShadow: "0 10px 40px -10px rgba(0,0,0,0.04)" }}
+              className="rounded-3xl border border-black/5 bg-white p-6 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.18)] sm:p-10 dark:border-white/10 dark:bg-[#22262A] dark:shadow-none text-center"
             >
               <div className="flex justify-center mb-6">
                 <div className="w-16 h-16 rounded-2xl bg-[#22846D]/10 flex items-center justify-center">
@@ -182,7 +186,7 @@ export default function RecuperarSenhaPage() {
               <button
                 onClick={handleResend}
                 disabled={cooldown > 0}
-                className="w-full bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all disabled:opacity-50 text-sm mb-4"
+                className="w-full min-h-12 bg-[#333333] text-white font-bold py-3 rounded-full hover:brightness-110 transition-all dark:bg-white dark:text-[#1C1F22] dark:hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40 disabled:opacity-50 text-sm mb-4"
                 data-testid="button-resend"
               >
                 {cooldown > 0 ? `Reenviar em ${cooldown}s` : "Reenviar email"}
@@ -190,17 +194,19 @@ export default function RecuperarSenhaPage() {
 
               <Link
                 href="/acesso-plataforma"
-                className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity"
+                className="text-sm font-bold text-[#333333] dark:text-white hover:opacity-70 transition-opacity rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#333333]/40 dark:focus-visible:ring-white/40"
                 data-testid="link-back-login-success"
               >
                 Voltar ao login
               </Link>
             </div>
           )}
+        </Reveal>
         </div>
       </main>
 
       <SiteFooter />
     </div>
+    </SiteTemaRaiz>
   );
 }

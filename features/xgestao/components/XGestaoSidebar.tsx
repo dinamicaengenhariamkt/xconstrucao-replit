@@ -21,6 +21,7 @@ import {
 import { Separator } from '@shared/components/ui/separator';
 import { XGESTAO_BOTTOM_NAV_ITEMS, XGESTAO_NAV_ITEMS } from '../constants';
 import { XGESTAO_HOME } from '@features/xgestao/routes';
+import { InstalarAppMenuItem } from '@features/pwa/components/InstalarAppMenuItem';
 
 export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
   const pathname = usePathname();
@@ -109,6 +110,7 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
               </span>
             </Link>
           </SidebarMenuItem>}
+          <InstalarAppMenuItem />
           {XGESTAO_BOTTOM_NAV_ITEMS.map((item) => {
             const active = isActive(item.url);
             return (

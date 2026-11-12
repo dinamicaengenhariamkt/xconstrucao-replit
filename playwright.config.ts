@@ -96,6 +96,8 @@ export default defineConfig({
         "**/xgestao-somente-leitura.browser.spec.ts",
         "**/xgestao-link-publico-mobile.browser.spec.ts",
         "**/xgestao-marketing.browser.spec.ts",
+        "**/pwa-instalar.browser.spec.ts",
+        "**/site-publico.browser.spec.ts",
       ],
       use: { ...devices["Desktop Chrome"] },
     },
