@@ -96,7 +96,7 @@ export function HealthSummary({
     >
       <CardContent className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-foreground">{title}</h3>
           <span className="text-xs text-muted-foreground">{summary.total} obras</span>
         </div>
         <div className="grid grid-cols-3 gap-3">

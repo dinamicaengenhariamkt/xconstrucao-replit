@@ -49,7 +49,7 @@ export function HealthCard({ health, className, luminous = false }: HealthCardPr
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Score</p>
-            <p className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100">{health.score}</p>
+            <p className="text-2xl font-extrabold tabular-nums text-gray-900 dark:text-foreground">{health.score}</p>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -61,8 +61,8 @@ export function HealthCard({ health, className, luminous = false }: HealthCardPr
               return (
                 <div key={key} className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">{FACTOR_LABELS[key]}</span>
-                    <span className="font-bold tabular-nums text-gray-600 dark:text-gray-400">{value}</span>
+                    <span className="font-semibold text-gray-700 dark:text-slate-300">{FACTOR_LABELS[key]}</span>
+                    <span className="font-bold tabular-nums text-gray-600 dark:text-slate-300">{value}</span>
                   </div>
                   <ProgressBar value={value} color={color} size="sm" />
                 </div>
@@ -75,7 +75,7 @@ export function HealthCard({ health, className, luminous = false }: HealthCardPr
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pontos de atenção</p>
               <ul className="space-y-1">
                 {health.reasons.map((r) => (
-                  <li key={r.fator} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <li key={r.fator} className="text-xs text-gray-700 dark:text-slate-300 flex items-center gap-2">
                     <HealthBadge status={r.severidade} size="sm" showLabel={false} />
                     <span>
                       <strong>{FACTOR_LABELS[r.fator]}:</strong> {r.mensagem}

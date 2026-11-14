@@ -29,7 +29,7 @@ const STATUS_STYLE: Record<XgestaoObraStatus, string> = {
   planejamento: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   em_andamento: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   pausada: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  concluida: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  concluida: 'bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300',
 };
 
 const SITUACAO_LABEL: Record<SituacaoObra, string> = {
@@ -128,22 +128,11 @@ function ObrasXgestao() {
                   : 'Obras próprias das empreiteiras com acesso ao xgestão.'}
             </p>
           </div>
-          {/* XG36 — exporta exatamente o que os filtros mostram. */}
-          <Button asChild variant="outline" size="sm" data-testid="xgestao-obras-exportar">
-            <a href={`/api/admin/xgestao/export?${new URLSearchParams({
-              tipo: 'obras',
-              ...(busca.trim() ? { q: busca.trim() } : {}),
-              ...(status ? { status } : {}),
-              ...(situacao ? { situacao } : {}),
-              ...(empreiteiraId ? { empreiteira_id: empreiteiraId } : {}),
-            }).toString()}`}>
-              <RiDownloadLine /> Exportar CSV
-            </a>
-          </Button>
           </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_180px]">
+      {/* PRD 55 (A3) — busca, filtros e "Exportar CSV" numa linha só. */}
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_180px_auto] sm:items-center">
         <div className="relative">
-          <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-muted-foreground" />
           <Input
             value={busca}
             onChange={(event) => aplicar(setBusca)(event.target.value)}
@@ -174,6 +163,18 @@ function ObrasXgestao() {
             <option key={valor} value={valor}>{rotulo}</option>
           ))}
         </select>
+        {/* XG36 — exporta exatamente o que os filtros mostram. */}
+        <Button asChild variant="outline" className="h-10" data-testid="xgestao-obras-exportar">
+          <a href={`/api/admin/xgestao/export?${new URLSearchParams({
+            tipo: 'obras',
+            ...(busca.trim() ? { q: busca.trim() } : {}),
+            ...(status ? { status } : {}),
+            ...(situacao ? { situacao } : {}),
+            ...(empreiteiraId ? { empreiteira_id: empreiteiraId } : {}),
+          }).toString()}`}>
+            <RiDownloadLine /> Exportar CSV
+          </a>
+        </Button>
       </div>
 
       {isError && !data ? (
@@ -183,7 +184,7 @@ function ObrasXgestao() {
           {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-xl" />)}
         </div>
       ) : !data || data.rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800">
+        <div className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-border">
           <p>
             {selecionada && selecionada.obrasGerenciadas === 0 && !busca && !status && !situacao
               ? 'Esta empreiteira ainda não tem obras.'
@@ -197,32 +198,32 @@ function ObrasXgestao() {
         </div>
       ) : (
         <>
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-border dark:bg-card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Obra</th>
-                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Empreiteira</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Prazo</th>
-                    <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Orçamento</th>
-                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Custo real</th>
-                    <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell">Última atividade</th>
+                  <tr className="border-b border-gray-100 bg-gray-50 dark:border-border dark:bg-muted">
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Obra</th>
+                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell dark:text-muted-foreground">Empreiteira</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Prazo</th>
+                    <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell dark:text-muted-foreground">Orçamento</th>
+                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell dark:text-muted-foreground">Custo real</th>
+                    <th className="hidden px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell dark:text-muted-foreground">Última atividade</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                <tbody className="divide-y divide-gray-50 dark:divide-border">
                   {data.rows.map((obra) => (
-                    <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40">
+                    <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-muted">
                       <td className="px-5 py-3">
                         <Link
                           href={`/admin/xgestao/obras/${obra.id}`}
-                          className="font-semibold text-gray-900 hover:text-primary dark:text-white"
+                          className="font-semibold text-gray-900 hover:text-primary dark:text-foreground"
                           data-testid={`xgestao-obra-link-${obra.id}`}
                         >
                           {obra.nome}
                         </Link>
-                        <p className="mt-0.5 text-xs text-gray-400">
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground">
                           {[obra.cidade, obra.uf].filter(Boolean).join(' · ') || 'Sem localização'}
                           {obra.linkPublicoAtivo && (
                             <span className="ml-2 inline-flex items-center gap-1 text-primary">
@@ -231,10 +232,10 @@ function ObrasXgestao() {
                           )}
                         </p>
                         {/* Reinjeta no mobile o que as colunas escondidas mostram. */}
-                        <p className="mt-0.5 text-xs text-gray-400 md:hidden">{obra.empreiteira}</p>
-                        <p className="mt-0.5 text-xs text-gray-400 sm:hidden">{formatCurrency(obra.valorTotal)}</p>
+                        <p className="mt-0.5 text-xs text-gray-400 md:hidden dark:text-muted-foreground">{obra.empreiteira}</p>
+                        <p className="mt-0.5 text-xs text-gray-400 sm:hidden dark:text-muted-foreground">{formatCurrency(obra.valorTotal)}</p>
                       </td>
-                      <td className="hidden px-4 py-3 text-gray-600 dark:text-gray-300 md:table-cell">{obra.empreiteira}</td>
+                      <td className="hidden px-4 py-3 text-gray-600 dark:text-slate-300 md:table-cell">{obra.empreiteira}</td>
                       <td className="px-4 py-3">
                         <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', STATUS_STYLE[obra.status])}>
                           {STATUS_LABEL[obra.status]}
@@ -249,13 +250,13 @@ function ObrasXgestao() {
                       >
                         {obra.dataPrevisao ? formatDate(obra.dataPrevisao) : '—'}
                       </td>
-                      <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-gray-300 sm:table-cell">
+                      <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-slate-300 sm:table-cell">
                         {formatCurrency(obra.valorTotal)}
                       </td>
-                      <td className="hidden px-4 py-3 text-right text-gray-600 dark:text-gray-300 lg:table-cell">
+                      <td className="hidden px-4 py-3 text-right text-gray-600 dark:text-slate-300 lg:table-cell">
                         {formatCurrency(obra.valorPago)}
                       </td>
-                      <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-gray-300 xl:table-cell">
+                      <td className="hidden px-5 py-3 text-right text-gray-600 dark:text-slate-300 xl:table-cell">
                         {obra.ultimaAtividadeEm ? formatDate(obra.ultimaAtividadeEm) : '—'}
                       </td>
                     </tr>

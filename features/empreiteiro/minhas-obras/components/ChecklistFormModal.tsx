@@ -154,7 +154,7 @@ export function ChecklistFormModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-lg max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               {isCompleto ? (
@@ -166,10 +166,10 @@ export function ChecklistFormModal({
               )}
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-foreground">
                 {tituloModal}
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 dark:text-muted-foreground">
                 {descricaoModal}
               </DialogDescription>
             </div>
@@ -188,7 +188,7 @@ export function ChecklistFormModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Nome <span className="text-red-500">*</span>
+                        Nome <span className="text-red-500 dark:text-red-400">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -209,7 +209,7 @@ export function ChecklistFormModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Tipo <span className="text-red-500">*</span>
+                        Tipo <span className="text-red-500 dark:text-red-400">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="flex flex-col gap-2">
@@ -220,7 +220,7 @@ export function ChecklistFormModal({
                                 'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer border-2 transition-all',
                                 field.value === opt.value
                                   ? opt.color + ' border-current'
-                                  : 'border-transparent bg-gray-50 dark:bg-gray-800 hover:border-gray-200',
+                                  : 'border-transparent bg-gray-50 dark:bg-muted hover:border-gray-200 dark:hover:border-border',
                                 isCompleto && 'cursor-default pointer-events-none'
                               )}
                             >
@@ -234,7 +234,7 @@ export function ChecklistFormModal({
                               <opt.Icon className="text-lg" />
                               <div>
                                 <p className="text-sm font-semibold">{opt.label}</p>
-                                <p className="text-xs text-gray-400">{opt.descricao}</p>
+                                <p className="text-xs text-gray-400 dark:text-muted-foreground">{opt.descricao}</p>
                               </div>
                             </label>
                           ))}
@@ -259,7 +259,7 @@ export function ChecklistFormModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Recorrência <span className="text-red-500">*</span>
+                        Recorrência <span className="text-red-500 dark:text-red-400">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="flex flex-col gap-2">
@@ -270,7 +270,7 @@ export function ChecklistFormModal({
                                 'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer border-2 transition-all',
                                 field.value === opt.value
                                   ? 'border-primary bg-primary/5 text-primary'
-                                  : 'border-transparent bg-gray-50 dark:bg-gray-800 hover:border-gray-200',
+                                  : 'border-transparent bg-gray-50 dark:bg-muted hover:border-gray-200 dark:hover:border-border',
                                 isCompleto && 'cursor-default pointer-events-none',
                               )}
                               data-testid={`recorrencia-${opt.value}`}
@@ -285,7 +285,7 @@ export function ChecklistFormModal({
                               <IconEvent className="text-lg" />
                               <div>
                                 <p className="text-sm font-semibold">{opt.label}</p>
-                                <p className="text-xs text-gray-400">{opt.descricao}</p>
+                                <p className="text-xs text-gray-400 dark:text-muted-foreground">{opt.descricao}</p>
                               </div>
                             </label>
                           ))}
@@ -309,7 +309,7 @@ export function ChecklistFormModal({
                             value={field.value ?? 1}
                             onChange={(e) => field.onChange(Number(e.target.value))}
                             disabled={isCompleto}
-                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-border bg-white dark:bg-card text-sm"
                             data-testid="recorrencia-dia-semana"
                           >
                             {DIAS_SEMANA.map((d) => (
@@ -333,7 +333,7 @@ export function ChecklistFormModal({
                     <FormItem>
                       <FormLabel>
                         Descrição{' '}
-                        <span className="text-xs text-gray-400 font-normal">(opcional)</span>
+                        <span className="text-xs text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -350,12 +350,12 @@ export function ChecklistFormModal({
                 {/* Itens */}
                 <div>
                   <FormLabel className="mb-3 block">
-                    Itens de verificação <span className="text-red-500">*</span>
+                    Itens de verificação <span className="text-red-500 dark:text-red-400">*</span>
                   </FormLabel>
                   <div className="flex flex-col gap-2">
                     {fields.map((field, index) => (
                       <div key={field.id} className="flex items-center gap-2">
-                        <IconDragIndicator className="text-sm text-gray-400" />
+                        <IconDragIndicator className="text-sm text-gray-400 dark:text-muted-foreground" />
                         <FormField
                           control={form.control}
                           name={`itens.${index}.titulo`}
@@ -384,7 +384,7 @@ export function ChecklistFormModal({
                           <button
                             type="button"
                             onClick={() => remove(index)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer rounded"
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors cursor-pointer rounded dark:text-muted-foreground dark:hover:text-red-400"
                             aria-label="Remover item"
                           >
                             <IconClose className="text-lg" />
@@ -394,7 +394,7 @@ export function ChecklistFormModal({
                     ))}
                   </div>
                   {form.formState.errors.itens?.root && (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-sm text-red-500 mt-1 dark:text-red-400">
                       {form.formState.errors.itens.root.message}
                     </p>
                   )}
@@ -405,7 +405,7 @@ export function ChecklistFormModal({
                         append({ titulo: '' });
                         setTimeout(() => novoItemRef.current?.focus(), 50);
                       }}
-                      className="mt-3 w-full py-2 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-500 hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                      className="mt-3 w-full py-2 border-2 border-dashed border-gray-200 dark:border-border rounded-lg text-xs font-medium text-gray-500 hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1 cursor-pointer dark:text-muted-foreground"
                     >
                       <IconAdd className="text-sm" />
                       Adicionar item
@@ -418,7 +418,7 @@ export function ChecklistFormModal({
         </ScrollArea>
 
         {/* Footer */}
-        <DialogFooter className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-row justify-end gap-3">
+        <DialogFooter className="p-6 border-t border-gray-100 dark:border-border shrink-0 flex flex-row justify-end gap-3">
           <Button type="button" variant="ghost" onClick={handleClose}>
             {isCompleto ? 'Fechar' : 'Cancelar'}
           </Button>

@@ -16,9 +16,9 @@ import { useObraStorage, formatarMB } from '../hooks/use-obra-storage';
 
 /** Avisa antes de barrar: âmbar a partir de 70%, vermelho a partir de 90%. */
 function corDoNivel(percentual: number) {
-  if (percentual >= 90) return { barra: 'bg-red-500', texto: 'text-red-600' };
-  if (percentual >= 70) return { barra: 'bg-amber-500', texto: 'text-amber-600' };
-  return { barra: 'bg-success', texto: 'text-gray-500' };
+  if (percentual >= 90) return { barra: 'bg-red-500', texto: 'text-red-600 dark:text-red-300' };
+  if (percentual >= 70) return { barra: 'bg-amber-500', texto: 'text-amber-600 dark:text-amber-300' };
+  return { barra: 'bg-success', texto: 'text-gray-500 dark:text-muted-foreground' };
 }
 
 export function StorageBar({ obraId }: { obraId: string }) {
@@ -31,18 +31,18 @@ export function StorageBar({ obraId }: { obraId: string }) {
 
   return (
     <div
-      className="mb-5 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/40"
+      className="mb-5 p-4 rounded-xl border border-gray-100 dark:border-border bg-gray-50 dark:bg-muted"
       data-testid="storage-bar"
     >
       <div className="flex items-center justify-between gap-3 mb-2">
-        <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
           <IconFolderOpen className="text-sm" />
           Armazenamento da obra
         </span>
         <span className={cn('text-xs font-semibold tabular-nums', cor.texto)}>
           {formatarMB(data.usadoBytes)} de {formatarMB(data.limiteBytes)}
           {data.arquivos > 0 && (
-            <span className="text-gray-400 font-normal">
+            <span className="text-gray-400 font-normal dark:text-muted-foreground">
               {' · '}
               {data.arquivos} {data.arquivos === 1 ? 'arquivo' : 'arquivos'}
             </span>
@@ -51,7 +51,7 @@ export function StorageBar({ obraId }: { obraId: string }) {
       </div>
 
       <div
-        className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+        className="h-2 w-full bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden"
         role="progressbar"
         aria-valuenow={data.percentual}
         aria-valuemin={0}

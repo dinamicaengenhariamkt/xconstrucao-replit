@@ -208,7 +208,7 @@ export function EnviarDocumentoModal({
                 'flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold border transition-colors',
                 modo === m
                   ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800',
+                  : 'border-gray-200 dark:border-border text-gray-500 hover:bg-gray-50 dark:hover:bg-muted dark:text-muted-foreground',
               )}
               data-testid={`modo-${m}`}
             >
@@ -303,7 +303,7 @@ export function EnviarDocumentoModal({
             />
 
             {modo === 'arquivo' && (
-              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center">
+              <div className="rounded-lg border border-dashed border-gray-300 dark:border-border p-4 text-center">
                 <FileUploader
                   kind="obra_anexo"
                   accept={ACCEPT}

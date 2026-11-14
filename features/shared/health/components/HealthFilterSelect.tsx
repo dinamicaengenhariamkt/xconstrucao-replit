@@ -46,7 +46,7 @@ export function HealthFilterSelect({
 
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+      <label className="text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
         {label}
       </label>
       <Select value={value ?? ALL_VALUE} onValueChange={handleChange}>

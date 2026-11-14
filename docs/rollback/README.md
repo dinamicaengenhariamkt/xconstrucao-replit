@@ -46,3 +46,23 @@ Pedido do Ramon depois de ver no aparelho: tirar as etiquetas com bolinha acima 
 - Voltar tudo ao visual original (antes das duas rodadas): rode primeiro o da rodada 2 e depois `tar xzf docs/rollback/visual-site-antes-2026-11-11.tar.gz`. As telas de conta só existem no pacote da rodada 2.
 
 Arquivos novos da rodada 2 (podem ficar sem uso): `features/landing/components/SiteHeroPagina.tsx`, `features/legal/components/IndiceDocumento.tsx`.
+
+## Painel do xgestão, 13/11/2026 (tema claro/escuro + acabamento leve, PRD 55)
+
+Pedido do Ramon: aplicar o PRD 55 completo (tema escuro do painel do empreiteiro, do admin xgestão e do link público; ajustes leves do claro).
+
+`painel-tema-antes-2026-11-13.tar.gz` guarda os 97 arquivos alterados como estavam antes (já com a correção do menu do celular, que continua valendo ao voltar).
+
+### Voltar tudo
+
+```bash
+tar xzf docs/rollback/painel-tema-antes-2026-11-13.tar.gz
+tar xzf docs/rollback/painel-tema-antes-2026-11-13-selos.tar.gz
+rm app/admin/xgestao/layout.tsx
+```
+
+O `rm` é necessário: esse layout é novo e liga o tema no admin. Os demais arquivos novos podem ficar sem uso: `features/xgestao/tema/` (4 arquivos), `tests/unit/painel-tema.test.ts`, `tests/e2e/helpers-tema-painel.ts`, `tests/e2e/tema-painel.browser.spec.ts` e `tests/e2e/tema-painel-escuro-forcado.browser.spec.ts` (para tirar os testes, apague os dois specs e as duas linhas deles no `playwright.config.ts`).
+
+### Desligar só o botão de tema (manter tudo claro)
+
+Apagar a linha `<SeletorTemaMenu />` em `features/xgestao/components/XGestaoTopbar.tsx` e o bloco `isAdminXgestaoPath(pathname) && <SeletorTemaMenu />` em `features/admin/components/AdminTopbar.tsx`, e trocar `PREFERENCIA_PADRAO` para `'claro'` em `features/xgestao/tema/painel-tema.ts`. O escuro forçado do navegador continua desligado (fica claro e com a logo visível).

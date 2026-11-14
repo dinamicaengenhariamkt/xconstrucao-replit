@@ -6,6 +6,7 @@ import { semaforoFinanceiro, semaforoPrazo } from '@features/xgestao/lib/indicad
 import type { HealthStatus } from '@features/shared/health';
 import type { MinhaObraCardProps } from '../types';
 import { formatCurrency } from '@shared/lib/formatters';
+import { STATUS_BADGE_CLASSES_XGESTAO } from '@shared/constants/status';
 
 export function MinhaObraCard({
   obra,
@@ -19,6 +20,8 @@ export function MinhaObraCard({
       endereco={obra.endereco}
       imagemUrl={obra.imagemUrl}
       status={obra.status}
+      // PRD 55 — no xgestão o selo usa o tom com contraste AA.
+      badgeClasses={obra.isObraPropria ? STATUS_BADGE_CLASSES_XGESTAO : undefined}
       progresso={obra.progresso}
       /**
        * XG29 — na obra própria o percentual de execução dá lugar aos dois sinais

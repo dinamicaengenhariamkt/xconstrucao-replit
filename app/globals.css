@@ -275,6 +275,44 @@ input[type="radio"],
   --primary-foreground: 0 0% 98%;
 }
 
+/*
+ * PRD 55 — painel do xgestão no escuro: mesma paleta do site (#1C1F22, #2A2D30,
+ * #F4F5F5, slate-400). Só vale com `.xg-painel.dark` no <body>, posto pelo
+ * `PainelTemaRaiz`; o claro e o resto do app não mudam.
+ */
+.xg-painel.dark {
+  --background: 210 9% 12%;
+  --foreground: 180 6% 96%;
+  --border: 210 4% 25%;
+  --card: 210 7% 18%;
+  --card-foreground: 180 6% 96%;
+  --card-border: 210 4% 25%;
+  --popover: 210 7% 18%;
+  --popover-foreground: 180 6% 96%;
+  --popover-border: 210 4% 25%;
+  --primary: 180 6% 96%;
+  --primary-foreground: 210 9% 12%;
+  --secondary: 210 6% 23%;
+  --secondary-foreground: 180 6% 96%;
+  --muted: 210 6% 22%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 210 6% 23%;
+  --accent-foreground: 180 6% 96%;
+  --input: 210 4% 30%;
+  --ring: 215 20% 65%;
+  --sidebar: 210 9% 12%;
+  --sidebar-foreground: 180 6% 96%;
+  --sidebar-border: 210 4% 22%;
+  --sidebar-primary: 180 6% 96%;
+  --sidebar-primary-foreground: 210 9% 12%;
+  --sidebar-accent: 210 7% 18%;
+  --sidebar-accent-foreground: 180 6% 96%;
+  --sidebar-ring: 0 0% 80%;
+  /* Vermelho um pouco mais claro: "Sair" e erros passam no contraste AA sobre o fundo escuro. */
+  --destructive: 0 84% 71%;
+  --destructive-foreground: 210 9% 12%;
+}
+
 @utility hover-elevate {
   position: relative;
   z-index: 0;
@@ -403,6 +441,14 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* Degradê interno sutil cinza→branco→cinza para cards de seção (efeito "papel suave"). */
+/* PRD 55 — no escuro do painel a borda luminosa fica discreta (a branca 85% virava um aro aceso). */
+.xg-painel.dark .luminous-card::before {
+  background: linear-gradient(225deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0) 100%);
+}
+.xg-painel.dark .luminous-section::before {
+  background: linear-gradient(225deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 100%);
+}
+
 .luminous-section {
   background-image: linear-gradient(
     135deg,

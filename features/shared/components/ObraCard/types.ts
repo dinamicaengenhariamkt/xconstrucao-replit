@@ -54,4 +54,9 @@ export interface ObraCardProps {
    * produto é o card que o envolve. Ausente → a barra de progresso de sempre.
    */
   indicadores?: React.ReactNode;
+  /**
+   * Classes do selo de status por status. Ausente → `STATUS_BADGE_CLASSES`
+   * (marketplace). O xgestão passa a versão com contraste AA.
+   */
+  badgeClasses?: Record<string, string>;
 }

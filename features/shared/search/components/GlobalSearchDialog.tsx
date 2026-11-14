@@ -171,7 +171,7 @@ function SearchHitItem<TCategory extends string>({
         <Icon className="w-4 h-4" />
       </span>
       <div className="flex flex-col min-w-0 flex-1">
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+        <span className="text-sm font-medium text-gray-900 dark:text-foreground truncate">
           {hit.title}
         </span>
         {hit.subtitle && (

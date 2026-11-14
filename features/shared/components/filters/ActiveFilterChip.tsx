@@ -28,7 +28,7 @@ export function ActiveFilterChip({
     <span
       className={cn(
         'inline-flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border text-xs font-semibold',
-        className ?? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700'
+        className ?? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-muted dark:text-slate-300 dark:border-border'
       )}
       data-testid={testId}
     >

@@ -34,7 +34,7 @@ export function TimelineSection({ obraId, fallbackEvents = [], ocultarFiltroTare
 
   return (
     <div
-      className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+      className="bg-white dark:bg-card p-8 rounded-2xl border border-gray-100 dark:border-border shadow-sm"
       data-tour="aba-timeline"
     >
       <TimelineDisplay

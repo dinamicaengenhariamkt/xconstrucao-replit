@@ -54,7 +54,7 @@ const STATUS_LABEL: Record<EtapaStatus, string> = {
 };
 
 const STATUS_BADGE: Record<EtapaStatus, string> = {
-  pendente: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  pendente: 'bg-gray-100 text-gray-700 dark:bg-muted dark:text-slate-300',
   em_andamento: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   bloqueado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   concluido: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
@@ -340,8 +340,8 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
           /* XG15 — o empty state dizia "defina o cronograma", mandando para a aba
              errada, e não explicava o que é uma etapa. Etapa é o conceito-raiz:
              tarefa pertence a ela e o cronograma a desenha. */
-          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-gray-700" data-testid="empty-etapas">
-            <p className="font-semibold text-gray-700 dark:text-gray-200">
+          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-border" data-testid="empty-etapas">
+            <p className="font-semibold text-gray-700 dark:text-slate-300">
               Nenhuma etapa cadastrada ainda
             </p>
             {canEditScope ? (
@@ -387,7 +387,7 @@ export function EtapasJ06Card({ obraId, canWrite, canEditScope, data, isLoading:
                         {formatarDiaMes(e.dataInicio)} até {formatarDiaMes(e.prazo)}
                       </p>
                     ) : (
-                      <p className="mt-0.5 text-xs text-amber-600" data-testid={`etapa-sem-datas-${e.id}`}>
+                      <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-300" data-testid={`etapa-sem-datas-${e.id}`}>
                         Sem datas, não aparece no cronograma
                       </p>
                     )}

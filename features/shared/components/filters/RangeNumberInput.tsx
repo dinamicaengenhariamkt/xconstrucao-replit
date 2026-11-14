@@ -29,7 +29,7 @@ export function RangeNumberInput({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+      <p className="text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
         {label}
       </p>
       <div className="grid grid-cols-2 gap-2">

@@ -265,12 +265,12 @@ export function MinhasObrasView({ basePath, xgestao = false }: MinhasObrasViewPr
             </AdvancedFiltersPopover>
 
             <div className="relative w-full sm:ml-auto sm:max-w-md sm:flex-1">
-              <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+              <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-muted-foreground" />
               <Input
                 placeholder="Buscar por título ou endereço..."
                 value={searchQuery}
                 onChange={(event) => onFilterChange(setSearchQuery)(event.target.value)}
-                className="border-gray-200 bg-white pl-9 dark:border-gray-700 dark:bg-gray-900"
+                className="border-gray-200 bg-white pl-9 dark:border-border dark:bg-background"
                 data-testid="input-search-obras"
               />
             </div>

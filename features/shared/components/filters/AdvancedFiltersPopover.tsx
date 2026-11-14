@@ -41,14 +41,14 @@ export function AdvancedFiltersPopover({
             'inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border text-sm font-semibold transition-colors cursor-pointer',
             hasActive
               ? 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/15'
-              : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+              : 'bg-white dark:bg-card text-gray-700 dark:text-slate-300 border-gray-200 dark:border-border hover:bg-gray-50 dark:hover:bg-muted'
           )}
           data-testid="advanced-filters-trigger"
         >
           <RiFilter3Line className="w-4 h-4" />
           <span>{label}</span>
           {hasActive && (
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold tabular-nums">
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white dark:text-primary-foreground text-[10px] font-bold tabular-nums">
               {activeCount}
             </span>
           )}
@@ -63,7 +63,7 @@ export function AdvancedFiltersPopover({
         )}
       >
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100">{label}</h4>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-foreground">{label}</h4>
           {onClearAll && hasActive && (
             <button
               type="button"

@@ -187,14 +187,14 @@ export function AditivosCard({ obraId, podeLancar = true, moedaXgestao = false }
 
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-gray-500 py-4 text-center">Carregando…</p>
+            <p className="text-sm text-gray-500 py-4 text-center dark:text-muted-foreground">Carregando…</p>
           ) : aditivos.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">
+            <p className="text-sm text-gray-500 py-4 text-center dark:text-muted-foreground">
               Nenhum aditivo lançado.
             </p>
           ) : (
             <>
-              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              <ul className="divide-y divide-gray-100 dark:divide-border">
                 {aditivos.map((a) => {
                   const valor = Number(a.valor);
                   const supressao = valor < 0;
@@ -206,13 +206,13 @@ export function AditivosCard({ obraId, podeLancar = true, moedaXgestao = false }
                     >
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{a.descricao}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{formatarDataBr(a.data)}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground">{formatarDataBr(a.data)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span
                           className={cn(
                             'font-semibold text-sm tabular-nums',
-                            supressao ? 'text-amber-600' : 'text-purple-600',
+                            supressao ? 'text-amber-600 dark:text-amber-300' : 'text-purple-600 dark:text-purple-300',
                           )}
                         >
                           {supressao ? '−' : '+'} {formatCurrency(Math.abs(valor))}
@@ -221,7 +221,7 @@ export function AditivosCard({ obraId, podeLancar = true, moedaXgestao = false }
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300"
                             onClick={() => setParaExcluir(a)}
                             aria-label={`Excluir ${a.descricao}`}
                           >
@@ -233,11 +233,11 @@ export function AditivosCard({ obraId, podeLancar = true, moedaXgestao = false }
                   );
                 })}
               </ul>
-              <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
-                <span className="text-xs text-gray-500">
+              <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-border">
+                <span className="text-xs text-gray-500 dark:text-muted-foreground">
                   {aditivos.length} {aditivos.length === 1 ? 'aditivo' : 'aditivos'}
                 </span>
-                <span className="text-sm font-bold tabular-nums text-purple-600" data-testid="total-aditivos">
+                <span className="text-sm font-bold tabular-nums text-purple-600 dark:text-purple-300" data-testid="total-aditivos">
                   {formatCurrency(total)}
                 </span>
               </div>

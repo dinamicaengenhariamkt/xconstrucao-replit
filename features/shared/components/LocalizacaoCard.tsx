@@ -60,20 +60,20 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
   return (
     <div
       className={cn(
-        'bg-white dark:bg-gray-900 rounded-2xl overflow-hidden',
+        'bg-white dark:bg-card rounded-2xl overflow-hidden',
         luminous
           ? 'luminous-section'
-          : 'border border-gray-100 dark:border-gray-800 shadow-sm',
+          : 'border border-gray-100 dark:border-border shadow-sm',
       )}
       data-tour="localizacao-obra"
     >
-      <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+      <div className="px-6 py-5 border-b border-gray-100 dark:border-border flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
           <IconLocationOn className="text-primary" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">Localização da Obra</h2>
-          <p className="text-xs text-gray-500">Endereço completo do terreno</p>
+          <h2 className="text-base font-bold text-gray-900 dark:text-foreground">Localização da Obra</h2>
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">Endereço completo do terreno</p>
         </div>
       </div>
 
@@ -93,29 +93,29 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           mapa ao lado): o texto fica curto o bastante para ler de relance, e
           os botões não viram barras atravessando a tela. */}
         <div className="flex flex-col gap-4 max-w-md">
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+          <div className="p-4 bg-gray-50 dark:bg-muted rounded-xl border border-gray-100 dark:border-border">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
                 <IconLocationOn className="text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1">Endereço Completo</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{ruaComNumero}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1 dark:text-muted-foreground">Endereço Completo</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-foreground">{ruaComNumero}</p>
                 {localizacao.complemento && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.complemento}</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{localizacao.complemento}</p>
                 )}
                 {localizacao.bairro && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{localizacao.bairro}</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{localizacao.bairro}</p>
                 )}
                 {/* XG21 — sem o guard, uma obra sem cidade mostrava só " - ".
                     Os adapters mandam '' quando não há dado. */}
                 {cidadeEstado ? (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{cidadeEstado}</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">{cidadeEstado}</p>
                 ) : (
                   <p className="text-sm italic text-amber-600 dark:text-amber-400">Cidade não informada</p>
                 )}
                 {localizacao.cep && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">CEP: {localizacao.cep}</p>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">CEP: {localizacao.cep}</p>
                 )}
               </div>
             </div>
@@ -123,7 +123,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
 
           <button
             onClick={handleOpenMaps}
-            className="w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors cursor-pointer"
+            className="w-full py-3 bg-primary text-white dark:text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors cursor-pointer"
           >
             <IconOpenInNew />
             Abrir no Google Maps
@@ -132,7 +132,7 @@ export function LocalizacaoCard({ localizacao, luminous = false, onEditar }: Loc
           {onEditar && (
             <button
               onClick={onEditar}
-              className="w-full py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+              className="w-full py-3 border border-gray-200 dark:border-border text-gray-700 dark:text-slate-300 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
               data-testid="btn-editar-localizacao"
             >
               <IconEdit />

@@ -21,13 +21,13 @@ export function ProgressBar({ value, color = 'primary', size = 'sm', showLabel =
   const clampedValue = Math.min(100, Math.max(0, value));
   return (
     <div className="flex items-center gap-2">
-      <div className={cn('flex-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden', size === 'sm' ? 'h-1.5' : 'h-2')}>
+      <div className={cn('flex-1 rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden', size === 'sm' ? 'h-1.5' : 'h-2')}>
         <div
           className={cn('h-full rounded-full transition-all duration-500', COLOR_MAP[color])}
           style={{ width: `${clampedValue}%` }}
         />
       </div>
-      {showLabel && <span className="text-xs font-bold text-gray-600 dark:text-gray-400 tabular-nums">{clampedValue}%</span>}
+      {showLabel && <span className="text-xs font-bold text-gray-600 dark:text-slate-300 tabular-nums">{clampedValue}%</span>}
     </div>
   );
 }

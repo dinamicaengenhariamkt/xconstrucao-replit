@@ -33,9 +33,9 @@ const PERMISSAO_OPTIONS: {
     label: 'Visualizar',
     descricao: 'Pode ver informações, documentos e relatórios da obra',
     Icon: IconVisibility,
-    color: 'text-gray-600 dark:text-gray-400',
-    bg: 'bg-gray-50 dark:bg-gray-800/50',
-    border: 'border-gray-200 dark:border-gray-700',
+    color: 'text-gray-600 dark:text-slate-300',
+    bg: 'bg-gray-50 dark:bg-muted',
+    border: 'border-gray-200 dark:border-border',
   },
   {
     value: 'editar',
@@ -95,17 +95,17 @@ export function PermissoesMembroModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-sm p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-5 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               <IconKey className="text-primary text-xl" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                 Permissões de acesso
               </DialogTitle>
               {membro && (
-                <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                   {membro.nome}
                 </DialogDescription>
               )}
@@ -126,17 +126,17 @@ export function PermissoesMembroModal({
                   'w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
                   isSelected
                     ? cn(opt.bg, opt.border, 'ring-1 ring-inset', opt.border)
-                    : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700',
+                    : 'bg-white dark:bg-card border-gray-100 dark:border-border hover:border-gray-200 dark:hover:border-border',
                 )}
               >
-                <div className={cn('p-1.5 rounded-lg', isSelected ? opt.bg : 'bg-gray-100 dark:bg-gray-800')}>
-                  <opt.Icon className={cn('text-base', isSelected ? opt.color : 'text-gray-400')} />
+                <div className={cn('p-1.5 rounded-lg', isSelected ? opt.bg : 'bg-gray-100 dark:bg-muted')}>
+                  <opt.Icon className={cn('text-base', isSelected ? opt.color : 'text-gray-400 dark:text-muted-foreground')} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm font-bold', isSelected ? opt.color : 'text-gray-700 dark:text-gray-300')}>
+                  <p className={cn('text-sm font-bold', isSelected ? opt.color : 'text-gray-700 dark:text-slate-300')}>
                     {opt.label}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground leading-tight mt-0.5">
                     {opt.descricao}
                   </p>
                 </div>

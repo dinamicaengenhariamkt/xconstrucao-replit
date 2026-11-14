@@ -71,16 +71,16 @@ export function EditarEtiquetaModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-xs p-0 flex flex-col gap-0 overflow-hidden">
-        <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-5 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               <IconLabel className="text-primary text-xl" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                 Editar etiqueta
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 mt-0.5">
+              <DialogDescription className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground">
                 Altere ou remova a etiqueta desta foto
               </DialogDescription>
             </div>

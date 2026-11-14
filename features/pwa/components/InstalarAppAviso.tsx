@@ -52,7 +52,7 @@ export function InstalarAppAviso() {
   return (
     <>
       <div
-        className="flex items-center justify-between gap-3 border-b border-primary/10 bg-primary/5 px-4 py-2 text-xs text-gray-700 dark:text-gray-200 sm:text-sm"
+        className="flex items-center justify-between gap-3 border-b border-primary/10 bg-primary/5 px-4 py-2 text-xs text-gray-700 dark:text-slate-300 sm:text-sm"
         data-testid="xgestao-aviso-instalar-app"
       >
         <span className="flex min-w-0 items-center gap-2">

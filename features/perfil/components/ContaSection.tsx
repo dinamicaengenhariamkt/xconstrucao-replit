@@ -27,7 +27,7 @@ import {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4 dark:text-muted-foreground">
       {children}
     </p>
   );
@@ -131,7 +131,7 @@ export function ContaSection({ emailAtual }: { emailAtual: string | null | undef
   return (
     <div className="flex flex-col gap-6">
       {/* Trocar email */}
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+      <Card className="rounded-xl border border-gray-100 dark:border-border">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Email de acesso</SectionTitle>
         </CardHeader>
@@ -174,7 +174,7 @@ export function ContaSection({ emailAtual }: { emailAtual: string | null | undef
       </Card>
 
       {/* Exportar dados (LGPD) */}
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+      <Card className="rounded-xl border border-gray-100 dark:border-border">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Meus dados (LGPD)</SectionTitle>
         </CardHeader>
@@ -203,7 +203,7 @@ export function ContaSection({ emailAtual }: { emailAtual: string | null | undef
         </CardHeader>
         <CardContent className="px-6 pb-6 pt-0 flex flex-col gap-4">
           <div className="flex items-start gap-2">
-            <RiAlertLine className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+            <RiAlertLine className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0 dark:text-red-400" />
             <p className="text-sm text-muted-foreground">
               Desativar sua conta encerra seu acesso imediatamente. A reativação só pode ser feita pela administração.
             </p>

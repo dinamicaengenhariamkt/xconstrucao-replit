@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from '@shared/components/ui/alert-dialog';
 import { formatCurrency } from '@shared/lib/formatters';
+import { corMembroLegivel } from '@shared/constants/status';
 import { AdicionarMembroModal } from './AdicionarMembroModal';
 import { PermissoesMembroModal } from './PermissoesMembroModal';
 import type { MembroEquipe, MinhaObraDetalhe } from '../types';
@@ -44,14 +45,14 @@ interface ModalState {
 // ─── Theme map ────────────────────────────────────────────────────────────────
 
 const TIPO_THEME: Record<MembroEquipe['tipo'], { bg: string; border: string; papelColor: string }> = {
-  contratante: { bg: 'bg-blue-50/50 dark:bg-blue-900/10', border: 'border-blue-100 dark:border-blue-800', papelColor: 'text-blue-600' },
+  contratante: { bg: 'bg-blue-50/50 dark:bg-blue-900/10', border: 'border-blue-100 dark:border-blue-800', papelColor: 'text-blue-600 dark:text-blue-300' },
   engenheiro:  { bg: 'bg-primary/5 dark:bg-primary/10',   border: 'border-primary/20',                    papelColor: 'text-primary' },
-  mestre:      { bg: 'bg-gray-50 dark:bg-gray-800/50',    border: 'border-gray-100 dark:border-gray-700', papelColor: 'text-gray-500' },
-  equipe:      { bg: 'bg-gray-50 dark:bg-gray-800/50',    border: 'border-gray-100 dark:border-gray-700', papelColor: 'text-gray-500' },
+  mestre:      { bg: 'bg-gray-50 dark:bg-muted',    border: 'border-gray-100 dark:border-border', papelColor: 'text-gray-500 dark:text-muted-foreground' },
+  equipe:      { bg: 'bg-gray-50 dark:bg-muted',    border: 'border-gray-100 dark:border-border', papelColor: 'text-gray-500 dark:text-muted-foreground' },
 };
 
 const PERMISSAO_BADGE: Record<NonNullable<MembroEquipe['permissao']>, { label: string; className: string }> = {
-  visualizar: { label: 'Visualizar', className: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' },
+  visualizar: { label: 'Visualizar', className: 'bg-gray-100 dark:bg-muted text-gray-600 dark:text-slate-300' },
   editar:     { label: 'Editar',     className: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
   admin:      { label: 'Admin',      className: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' },
 };
@@ -66,6 +67,8 @@ interface MembroCardProps {
   onPermissoes: (m: MembroEquipe) => void;
   onToggleAtivo: (m: MembroEquipe) => void;
   onRemover: (m: MembroEquipe) => void;
+  /** PRD 55 — xgestão: cor do avatar um tom mais escura (iniciais legíveis). */
+  corLegivel?: boolean;
 }
 
 function MembroCard({
@@ -76,6 +79,7 @@ function MembroCard({
   onPermissoes,
   onToggleAtivo,
   onRemover,
+  corLegivel = false,
 }: MembroCardProps) {
   const theme = TIPO_THEME[membro.tipo];
   const permBadge = membro.permissao ? PERMISSAO_BADGE[membro.permissao] : null;
@@ -89,7 +93,7 @@ function MembroCard({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-muted transition-colors cursor-pointer dark:text-muted-foreground dark:hover:text-slate-300"
                 aria-label="Ações"
               >
                 <IconMoreVert className="text-base" />
@@ -134,12 +138,12 @@ function MembroCard({
 
       {/* Avatar + Info */}
       <div className="flex items-center gap-4 mb-3 pr-8">
-        <div className={cn('w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0', membro.cor)}>
+        <div aria-hidden="true" className={cn('w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0', corLegivel ? corMembroLegivel(membro.cor) : membro.cor)}>
           {membro.iniciais}
         </div>
         <div className="flex-1 min-w-0">
           <p className={cn('text-xs font-medium uppercase tracking-wider', theme.papelColor)}>{membro.papel}</p>
-          <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{membro.nome}</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-foreground truncate">{membro.nome}</p>
         </div>
       </div>
 
@@ -151,7 +155,7 @@ function MembroCard({
             Ativo
           </span>
         ) : (
-          <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded flex items-center gap-1">
+          <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-muted px-2 py-0.5 rounded flex items-center gap-1 dark:text-muted-foreground">
             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
             Inativo
           </span>
@@ -165,49 +169,49 @@ function MembroCard({
       </div>
 
       {/* Contact info */}
-      <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+      <div className="space-y-1.5 text-xs text-gray-600 dark:text-slate-300">
         {membro.registro && (
           <div className="flex items-center gap-2">
-            <IconEngineering className="text-gray-400 text-sm" />
+            <IconEngineering className="text-gray-400 text-sm dark:text-muted-foreground" />
             {membro.registro}
           </div>
         )}
         {membro.telefone && (
           <div className="flex items-center gap-2">
-            <IconCall className="text-gray-400 text-sm" />
+            <IconCall className="text-gray-400 text-sm dark:text-muted-foreground" />
             {membro.telefone}
           </div>
         )}
         {membro.email && (
           <div className="flex items-center gap-2">
-            <IconMail className="text-gray-400 text-sm" />
+            <IconMail className="text-gray-400 text-sm dark:text-muted-foreground" />
             <span className="truncate">{membro.email}</span>
           </div>
         )}
         {membro.membros && (
           <div className="flex items-center gap-2">
-            <IconGroup className="text-gray-400 text-sm" />
+            <IconGroup className="text-gray-400 text-sm dark:text-muted-foreground" />
             <span className="truncate">{membro.membros}</span>
           </div>
         )}
         {/* XG22 — acordo com o prestador: PIX, valor e contrato. */}
         {membro.pixChave && (
           <div className="flex items-center gap-2" data-testid="membro-pix">
-            <IconPayments className="text-gray-400 text-sm" />
+            <IconPayments className="text-gray-400 text-sm dark:text-muted-foreground" />
             <span className="truncate">{membro.pixChave}</span>
           </div>
         )}
         {membro.valorContrato != null && (
           <div className="flex items-center gap-2" data-testid="membro-valor-contrato">
-            <IconAttachMoney className="text-gray-400 text-sm" />
-            <span className="font-semibold text-gray-700 dark:text-gray-300">
+            <IconAttachMoney className="text-gray-400 text-sm dark:text-muted-foreground" />
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
               {formatCurrency(membro.valorContrato)}
             </span>
           </div>
         )}
         {membro.contratoUrl && (
           <div className="flex items-center gap-2">
-            <IconDescription className="text-gray-400 text-sm" />
+            <IconDescription className="text-gray-400 text-sm dark:text-muted-foreground" />
             <a
               href={membro.contratoUrl}
               target="_blank"
@@ -312,18 +316,18 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
   return (
     <>
       <div
-        className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+        className="bg-white dark:bg-card p-8 rounded-2xl border border-gray-100 dark:border-border shadow-sm"
         data-tour="equipe-obra"
       >
         {/* Header */}
         <div className="flex justify-between items-start mb-6 gap-4">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Equipe e Colaboradores</h3>
-            <p className="text-sm text-gray-500">Membros envolvidos no projeto</p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Equipe e Colaboradores</h3>
+            <p className="text-sm text-gray-500 dark:text-muted-foreground">Membros envolvidos no projeto</p>
 
             {/* Stats chips */}
             <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <span className="text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold bg-gray-100 dark:bg-muted text-gray-600 dark:text-slate-300 px-2.5 py-1 rounded-full">
                 Total: {stats.total}
               </span>
               <span className="text-xs font-semibold bg-success/10 text-success px-2.5 py-1 rounded-full">
@@ -339,7 +343,7 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
             type="button"
             disabled={obraFinalizada}
             onClick={() => openModal('novo')}
-            className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="px-4 py-2 bg-primary text-white dark:text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
           >
             <IconPersonAdd className="text-sm" />
             Adicionar Membro
@@ -358,6 +362,7 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
               onPermissoes={(m) => openModal('permissoes', m)}
               onToggleAtivo={handleToggleAtivo}
               onRemover={(m) => openModal('remover', m)}
+              corLegivel={Boolean(obra.isObraPropria)}
             />
           ))}
 
@@ -366,12 +371,12 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
             <button
               type="button"
               onClick={() => openModal('novo')}
-              className="p-5 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer min-h-[120px]"
+              className="p-5 border-2 border-dashed border-gray-200 dark:border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer min-h-[120px]"
             >
-              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                <IconPersonAdd className="text-gray-400 text-2xl" />
+              <div className="w-12 h-12 bg-gray-100 dark:bg-muted rounded-full flex items-center justify-center">
+                <IconPersonAdd className="text-gray-400 text-2xl dark:text-muted-foreground" />
               </div>
-              <span className="text-sm font-semibold text-gray-500">Adicionar Membro</span>
+              <span className="text-sm font-semibold text-gray-500 dark:text-muted-foreground">Adicionar Membro</span>
             </button>
           )}
         </div>
@@ -380,12 +385,12 @@ export function EquipeSection({ obra, readOnly = false }: EquipeSectionProps) {
         {membros.length === 0 && (
           <div className="text-center py-16">
             <IconGroup className="text-4xl text-gray-300 dark:text-gray-700" />
-            <p className="text-sm font-medium text-gray-400 mt-2">Nenhum membro na equipe</p>
+            <p className="text-sm font-medium text-gray-400 mt-2 dark:text-muted-foreground">Nenhum membro na equipe</p>
             {!obraFinalizada && !readOnly && (
               <button
                 type="button"
                 onClick={() => openModal('novo')}
-                className="mt-4 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                className="mt-4 px-4 py-2 bg-primary text-white dark:text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
               >
                 Adicionar primeiro membro
               </button>

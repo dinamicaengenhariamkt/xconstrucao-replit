@@ -8,10 +8,10 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle }: PageHeaderProps) {
   return (
     <div>
-      <h1 className="text-5xl font-extrabold tracking-tighter text-[#101819] dark:text-white">
+      <h1 className="text-5xl font-extrabold tracking-tighter text-[#101819] dark:text-foreground">
         {title}
       </h1>
-      <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">{subtitle}</p>
+      <p className="text-gray-500 dark:text-muted-foreground mt-2 text-lg">{subtitle}</p>
     </div>
   );
 }

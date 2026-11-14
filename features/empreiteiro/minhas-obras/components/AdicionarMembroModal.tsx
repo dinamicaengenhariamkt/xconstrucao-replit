@@ -268,7 +268,7 @@ export function AdicionarMembroModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-md p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div
               className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0', previewCor)}
@@ -282,10 +282,10 @@ export function AdicionarMembroModal({
                 ))}
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                 {isEdit ? 'Editar membro' : 'Adicionar membro'}
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 mt-0.5">
+              <DialogDescription className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground">
                 {isEdit ? 'Altere os dados do colaborador' : 'Adicione um colaborador à equipe'}
               </DialogDescription>
             </div>
@@ -371,7 +371,7 @@ export function AdicionarMembroModal({
                               'w-8 h-8 rounded-full transition-all',
                               c.bg,
                               field.value === c.value
-                                ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-white scale-110'
+                                ? 'ring-2 ring-offset-2 ring-gray-900 dark:ring-border scale-110'
                                 : 'opacity-70 hover:opacity-100',
                             )}
                           />
@@ -392,7 +392,7 @@ export function AdicionarMembroModal({
                     <FormItem>
                       <FormLabel>
                         Telefone{' '}
-                        <span className="text-gray-400 font-normal">(opcional)</span>
+                        <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="(11) 99999-9999" {...field} />
@@ -408,7 +408,7 @@ export function AdicionarMembroModal({
                     <FormItem>
                       <FormLabel>
                         E-mail{' '}
-                        <span className="text-gray-400 font-normal">(opcional)</span>
+                        <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="nome@email.com" {...field} />
@@ -427,7 +427,7 @@ export function AdicionarMembroModal({
                   <FormItem>
                     <FormLabel>
                       Registro profissional{' '}
-                      <span className="text-gray-400 font-normal">(opcional)</span>
+                      <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: CREA-SP 123456-D" {...field} />
@@ -446,7 +446,7 @@ export function AdicionarMembroModal({
                     <FormItem>
                       <FormLabel>
                         Membros da equipe{' '}
-                        <span className="text-gray-400 font-normal">(opcional)</span>
+                        <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: Pedro, Marco, Ana" {...field} />
@@ -463,8 +463,8 @@ export function AdicionarMembroModal({
                 descrevem o acordo com ela.
               */}
               {mostrarContrato && (<>
-              <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              <div className="pt-2 mt-2 border-t border-gray-100 dark:border-border">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">
                   Pagamento e contrato
                 </p>
               </div>
@@ -476,7 +476,7 @@ export function AdicionarMembroModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Chave PIX <span className="text-gray-400 font-normal">(opcional)</span>
+                        Chave PIX <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -497,7 +497,7 @@ export function AdicionarMembroModal({
                     <FormItem>
                       <FormLabel>
                         Valor do contrato{' '}
-                        <span className="text-gray-400 font-normal">(opcional)</span>
+                        <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -516,12 +516,12 @@ export function AdicionarMembroModal({
               {/* Contrato assinado: arquivo OU link, nunca os dois. */}
               <div className="space-y-2">
                 <FormLabel>
-                  Contrato assinado <span className="text-gray-400 font-normal">(opcional)</span>
+                  Contrato assinado <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                 </FormLabel>
                 {contrato ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-border">
                     <span className="flex min-w-0 items-center gap-2 text-sm">
-                      <IconAttachFile className="shrink-0 text-gray-500" aria-hidden />
+                      <IconAttachFile className="shrink-0 text-gray-500 dark:text-muted-foreground" aria-hidden />
                       <span className="truncate">{contrato.nome}</span>
                     </span>
                     <Button

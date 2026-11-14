@@ -23,7 +23,7 @@ import { rotuloMotivoCancelamento } from '@features/xgestao/lib/motivo-cancelame
 const TIPO_SAIDA: Record<string, { rotulo: string; estilo: string }> = {
   agendado: { rotulo: 'Cancelou, usa até', estilo: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
   inadimplente: { rotulo: 'Pagamento pendente até', estilo: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-  encerrado: { rotulo: 'Saiu em', estilo: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+  encerrado: { rotulo: 'Saiu em', estilo: 'bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300' },
 };
 
 function porcento(valor: number | null): string {
@@ -91,14 +91,14 @@ export default function AdminXgestaoConversaoPage() {
       </div>
 
       <section data-testid="xgestao-funil">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">Teste grátis</h2>
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Teste grátis</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard label="Começaram o teste" value={String(funil.iniciados)} icon={RiUserFollowLine} iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20" testId="xgestao-funil-iniciados" href="/admin/xgestao/assinantes?situacao=em_teste" />
-          <StatsCard label="Assinaram" value={String(funil.convertidos)} icon={RiLineChartLine} iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20" testId="xgestao-funil-convertidos" href="/admin/xgestao/assinantes?situacao=pago" />
-          <StatsCard label="Não assinaram" value={String(funil.perdidos)} icon={RiUserUnfollowLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" testId="xgestao-funil-perdidos" href="/admin/xgestao/assinantes?situacao=somente_leitura" />
-          <StatsCard label="Tempo até assinar (mediana)" value={dias(funil.medianaDiasAteAssinar)} icon={RiTimeLine} iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20" />
+          <StatsCard label="Começaram o teste" value={String(funil.iniciados)} icon={RiUserFollowLine} iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300" testId="xgestao-funil-iniciados" href="/admin/xgestao/assinantes?situacao=em_teste" />
+          <StatsCard label="Assinaram" value={String(funil.convertidos)} icon={RiLineChartLine} iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300" testId="xgestao-funil-convertidos" href="/admin/xgestao/assinantes?situacao=pago" />
+          <StatsCard label="Não assinaram" value={String(funil.perdidos)} icon={RiUserUnfollowLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300" testId="xgestao-funil-perdidos" href="/admin/xgestao/assinantes?situacao=somente_leitura" />
+          <StatsCard label="Tempo até assinar (mediana)" value={dias(funil.medianaDiasAteAssinar)} icon={RiTimeLine} iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-300" />
         </div>
-        <div className="mt-4 grid gap-3 rounded-2xl border border-gray-100 bg-white p-5 text-sm sm:grid-cols-2 lg:grid-cols-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="mt-4 grid gap-3 rounded-2xl border border-gray-100 bg-white p-5 text-sm sm:grid-cols-2 lg:grid-cols-4 dark:border-border dark:bg-card">
           <div data-testid="xgestao-funil-taxa">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conversão</p>
             <p className="mt-1 text-2xl font-extrabold">{porcento(funil.taxaConversao)}</p>
@@ -124,7 +124,7 @@ export default function AdminXgestaoConversaoPage() {
         </div>
       </section>
 
-      <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-coortes">
+      <Card className="border-gray-100 dark:border-border" data-testid="xgestao-coortes">
         <CardHeader>
           <CardTitle className="text-lg">Por mês de início do teste</CardTitle>
         </CardHeader>
@@ -141,7 +141,7 @@ export default function AdminXgestaoConversaoPage() {
                   <th className="pb-2 text-right font-semibold">Conversão</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-100 dark:divide-border">
                 {funil.coortes.map((c) => (
                   <tr key={c.mes} data-testid={`xgestao-coorte-${c.mes}`}>
                     <td className="py-2 font-semibold">{rotuloMes(c.mes)}</td>
@@ -161,11 +161,11 @@ export default function AdminXgestaoConversaoPage() {
       </Card>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-convertidos-recentes">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-convertidos-recentes">
           <CardHeader><CardTitle className="text-lg">Assinaram por último</CardTitle></CardHeader>
           <CardContent>
             {recentes.convertidos.length ? (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="divide-y divide-gray-100 dark:divide-border">
                 {recentes.convertidos.map((c) => (
                   <div key={c.userId} className="flex items-center justify-between gap-3 py-3">
                     <NomeAssinante {...c} prefixo="xgestao-convertido" />
@@ -182,14 +182,14 @@ export default function AdminXgestaoConversaoPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-perdidos-recentes">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-perdidos-recentes">
           <CardHeader>
             <CardTitle className="text-lg">Terminaram o teste sem assinar</CardTitle>
             <p className="text-sm text-muted-foreground">Estão em somente leitura: bons alvos para um contato.</p>
           </CardHeader>
           <CardContent>
             {recentes.perdidos.length ? (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="divide-y divide-gray-100 dark:divide-border">
                 {recentes.perdidos.map((p) => (
                   <div key={p.userId} className="flex items-center justify-between gap-3 py-3">
                     <NomeAssinante {...p} prefixo="xgestao-perdido" />
@@ -205,7 +205,7 @@ export default function AdminXgestaoConversaoPage() {
       </section>
 
       <section data-testid="xgestao-cancelamentos">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
           Cancelamentos desde {formatDate(cancelamentos.desde)}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -215,7 +215,7 @@ export default function AdminXgestaoConversaoPage() {
             { id: 'agendados', rotulo: 'Cancelaram, ainda usam', v: cancelamentos.agendados },
             { id: 'inadimplentes', rotulo: 'Pagamento pendente', v: cancelamentos.inadimplentes },
           ].map((item) => (
-            <div key={item.id} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" data-testid={`xgestao-cancel-${item.id}`}>
+            <div key={item.id} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card" data-testid={`xgestao-cancel-${item.id}`}>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{item.rotulo}</p>
               <p className="mt-1 text-2xl font-extrabold" data-valor={item.v.quantidade}>{item.v.quantidade}</p>
               <p className="text-xs text-muted-foreground">{formatCurrency(item.v.mrr)} por mês</p>
@@ -228,11 +228,11 @@ export default function AdminXgestaoConversaoPage() {
           {' '}{cancelamentos.pedidosNoMes} pedido(s) de cancelamento feitos no mês.
         </p>
 
-        <Card className="mt-4 border-gray-100 dark:border-gray-800" data-testid="xgestao-saidas">
+        <Card className="mt-4 border-gray-100 dark:border-border" data-testid="xgestao-saidas">
           <CardHeader><CardTitle className="text-lg">Quem está saindo ou saiu</CardTitle></CardHeader>
           <CardContent>
             {cancelamentos.saidas.length ? (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="divide-y divide-gray-100 dark:divide-border">
                 {cancelamentos.saidas.map((s) => (
                   <div key={`${s.userId}-${s.tipo}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
@@ -255,7 +255,7 @@ export default function AdminXgestaoConversaoPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center py-10 text-center">
-                <RiCloseCircleLine className="size-8 text-emerald-500" />
+                <RiCloseCircleLine className="size-8 text-emerald-500 dark:text-emerald-400" />
                 <p className="mt-2 text-sm font-bold">Ninguém saindo neste mês</p>
               </div>
             )}
@@ -263,7 +263,7 @@ export default function AdminXgestaoConversaoPage() {
         </Card>
 
         {/* CRM-03 — motivos informados ao cancelar, contados por pedido no período. */}
-        <Card className="mt-4 border-gray-100 dark:border-gray-800" data-testid="xgestao-motivos-cancelamento">
+        <Card className="mt-4 border-gray-100 dark:border-border" data-testid="xgestao-motivos-cancelamento">
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-lg">Motivos de cancelamento</CardTitle>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Período dos motivos">
@@ -278,7 +278,7 @@ export default function AdminXgestaoConversaoPage() {
                     'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
                     periodo === p
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+                      : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
                   )}
                 >
                   {ROTULO_PERIODO[p]}
@@ -288,7 +288,7 @@ export default function AdminXgestaoConversaoPage() {
           </CardHeader>
           <CardContent>
             {motivosCancelamento.total ? (
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="divide-y divide-gray-100 dark:divide-border">
                 {motivosCancelamento.porMotivo.map((m) => (
                   <div key={m.motivo} className="flex items-center justify-between gap-3 py-2 text-sm" data-testid={`xgestao-motivo-${m.motivo}`}>
                     <span>{m.rotulo}</span>

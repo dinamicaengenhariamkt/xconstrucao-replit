@@ -56,7 +56,7 @@ export default function AdminXgestaoHistoricoPage() {
         </p>
       </div>
 
-      <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-historico-grafico">
+      <Card className="border-gray-100 dark:border-border" data-testid="xgestao-historico-grafico">
         <CardHeader>
           <CardTitle className="text-lg">Recorrente no fim do mês e recebido no mês</CardTitle>
           <div className="flex flex-wrap gap-4 pt-1 text-xs text-muted-foreground">
@@ -85,7 +85,7 @@ export default function AdminXgestaoHistoricoPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-historico-tabela">
+      <Card className="border-gray-100 dark:border-border" data-testid="xgestao-historico-tabela">
         <CardHeader><CardTitle className="text-lg">Tabela</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
@@ -100,7 +100,7 @@ export default function AdminXgestaoHistoricoPage() {
                 <th className="pb-2 text-right font-semibold">Recebido</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-border">
               {recentes.map((m) => (
                 <tr key={m.mes} data-testid={`xgestao-historico-${m.mes}`}>
                   <td className="py-2 font-semibold">{rotuloMes(m.mes)}</td>

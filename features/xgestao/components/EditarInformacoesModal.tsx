@@ -58,9 +58,9 @@ function Campo({
 }) {
   return (
     <div className="space-y-2">
-      <label htmlFor={htmlFor} className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+      <label htmlFor={htmlFor} className="text-sm font-semibold text-gray-700 dark:text-slate-300">
         {label}
-        {optional && <span className="ml-1 font-normal text-gray-400">(opcional)</span>}
+        {optional && <span className="ml-1 font-normal text-gray-400 dark:text-muted-foreground">(opcional)</span>}
       </label>
       {children}
     </div>
@@ -163,7 +163,7 @@ export function EditarInformacoesModal({
         {obraQuery.isError && !pronto ? (
           <p role="alert">Não foi possível carregar a obra. Feche e tente novamente.</p>
         ) : !pronto ? (
-          <div className="h-72 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+          <div className="h-72 animate-pulse rounded-xl bg-gray-100 dark:bg-muted" />
         ) : (
           <form
             id="form-editar-informacoes"

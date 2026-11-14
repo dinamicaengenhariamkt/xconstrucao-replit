@@ -148,7 +148,7 @@ export function NovaAtividadeModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-md p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               {isEdit ? (
@@ -158,10 +158,10 @@ export function NovaAtividadeModal({
               )}
             </div>
             <div>
-              <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                 {isEdit ? 'Editar atividade' : 'Nova atividade'}
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 mt-0.5">
+              <DialogDescription className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground">
                 {isEdit ? 'Altere os dados da atividade' : 'Adicione uma atividade ao cronograma'}
               </DialogDescription>
             </div>
@@ -288,7 +288,7 @@ export function NovaAtividadeModal({
                       />
                     </FormControl>
                     {progressoTravado && (
-                      <p className="text-xs text-gray-400">Travado em 100% — atividade concluída</p>
+                      <p className="text-xs text-gray-400 dark:text-muted-foreground">Travado em 100% — atividade concluída</p>
                     )}
                     <FormMessage />
                   </FormItem>
@@ -303,7 +303,7 @@ export function NovaAtividadeModal({
                   <FormItem>
                     <FormLabel>
                       Descrição{' '}
-                      <span className="text-gray-400 font-normal">(opcional)</span>
+                      <span className="text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span>
                     </FormLabel>
                     <FormControl>
                       <Textarea

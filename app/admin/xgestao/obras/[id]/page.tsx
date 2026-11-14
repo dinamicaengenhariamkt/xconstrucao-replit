@@ -87,19 +87,19 @@ export default function AdminXgestaoObraDetalhePage({
           label="Orçamento"
           value={formatCurrency(obra.valorTotal)}
           icon={RiMoneyDollarCircleLine}
-          iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20"
+          iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
         />
         <StatsCard
           label="Custo real"
           value={formatCurrency(obra.valorPago)}
           icon={RiBuilding2Line}
-          iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+          iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
         />
         <StatsCard
           label="Previsão"
           value={formatarData(obra.dataPrevisao)}
           icon={RiCalendarLine}
-          iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+          iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300"
         />
       </div>
 
@@ -113,10 +113,10 @@ export default function AdminXgestaoObraDetalhePage({
         />
       </div>
 
-      <section className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500">Link público</h2>
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Link público</h2>
         {linkPublico.ativo ? (
-          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-slate-300">
             <span className="inline-flex items-center gap-1.5 font-semibold text-primary">
               <RiLinkM /> Ativo
             </span>
@@ -130,7 +130,7 @@ export default function AdminXgestaoObraDetalhePage({
         ) : null}
         {/* XG36 — um link por público (XG30). ADM-01: todos, com status e seções. */}
         {linksPublicos.length > 0 && (
-          <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800" data-testid="xgestao-obra-links">
+          <ul className="mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-border dark:border-border" data-testid="xgestao-obra-links">
             {linksPublicos.map((link, index) => (
               <li key={`${link.nome}-${index}`} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2" data-status={link.status}>
                 <span className="font-medium">
@@ -142,7 +142,7 @@ export default function AdminXgestaoObraDetalhePage({
                   {link.ultimoAcessoEm && ` · último acesso ${formatarData(link.ultimoAcessoEm)}`}
                   {link.expiraEm && ` · ${link.status === 'expirado' ? 'expirou' : 'expira'} ${formatarData(link.expiraEm)}`}
                 </span>
-                <span className="w-full text-xs text-gray-400">
+                <span className="w-full text-xs text-gray-400 dark:text-muted-foreground">
                   Mostra: {link.secoes.length ? link.secoes.map((secao) => ROTULO_SECAO[secao] ?? secao).join(', ') : 'nenhuma seção'}
                 </span>
               </li>
@@ -158,7 +158,7 @@ export default function AdminXgestaoObraDetalhePage({
 
       {conteudo && (
         <section>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
             Acompanhamento da obra
           </h2>
           {/* Reusa a visão de leitura do link público, com todas as seções
@@ -194,9 +194,9 @@ const ROTULO_STATUS_LANCAMENTO: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
-const CARTAO = 'rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900';
-const TITULO = 'text-sm font-bold uppercase tracking-wide text-gray-500';
-const LISTA = 'mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-gray-800 dark:border-gray-800';
+const CARTAO = 'rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card';
+const TITULO = 'text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground';
+const LISTA = 'mt-3 divide-y divide-gray-100 rounded-xl border border-gray-100 text-sm dark:divide-border dark:border-border';
 
 /**
  * ADM-01 — o que a obra tem por dentro, em leitura: financeiro interno, equipe
@@ -262,7 +262,7 @@ function ProjecaoAdministrativa({ dados }: { dados: XgestaoObraAdministrativo })
               ))}
             </ul>
           )}
-          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">Acesso da empresa</h3>
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Acesso da empresa</h3>
           {dados.acessos.length === 0 ? vazio('Só o titular acessa esta obra.') : (
             <ul className={LISTA} data-testid="xgestao-obra-acessos">
               {dados.acessos.map((a) => (
@@ -322,7 +322,7 @@ function ProjecaoAdministrativa({ dados }: { dados: XgestaoObraAdministrativo })
                   <span className="block text-xs text-muted-foreground">
                     {o.gravidade} · {o.status === 'resolvida' ? `resolvida ${formatarData(o.resolvidaEm)}` : 'aberta'} · {formatarData(o.criadaEm)}
                   </span>
-                  {o.observacaoResolucao && <span className="mt-0.5 block text-xs text-gray-500">Resolução: {o.observacaoResolucao}</span>}
+                  {o.observacaoResolucao && <span className="mt-0.5 block text-xs text-gray-500 dark:text-muted-foreground">Resolução: {o.observacaoResolucao}</span>}
                 </li>
               ))}
             </ul>

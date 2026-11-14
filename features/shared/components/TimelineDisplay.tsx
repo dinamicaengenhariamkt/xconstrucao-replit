@@ -76,8 +76,8 @@ const TIPO_CONFIG: Record<TimelineTipo, {
   nota: {
     label: 'Nota',
     dotClass: 'bg-gray-400',
-    badgeBg: 'bg-gray-100 dark:bg-gray-700',
-    badgeText: 'text-gray-600 dark:text-gray-400',
+    badgeBg: 'bg-gray-100 dark:bg-muted',
+    badgeText: 'text-gray-600 dark:text-slate-300',
     Icon: IconStickyNote,
   },
 };
@@ -101,8 +101,8 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarF
     <div>
       {/* Header */}
       <div className="mb-5">
-        <h3 className="text-base font-bold text-gray-900 dark:text-white">{title}</h3>
-        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        <h3 className="text-base font-bold text-gray-900 dark:text-foreground">{title}</h3>
+        {subtitle && <p className="text-sm text-gray-500 dark:text-muted-foreground">{subtitle}</p>}
       </div>
 
       {/* Filters */}
@@ -118,14 +118,14 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarF
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer',
                 activeFilter === opt.key
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  ? 'bg-primary text-white dark:text-primary-foreground'
+                  : 'bg-gray-100 dark:bg-muted text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10'
               )}
             >
               {opt.label}
               <span className={cn(
                 'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                activeFilter === opt.key ? 'bg-white/20 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                activeFilter === opt.key ? 'bg-white/20 text-white dark:bg-black/10 dark:text-primary-foreground' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-slate-300'
               )}>
                 {count}
               </span>
@@ -138,12 +138,12 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarF
       {filtered.length === 0 ? (
         <div className="text-center py-14">
           <IconTimeline className="text-4xl text-gray-200 dark:text-gray-700" />
-          <p className="text-sm font-semibold text-gray-500 mt-3">Nenhuma atualização encontrada</p>
-          <p className="text-xs text-gray-400 mt-1">Sem eventos para o filtro selecionado.</p>
+          <p className="text-sm font-semibold text-gray-500 mt-3 dark:text-muted-foreground">Nenhuma atualização encontrada</p>
+          <p className="text-xs text-gray-400 mt-1 dark:text-muted-foreground">Sem eventos para o filtro selecionado.</p>
         </div>
       ) : (
         <div className="relative">
-          <div className="absolute left-[15px] top-3 bottom-3 w-0.5 bg-gray-100 dark:bg-gray-800" />
+          <div className="absolute left-[15px] top-3 bottom-3 w-0.5 bg-gray-100 dark:bg-muted" />
           <div className="space-y-1">
             {filtered.map((event) => {
               const config = TIPO_CONFIG[event.tipo];
@@ -159,7 +159,7 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarF
                     'flex-1 rounded-xl p-4 mb-2 border',
                     isProblema
                       ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40'
-                      : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'
+                      : 'bg-white dark:bg-card border-gray-100 dark:border-border'
                   )}>
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -171,17 +171,17 @@ export function TimelineDisplay({ events, title = 'Timeline', subtitle, ocultarF
                           <config.Icon className="text-[12px]" />
                           {config.label}
                         </span>
-                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-foreground">
                           {event.titulo}
                         </span>
                       </div>
-                      <time dateTime={event.data} className="text-xs text-gray-400 whitespace-nowrap">
+                      <time dateTime={event.data} className="text-xs text-gray-400 whitespace-nowrap dark:text-muted-foreground">
                         {formatTimelineDate(event.data)}
                       </time>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.descricao}</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-300 mb-2">{event.descricao}</p>
                     {event.autor && event.autor !== '—' && (
-                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <p className="text-xs text-gray-400 flex items-center gap-1 dark:text-muted-foreground">
                         <IconPerson className="text-[12px]" />
                         {event.autor}
                       </p>

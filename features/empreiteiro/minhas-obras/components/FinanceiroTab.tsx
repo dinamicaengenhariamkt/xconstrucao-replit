@@ -171,7 +171,7 @@ function ValoresDoContrato({
           */}
           {recalculando && (
             <span
-              className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-gray-500"
+              className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-muted-foreground"
               data-testid="valores-contrato-recalculando"
             >
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
@@ -189,24 +189,24 @@ function ValoresDoContrato({
             <div
               key={kpi.label}
               className={cn(
-                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-gray-800/50',
-                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-gray-800/80',
+                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-muted',
+                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-muted/70',
                 kpi.accent,
               )}
             >
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">
                 {kpi.label}
               </p>
               <p
                 className={cn(
                   'mt-2 text-2xl font-extrabold',
-                  kpi.destaque ? 'text-success' : 'text-gray-900 dark:text-white',
+                  kpi.destaque ? 'text-success' : 'text-gray-900 dark:text-foreground',
                 )}
               >
                 {formatCurrency(kpi.valor)}
               </p>
               {kpi.nota && (
-                <p className="mt-1 text-xs font-medium text-purple-600">{kpi.nota}</p>
+                <p className="mt-1 text-xs font-medium text-purple-600 dark:text-purple-300">{kpi.nota}</p>
               )}
             </div>
           ))}
@@ -241,12 +241,12 @@ function ValoresDoContrato({
           ].map((barra) => (
             <div key={barra.label}>
               <div className="mb-2 flex items-end justify-between">
-                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-bold text-gray-700 dark:text-slate-300">
                   {barra.label}
                 </span>
                 <span className={cn('text-lg font-extrabold', barra.texto)}>{barra.valor}%</span>
               </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-muted">
                 <div
                   className={cn('h-full rounded-full', barra.cor)}
                   style={{ width: `${Math.min(100, Math.max(0, barra.valor))}%` }}
@@ -308,18 +308,18 @@ export function CustoPrevistoEquipe({
             <div
               key={kpi.label}
               className={cn(
-                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-gray-800/50',
-                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-gray-800/80',
+                'rounded-xl border-l-4 bg-gray-50 p-4 transition-all dark:bg-muted',
+                luminous && 'luminous-card hover:bg-gray-100/70 dark:hover:bg-muted/70',
                 kpi.accent,
               )}
             >
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">
                 {kpi.label}
               </p>
               <p
                 className={cn(
                   'mt-2 text-2xl font-extrabold',
-                  kpi.destaque ? 'text-primary' : 'text-gray-900 dark:text-white',
+                  kpi.destaque ? 'text-primary' : 'text-gray-900 dark:text-foreground',
                 )}
                 data-testid={`custo-equipe-${kpi.id}`}
               >
@@ -331,12 +331,12 @@ export function CustoPrevistoEquipe({
 
         <div>
           <div className="mb-2 flex items-end justify-between">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <p className="text-sm font-medium text-gray-600 dark:text-slate-300">
               Quitado nos contratos
             </p>
             <p className="text-lg font-bold text-primary">{pctPago}%</p>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
             <div className="h-full rounded-full bg-primary" style={{ width: `${pctPago}%` }} />
           </div>
         </div>
@@ -347,7 +347,7 @@ export function CustoPrevistoEquipe({
           </p>
         )}
         {financeiro.custoMaoDeObraForaContratos > 0 && (
-          <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="custo-equipe-avulso">
+          <p className="text-sm text-gray-600 dark:text-slate-300" data-testid="custo-equipe-avulso">
             {formatCurrency(financeiro.custoMaoDeObraForaContratos)} de mão de obra paga
             fora dos contratos ativos. Esse valor está no custo da obra, não reduz o restante acima.
           </p>
@@ -618,17 +618,17 @@ export function FinanceiroTab({
 
           <CardContent>
             {isLoading ? (
-              <p className="text-sm text-gray-500 py-6 text-center">Carregando lançamentos…</p>
+              <p className="text-sm text-gray-500 py-6 text-center dark:text-muted-foreground">Carregando lançamentos…</p>
             ) : filtrados.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-muted-foreground">
                   {lancamentosVisiveis.length === 0
                     ? 'Nenhum lançamento ainda.'
                     : 'Nenhum lançamento com esses filtros.'}
                 </p>
                 {lancamentosVisiveis.length === 0 && podeLancar && (
                   <>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 mt-1 dark:text-muted-foreground">
                       {somenteMaoDeObra
                         ? 'Registre uma saída de mão de obra para acompanhar os pagamentos desta categoria.'
                         : 'Registre o que entrou e o que saiu para ver receita, custo e margem.'}
@@ -649,7 +649,7 @@ export function FinanceiroTab({
                       <button
                         type="button"
                         onClick={() => abrirNovo('saida')}
-                        className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-200"
+                        className="cursor-pointer rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300"
                         data-testid="btn-primeira-saida"
                       >
                         {somenteMaoDeObra ? 'Registrar mão de obra' : 'Registrar saída'}
@@ -660,7 +660,7 @@ export function FinanceiroTab({
               </div>
             ) : (
               <>
-                <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                <ul className="divide-y divide-gray-100 dark:divide-border">
                   {filtrados.map((l) => {
                     const entrada = l.tipo === 'entrada';
                     const automatico = Boolean(l.medicaoId || l.origemId);
@@ -709,10 +709,10 @@ export function FinanceiroTab({
                               </button>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5">{formatarDataBr(l.data)}</p>
+                          <p className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground">{formatarDataBr(l.data)}</p>
                           {isObraPropria && l.actorName && (
                             <p
-                              className="text-xs text-gray-500 mt-0.5"
+                              className="text-xs text-gray-500 mt-0.5 dark:text-muted-foreground"
                               data-testid={`lancamento-ator-${l.id}`}
                             >
                               Registrado por {l.actorName}
@@ -724,7 +724,7 @@ export function FinanceiroTab({
                           <span
                             className={cn(
                               'font-semibold text-sm tabular-nums',
-                              entrada ? 'text-emerald-600' : 'text-amber-600',
+                              entrada ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300',
                             )}
                           >
                             {entrada ? '+' : '−'} {formatCurrency(Number(l.valor))}
@@ -743,7 +743,7 @@ export function FinanceiroTab({
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-red-600 hover:text-red-700"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300"
                                 onClick={() => setParaExcluir(l)}
                                 aria-label={`Excluir ${l.descricao}`}
                               >
@@ -757,21 +757,21 @@ export function FinanceiroTab({
                   })}
                 </ul>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
-                  <span className="text-xs text-gray-500">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 mt-1 border-t border-gray-100 dark:border-border">
+                  <span className="text-xs text-gray-500 dark:text-muted-foreground">
                     {somenteMaoDeObra ? 'Total listado de mão de obra' : `Saldo listado · ${filtrados.length} ${filtrados.length === 1 ? 'lançamento' : 'lançamentos'}`}
                   </span>
                   <span
                     className={cn(
                       'text-sm font-bold tabular-nums',
-                      somenteMaoDeObra ? 'text-amber-600' : totalFiltrado >= 0 ? 'text-emerald-600' : 'text-amber-600',
+                      somenteMaoDeObra ? 'text-amber-600 dark:text-amber-300' : totalFiltrado >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300',
                     )}
                     data-testid="total-filtrado"
                   >
                     {formatCurrency(totalFiltrado)}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-muted-foreground">
                   Total das linhas exibidas, inclusive pendentes e canceladas. Os indicadores da obra consideram apenas valores pagos.
                 </p>
               </>

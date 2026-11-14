@@ -4,7 +4,7 @@ import { tierLabel } from '@features/xgestao/admin/plano-label';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
-import { RiArrowLeftLine, RiArrowRightSLine, RiDownloadLine, RiSearchLine } from 'react-icons/ri';
+import { RiArrowDownSLine, RiArrowLeftLine, RiArrowRightSLine, RiDownloadLine, RiSearchLine } from 'react-icons/ri';
 import { Button } from '@shared/components/ui/button';
 import { Input } from '@shared/components/ui/input';
 import { Skeleton } from '@shared/components/ui/skeleton';
@@ -46,7 +46,7 @@ import { cn } from '@shared/lib/utils';
 type FiltroSituacao = FiltroSegmento;
 
 const ESTILO_CHIP_ATIVO = 'border-primary bg-primary text-primary-foreground';
-const ESTILO_CHIP = 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300';
+const ESTILO_CHIP = 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300';
 
 /** `useSearchParams` exige boundary de Suspense na renderização estática. */
 export default function AdminXgestaoAssinantesPage() {
@@ -67,6 +67,10 @@ function AssinantesXgestao() {
   const internas = useXgestaoAdminAssinantes({ internas: true });
   const { data, isLoading, isError, refetch, isFetching } = filtro === 'internas' ? internas : padrao;
   const [busca, setBusca] = useState(filtros.busca);
+  // PRD 55 (A2) — prazo, contato, marketing e ordem ficam em "Mais filtros". Só visual: mesmos
+  // filtros, mesma URL. Abre sozinho quando a URL já traz algum deles (atalho da home, link salvo).
+  const secundariosAtivos = [filtros.janela, filtros.nuncaContatado, filtros.somenteMarketing, filtros.ordem].filter(Boolean).length;
+  const [maisFiltrosAberto, setMaisFiltrosAberto] = useState(secundariosAtivos > 0);
 
   const atualizar = (mudanca: Partial<FiltrosSegmento>) => {
     const query = filtrosParaQuery({ ...filtros, busca: '', ...mudanca });
@@ -135,7 +139,7 @@ function AssinantesXgestao() {
 
       <div className="space-y-3">
         <div className="relative max-w-md">
-          <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <RiSearchLine className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-muted-foreground" />
           <Input
             value={busca}
             onChange={(evento) => setBusca(evento.target.value)}
@@ -157,13 +161,24 @@ function AssinantesXgestao() {
                 'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
                 filtro === chip.valor
                   ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+                  : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
               )}
             >
               {chip.rotulo}{chip.total !== null && <span className="opacity-70"> ({chip.total})</span>}
             </button>
           ))}
         </div>
+        <details
+          open={maisFiltrosAberto}
+          onToggle={(evento) => setMaisFiltrosAberto(evento.currentTarget.open)}
+          className="group/mais"
+          data-testid="xgestao-assinantes-mais-filtros"
+        >
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300 [&::-webkit-details-marker]:hidden">
+            Mais filtros{secundariosAtivos > 0 && <span className="opacity-70"> ({secundariosAtivos} ativo{secundariosAtivos > 1 ? 's' : ''})</span>}
+            <RiArrowDownSLine className="size-4 transition-transform duration-150 group-open/mais:rotate-180" aria-hidden />
+          </summary>
+          <div className="mt-3 space-y-3">
         {/* CRM-06 — janela de tempo (combina com o recorte acima) e CRM-07 — nunca contatado. */}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por prazo">
           {JANELAS_SEGMENTO.map((janela) => (
@@ -216,6 +231,8 @@ function AssinantesXgestao() {
             </button>
           ))}
         </div>
+          </div>
+        </details>
       </div>
 
       {isLoading && !data ? (
@@ -224,7 +241,7 @@ function AssinantesXgestao() {
         </div>
       ) : linhas.length === 0 ? (
         <div
-          className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800"
+          className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-border"
           data-testid={filtro === 'internas' ? 'xgestao-assinantes-vazio-internas' : undefined}
         >
           {filtro === 'internas'
@@ -233,48 +250,48 @@ function AssinantesXgestao() {
         </div>
       ) : visiveis.length === 0 ? (
         <div
-          className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800"
+          className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-border"
           data-testid="xgestao-assinantes-vazio-filtro"
         >
           Nenhum assinante neste filtro.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-border dark:bg-card">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Empresa / responsável</th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Contato</th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Plano e situação</th>
-                  <th className="hidden min-w-[190px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Uso do plano</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Obras</th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell">Último acesso</th>
+                <tr className="border-b border-gray-100 bg-gray-50 dark:border-border dark:bg-muted">
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Empresa / responsável</th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell dark:text-muted-foreground">Contato</th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell dark:text-muted-foreground">Plano e situação</th>
+                  <th className="hidden min-w-[190px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell dark:text-muted-foreground">Uso do plano</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Obras</th>
+                  <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 xl:table-cell dark:text-muted-foreground">Último acesso</th>
                   <th className="w-8 px-3 py-3" aria-hidden />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-50 dark:divide-border">
                 {visiveis.map((assinante) => {
                   const href = `/admin/xgestao/assinantes/${assinante.userId}`;
                   return (
                     <tr
                       key={assinante.userId}
-                      className="align-top hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                      className="align-top hover:bg-gray-50 dark:hover:bg-muted"
                       data-testid={`xgestao-assinante-${assinante.userId}`}
                       data-situacao={assinante.situacao.codigo}
                     >
                       <td className="px-5 py-3">
                         <Link
                           href={href}
-                          className="font-semibold text-gray-900 hover:text-primary dark:text-white"
+                          className="font-semibold text-gray-900 hover:text-primary dark:text-foreground"
                           data-testid={`xgestao-assinante-link-${assinante.userId}`}
                         >
                           {assinante.empreiteiraNome}
                         </Link>
-                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-muted-foreground">
                           Responsável: {assinante.nome || 'não informado'}
                         </p>
-                        <p className="mt-0.5 text-xs text-gray-400">{assinante.email}</p>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground">{assinante.email}</p>
                         {(assinante.semEmpresa || assinante.contaInterna) && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {assinante.semEmpresa && (
@@ -287,7 +304,7 @@ function AssinantesXgestao() {
                             )}
                             {assinante.contaInterna && (
                               <span
-                                className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                                className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:bg-muted dark:text-slate-300"
                                 data-testid={`xgestao-assinante-interna-${assinante.userId}`}
                               >
                                 Conta interna
@@ -300,7 +317,7 @@ function AssinantesXgestao() {
                           <SituacaoAssinanteBadge situacao={assinante.situacao} />
                         </div>
                         {assinante.membros.length > 0 && (
-                          <p className="mt-1 text-xs text-gray-400">{assinante.membros.length} vínculo(s) de equipe</p>
+                          <p className="mt-1 text-xs text-gray-400 dark:text-muted-foreground">{assinante.membros.length} vínculo(s) de equipe</p>
                         )}
                         <div className="mt-2">
                           <MotivosAtencao motivos={assinante.atencao} testId={`xgestao-assinante-atencao-${assinante.userId}`} />
@@ -318,11 +335,11 @@ function AssinantesXgestao() {
                       </td>
                       {/* CRM-01 — telefone compacto e atalhos de contato. */}
                       <td className="hidden px-4 py-3 sm:table-cell" data-testid={`xgestao-assinante-contato-${assinante.userId}`}>
-                        <p className="whitespace-nowrap text-xs font-semibold text-gray-700 dark:text-gray-200">
+                        <p className="whitespace-nowrap text-xs font-semibold text-gray-700 dark:text-slate-300">
                           {assinante.contato.telefone ? formatarTelefone(assinante.contato.telefone) : 'sem telefone'}
                         </p>
                         {(assinante.contato.cidade || assinante.contato.uf) && (
-                          <p className="mt-0.5 text-[11px] text-gray-400">{[assinante.contato.cidade, assinante.contato.uf].filter(Boolean).join(' - ')}</p>
+                          <p className="mt-0.5 text-[11px] text-gray-400 dark:text-muted-foreground">{[assinante.contato.cidade, assinante.contato.uf].filter(Boolean).join(' - ')}</p>
                         )}
                         <div className="mt-1">
                           <BotoesContato compacto telefone={assinante.contato.telefone} email={assinante.email} testId={`xgestao-assinante-botoes-${assinante.userId}`} />
@@ -333,7 +350,7 @@ function AssinantesXgestao() {
                           {tierLabel(assinante.plano.tier)}
                         </span>
                         {!assinante.plano.emTeste && assinante.plano.valorMensal > 0 && (
-                          <span className="ml-1 text-xs text-gray-400">{formatCurrency(assinante.plano.valorMensal)}/mês</span>
+                          <span className="ml-1 text-xs text-gray-400 dark:text-muted-foreground">{formatCurrency(assinante.plano.valorMensal)}/mês</span>
                         )}
                         <div className="mt-2">
                           <SituacaoAssinanteBadge
@@ -351,9 +368,9 @@ function AssinantesXgestao() {
                       <td className="px-4 py-3 text-right">
                         <span className="font-semibold">{assinante.obrasGerenciadas}</span>
                         {assinante.obrasAtivas > 0 && (
-                          <span className="ml-1 text-xs font-normal text-gray-400">({assinante.obrasAtivas} ativas)</span>
+                          <span className="ml-1 text-xs font-normal text-gray-400 dark:text-muted-foreground">({assinante.obrasAtivas} ativas)</span>
                         )}
-                        <p className="mt-1 text-xs text-gray-400">{formatCurrency(assinante.consolidado.orcamento)}</p>
+                        <p className="mt-1 text-xs text-gray-400 dark:text-muted-foreground">{formatCurrency(assinante.consolidado.orcamento)}</p>
                         {(assinante.consolidado.obrasAtrasadas > 0 || assinante.consolidado.obrasParadas > 0) && (
                           <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-400">
                             {[
@@ -363,20 +380,20 @@ function AssinantesXgestao() {
                           </p>
                         )}
                       </td>
-                      <td className="hidden px-4 py-3 text-gray-500 xl:table-cell">
+                      <td className="hidden px-4 py-3 text-gray-500 xl:table-cell dark:text-muted-foreground">
                         {assinante.ultimoAcessoEm ? formatarDataAdmin(assinante.ultimoAcessoEm) : 'nunca'}
-                        <p className="mt-0.5 text-xs text-gray-400">Entrada {formatarDataAdmin(String(assinante.entradaEm))}</p>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground">Entrada {formatarDataAdmin(String(assinante.entradaEm))}</p>
                         {/* CRM-07 — último contato registrado pelo admin. */}
-                        <p className="mt-0.5 text-xs text-gray-400" data-testid={`xgestao-assinante-ultimo-contato-${assinante.userId}`}>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground" data-testid={`xgestao-assinante-ultimo-contato-${assinante.userId}`}>
                           {assinante.ultimoContato
                             ? `Contato ${formatarDataAdmin(assinante.ultimoContato.em)} (${ROTULO_CANAL_CONTATO[assinante.ultimoContato.canal]})`
                             : 'Nunca contatado'}
                         </p>
-                        <p className="mt-0.5 text-xs text-gray-400" data-testid={`xgestao-assinante-marketing-${assinante.userId}`}>
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground" data-testid={`xgestao-assinante-marketing-${assinante.userId}`}>
                           {assinante.marketing?.aceito ? 'Aceita e-mail de marketing' : 'Sem e-mail de marketing'}
                         </p>
                       </td>
-                      <td className="px-3 py-3 text-gray-400">
+                      <td className="px-3 py-3 text-gray-400 dark:text-muted-foreground">
                         <Link href={href} aria-label={`Ver detalhes de ${assinante.empreiteiraNome}`} className="hover:text-primary">
                           <RiArrowRightSLine className="size-5" />
                         </Link>

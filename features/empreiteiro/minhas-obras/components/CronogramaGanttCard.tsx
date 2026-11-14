@@ -208,7 +208,7 @@ export function CronogramaGanttCard({
                 <button
                   type="button"
                   onClick={onIrParaEtapas}
-                  className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-200"
+                  className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 transition-colors hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300"
                   data-testid="cronograma-ir-para-etapas"
                 >
                   {etapas.length === 0 ? 'Cadastrar etapas' : 'Informar datas nas etapas'}
@@ -246,7 +246,7 @@ export function CronogramaGanttCard({
                         fontSize={10}
                         textAnchor="middle"
                         fill="currentColor"
-                        className="text-gray-500"
+                        className="text-gray-500 dark:text-muted-foreground"
                       >
                         {m.label}
                       </text>
@@ -291,7 +291,7 @@ export function CronogramaGanttCard({
                           y={y + BARRA_H / 2 + 4}
                           fontSize={11}
                           fill="currentColor"
-                          className="text-gray-700 dark:text-gray-300"
+                          className="text-gray-700 dark:text-slate-300"
                         >
                           {etapa.nome.length > 20 ? `${etapa.nome.slice(0, 19)}…` : etapa.nome}
                         </text>
@@ -335,18 +335,18 @@ export function CronogramaGanttCard({
 
               {/* Legenda */}
               <div
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800"
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 pt-3 border-t border-gray-100 dark:border-border"
                 data-testid="gantt-legenda"
               >
                 {(Object.keys(STATUS_COR) as ObraEtapaApi['status'][]).map((s) => (
-                  <span key={s} className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span key={s} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-muted-foreground">
                     <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: STATUS_COR[s] }} />
                     {STATUS_LABEL[s]}
                   </span>
                 ))}
                 {/* Avulsa, e não dentro do `.map` acima: atraso não é status
                     da etapa, é derivado do prazo. Mesmo tratamento da de "Hoje". */}
-                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-muted-foreground">
                   <span
                     className="w-3 h-3 rounded-sm"
                     style={{
@@ -356,14 +356,14 @@ export function CronogramaGanttCard({
                   />
                   Atrasada
                 </span>
-                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-muted-foreground">
                   <span className="w-3 h-0.5 bg-amber-500" />
                   Hoje
                 </span>
               </div>
 
               {semDatas > 0 && (
-                <p className={cn('text-xs text-amber-600 mt-3')} data-testid="gantt-sem-datas">
+                <p className={cn('text-xs text-amber-600 mt-3 dark:text-amber-300')} data-testid="gantt-sem-datas">
                   {semDatas} {semDatas === 1 ? 'etapa ainda não tem' : 'etapas ainda não têm'} início
                   e fim definidos — {semDatas === 1 ? 'ela não aparece' : 'elas não aparecem'} no gráfico.
                 </p>

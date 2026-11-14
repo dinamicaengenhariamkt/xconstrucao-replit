@@ -25,9 +25,9 @@ export const SITUACAO_STYLE: Record<CodigoSituacaoAssinante, string> = {
   teste_tolerancia: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
   aguardando_pagamento: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
   pago: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  cancelamento_agendado: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  cancelamento_agendado: 'bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300',
   inadimplente: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  somente_leitura: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
+  somente_leitura: 'bg-gray-100 text-gray-600 dark:bg-muted dark:text-slate-300',
   sem_teste: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
@@ -66,7 +66,7 @@ export function SituacaoAssinanteBadge({
       <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', SITUACAO_STYLE[situacao.codigo])}>
         {situacao.rotulo}
       </span>
-      {descricao && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{descricao}</p>}
+      {descricao && <p className="mt-1 text-xs text-gray-500 dark:text-muted-foreground">{descricao}</p>}
     </div>
   );
 }
@@ -81,12 +81,12 @@ const NIVEL_BARRA: Record<NivelUso, string> = {
 };
 
 const NIVEL_TEXTO: Record<NivelUso, string> = {
-  livre: 'text-gray-500 dark:text-gray-400',
+  livre: 'text-gray-500 dark:text-muted-foreground',
   perto: 'text-amber-700 dark:text-amber-300',
   no_limite: 'text-orange-700 dark:text-orange-300',
   acima: 'text-red-700 dark:text-red-300',
-  sem_limite: 'text-gray-500 dark:text-gray-400',
-  bloqueado: 'text-gray-500 dark:text-gray-400',
+  sem_limite: 'text-gray-500 dark:text-muted-foreground',
+  bloqueado: 'text-gray-500 dark:text-muted-foreground',
 };
 
 /** "2 de 5", "3 · sem limite", "1 · somente leitura". */
@@ -113,10 +113,10 @@ export function UsoRecursoBarra({
   return (
     <div data-testid={testId} data-nivel={uso.nivel} className={compacto ? 'space-y-0.5' : 'space-y-1'}>
       <div className="flex items-baseline justify-between gap-2 text-xs">
-        <span className="text-gray-500 dark:text-gray-400">{rotulo}</span>
+        <span className="text-gray-500 dark:text-muted-foreground">{rotulo}</span>
         <span className={cn('font-semibold', NIVEL_TEXTO[uso.nivel])}>{textoUso(uso)}</span>
       </div>
-      <div className={cn('overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800', compacto ? 'h-1' : 'h-1.5')}>
+      <div className={cn('overflow-hidden rounded-full bg-gray-100 dark:bg-muted', compacto ? 'h-1' : 'h-1.5')}>
         <div className={cn('h-full rounded-full', NIVEL_BARRA[uso.nivel])} style={{ width: `${largura}%` }} />
       </div>
     </div>
@@ -165,7 +165,7 @@ export function BotoesContato({
   const mailto = linkEmail(email);
   if (!whatsapp && !mailto) return null;
   const estilo = cn(
-    'inline-flex items-center gap-1 rounded-full border border-gray-200 font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+    'inline-flex items-center gap-1 rounded-full border border-gray-200 font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
     compacto ? 'px-2 py-0.5 text-[11px]' : 'px-3 py-1 text-xs',
   );
   return (
@@ -207,7 +207,7 @@ export function ChipsSegmento({
   return (
     <div className="flex flex-wrap gap-1" data-testid={testId}>
       {saida && (
-        <span className={cn(CHIP_INFO, 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300')} data-chip="saiu">
+        <span className={cn(CHIP_INFO, 'bg-slate-200 text-slate-700 dark:bg-white/10 dark:text-slate-300')} data-chip="saiu">
           Cancelou / saiu{saida.em ? ` em ${formatarDataAdmin(saida.em)}` : ''}
           {motivoCancelamento ? ` · ${rotuloMotivoCancelamento(motivoCancelamento)}` : ''}
           {` · pagou ${totalPago.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`}

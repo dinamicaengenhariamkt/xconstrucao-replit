@@ -43,21 +43,21 @@ export function MarkdownView({ content }: { content: string }) {
     if (line.startsWith('### ')) {
       flushList();
       blocks.push(
-        <h3 key={`h3-${key++}`} className="text-lg font-bold mt-6 mb-2 text-[#101819] dark:text-white">
+        <h3 key={`h3-${key++}`} className="text-lg font-bold mt-6 mb-2 text-[#101819] dark:text-foreground">
           {renderInline(line.slice(4), `h3-${key}`)}
         </h3>,
       );
     } else if (line.startsWith('## ')) {
       flushList();
       blocks.push(
-        <h2 key={`h2-${key++}`} className="text-2xl font-extrabold mt-10 mb-3 text-[#101819] dark:text-white">
+        <h2 key={`h2-${key++}`} className="text-2xl font-extrabold mt-10 mb-3 text-[#101819] dark:text-foreground">
           {renderInline(line.slice(3), `h2-${key}`)}
         </h2>,
       );
     } else if (line.startsWith('# ')) {
       flushList();
       blocks.push(
-        <h1 key={`h1-${key++}`} className="text-3xl font-extrabold mb-4 text-[#101819] dark:text-white">
+        <h1 key={`h1-${key++}`} className="text-3xl font-extrabold mb-4 text-[#101819] dark:text-foreground">
           {renderInline(line.slice(2), `h1-${key}`)}
         </h1>,
       );

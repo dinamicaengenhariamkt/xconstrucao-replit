@@ -182,13 +182,14 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
   return (
     <div className="min-h-full p-6 md:p-10" data-testid="xgestao-configuracoes-page">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Configurações</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-foreground">Configurações</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Gerencie sua conta, empresa e preferências do xgestão.
         </p>
       </div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+      {/* PRD 55 — as abas encostam na borda da tela e esmaecem no fim: dá para ver que rolam para o lado. */}
+      <div className="-mx-6 mb-6 flex gap-2 overflow-x-auto px-6 pb-2 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:-mx-10 md:px-10 lg:hidden">
         {navItems.map((item) => (
           <Button key={item.id} variant={section === item.id ? 'default' : 'outline'} size="sm" onClick={() => setSection(item.id)} className="shrink-0">
             <item.icon className="mr-2 size-4" />{item.label}
@@ -197,7 +198,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
       </div>
 
       <div className="flex items-start gap-8">
-        <nav className="sticky top-6 hidden w-56 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 lg:block">
+        <nav className="sticky top-6 hidden w-56 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-white dark:border-border dark:bg-card lg:block">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -207,7 +208,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                 'flex w-full items-center gap-3 border-r-3 px-4 py-3 text-left text-sm transition-colors',
                 section === item.id
                   ? 'border-primary bg-primary/5 font-semibold text-primary'
-                  : 'border-transparent text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800',
+                  : 'border-transparent text-gray-600 hover:bg-gray-50 dark:text-slate-300 dark:hover:bg-muted',
               )}
             >
               <item.icon className="size-4" />{item.label}
@@ -239,7 +240,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                     <Field label="Nome do responsável"><Input value={form.responsavel} onChange={setField('responsavel')} /></Field>
                     <Field label="E-mail"><Input value={perfil?.email ?? ''} disabled /></Field>
                     <Field label="Telefone"><Input value={form.telefone} onChange={setField('telefone')} /></Field>
-                    <div className="sm:col-span-2 flex justify-end"><Button onClick={saveProfile} disabled={updatePerfil.isPending}><RiSave3Line className="mr-2 size-4" />Salvar perfil</Button></div>
+                    <div className="sm:col-span-2 flex justify-end"><Button onClick={saveProfile} disabled={updatePerfil.isPending} className="w-full sm:w-auto"><RiSave3Line className="mr-2 size-4" />Salvar perfil</Button></div>
                   </CardContent>
                 </Card>
               )}
@@ -333,7 +334,7 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                       </div>
                     </div>
                     <div className="sm:col-span-2"><Field label="Descrição"><Textarea value={form.descricao} onChange={setField('descricao')} rows={4} /></Field></div>
-                    <div className="sm:col-span-2 flex justify-end"><Button onClick={saveProfile} disabled={updatePerfil.isPending}><RiSave3Line className="mr-2 size-4" />Salvar empresa</Button></div>
+                    <div className="sm:col-span-2 flex justify-end"><Button onClick={saveProfile} disabled={updatePerfil.isPending} className="w-full sm:w-auto"><RiSave3Line className="mr-2 size-4" />Salvar empresa</Button></div>
                   </CardContent>
                 </Card>
               )}
@@ -362,12 +363,12 @@ export function XGestaoConfiguracoesView({ isOwner = true }: { isOwner?: boolean
                     {[
                       ['email_prazo', 'Avisos sobre sua assinatura', 'Emails quando sua assinatura estiver perto de vencer.'],
                     ].map(([key, label, description]) => (
-                      <div key={key} className="flex items-center justify-between gap-4 border-b border-gray-100 py-4 last:border-0 dark:border-gray-800">
+                      <div key={key} className="flex items-center justify-between gap-4 border-b border-gray-100 py-4 last:border-0 dark:border-border">
                         <div><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{description}</p></div>
                         <Switch checked={notifications[key] ?? true} onCheckedChange={(checked) => setNotifications((current) => ({ ...current, [key]: checked }))} />
                       </div>
                     ))}
-                    <div className="flex justify-end pt-5"><Button onClick={saveNotifications} disabled={updatePreferencias.isPending}><RiSave3Line className="mr-2 size-4" />Salvar preferências</Button></div>
+                    <div className="flex justify-end pt-5"><Button onClick={saveNotifications} disabled={updatePreferencias.isPending} className="w-full sm:w-auto"><RiSave3Line className="mr-2 size-4" />Salvar preferências</Button></div>
                   </CardContent>
                 </Card>
               )}

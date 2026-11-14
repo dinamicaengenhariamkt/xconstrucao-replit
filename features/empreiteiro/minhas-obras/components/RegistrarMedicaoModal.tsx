@@ -194,7 +194,7 @@ export function RegistrarMedicaoModal({
       }}
     >
       <DialogContent className="w-[calc(100%-2rem)] max-w-lg p-0 flex flex-col gap-0 overflow-hidden max-h-[90vh] sm:w-full">
-        <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-5 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/10 rounded-lg">
               <IconAddTask className="text-primary text-xl" />
@@ -204,10 +204,10 @@ export function RegistrarMedicaoModal({
                   título. "Medição" é palavra do marketplace, onde existe um
                   contratante para aprovar; no xgestão ela abria um modal com
                   nome diferente do botão que o usuário acabara de clicar. */}
-              <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                 {isOwnWork ? 'Registrar atualização' : 'Registrar medição'}
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+              <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                 {obraTitulo
                   ? isOwnWork
                     ? `Obra: ${obraTitulo} · registre aqui o andamento executado`
@@ -224,8 +224,8 @@ export function RegistrarMedicaoModal({
           <div className="p-5 flex flex-col gap-5">
             {/* Etapa */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">
-                Etapa <span className="text-red-500">*</span>
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5 dark:text-muted-foreground">
+                Etapa <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <Input
                 value={etapa}
@@ -241,8 +241,8 @@ export function RegistrarMedicaoModal({
             {/* Percentual */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-gray-500">
-                  Avanço desta atualização <span className="text-red-500">*</span>
+                <label className="text-xs font-semibold text-gray-500 dark:text-muted-foreground">
+                  Avanço desta atualização <span className="text-red-500 dark:text-red-400">*</span>
                 </label>
                 <span className="text-2xl font-extrabold text-primary tabular-nums">{percentual}%</span>
               </div>
@@ -262,7 +262,7 @@ export function RegistrarMedicaoModal({
                     key={v}
                     type="button"
                     onClick={() => setPercentual(v)}
-                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold border border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold border border-gray-200 dark:border-border hover:border-primary hover:text-primary transition-colors cursor-pointer"
                   >
                     {v}%
                   </button>
@@ -271,7 +271,7 @@ export function RegistrarMedicaoModal({
               {/* XG15 — o campo que mais move o produto não tinha uma linha de
                   ajuda. "Avanço" sozinho não diz se é do total da obra ou da
                   etapa, nem se soma ao que já existe. */}
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500 dark:text-muted-foreground">
                 Quanto a obra avançou <strong>desde a última atualização</strong> — soma-se
                 ao progresso atual, não o substitui.
               </p>
@@ -279,7 +279,7 @@ export function RegistrarMedicaoModal({
 
             {/* Valor */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5 dark:text-muted-foreground">
                 Valor (R$)
               </label>
               <Input
@@ -292,7 +292,7 @@ export function RegistrarMedicaoModal({
                 className="text-sm"
                 data-testid="input-valor-medicao"
               />
-              <p className="text-[11px] text-gray-400 mt-1">
+              <p className="text-[11px] text-gray-400 mt-1 dark:text-muted-foreground">
                 Opcional. Deixe em branco se ainda não houver valor definido para{' '}
                 {isOwnWork ? 'esta atualização' : 'esta medição'}.
               </p>
@@ -300,7 +300,7 @@ export function RegistrarMedicaoModal({
 
             {/* Descrição */}
             <div>
-              <label className="text-xs font-semibold text-gray-500 block mb-1.5">
+              <label className="text-xs font-semibold text-gray-500 block mb-1.5 dark:text-muted-foreground">
                 Descrição
               </label>
               <Textarea
@@ -317,18 +317,18 @@ export function RegistrarMedicaoModal({
             {/* Fotos */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 flex items-center gap-1.5 dark:text-muted-foreground">
                   <IconPhotoCamera className="text-sm" />
                   Fotos da execução
                 </label>
-                <span className="text-[11px] text-gray-400">{fotos.length}/20</span>
+                <span className="text-[11px] text-gray-400 dark:text-muted-foreground">{fotos.length}/20</span>
               </div>
               {fotos.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-2">
                   {fotos.map((f) => (
                     <div
                       key={f.fileId}
-                      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group"
+                      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-border group"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
@@ -359,7 +359,7 @@ export function RegistrarMedicaoModal({
             </div>
           </div>
 
-          <DialogFooter className="p-5 pt-3 flex flex-row justify-end gap-2 border-t border-gray-100 dark:border-gray-800 shrink-0">
+          <DialogFooter className="p-5 pt-3 flex flex-row justify-end gap-2 border-t border-gray-100 dark:border-border shrink-0">
             <Button
               type="button"
               variant="ghost"

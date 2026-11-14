@@ -182,7 +182,7 @@ export function NovaObraModal() {
           >
             {serverMissing.length > 0 && (
               <div
-                className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+                className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-900/20"
                 data-testid="xgestao-obra-perfil-incompleto"
               >
                 <div className="flex items-start gap-2">
@@ -250,7 +250,7 @@ export function NovaObraModal() {
         <DialogContent className="sm:max-w-md" data-testid="xgestao-perfil-operacional-dialog">
           <DialogHeader>
             <div className="mb-2 flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                 <RiErrorWarningLine className="size-5" />
               </div>
               <DialogTitle>Complete seu perfil antes da primeira obra</DialogTitle>

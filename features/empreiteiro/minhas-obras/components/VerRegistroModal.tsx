@@ -30,9 +30,9 @@ const TIPO_CONFIG: Record<
   MinhaObraChecklist['tipo'],
   { Icon: ComponentType<{ className?: string }>; iconBg: string; iconText: string; label: string }
 > = {
-  seguranca: { Icon: IconHealthAndSafety, iconBg: 'bg-red-100 dark:bg-red-900/30', iconText: 'text-red-600', label: 'Segurança' },
-  diario: { Icon: IconFactCheck, iconBg: 'bg-blue-100 dark:bg-blue-900/30', iconText: 'text-blue-600', label: 'Diário de Obra' },
-  etapa: { Icon: IconDomain, iconBg: 'bg-purple-100 dark:bg-purple-900/30', iconText: 'text-purple-600', label: 'Validação de Etapa' },
+  seguranca: { Icon: IconHealthAndSafety, iconBg: 'bg-red-100 dark:bg-red-900/30', iconText: 'text-red-600 dark:text-red-300', label: 'Segurança' },
+  diario: { Icon: IconFactCheck, iconBg: 'bg-blue-100 dark:bg-blue-900/30', iconText: 'text-blue-600 dark:text-blue-300', label: 'Diário de Obra' },
+  etapa: { Icon: IconDomain, iconBg: 'bg-purple-100 dark:bg-purple-900/30', iconText: 'text-purple-600 dark:text-purple-300', label: 'Validação de Etapa' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -50,16 +50,16 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-md max-h-[85vh] p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-lg', config.iconBg)}>
               <config.Icon className={cn('text-xl', config.iconText)} />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-foreground">
                 {isCompleto ? 'Registro de conclusão' : 'Progresso atual'}
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 dark:text-muted-foreground">
                 {checklist.nome}
               </DialogDescription>
             </div>
@@ -74,20 +74,20 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                 'p-4 rounded-xl border flex items-center justify-between',
                 isCompleto
                   ? 'bg-success/5 border-success/20'
-                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                  : 'bg-gray-50 dark:bg-muted border-gray-200 dark:border-border'
               )}
             >
               <div className="flex items-center gap-2">
                 {isCompleto ? (
                   <IconCheckCircle className="text-xl text-success" />
                 ) : (
-                  <IconPending className="text-xl text-gray-400" />
+                  <IconPending className="text-xl text-gray-400 dark:text-muted-foreground" />
                 )}
                 <div>
-                  <p className={cn('text-sm font-bold', isCompleto ? 'text-success' : 'text-gray-700 dark:text-gray-300')}>
+                  <p className={cn('text-sm font-bold', isCompleto ? 'text-success' : 'text-gray-700 dark:text-slate-300')}>
                     {isCompleto ? 'Finalizado' : 'Em andamento'}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground">
                     {config.label} · {checklist.descricao}
                   </p>
                 </div>
@@ -109,9 +109,9 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
               <div className="flex flex-col gap-3">
                 {checklist.completadoEm && (
                   <div className="flex items-center gap-2 text-sm">
-                    <IconSchedule className="text-base text-gray-400" />
-                    <span className="text-gray-500">Finalizado {preposicaoMomento(checklist.completadoEm)}</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{formatarMomentoChecklist(checklist.completadoEm)}</span>
+                    <IconSchedule className="text-base text-gray-400 dark:text-muted-foreground" />
+                    <span className="text-gray-500 dark:text-muted-foreground">Finalizado {preposicaoMomento(checklist.completadoEm)}</span>
+                    <span className="font-semibold text-gray-900 dark:text-foreground">{formatarMomentoChecklist(checklist.completadoEm)}</span>
                   </div>
                 )}
                 {checklist.assinadoPor && (
@@ -120,20 +120,20 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                       Assinado por
                     </p>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center text-purple-700 font-bold text-sm">
+                      <div className="w-8 h-8 rounded-full bg-purple-200 dark:bg-purple-800 flex items-center justify-center text-purple-700 font-bold text-sm dark:text-purple-300">
                         {checklist.assinadoPor.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-foreground">
                           {checklist.assinadoPor}
                         </p>
                         {checklist.registroProfissional && (
-                          <p className="text-xs text-gray-500">{checklist.registroProfissional}</p>
+                          <p className="text-xs text-gray-500 dark:text-muted-foreground">{checklist.registroProfissional}</p>
                         )}
                       </div>
                     </div>
                     {checklist.assinadoEm && (
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <p className="text-xs text-gray-500 flex items-center gap-1 dark:text-muted-foreground">
                         <IconCalendarToday className="text-sm" />
                         {formatarMomentoChecklist(checklist.assinadoEm)}
                       </p>
@@ -145,7 +145,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
 
             {/* Lista de itens */}
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 dark:text-muted-foreground">
                 Itens verificados ({concluidos}/{total})
               </p>
               <div className="flex flex-col gap-1.5">
@@ -156,7 +156,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                       'flex items-center gap-3 p-2.5 rounded-lg',
                       item.concluida
                         ? 'bg-success/5'
-                        : 'bg-gray-50 dark:bg-gray-800/50'
+                        : 'bg-gray-50 dark:bg-muted'
                     )}
                   >
                     {item.concluida ? (
@@ -168,8 +168,8 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
                       className={cn(
                         'text-sm',
                         item.concluida
-                          ? 'text-gray-500 line-through'
-                          : 'text-gray-700 dark:text-gray-300'
+                          ? 'text-gray-500 line-through dark:text-muted-foreground'
+                          : 'text-gray-700 dark:text-slate-300'
                       )}
                     >
                       {item.titulo}
@@ -181,7 +181,7 @@ export function VerRegistroModal({ open, onOpenChange, checklist }: VerRegistroM
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogFooter className="p-6 border-t border-gray-100 dark:border-border shrink-0">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>

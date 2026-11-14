@@ -44,11 +44,11 @@ export function AssinantesObrasPicker({
   const totalObras = assinantes.reduce((total, assinante) => total + assinante.obrasGerenciadas, 0);
 
   return (
-    <aside className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-gray-900" aria-label="Empreiteiras assinantes do xgestão">
+    <aside className="rounded-2xl border border-gray-100 bg-white p-4 dark:border-border dark:bg-card" aria-label="Empreiteiras assinantes do xgestão">
       <h2 className="text-base font-bold">Empreiteiras assinantes</h2>
       <p className="mt-1 text-xs text-muted-foreground">Escolha uma empreiteira para acompanhar suas obras.</p>
       <div className="relative mt-4">
-        <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+        <RiSearchLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-muted-foreground" />
         <Input
           aria-label="Buscar empreiteira assinante"
           placeholder="Buscar empreiteira"
@@ -74,7 +74,7 @@ export function AssinantesObrasPicker({
               type="button"
               aria-pressed={!selecionadaId}
               onClick={() => onSelecionar('')}
-              className={`w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!selecionadaId ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-primary/40 dark:border-gray-800'}`}
+              className={`w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!selecionadaId ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-primary/40 dark:border-border'}`}
               data-testid="xgestao-assinante-todos"
             >
               <span className="block text-sm font-bold">Todas as empreiteiras</span>
@@ -86,7 +86,7 @@ export function AssinantesObrasPicker({
                 type="button"
                 aria-pressed={selecionadaId === assinante.empreiteiraId}
                 onClick={() => onSelecionar(assinante.empreiteiraId)}
-                className={`w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selecionadaId === assinante.empreiteiraId ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-primary/40 dark:border-gray-800'}`}
+                className={`w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${selecionadaId === assinante.empreiteiraId ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-primary/40 dark:border-border'}`}
                 data-testid={`xgestao-assinante-selecionar-${assinante.empreiteiraId}`}
               >
                 <span className="block truncate text-sm font-bold" title={assinante.empreiteiraNome}>{assinante.empreiteiraNome}</span>
@@ -104,7 +104,7 @@ export function AssinantesObrasPicker({
             )}
           </div>
           {totalPaginas > 1 && (
-            <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3 text-xs dark:border-gray-800">
+            <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3 text-xs dark:border-border">
               <Button size="sm" variant="outline" disabled={paginaAtual === 1} onClick={() => setPagina(paginaAtual - 1)}>Anterior</Button>
               <span aria-live="polite">{paginaAtual} de {totalPaginas}</span>
               <Button size="sm" variant="outline" disabled={paginaAtual === totalPaginas} onClick={() => setPagina(paginaAtual + 1)}>Próxima</Button>

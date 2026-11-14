@@ -112,7 +112,8 @@ function PlanCard({
     <article
       className={[
         'relative flex min-w-0 flex-col rounded-2xl border p-5 shadow-sm',
-        isFeatured ? 'border-primary bg-primary text-primary-foreground shadow-md' : 'border-border bg-card',
+        // PRD 55 — no escuro o destaque usa o cinza da marca (#333), não o branco chapado.
+        isFeatured ? 'border-primary bg-primary text-primary-foreground shadow-md dark:border-white/30 dark:[--primary:0_0%_20%] dark:[--primary-foreground:180_6%_96%]' : 'border-border bg-card',
       ].join(' ')}
       data-testid={`xgestao-plano-${plano.tier}`}
     >
@@ -146,7 +147,7 @@ function PlanCard({
       <Button
         type="button"
         variant={isFeatured ? 'secondary' : 'outline'}
-        className={isFeatured ? 'text-primary' : ''}
+        className={isFeatured ? 'text-primary dark:bg-[#F4F5F5] dark:text-[#1C1F22] dark:hover:bg-[#F4F5F5]/90' : ''}
         disabled={isCurrent || isAgendado || pending || blockedByDocument}
         onClick={() => onChoose(plano)}
         data-testid={`xgestao-assinar-${plano.tier}`}
@@ -398,7 +399,7 @@ export function XGestaoPlanosSection() {
         <CardContent className="pt-6">
           <div className="grid gap-4 sm:grid-cols-2">
             {perfil.uso.map((item) => (
-              <div key={item.key} className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900">
+              <div key={item.key} className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-border dark:bg-muted">
                 <p className="text-xs text-muted-foreground">{item.label}</p>
                 <p className="mt-1 text-xl font-bold">
                   {item.current}{' '}
@@ -549,7 +550,7 @@ export function XGestaoPlanosSection() {
                     'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
                     motivoCancelamento === m
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+                      : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
                   )}
                 >
                   {ROTULO_MOTIVO_CANCELAMENTO[m]}

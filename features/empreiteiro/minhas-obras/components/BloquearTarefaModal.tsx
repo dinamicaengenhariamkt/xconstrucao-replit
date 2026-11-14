@@ -68,16 +68,16 @@ export function BloquearTarefaModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-md p-0 flex flex-col gap-0 overflow-hidden">
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <IconBlock className="text-amber-600 text-xl" />
+              <IconBlock className="text-amber-600 text-xl dark:text-amber-300" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-foreground">
                 Bloquear tarefa
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                 {tarefa?.titulo}
               </DialogDescription>
             </div>
@@ -93,7 +93,7 @@ export function BloquearTarefaModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Motivo do bloqueio <span className="text-red-500">*</span>
+                      Motivo do bloqueio <span className="text-red-500 dark:text-red-400">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: Aguardando material" {...field} autoFocus />
@@ -108,7 +108,7 @@ export function BloquearTarefaModal({
                 name="info"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Informação adicional <span className="text-xs text-gray-400 font-normal">(opcional)</span></FormLabel>
+                    <FormLabel>Informação adicional <span className="text-xs text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span></FormLabel>
                     <FormControl>
                       <textarea
                         {...field}

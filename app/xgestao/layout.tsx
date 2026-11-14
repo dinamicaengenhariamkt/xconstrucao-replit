@@ -1,10 +1,18 @@
 import type { ReactNode } from 'react';
+import type { Viewport } from 'next';
 import { redirect } from 'next/navigation';
 import { XGestaoLayout } from '@features/xgestao/components/XGestaoLayout';
 import { getCurrentXGestaoEntitlement } from '@features/xgestao/lib/entitlement';
 import { XGESTAO_LOGIN_HREF } from '@features/xgestao/routes';
 import { iniciarTesteAutomatico } from '@features/xgestao/teste/server/teste-service';
 import { onboardingXgestaoPendente } from '@features/onboarding/server/documento-pendente';
+import { PainelTemaRaiz } from '@features/xgestao/tema/PainelTemaRaiz';
+import { ScriptTemaPainel } from '@features/xgestao/tema/ScriptTemaPainel';
+
+// PRD 55 — o painel declara o próprio esquema de cores: sem isso o "escuro forçado"
+// do navegador do celular invertia o painel (logo some). O script do tema troca
+// para `dark` quando o painel está no nosso escuro.
+export const viewport: Viewport = { colorScheme: 'only light' };
 
 export default async function XGestaoRouteLayout({ children }: { children: ReactNode }) {
   const entitlement = await getCurrentXGestaoEntitlement();
@@ -22,5 +30,12 @@ export default async function XGestaoRouteLayout({ children }: { children: React
     await iniciarTesteAutomatico(entitlement.userId);
   }
 
-  return <XGestaoLayout isOwner={entitlement.papel === 'dono'}>{children}</XGestaoLayout>;
+  return (
+    <>
+      <ScriptTemaPainel />
+      <PainelTemaRaiz>
+        <XGestaoLayout isOwner={entitlement.papel === 'dono'}>{children}</XGestaoLayout>
+      </PainelTemaRaiz>
+    </>
+  );
 }

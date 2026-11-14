@@ -15,6 +15,7 @@ import { usePerfilPlano } from '@features/planos/ui/use-planos';
 import { Avatar, AvatarFallback, AvatarImage } from '@shared/components/ui/avatar';
 import { SidebarTrigger } from '@shared/components/ui/sidebar';
 import { XGESTAO_HOME } from '@features/xgestao/routes';
+import { SeletorTemaMenu } from '@features/xgestao/tema/SeletorTemaMenu';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,11 +36,11 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
   }, [logout, router]);
 
   return (
-    <header className="sticky top-0 z-10 flex h-20 shrink-0 items-center justify-between border-b border-gray-100 bg-white/80 px-4 py-2 backdrop-blur-md md:px-12 dark:border-gray-800 dark:bg-background-dark/80">
+    <header className="sticky top-0 z-10 flex h-20 shrink-0 items-center justify-between border-b border-gray-100 bg-white/80 px-4 py-2 backdrop-blur-md md:px-12 dark:border-border dark:bg-background/80">
       <div className="flex min-w-0 items-center gap-4">
         <SidebarTrigger icon={RiMenuLine} />
         <div className="hidden sm:block">
-          <p className="text-sm font-bold text-gray-900 dark:text-gray-100">xgestão</p>
+          <p className="text-sm font-bold text-gray-900 dark:text-foreground">xgestão</p>
           <p className="text-xs text-muted-foreground">Gestão das suas próprias obras</p>
         </div>
       </div>
@@ -48,14 +49,14 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-3 rounded-xl p-1.5 text-left outline-none transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-gray-800"
+            className="flex items-center gap-3 rounded-xl p-1.5 text-left outline-none transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-primary dark:hover:bg-muted"
             aria-label="Abrir menu da conta"
           >
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-bold leading-none text-gray-900 dark:text-gray-100">
+              <p className="text-sm font-bold leading-none text-gray-900 dark:text-foreground">
                 {user?.name ?? 'Empreiteiro'}
               </p>
-              <p className="mt-1 text-[11px] font-medium text-gray-500">Conta xgestão</p>
+              <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-muted-foreground">Conta xgestão</p>
               <span className="mt-1 inline-flex w-fit rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
                 {plano?.catalogo.nome ?? (isOwner ? 'Plano xgestão' : 'Membro da equipe')}
               </span>
@@ -93,6 +94,7 @@ export function XGestaoTopbar({ isOwner }: { isOwner: boolean }) {
             <RiTeamLine className="mr-2 size-4" />
             Equipe
           </DropdownMenuItem>}
+          <SeletorTemaMenu />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleLogout}

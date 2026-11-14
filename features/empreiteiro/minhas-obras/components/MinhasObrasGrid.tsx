@@ -15,8 +15,8 @@ export function MinhasObrasGrid({ obras, basePath, xgestao = false }: MinhasObra
     return (
       <div className="text-center py-20" data-testid="empty-state-minhas-obras">
         <IconConstruction className="text-5xl text-gray-300 mb-4 block" />
-        <h3 className="text-lg font-bold text-gray-500 dark:text-gray-400">Nenhuma obra encontrada</h3>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Tente alterar os filtros de busca.</p>
+        <h3 className="text-lg font-bold text-gray-500 dark:text-muted-foreground">Nenhuma obra encontrada</h3>
+        <p className="text-sm text-gray-400 dark:text-muted-foreground mt-1">Tente alterar os filtros de busca.</p>
       </div>
     );
   }

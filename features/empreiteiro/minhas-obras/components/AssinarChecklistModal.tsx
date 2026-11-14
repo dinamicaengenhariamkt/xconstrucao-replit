@@ -96,16 +96,16 @@ export function AssinarChecklistModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-md p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <IconDraw className="text-purple-600 text-xl" />
+              <IconDraw className="text-purple-600 text-xl dark:text-purple-300" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-foreground">
                 Assinar checklist
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                 {checklist?.nome}
               </DialogDescription>
             </div>
@@ -143,7 +143,7 @@ export function AssinarChecklistModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Nome do responsável <span className="text-red-500">*</span>
+                      Nome do responsável <span className="text-red-500 dark:text-red-400">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Nome completo" {...field} autoFocus />
@@ -161,7 +161,7 @@ export function AssinarChecklistModal({
                   <FormItem>
                     <FormLabel>
                       Registro profissional{' '}
-                      <span className="text-xs text-gray-400 font-normal">(CREA/CAU — opcional)</span>
+                      <span className="text-xs text-gray-400 font-normal dark:text-muted-foreground">(CREA/CAU — opcional)</span>
                     </FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: CREA-SP 123456-D" {...field} />
@@ -183,7 +183,7 @@ export function AssinarChecklistModal({
                           'flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all',
                           field.value
                             ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/10'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-purple-300'
+                            : 'border-gray-200 dark:border-border hover:border-purple-300 dark:hover:border-purple-800'
                         )}
                       >
                         <input
@@ -192,7 +192,7 @@ export function AssinarChecklistModal({
                           onChange={(e) => field.onChange(e.target.checked ? true : undefined)}
                           className="w-4 h-4 mt-0.5 rounded accent-purple-600 flex-shrink-0"
                         />
-                        <span className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        <span className="text-xs text-gray-600 dark:text-slate-300 leading-relaxed">
                           Declaro que todos os itens deste checklist foram verificados conforme as
                           normas técnicas vigentes e assumo responsabilidade técnica por esta validação.
                         </span>

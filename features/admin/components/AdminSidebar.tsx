@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from '@shared/components/ui/sidebar';
 import { RiLogoutBoxRLine } from 'react-icons/ri';
 import { Separator } from '@shared/components/ui/separator';
@@ -32,6 +33,12 @@ export function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuth();
+
+  // No celular o menu é uma gaveta: ao tocar num item ela fecha, para ficar claro que a tela mudou.
+  const { isMobile, setOpenMobile } = useSidebar();
+  const fecharNoCelular = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
 
   // XG06 — o shell visual segue o produto aberto, enquanto a autorização segue
   // o escopo do ator. Um admin global em /admin/xgestao vê o menu enxuto, mas
@@ -70,16 +77,16 @@ export function AdminSidebar() {
   const isActive = (url: string): boolean => url === activeUrl;
 
   return (
-    <Sidebar className="bg-[#FAFAFA] dark:bg-background-dark">
+    <Sidebar className="bg-[#FAFAFA] dark:bg-background">
       <SidebarHeader className="p-6">
-        <Link href={isXgestao ? '/admin/xgestao' : '/admin/financeiro'}>
+        <Link onClick={fecharNoCelular} href={isXgestao ? '/admin/xgestao' : '/admin/financeiro'}>
           <div className="flex items-center cursor-pointer">
             <Image
               src="/images/logo-xconstrucao-horizontal-01.png"
               alt="XConstrução"
               width={160}
               height={48}
-              className="h-12 w-auto"
+              className="h-12 w-auto dark:invert"
             />
           </div>
         </Link>
@@ -95,12 +102,16 @@ export function AdminSidebar() {
                     asChild
                     isActive={isActive(item.url)}
                     className={
+                      // PRD 55 (A1) — no xgestão o item ativo perde a barra saliente, como no
+                      // painel do empreiteiro. O admin do marketplace fica como está.
                       isActive(item.url)
-                        ? 'bg-[#f3f7f8] dark:bg-gray-800 border-r-3 border-primary font-semibold'
+                        ? isXgestao
+                          ? 'bg-[#f3f7f8] font-semibold transition-colors duration-150 dark:bg-card'
+                          : 'bg-[#f3f7f8] dark:bg-gray-800 border-r-3 border-primary font-semibold'
                         : ''
                     }
                   >
-                    <Link href={item.url}>
+                    <Link onClick={fecharNoCelular} href={item.url}>
                       <item.icon className="w-5 h-5" />
                       <span className="text-sm">{item.title}</span>
                     </Link>
@@ -117,7 +128,7 @@ export function AdminSidebar() {
           {bottomNavItems.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <Link href={item.url}>
+                <Link onClick={fecharNoCelular} href={item.url}>
                   <item.icon className="w-4 h-4" />
                   <span className="text-sm font-medium">{item.title}</span>
                 </Link>

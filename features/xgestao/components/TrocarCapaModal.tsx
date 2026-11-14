@@ -71,7 +71,7 @@ export function TrocarCapaModal({
         </DialogHeader>
 
         {obraQuery.isLoading ? (
-          <div className="aspect-[16/7] animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800" />
+          <div className="aspect-[16/7] animate-pulse rounded-2xl bg-gray-100 dark:bg-muted" />
         ) : (
           <CapaObraEditor
             obraId={obraId}

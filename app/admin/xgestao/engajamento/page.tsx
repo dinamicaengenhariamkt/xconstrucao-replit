@@ -21,7 +21,7 @@ const NIVEL_STYLE: Record<NivelEngajamento, string> = {
   ativo_7d: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
   ativo_30d: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   inativo: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  nunca: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  nunca: 'bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300',
 };
 
 function porcento(valor: number | null): string {
@@ -36,9 +36,9 @@ function dias(valor: number | null): string {
 
 function Grupo({ titulo, grupo, testId }: { titulo: string; grupo: GrupoEngajamento; testId: string }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" data-testid={testId}>
+    <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card" data-testid={testId}>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">{titulo}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-foreground">{titulo}</p>
         <p className="text-xs text-muted-foreground">{grupo.total} no total</p>
       </div>
       <p className="mt-2 text-2xl font-extrabold" data-testid={`${testId}-taxa7d`}>{porcento(grupo.taxaAtivos7d)}</p>
@@ -102,7 +102,7 @@ export default function AdminXgestaoEngajamentoPage() {
         <Grupo titulo="Todos os assinantes" grupo={resumo.todos} testId="xgestao-engajamento-todos" />
       </section>
 
-      <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-sem-uso">
+      <Card className="border-gray-100 dark:border-border" data-testid="xgestao-sem-uso">
         <CardHeader className="flex-row items-center justify-between gap-3">
           <div>
             <CardTitle className="text-lg">Pagam ou estão no teste e pararam de usar</CardTitle>
@@ -120,7 +120,7 @@ export default function AdminXgestaoEngajamentoPage() {
         </CardHeader>
         <CardContent>
           {semUso.length ? (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            <div className="divide-y divide-gray-100 dark:divide-border">
               {semUso.map((a) => (
                 <Link
                   key={a.userId}
@@ -141,14 +141,14 @@ export default function AdminXgestaoEngajamentoPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center py-10 text-center">
-              <RiCheckboxCircleLine className="size-8 text-emerald-500" />
+              <RiCheckboxCircleLine className="size-8 text-emerald-500 dark:text-emerald-400" />
               <p className="mt-2 text-sm font-bold">Todos que pagam ou testam usaram nos últimos {DIAS_SEM_USO} dias</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-engajamento-tabela">
+      <Card className="border-gray-100 dark:border-border" data-testid="xgestao-engajamento-tabela">
         <CardHeader><CardTitle className="text-lg">Uso por assinante</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -162,7 +162,7 @@ export default function AdminXgestaoEngajamentoPage() {
                 <th className="pb-2 text-right font-semibold">Registros 30 dias</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-border">
               {assinantes.map((a) => (
                 <tr key={a.userId} data-testid={`xgestao-engajamento-${a.userId}`} data-nivel={a.engajamento.nivel}>
                   <td className="py-2">

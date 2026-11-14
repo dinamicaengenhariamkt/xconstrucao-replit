@@ -70,7 +70,7 @@ export function ProfitCard({
               label="Receita total"
               value={formatCurrencyRounded(metrics.receitaTotal)}
               icon={IconAttachMoney}
-              iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+              iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
               luminous={luminous}
               compact
             />
@@ -78,7 +78,7 @@ export function ProfitCard({
               label="Custo total"
               value={formatCurrencyRounded(metrics.custoTotal)}
               icon={IconReceiptLong}
-              iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+              iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300"
               luminous={luminous}
               compact
             />
@@ -87,7 +87,7 @@ export function ProfitCard({
                 label="Lucro estimado"
                 value={formatCurrencyRounded(metrics.lucroEstimado)}
                 icon={IconTrendingUp}
-                iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
+                iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300"
                 badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
                 luminous={luminous}
                 compact
@@ -97,7 +97,7 @@ export function ProfitCard({
               label="Margem"
               value={`${metrics.margem.toFixed(1).replace('.', ',')}%`}
               icon={IconAnalytics}
-              iconBgColor="bg-purple-50 text-purple-600 dark:bg-purple-900/20"
+              iconBgColor="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300"
               badge={{ label: VARIANT_BADGE_LABEL[variant], variant }}
               luminous={luminous}
               compact

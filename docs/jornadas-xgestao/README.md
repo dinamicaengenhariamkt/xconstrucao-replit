@@ -225,3 +225,7 @@ Ver [XG51: publish e Asaas em produção](51-publish-e-asaas-producao.md): Secre
 Ver [XG52: marketing e e-mails automáticos](52-marketing-e-emails.md): consentimento de e-mail de marketing (LGPD) no cadastro e nas configurações, descadastro sem login, rotina diária `/api/cron/xgestao-diario` (avisos de teste, cobrança e cancelamento, convites com opt-in), lista do Brevo, opt-in no CSV do admin e validação do telefone.
 
 Ver [XG53: PWA, instalar o app no celular](53-pwa-instalar-app.md): manifesto, ícones, seção com QR code na home, página `/instalar` com o passo a passo de cada aparelho, item "Instalar app" e faixa no painel; sem service worker; o que falta testar em aparelho de verdade.
+
+Ver [XG54: erro com saída](54-erro-com-suporte.md) (PRD): código curto do erro, botão de WhatsApp, aviso imediato para a equipe e faixa de instabilidade.
+
+Ver [XG55: tema claro/escuro e acabamento do painel](55-tema-e-acabamento-do-painel.md) (PRD): menu do celular corrigido, escuro forçado do navegador, paleta escura, ajustes leves e lotes.

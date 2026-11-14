@@ -77,10 +77,10 @@ const STATUS_STYLE: Record<string, string> = {
   ativo: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
   ativa: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
   active: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200',
-  revogado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  revogada: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  revoked: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  pausado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  revogado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted dark:text-slate-300',
+  revogada: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted dark:text-slate-300',
+  revoked: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted dark:text-slate-300',
+  pausado: 'border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted dark:text-slate-300',
 };
 
 const blankForm = (): FormState => ({
@@ -441,7 +441,7 @@ export function XGestaoEquipeView() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary"><RiTeamLine className="size-4" /> Empresa</p>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Equipe</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground sm:text-3xl">Equipe</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Convide pessoas para acessar as obras da empresa e gerencie suas permissões.</p>
         </div>
         <Button onClick={openInvite} disabled={loading || Boolean(loadError) || !data || equipeLotada(data.usoEquipe)}><RiAddLine /> Convidar pessoa</Button>

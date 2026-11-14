@@ -42,7 +42,7 @@ const CATEGORIA_CONFIG: Record<
   alvara:    { label: 'Alvarás',           Icon: IconDomain,       iconeBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
   laudo:     { label: 'Laudos Técnicos',   Icon: IconFactCheck,    iconeBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
   foto:      { label: 'Fotos',             Icon: IconFolderOpen,   iconeBg: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400' },
-  outros:    { label: 'Outros',            Icon: IconDescription,  iconeBg: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
+  outros:    { label: 'Outros',            Icon: IconDescription,  iconeBg: 'bg-gray-100 text-gray-600 dark:bg-muted dark:text-muted-foreground' },
 };
 
 const CATEGORIAS_ORDEM: ObraDocumento['categoria'][] = [
@@ -120,7 +120,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
         'flex items-center gap-3 p-3 rounded-xl border transition-colors group',
         isVencendo
           ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 border-l-4 border-l-amber-500'
-          : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
+          : 'bg-gray-50 dark:bg-muted border-gray-100 dark:border-border hover:bg-gray-100 dark:hover:bg-muted'
       )}
     >
       {/* Icon */}
@@ -130,11 +130,11 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{doc.nome}</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-foreground truncate">{doc.nome}</p>
         {doc.observacoes && (
-          <p className="text-xs text-gray-500 truncate">{doc.observacoes}</p>
+          <p className="text-xs text-gray-500 truncate dark:text-muted-foreground">{doc.observacoes}</p>
         )}
-        <p className={cn('text-xs mt-0.5', isVencendo ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400')}>
+        <p className={cn('text-xs mt-0.5', isVencendo ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-400 dark:text-muted-foreground')}>
           {doc.tamanho ? `${doc.tamanho} · ` : ''}{doc.data}
           {doc.venceEmDias && ` · vence em ${doc.venceEmDias} dias`}
         </p>
@@ -166,7 +166,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
             href={doc.url ?? '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-white/10 transition-all dark:text-muted-foreground"
             aria-label={`Abrir ${doc.nome} em nova aba`}
             data-testid={`abrir-link-${doc.id}`}
           >
@@ -176,7 +176,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
           <button
             type="button"
             onClick={() => onAcao('abrir', doc)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-gray-200 dark:hover:bg-white/10 transition-all dark:text-muted-foreground"
             aria-label={`Abrir ${doc.nome}`}
             data-testid={`abrir-doc-${doc.id}`}
           >
@@ -189,7 +189,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-all cursor-pointer opacity-0 group-hover:opacity-100 focus:opacity-100 dark:text-muted-foreground"
               aria-label="Ações do documento"
             >
               <IconMoreVert className="text-[18px]" />
@@ -208,7 +208,7 @@ function DocumentoRow({ doc, obraFinalizada, onAcao, onBaixar }: DocumentoRowPro
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onAcao('excluir', doc)}
-                  className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                  className="gap-2 cursor-pointer text-red-600 focus:text-red-600 dark:text-red-300 dark:focus:text-red-300"
                 >
                   <IconDelete className="text-[16px]" />
                   Excluir
@@ -294,14 +294,14 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
 
   return (
     <div
-      className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+      className="bg-white dark:bg-card p-6 rounded-2xl border border-gray-100 dark:border-border shadow-sm"
       data-tour="aba-documentos"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Documentos da Obra</h3>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Documentos da Obra</h3>
+          <p className="text-sm text-gray-500 mt-0.5 dark:text-muted-foreground">
             {documentos.length} documento{documentos.length !== 1 ? 's' : ''} · {gruposPorCategoria.length} categori{gruposPorCategoria.length !== 1 ? 'as' : 'a'}
           </p>
         </div>
@@ -323,7 +323,7 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
       {/* Alerta de vencimento */}
       {docsVencendo.length > 0 && (
         <div className="mb-5 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-          <IconWarning className="text-amber-500 text-xl flex-shrink-0 mt-0.5" />
+          <IconWarning className="text-amber-500 text-xl flex-shrink-0 mt-0.5 dark:text-amber-400" />
           <div>
             <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
               {docsVencendo.length} documento{docsVencendo.length !== 1 ? 's' : ''} com validade próxima do vencimento
@@ -339,10 +339,10 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
       {documentos.length === 0 && (
         <div className="text-center py-16">
           <IconFolderOpen className="text-gray-300 dark:text-gray-600 text-6xl mb-3 block" />
-          <p className="text-base font-semibold text-gray-500 dark:text-gray-400">
+          <p className="text-base font-semibold text-gray-500 dark:text-muted-foreground">
             Nenhum documento cadastrado
           </p>
-          <p className="text-sm text-gray-400 mt-1 mb-6">
+          <p className="text-sm text-gray-400 mt-1 mb-6 dark:text-muted-foreground">
             Adicione contratos, projetos, ARTs e outros arquivos da obra.
           </p>
           {!obraFinalizada && (
@@ -367,10 +367,10 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
                     <span className={cn('p-1 rounded', cfg.iconeBg)}>
                       <cfg.Icon className="text-[16px]" />
                     </span>
-                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    <h4 className="text-sm font-bold text-gray-700 dark:text-slate-300">
                       {cfg.label}
                     </h4>
-                    <span className="text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold bg-gray-100 dark:bg-muted text-gray-500 px-1.5 py-0.5 rounded-full dark:text-muted-foreground">
                       {docs.length}
                     </span>
                   </div>
@@ -429,7 +429,7 @@ export function DocumentosSection({ obra, readOnly = false }: DocumentosSectionP
             <AlertDialogTitle>Excluir documento</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir{' '}
-              <strong className="text-gray-900 dark:text-white">{modalState.doc?.nome}</strong>?
+              <strong className="text-gray-900 dark:text-foreground">{modalState.doc?.nome}</strong>?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

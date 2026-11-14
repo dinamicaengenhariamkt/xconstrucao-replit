@@ -25,16 +25,16 @@ import { InstalarAppQrCode } from './InstalarAppQrCode';
 function Passo({ numero, children }: { numero: number; children: ReactNode }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#333333] text-xs font-bold text-white dark:bg-white dark:text-[#333333]">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#333333] text-xs font-bold text-white dark:bg-primary dark:text-primary-foreground">
         {numero}
       </span>
-      <span className="pt-0.5 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{children}</span>
+      <span className="pt-0.5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">{children}</span>
     </li>
   );
 }
 
 function Destaque({ children }: { children: ReactNode }) {
-  return <strong className="inline-flex items-center gap-1 font-semibold text-[#101819] dark:text-white">{children}</strong>;
+  return <strong className="inline-flex items-center gap-1 font-semibold text-[#101819] dark:text-foreground">{children}</strong>;
 }
 
 export function InstalarAppPassos({ mostrarQrNoComputador = true }: { mostrarQrNoComputador?: boolean }) {
@@ -73,7 +73,7 @@ export function InstalarAppPassos({ mostrarQrNoComputador = true }: { mostrarQrN
     };
     return (
       <div className="space-y-4" data-testid="instalar-app-navegador-interno">
-        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
           Você abriu este link por dentro de outro aplicativo. Para instalar, abra no navegador do celular
           (Chrome no Android ou Safari no iPhone): toque nos <Destaque><RiMore2Fill />três pontinhos</Destaque> e
           em <Destaque>Abrir no navegador</Destaque>.
@@ -92,12 +92,12 @@ export function InstalarAppPassos({ mostrarQrNoComputador = true }: { mostrarQrN
           <Button
             type="button"
             onClick={clicarInstalar}
-            className="h-12 w-full rounded-full bg-[#333333] px-8 font-bold text-white hover:brightness-110 dark:bg-white dark:text-[#1C1F22] sm:w-auto"
+            className="h-12 w-full rounded-full bg-[#333333] px-8 font-bold text-white hover:brightness-110 dark:bg-primary dark:text-primary-foreground sm:w-auto"
             data-testid="button-instalar-app"
           >
             <RiSmartphoneLine className="size-5" /> Instalar o app
           </Button>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-muted-foreground">
             {resultado === 'recusado'
               ? 'Sem problema. Quando quiser, é só tocar de novo ou instalar pelo menu do navegador.'
               : 'Toque no botão e confirme. O ícone aparece na tela inicial.'}
@@ -113,7 +113,7 @@ export function InstalarAppPassos({ mostrarQrNoComputador = true }: { mostrarQrN
         <Passo numero={2}>
           Toque em <Destaque>Instalar app</Destaque> ou <Destaque>Adicionar à tela inicial</Destaque> e confirme.
         </Passo>
-        <li className="pl-10 text-xs text-slate-500 dark:text-slate-400">
+        <li className="pl-10 text-xs text-slate-500 dark:text-muted-foreground">
           Se o app já estiver instalado, é só abrir pelo ícone do xgestão.
         </li>
       </ol>

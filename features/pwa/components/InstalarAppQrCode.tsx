@@ -22,17 +22,17 @@ export function InstalarAppQrCode({ tamanho = 168 }: { tamanho?: number }) {
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5"
+        className="rounded-xl bg-white p-2 shadow-sm ring-1 ring-black/5 dark:bg-card dark:ring-border"
         style={{ width: tamanho + 16, height: tamanho + 16 }}
       >
         {src ? (
           // eslint-disable-next-line @next/next/no-img-element -- data URL gerada aqui, sem otimização a fazer
           <img src={src} alt="QR code para instalar o app xgestão no celular" width={tamanho} height={tamanho} data-testid="instalar-app-qrcode" />
         ) : (
-          <div className="size-full animate-pulse rounded-lg bg-slate-100" role="status" aria-label="Gerando QR code" />
+          <div className="size-full animate-pulse rounded-lg bg-slate-100 dark:bg-muted" role="status" aria-label="Gerando QR code" />
         )}
       </div>
-      {url && <span className="text-[11px] text-slate-500 dark:text-slate-400">{url.replace(/^https?:\/\//, '')}</span>}
+      {url && <span className="text-[11px] text-slate-500 dark:text-muted-foreground">{url.replace(/^https?:\/\//, '')}</span>}
     </div>
   );
 }

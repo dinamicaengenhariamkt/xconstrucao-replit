@@ -152,16 +152,16 @@ export function NovaTarefaModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               {isEdicao ? <IconEdit className="text-primary text-xl" /> : <IconAddTask className="text-primary text-xl" />}
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-xl font-bold text-gray-900 dark:text-foreground">
                 {titulo}
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 dark:text-muted-foreground">
                 {isEdicao ? 'Altere os dados da tarefa abaixo' : 'Preencha os dados para criar a tarefa'}
               </DialogDescription>
             </div>
@@ -184,7 +184,7 @@ export function NovaTarefaModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Título <span className="text-red-500">*</span>
+                        Título <span className="text-red-500 dark:text-red-400">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="Ex: Concretagem laje 3º pavimento" {...field} data-testid="input-tarefa-titulo" />
@@ -202,7 +202,7 @@ export function NovaTarefaModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Etapa <span className="text-red-500">*</span>
+                          Etapa <span className="text-red-500 dark:text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
                           <select
@@ -217,7 +217,7 @@ export function NovaTarefaModal({
                             ))}
                           </select>
                         </FormControl>
-                         <p className="text-[11px] text-gray-400 mt-1">
+                         <p className="text-[11px] text-gray-400 mt-1 dark:text-muted-foreground">
                            {obra.etapas.length > 0
                              ? 'A tarefa ficará vinculada à etapa selecionada.'
                              /* XG15 — apontava para o "Cronograma", que só exibe o
@@ -235,7 +235,7 @@ export function NovaTarefaModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Responsável <span className="text-red-500">*</span>
+                          Responsável <span className="text-red-500 dark:text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
                           <select
@@ -266,7 +266,7 @@ export function NovaTarefaModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Prazo <span className="text-red-500">*</span>
+                          Prazo <span className="text-red-500 dark:text-red-400">*</span>
                         </FormLabel>
                         <FormControl>
                         <Input type="date" {...field} data-testid="input-tarefa-prazo" />
@@ -308,7 +308,7 @@ export function NovaTarefaModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Prioridade <span className="text-red-500">*</span>
+                        Prioridade <span className="text-red-500 dark:text-red-400">*</span>
                       </FormLabel>
                       <FormControl>
                         <div className="flex gap-3">
@@ -320,7 +320,7 @@ export function NovaTarefaModal({
                                 'flex items-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border-2 transition-all flex-1 justify-center text-sm font-semibold',
                                 field.value === opt.value
                                   ? opt.color + ' border-current'
-                                  : 'border-transparent bg-gray-100 dark:bg-gray-800 text-gray-500 hover:border-gray-300'
+                                  : 'border-transparent bg-gray-100 dark:bg-muted text-gray-500 hover:border-gray-300 dark:text-muted-foreground dark:hover:border-border'
                               )}
                             >
                               <input
@@ -372,14 +372,14 @@ export function NovaTarefaModal({
 
                 {/* Condicional: motivo de bloqueio */}
                 {isBloqueado && (
-                  <div className="flex flex-col gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200">
+                  <div className="flex flex-col gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800">
                     <FormField
                       control={form.control}
                       name="bloqueioMotivo"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            Motivo do bloqueio <span className="text-red-500">*</span>
+                            Motivo do bloqueio <span className="text-red-500 dark:text-red-400">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input placeholder="Ex: Aguardando material" {...field} />
@@ -415,7 +415,7 @@ export function NovaTarefaModal({
                   name="descricao"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Descrição <span className="text-xs text-gray-400 font-normal">(opcional)</span></FormLabel>
+                      <FormLabel>Descrição <span className="text-xs text-gray-400 font-normal dark:text-muted-foreground">(opcional)</span></FormLabel>
                       <FormControl>
                         <textarea
                           {...field}
@@ -435,7 +435,7 @@ export function NovaTarefaModal({
         </ScrollArea>
 
         {/* Footer */}
-        <DialogFooter className="p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-row justify-end gap-3">
+        <DialogFooter className="p-6 border-t border-gray-100 dark:border-border shrink-0 flex flex-row justify-end gap-3">
           <Button type="button" variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>

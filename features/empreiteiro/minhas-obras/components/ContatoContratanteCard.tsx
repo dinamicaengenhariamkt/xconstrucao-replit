@@ -45,14 +45,14 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
   }, [obraId, router]);
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-      <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+    <div className="bg-white dark:bg-card rounded-2xl border border-gray-100 dark:border-border shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-gray-100 dark:border-border flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
           <IconPerson className="text-primary" />
         </div>
         <div>
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">Contato do Contratante</h2>
-          <p className="text-xs text-gray-500">Para dúvidas ou agendamento de visita técnica</p>
+          <h2 className="text-base font-bold text-gray-900 dark:text-foreground">Contato do Contratante</h2>
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">Para dúvidas ou agendamento de visita técnica</p>
         </div>
       </div>
 
@@ -67,18 +67,18 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
               className="w-16 h-16 text-2xl"
             />
             <div>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{contratante.nome}</p>
-              <p className="text-sm text-gray-500">Contratante</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-foreground">{contratante.nome}</p>
+              <p className="text-sm text-gray-500 dark:text-muted-foreground">Contratante</p>
             </div>
           </div>
 
           {contratante.email && (
             <div className="flex-1">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <IconMail className="text-gray-400" />
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-muted rounded-lg border border-gray-100 dark:border-border">
+                <IconMail className="text-gray-400 dark:text-muted-foreground" />
                 <div>
-                  <p className="text-xs text-gray-500">E-mail</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{contratante.email}</p>
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground">E-mail</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-foreground">{contratante.email}</p>
                 </div>
               </div>
             </div>
@@ -89,14 +89,14 @@ export function ContatoContratanteCard({ contratante, obraId, obraTitulo }: Cont
               data-testid="btn-enviar-mensagem"
               onClick={handleEnviarMensagem}
               disabled={loading}
-              className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-gray-900 dark:bg-primary text-white dark:text-primary-foreground rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-700 dark:hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <IconChat />
               {loading ? 'Abrindo…' : 'Enviar Mensagem'}
             </button>
-            <span className="text-[10px] text-gray-400 font-medium">via xchat</span>
+            <span className="text-[10px] text-gray-400 font-medium dark:text-muted-foreground">via xchat</span>
             {erro && (
-              <p className="text-[11px] text-red-500 mt-1 text-center max-w-[160px]">{erro}</p>
+              <p className="text-[11px] text-red-500 mt-1 text-center max-w-[160px] dark:text-red-400">{erro}</p>
             )}
           </div>
         </div>

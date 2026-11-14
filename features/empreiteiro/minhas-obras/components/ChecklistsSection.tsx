@@ -155,15 +155,15 @@ function ChecklistCard({
             {(() => { const TipoIcon = TIPO_ICON[checklist.tipo]; return <TipoIcon className="" />; })()}
           </div>
           <div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{checklist.nome}</h4>
-            <p className="text-xs text-gray-500">{checklist.descricao}</p>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-foreground">{checklist.nome}</h4>
+            <p className="text-xs text-gray-500 dark:text-muted-foreground">{checklist.descricao}</p>
             {/*
               XG21 — o selo avisa que o card zera sozinho. Sem ele, ver os
               tiques sumirem de um dia para o outro parece perda de dado.
             */}
             {seloRecorrencia && (
               <span
-                className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400"
+                className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-gray-500 dark:text-muted-foreground"
                 data-testid={`checklist-recorrencia-${checklist.id}`}
               >
                 <IconAutorenew className="text-xs" />
@@ -187,7 +187,7 @@ function ChecklistCard({
           {!readOnly && <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded"
+                className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded dark:text-muted-foreground dark:hover:text-slate-300"
                 aria-label="Opções do checklist"
               >
                 <IconMoreVert className="text-base" />
@@ -196,7 +196,7 @@ function ChecklistCard({
             <DropdownMenuContent align="end" className="w-48">
               {isCompleto ? (
                 <DropdownMenuItem onClick={() => onVerRegistro(checklist)} className="cursor-pointer">
-                  <IconVisibility className="text-sm mr-2 text-gray-500" />
+                  <IconVisibility className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
                   Ver registro
                 </DropdownMenuItem>
               ) : (
@@ -205,7 +205,7 @@ function ChecklistCard({
                   className="cursor-pointer"
                   disabled={obraFinalizada}
                 >
-                  <IconEdit className="text-sm mr-2 text-gray-500" />
+                  <IconEdit className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
                   Editar checklist
                 </DropdownMenuItem>
               )}
@@ -222,18 +222,18 @@ function ChecklistCard({
                   disabled={obraFinalizada}
                   data-testid={`checklist-reabrir-${checklist.id}`}
                 >
-                  <IconUndo className="text-sm mr-2 text-gray-500" />
+                  <IconUndo className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
                   Reabrir checklist
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem onClick={() => onDuplicar(checklist)} className="cursor-pointer">
-                <IconContentCopy className="text-sm mr-2 text-gray-500" />
+                <IconContentCopy className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
                 Duplicar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onExcluir(checklist)}
-                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20 dark:text-red-300 dark:focus:text-red-300"
                 disabled={obraFinalizada}
               >
                 <IconDelete className="text-sm mr-2" />
@@ -287,8 +287,8 @@ function ChecklistCard({
               className={cn(
                 'text-xs',
                 item.concluida
-                  ? 'line-through text-gray-400'
-                  : 'text-gray-700 dark:text-gray-300'
+                  ? 'line-through text-gray-400 dark:text-muted-foreground'
+                  : 'text-gray-700 dark:text-slate-300'
               )}
             >
               {item.titulo}
@@ -325,7 +325,7 @@ function ChecklistCard({
             Não foi feito {rotuloPeriodo}
           </span>
         ) : (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-muted-foreground">
             {concluidos}/{total} {total === 1 ? 'item' : 'itens'}
             {eRecorrente && ` · ${rotuloPeriodo}`}
           </span>
@@ -337,9 +337,9 @@ function ChecklistCard({
           className={cn(
             'px-3 py-1.5 text-xs font-bold rounded-lg transition-colors flex items-center gap-1',
             isCompleto && checklist.tipo === 'diario'
-              ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer'
+              ? 'bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer'
               : isCompleto
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                ? 'bg-gray-100 dark:bg-muted text-gray-400 cursor-not-allowed dark:text-muted-foreground'
                 : config.actionBtn + ' cursor-pointer'
           )}
         >
@@ -539,14 +539,14 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
   return (
     <>
       <div
-        className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm"
+        className="bg-white dark:bg-card p-8 rounded-2xl border border-gray-100 dark:border-border shadow-sm"
         data-tour="aba-checklists"
       >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Checklists</h3>
-            <p className="text-sm text-gray-500">Segurança, conformidade e controle de qualidade</p>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Checklists</h3>
+            <p className="text-sm text-gray-500 dark:text-muted-foreground">Segurança, conformidade e controle de qualidade</p>
           </div>
           {!readOnly && <button
             onClick={() => !obraFinalizada && openModal('novo')}
@@ -555,7 +555,7 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
             className={cn(
               'px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-2',
               obraFinalizada
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                ? 'bg-gray-100 dark:bg-muted text-gray-400 cursor-not-allowed dark:text-muted-foreground'
                 : 'bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer'
             )}
           >
@@ -569,17 +569,17 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
           <div className="py-16 flex flex-col items-center gap-4 text-center">
             <IconFactCheck className="text-5xl text-gray-200 dark:text-gray-700" />
             <div>
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">
                 Nenhum checklist cadastrado
               </p>
-              <p className="text-xs text-gray-400 mt-1 max-w-xs">
+              <p className="text-xs text-gray-400 mt-1 max-w-xs dark:text-muted-foreground">
                 Adicione checklists para controlar segurança e conformidade da obra.
               </p>
             </div>
             {!obraFinalizada && (
               <button
                 onClick={() => openModal('novo')}
-                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 bg-primary text-white dark:text-primary-foreground text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 cursor-pointer"
               >
                 <IconAdd className="text-sm" />
                 Novo Checklist
@@ -642,11 +642,11 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
             <AlertDialogTitle>Finalizar com itens pendentes?</AlertDialogTitle>
             <AlertDialogDescription>
               Ainda {pendentesConfirm === 1 ? 'há' : 'existem'}{' '}
-              <strong className="text-gray-900 dark:text-white">
+              <strong className="text-gray-900 dark:text-foreground">
                 {pendentesConfirm} {pendentesConfirm === 1 ? 'item pendente' : 'itens pendentes'}
               </strong>{' '}
               em{' '}
-              <strong className="text-gray-900 dark:text-white">
+              <strong className="text-gray-900 dark:text-foreground">
                 {checklistAtualFinalizar?.nome}
               </strong>
               . Ao finalizar, todos serão marcados como concluídos.
@@ -675,12 +675,12 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
           <AlertDialogHeader>
             <AlertDialogTitle>Reabrir checklist?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong className="text-gray-900 dark:text-white">
+              <strong className="text-gray-900 dark:text-foreground">
                 {modalState.checklist?.nome}
               </strong>{' '}
               volta a ficar editável. Os itens já marcados são mantidos.
               {modalState.checklist?.assinadoPor && (
-                <span className="block mt-2 text-amber-600 font-medium">
+                <span className="block mt-2 text-amber-600 font-medium dark:text-amber-300">
                   A assinatura de {modalState.checklist.assinadoPor} será apagada.
                   Será preciso assinar de novo para concluir.
                 </span>
@@ -710,12 +710,12 @@ export function ChecklistsSection({ obra, readOnly = false }: ChecklistsSectionP
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir checklist?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong className="text-gray-900 dark:text-white">
+              <strong className="text-gray-900 dark:text-foreground">
                 {modalState.checklist?.nome}
               </strong>{' '}
               será removido permanentemente.
               {modalState.checklist?.status === 'completo' && (
-                <span className="block mt-1 text-amber-600 font-medium">
+                <span className="block mt-1 text-amber-600 font-medium dark:text-amber-300">
                   Atenção: este checklist já foi finalizado.
                 </span>
               )}

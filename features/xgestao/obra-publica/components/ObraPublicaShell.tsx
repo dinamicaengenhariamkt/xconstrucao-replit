@@ -70,7 +70,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
   );
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 py-6 sm:py-10">
+    <main className="min-h-screen bg-gray-50 dark:bg-background py-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 sm:px-6">
         <header className="flex items-center justify-between gap-4">
           <p className="text-sm font-extrabold tracking-tight text-primary">xgestão</p>
@@ -80,10 +80,10 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
         </header>
 
         <section
-          className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
+          className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-border dark:bg-card"
           data-testid="obra-publica-shell"
         >
-          <div className="relative aspect-[16/7] min-h-64 overflow-hidden bg-gradient-to-br from-primary/90 to-primary">
+          <div className="relative aspect-[16/7] min-h-64 overflow-hidden bg-gradient-to-br from-primary/90 to-primary dark:[--primary:0_0%_20%]">
             {view.obra.imagemUrl && (
               <img src={view.obra.imagemUrl} alt="" className="h-full w-full object-cover opacity-45" />
             )}
@@ -92,7 +92,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
               <span
                 className={cn(
                   'w-fit rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm',
-                  OBRA_STATUS_DB_BADGE_CLASSES[view.obra.status] ?? 'bg-white/20',
+                  OBRA_STATUS_DB_BADGE_CLASSES[view.obra.status] ?? 'bg-white/20 dark:bg-card/20',
                 )}
                 data-testid="obra-publica-status"
               >
@@ -133,8 +133,8 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
             desde a XG30, da última edição de etapa.
           */}
           {view.obra.ultimaAtualizacao && (
-            <div className="bg-gray-50 p-6 dark:bg-gray-800/50">
-              <p className="text-xs text-gray-500">
+            <div className="bg-gray-50 p-6 dark:bg-muted">
+              <p className="text-xs text-gray-500 dark:text-muted-foreground">
                 Última atualização: {new Date(view.obra.ultimaAtualizacao).toLocaleDateString('pt-BR')}
               </p>
             </div>
@@ -143,44 +143,44 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
 
         {hasDetails && (
           <section
-            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 dark:border-gray-800 dark:bg-gray-900"
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 dark:border-border dark:bg-card"
             aria-labelledby="detalhes-obra-publica"
           >
-            <h2 id="detalhes-obra-publica" className="text-lg font-extrabold text-gray-900 dark:text-white">
+            <h2 id="detalhes-obra-publica" className="text-lg font-extrabold text-gray-900 dark:text-foreground">
               Detalhes da obra
             </h2>
             {view.obra.descricao && (
-              <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+              <p className="mt-2 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-slate-300">
                 {view.obra.descricao}
               </p>
             )}
             <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {view.obra.tipo && (
-                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Tipo de obra</dt>
-                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{view.obra.tipo}</dd>
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">Tipo de obra</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-foreground">{view.obra.tipo}</dd>
                 </div>
               )}
               {view.obra.areaM2 && (
-                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Área</dt>
-                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">Área</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-foreground">
                     {formatArea(view.obra.areaM2)}
                   </dd>
                 </div>
               )}
               {view.obra.dataInicio && (
-                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Início</dt>
-                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">Início</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-foreground">
                     {formatDate(view.obra.dataInicio)}
                   </dd>
                 </div>
               )}
               {view.obra.dataPrevisao && (
-                <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">Previsão de término</dt>
-                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                <div className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">Previsão de término</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-foreground">
                     {formatDate(view.obra.dataPrevisao)}
                   </dd>
                 </div>
@@ -190,8 +190,8 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
         )}
 
         {tabs.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex overflow-x-auto border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-border dark:bg-card">
+          <div className="flex overflow-x-auto border-b border-gray-100 bg-gray-50 dark:border-border dark:bg-muted">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -200,8 +200,8 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
                 className={cn(
                   'flex shrink-0 items-center gap-2 px-4 py-4 text-sm font-semibold transition-colors sm:px-5',
                   activeTab === tab.key
-                    ? 'border-b-2 border-primary bg-white text-primary dark:bg-gray-900'
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700/50 dark:hover:text-gray-300',
+                    ? 'border-b-2 border-primary bg-white text-primary dark:bg-card'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-muted dark:hover:text-slate-300 dark:text-muted-foreground',
                 )}
               >
                 <tab.Icon className="text-lg" />
@@ -223,7 +223,7 @@ export function ObraPublicaShell({ view }: { view: ObraPublicaView }) {
         </section>
         )}
 
-        <p className="pb-4 text-center text-xs text-gray-400">
+        <p className="pb-4 text-center text-xs text-gray-400 dark:text-muted-foreground">
           Esta página é somente para acompanhamento. Não é possível alterar dados da obra por aqui.
         </p>
       </div>

@@ -81,7 +81,7 @@ function BotaoAdicionar({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:shadow-md"
+      className="inline-flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white dark:text-primary-foreground shadow-sm transition-all hover:shadow-md"
       data-testid="btn-adicionar-atualizacao"
     >
       <IconAddTask className="text-lg" />
@@ -113,8 +113,8 @@ export function AtualizacoesTab({
   const cabecalho = (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Atualizações da obra</h3>
-        <p className="mt-1 text-sm text-gray-500">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Atualizações da obra</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-muted-foreground">
           {isOwnWork
             ? 'Cada avanço registrado, com fotos e responsável. É o que move o progresso e aparece para o cliente.'
             : 'Medições enviadas ao contratante, com o parecer de cada uma.'}
@@ -130,7 +130,7 @@ export function AtualizacoesTab({
         {cabecalho}
         <div className="space-y-3" aria-hidden>
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+            <div key={i} className="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-muted" />
           ))}
         </div>
       </div>
@@ -141,8 +141,8 @@ export function AtualizacoesTab({
     return (
       <div>
         {cabecalho}
-        <div className="rounded-xl border border-gray-100 py-10 text-center dark:border-gray-800">
-          <p className="text-sm text-gray-500">Não foi possível carregar as atualizações.</p>
+        <div className="rounded-xl border border-gray-100 py-10 text-center dark:border-border">
+          <p className="text-sm text-gray-500 dark:text-muted-foreground">Não foi possível carregar as atualizações.</p>
           <button
             type="button"
             onClick={() => refetch()}
@@ -167,14 +167,14 @@ export function AtualizacoesTab({
       <div>
         {cabecalho}
         <div
-          className="rounded-xl border border-dashed border-gray-200 py-12 text-center dark:border-gray-700"
+          className="rounded-xl border border-dashed border-gray-200 py-12 text-center dark:border-border"
           data-testid="atualizacoes-vazio"
         >
           <IconTrendingUp className="mb-3 block text-4xl text-gray-300" />
-          <p className="font-semibold text-gray-700 dark:text-gray-200">
+          <p className="font-semibold text-gray-700 dark:text-slate-300">
             Nenhuma atualização registrada ainda
           </p>
-          <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
+          <p className="mx-auto mt-1 max-w-md text-sm text-gray-500 dark:text-muted-foreground">
             {isOwnWork
               ? 'Registre o que foi executado: percentual, descrição e fotos. O progresso da obra sobe a partir daqui.'
               : 'As medições enviadas ao contratante aparecem nesta lista.'}
@@ -198,7 +198,7 @@ export function AtualizacoesTab({
           return (
             <article
               key={item.id}
-              className="rounded-xl border border-gray-100 p-4 transition-colors hover:border-primary/30 dark:border-gray-800"
+              className="rounded-xl border border-gray-100 p-4 transition-colors hover:border-primary/30 dark:border-border"
               data-testid={`atualizacao-${item.id}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -217,14 +217,14 @@ export function AtualizacoesTab({
                       </span>
                     )}
                   </div>
-                  <h4 className="mt-2 font-bold text-gray-900 dark:text-white">{item.etapa}</h4>
+                  <h4 className="mt-2 font-bold text-gray-900 dark:text-foreground">{item.etapa}</h4>
                 </div>
                 <div className="text-right">
-                  <time dateTime={item.dataEnvio} className="block text-xs text-gray-500">
+                  <time dateTime={item.dataEnvio} className="block text-xs text-gray-500 dark:text-muted-foreground">
                     {formatDate(item.dataEnvio)}
                   </time>
                   {item.valor > 0 && (
-                    <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
+                    <p className="mt-1 text-sm font-bold text-gray-900 dark:text-foreground">
                       {formatCurrency(item.valor)}
                     </p>
                   )}
@@ -232,7 +232,7 @@ export function AtualizacoesTab({
               </div>
 
               {item.descricao && (
-                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300">
+                <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-slate-300">
                   {item.descricao}
                 </p>
               )}
@@ -246,7 +246,7 @@ export function AtualizacoesTab({
 
               {item.fotos.length > 0 && (
                 <div className="mt-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-muted-foreground">
                     <IconPhotoLibrary />
                     {item.fotos.length} {item.fotos.length === 1 ? 'foto' : 'fotos'}
                   </p>
@@ -259,7 +259,7 @@ export function AtualizacoesTab({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="aspect-square overflow-hidden rounded-lg border border-gray-100 bg-gray-100 transition-opacity hover:opacity-80 dark:border-gray-800"
+                        className="aspect-square overflow-hidden rounded-lg border border-gray-100 bg-gray-100 transition-opacity hover:opacity-80 dark:border-border dark:bg-muted"
                       >
                         <img
                           src={url}
@@ -276,7 +276,7 @@ export function AtualizacoesTab({
                         href={item.fotos[MAX_THUMBS]}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        className="flex aspect-square items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-xs font-bold text-gray-600 transition-colors hover:bg-gray-100 dark:border-border dark:bg-muted dark:text-slate-300 dark:hover:bg-muted"
                         data-testid={`atualizacao-fotos-extra-${item.id}`}
                       >
                         +{item.fotos.length - MAX_THUMBS}
@@ -286,7 +286,7 @@ export function AtualizacoesTab({
                 </div>
               )}
 
-              <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500 dark:text-muted-foreground">
                 <IconPerson className="text-sm" />
                 Registrado por {item.autorNome}
               </p>
@@ -300,12 +300,12 @@ export function AtualizacoesTab({
           <button
             type="button"
             onClick={() => setVisibleCount((atual) => atual + LOAD_INCREMENT)}
-            className="cursor-pointer rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="cursor-pointer rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-border dark:bg-card dark:text-slate-300 dark:hover:bg-muted"
             data-testid="atualizacoes-load-more"
           >
             Carregar mais ({proximoLote})
           </button>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">
             Mostrando {visiveis.length} de {atualizacoes.length}
           </p>
         </div>

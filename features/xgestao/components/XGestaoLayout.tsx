@@ -26,7 +26,7 @@ export function XGestaoLayout({ children, isOwner }: { children: ReactNode; isOw
           {/* XG35 — plano e teste grátis são decisão do responsável, não do membro. */}
           {isOwner && <TesteGratisAviso />}
           <InstalarAppAviso />
-          <main className="min-h-0 flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
+          <main className="min-h-0 flex-1 overflow-auto bg-gray-50 dark:bg-background">
             {children}
           </main>
         </div>

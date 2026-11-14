@@ -238,8 +238,8 @@ export function OcorrenciasJ06Card({ obraId, canWrite, edicaoCompleta = false, d
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
         ) : !rows || rows.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-gray-700" data-testid="empty-ocorrencias">
-            <p className="font-semibold text-gray-700 dark:text-gray-200">
+          <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center dark:border-border" data-testid="empty-ocorrencias">
+            <p className="font-semibold text-gray-700 dark:text-slate-300">
               Nenhum problema registrado
             </p>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
@@ -295,7 +295,7 @@ export function OcorrenciasJ06Card({ obraId, canWrite, edicaoCompleta = false, d
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-muted transition-colors cursor-pointer dark:text-muted-foreground dark:hover:text-slate-300"
                             aria-label="Ações da ocorrência"
                             data-testid={`button-acoes-ocorrencia-${o.id}`}
                           >

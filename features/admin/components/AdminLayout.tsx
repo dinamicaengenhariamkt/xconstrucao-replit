@@ -17,7 +17,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <AdminSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
           <AdminTopbar />
-          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background-dark">
+          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background">
             {children}
           </main>
         </div>

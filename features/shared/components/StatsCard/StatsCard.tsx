@@ -7,11 +7,11 @@ import type { StatsCardBadgeVariant, StatsCardProps } from './types';
 
 const BADGE_CLASSES: Record<StatsCardBadgeVariant, string> = {
   primary: 'text-primary bg-primary/10',
-  success: 'text-[#22846D] bg-[#22846D]/10',
-  warning: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20',
-  error: 'text-red-600 bg-red-50 dark:bg-red-900/20',
-  info: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
-  neutral: 'text-gray-400 bg-gray-50 dark:bg-gray-800',
+  success: 'text-[#22846D] bg-[#22846D]/10 dark:text-emerald-300 dark:bg-emerald-900/30',
+  warning: 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-300',
+  error: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-300',
+  info: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-300',
+  neutral: 'text-gray-400 bg-gray-50 dark:bg-muted dark:text-muted-foreground',
   blue: 'text-blue-600 bg-blue-50',
   amber: 'text-amber-600 bg-amber-50',
   red: 'text-red-600 bg-red-50',
@@ -67,7 +67,7 @@ export function StatsCard({
         >
           {label}
         </p>
-        <p className={cn('font-extrabold text-gray-900 dark:text-gray-100', compact ? 'text-2xl' : 'text-3xl')}>{value}</p>
+        <p className={cn('font-extrabold text-gray-900 dark:text-foreground', compact ? 'text-2xl' : 'text-3xl')}>{value}</p>
       </CardContent>
     </LuminousHoverCard>
   );

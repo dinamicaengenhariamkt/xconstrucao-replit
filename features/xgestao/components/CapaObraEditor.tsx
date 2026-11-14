@@ -81,7 +81,7 @@ export function CapaObraEditor({
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 dark:border-gray-800 dark:bg-gray-950">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-100 dark:border-border dark:bg-muted">
         <div className="aspect-[16/7]">
           {cover.url ? (
             <img
@@ -91,7 +91,7 @@ export function CapaObraEditor({
               data-testid="xgestao-cover-preview"
             />
           ) : (
-            <div className="flex size-full flex-col items-center justify-center gap-2 text-gray-400">
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-gray-400 dark:text-muted-foreground">
               <RiImageLine className="size-8" />
               <span className="text-sm">Nenhuma capa definida</span>
             </div>
@@ -140,7 +140,7 @@ export function CapaObraEditor({
                   disabled={coverMutation.isPending || !foto.url}
                   onClick={() => coverMutation.mutate({ fileId: foto.fileId, url: foto.url })}
                   className={cn(
-                    'group relative aspect-[4/3] overflow-hidden rounded-xl border-2 bg-gray-100 transition-all',
+                    'group relative aspect-[4/3] overflow-hidden rounded-xl border-2 bg-gray-100 transition-all dark:bg-muted',
                     selected
                       ? 'border-primary ring-2 ring-primary/20'
                       : 'border-transparent hover:border-primary/50',

@@ -347,7 +347,7 @@ export function LancamentoFinanceiroModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Para quem <span className="font-normal text-gray-400">(opcional)</span>
+                      Para quem <span className="font-normal text-gray-400 dark:text-muted-foreground">(opcional)</span>
                     </FormLabel>
                     <Select
                       onValueChange={(v) => {
@@ -471,11 +471,11 @@ export function LancamentoFinanceiroModal({
                 (06:02). A API já aceitava `comprovanteFileId`; faltava o
                 upload aqui. Opcional: nem toda saída tem documento. */}
             <div className="space-y-2">
-              <FormLabel>Nota fiscal ou comprovante <span className="font-normal text-gray-400">(opcional)</span></FormLabel>
+              <FormLabel>Nota fiscal ou comprovante <span className="font-normal text-gray-400 dark:text-muted-foreground">(opcional)</span></FormLabel>
               {comprovante ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-border">
                   <span className="flex min-w-0 items-center gap-2 text-sm">
-                    <IconAttachFile className="shrink-0 text-gray-500" />
+                    <IconAttachFile className="shrink-0 text-gray-500 dark:text-muted-foreground" />
                     <span className="truncate">{comprovante.nome}</span>
                   </span>
                   <Button

@@ -67,7 +67,7 @@ export default function AdminXgestaoFinanceiroPage() {
       </div>
 
       <section>
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
           Receita da plataforma
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -75,37 +75,38 @@ export default function AdminXgestaoFinanceiroPage() {
             label="Receita acumulada"
             value={formatCurrency(faturamento.receitaAcumulada)}
             icon={RiMoneyDollarCircleLine}
-            iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
+            iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300"
           />
           <StatsCard
             label="Recorrente mensal"
             value={formatCurrency(faturamento.receitaRecorrenteMensal)}
             icon={RiRepeatLine}
-            iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20"
+            iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
           />
           <StatsCard
             label="Assinantes pagantes"
             value={String(faturamento.assinantesPagantes)}
             icon={RiUserStarLine}
-            iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+            iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
           />
           <StatsCard
             label="Sem plano ativo"
             value={String(faturamento.assinantesFree)}
             icon={RiGroupLine}
-            iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+            iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300"
           />
         </div>
 
-        <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Distribuição por plano</p>
+        <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card">
+          <p className="text-sm font-semibold text-gray-900 dark:text-foreground">Distribuição por plano</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {Object.entries(faturamento.distribuicaoPlanos).map(([tier, total]) => (
-              <div key={tier} className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              <div key={tier} className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">
                   {TIER_LABEL[tier] ?? tier}
                 </p>
-                <p className="mt-1 text-2xl font-extrabold text-gray-900 dark:text-white">{total}</p>
+                {/* PRD 55 (A4) — menor que os KPIs de receita acima: a distribuição é detalhe. */}
+                <p className="mt-1 text-xl font-bold text-gray-900 dark:text-foreground">{total}</p>
               </div>
             ))}
           </div>
@@ -120,9 +121,9 @@ export default function AdminXgestaoFinanceiroPage() {
 
       {/* XG45 — de onde vem a receita e quanto está saindo ou em risco. */}
       <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" data-testid="xgestao-receita-planos">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card" data-testid="xgestao-receita-planos">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Receita por plano</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-foreground">Receita por plano</p>
             <p className="text-xs text-muted-foreground" data-testid="xgestao-ticket-medio">
               Ticket médio: <strong className="text-foreground">{receita.ticketMedio === null ? 'sem pagantes' : formatCurrency(receita.ticketMedio)}</strong>
             </p>
@@ -139,7 +140,7 @@ export default function AdminXgestaoFinanceiroPage() {
                   <th className="pb-2 text-right font-semibold">No teste</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y divide-gray-100 dark:divide-border">
                 {receita.porPlano.map((linha) => (
                   <tr key={linha.tier} data-testid={`xgestao-receita-plano-${linha.tier}`}>
                     <td className="py-2 font-semibold">{TIER_LABEL[linha.tier] ?? linha.tier}</td>
@@ -161,10 +162,10 @@ export default function AdminXgestaoFinanceiroPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900" data-testid="xgestao-top-clientes">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Quem mais pagou</p>
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card" data-testid="xgestao-top-clientes">
+          <p className="text-sm font-semibold text-gray-900 dark:text-foreground">Quem mais pagou</p>
           {receita.topClientes.length ? (
-            <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+            <div className="mt-2 divide-y divide-gray-100 dark:divide-border">
               {receita.topClientes.map((cliente) => (
                 <Link
                   key={cliente.userId}
@@ -189,15 +190,15 @@ export default function AdminXgestaoFinanceiroPage() {
       {/* ADM-03 — cobrança com problema: o card fica na home, a lista aqui. */}
       <section
         id="cobranca"
-        className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
+        className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card"
         data-testid="xgestao-cobranca-problema"
       >
-        <p className="text-sm font-semibold text-gray-900 dark:text-white">Cobrança com problema</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-foreground">Cobrança com problema</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {TIPOS_PROBLEMA_COBRANCA.map((t) => `${ROTULO_PROBLEMA_COBRANCA[t]}: ${data.cobranca.totais[t]}`).join(' · ')}
         </p>
         {data.cobranca.itens.length ? (
-          <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="mt-2 divide-y divide-gray-100 dark:divide-border">
             {data.cobranca.itens.map((item) => (
               <Link
                 key={item.id}
@@ -224,11 +225,11 @@ export default function AdminXgestaoFinanceiroPage() {
       {/* CRM-11 — estornos e chargebacks separados, por período, com CSV. */}
       <section
         id="estornos"
-        className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
+        className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-border dark:bg-card"
         data-testid="xgestao-estornos"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">Estornos e chargebacks</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-foreground">Estornos e chargebacks</p>
           <div className="flex flex-wrap items-center gap-2">
             {PERIODOS_ADMIN.map((p) => (
               <button
@@ -241,7 +242,7 @@ export default function AdminXgestaoFinanceiroPage() {
                   'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
                   periodo === p
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+                    : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
                 )}
               >
                 {ROTULO_PERIODO[p]}
@@ -257,7 +258,7 @@ export default function AdminXgestaoFinanceiroPage() {
           {' · '}Chargebacks: {data.estornos.porTipo.chargeback.quantidade} ({formatCurrency(data.estornos.porTipo.chargeback.valor)})
         </p>
         {data.estornos.itens.length ? (
-          <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="mt-2 divide-y divide-gray-100 dark:divide-border">
             {data.estornos.itens.map((item) => (
               <Link
                 key={item.id}
@@ -282,7 +283,7 @@ export default function AdminXgestaoFinanceiroPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
           Lucro dos assinantes
         </h2>
         <ProfitSummary

@@ -112,13 +112,13 @@ export function ContratoCard({ obraId }: { obraId: string }) {
         : 'Aguardando assinatura do contratante';
 
   return (
-    <div ref={cardRef} className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 space-y-4" data-testid="contrato-card">
+    <div ref={cardRef} className="rounded-2xl border border-gray-200 dark:border-border bg-white dark:bg-card p-6 space-y-4" data-testid="contrato-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <RiFileList3Line className="w-5 h-5 text-primary" />
           <div>
-            <h3 className="font-bold text-gray-900 dark:text-white">{data.titulo}</h3>
-            <p className="text-xs text-gray-500" data-testid="contrato-status-label">{statusLabel}</p>
+            <h3 className="font-bold text-gray-900 dark:text-foreground">{data.titulo}</h3>
+            <p className="text-xs text-gray-500 dark:text-muted-foreground" data-testid="contrato-status-label">{statusLabel}</p>
           </div>
         </div>
         <span
@@ -137,14 +137,14 @@ export function ContratoCard({ obraId }: { obraId: string }) {
       <div className="flex flex-wrap gap-3 text-xs">
         {(['contratante', 'empreiteiro'] as const).map((p) => (
           <span key={p} className="inline-flex items-center gap-1.5">
-            {assinou(p) ? <RiCheckLine className="w-4 h-4 text-green-600" /> : <span className="w-4 h-4 rounded-full border border-gray-300 inline-block" />}
-            <span className="text-gray-600 dark:text-gray-300 capitalize">{p}</span>
+            {assinou(p) ? <RiCheckLine className="w-4 h-4 text-green-600 dark:text-green-300" /> : <span className="w-4 h-4 rounded-full border border-gray-300 inline-block dark:border-border" />}
+            <span className="text-gray-600 dark:text-slate-300 capitalize">{p}</span>
           </span>
         ))}
       </div>
 
       {/* Conteúdo do contrato (fonte também do PDF). */}
-      <div ref={printRef} className="max-h-72 overflow-y-auto rounded-lg border border-gray-100 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-800/40">
+      <div ref={printRef} className="max-h-72 overflow-y-auto rounded-lg border border-gray-100 dark:border-border p-4 bg-gray-50 dark:bg-muted">
         <MarkdownView content={data.conteudo} />
       </div>
 
@@ -176,7 +176,7 @@ export function ContratoCard({ obraId }: { obraId: string }) {
       </div>
 
       {data.papel === 'empreiteiro' && data.contratoStatus === 'pendente_contratante' && (
-        <p className="text-xs text-gray-500">O contratante precisa assinar primeiro. Você será avisado quando for a sua vez.</p>
+        <p className="text-xs text-gray-500 dark:text-muted-foreground">O contratante precisa assinar primeiro. Você será avisado quando for a sua vez.</p>
       )}
     </div>
   );

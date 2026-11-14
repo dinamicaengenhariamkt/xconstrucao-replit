@@ -173,16 +173,16 @@ export function CompartilharModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] max-w-md flex-col gap-0 overflow-y-auto p-0 sm:w-full">
           {/* Header */}
-          <DialogHeader className="p-5 border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <DialogHeader className="p-5 border-b border-gray-100 dark:border-border shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <IconShare className="text-primary text-xl" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-gray-900 dark:text-white">
+                <DialogTitle className="text-base font-bold text-gray-900 dark:text-foreground">
                   Compartilhar link
                 </DialogTitle>
-                <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1">
+                <DialogDescription className="text-xs text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                   {obra.titulo}
                 </DialogDescription>
               </div>
@@ -196,7 +196,7 @@ export function CompartilharModal({
                 não. */}
             {shares.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 mb-2">Links desta obra</p>
+                <p className="text-xs font-semibold text-gray-500 mb-2 dark:text-muted-foreground">Links desta obra</p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Links desta obra">
                   {shares.map((share) => (
                     <button
@@ -211,7 +211,7 @@ export function CompartilharModal({
                         'rounded-lg border px-3 py-1.5 text-xs transition-colors cursor-pointer',
                         shareLink?.id === share.id
                           ? 'border-primary bg-primary/10 font-bold text-primary'
-                          : 'border-gray-200 font-semibold text-gray-600 hover:border-primary/40 dark:border-gray-700 dark:text-gray-300',
+                          : 'border-gray-200 font-semibold text-gray-600 hover:border-primary/40 dark:border-border dark:text-slate-300',
                       )}
                       data-testid={`xgestao-share-link-${share.id}`}
                     >
@@ -235,7 +235,7 @@ export function CompartilharModal({
                       'rounded-lg border border-dashed px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50',
                       criando
                         ? 'border-primary text-primary'
-                        : 'border-gray-300 text-gray-600 hover:border-primary/40 dark:border-gray-600 dark:text-gray-300',
+                        : 'border-gray-300 text-gray-600 hover:border-primary/40 dark:border-border dark:text-slate-300',
                     )}
                     data-testid="xgestao-share-novo"
                   >
@@ -243,7 +243,7 @@ export function CompartilharModal({
                   </button>
                 </div>
                 {noLimite && (
-                  <p className="mt-2 text-[11px] text-gray-500">
+                  <p className="mt-2 text-[11px] text-gray-500 dark:text-muted-foreground">
                     Limite de {limite} {limite === 1 ? 'link ativo' : 'links ativos'}. Revogue um para criar outro.
                   </p>
                 )}
@@ -251,11 +251,11 @@ export function CompartilharModal({
             )}
 
             {loading ? (
-              <p className="text-xs text-gray-500">Consultando links…</p>
+              <p className="text-xs text-gray-500 dark:text-muted-foreground">Consultando links…</p>
             ) : criando ? (
               <div className="flex flex-col gap-3" data-testid="xgestao-share-form">
                 <div>
-                  <label htmlFor="xgestao-share-nome" className="text-xs font-semibold text-gray-500">
+                  <label htmlFor="xgestao-share-nome" className="text-xs font-semibold text-gray-500 dark:text-muted-foreground">
                     Para quem é este link?
                   </label>
                   <Input
@@ -267,12 +267,12 @@ export function CompartilharModal({
                     className="mt-2 text-sm"
                     data-testid="xgestao-share-nome"
                   />
-                  <p className="mt-1 text-[11px] text-gray-500">
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-muted-foreground">
                     Só você vê este nome. Crie um link por pessoa para escolher o que cada uma vê.
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-2">Validade do link</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-2 dark:text-muted-foreground">Validade do link</p>
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Validade do link">
                     {VALIDADES.map((opcao) => (
                       <button
@@ -283,7 +283,7 @@ export function CompartilharModal({
                         className={
                           validadeDias === opcao.valor
                             ? 'rounded-lg border border-primary bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors cursor-pointer'
-                            : 'rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 dark:border-gray-700 dark:text-gray-300 cursor-pointer'
+                            : 'rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 dark:border-border dark:text-slate-300 cursor-pointer'
                         }
                         data-testid={`xgestao-share-validade-${opcao.valor}`}
                       >
@@ -291,7 +291,7 @@ export function CompartilharModal({
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-[11px] text-gray-500">
+                  <p className="mt-2 text-[11px] text-gray-500 dark:text-muted-foreground">
                     Depois do prazo o link deixa de abrir. Você pode revogar antes disso quando quiser.
                   </p>
                 </div>
@@ -310,7 +310,7 @@ export function CompartilharModal({
               <>
                 {/* URL + Copiar */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-2">Link de {shareLink.nome}</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-2 dark:text-muted-foreground">Link de {shareLink.nome}</p>
                   {shareLink.pausadoPorPlano && (
                     <p
                       className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
@@ -324,7 +324,7 @@ export function CompartilharModal({
                     <Input
                       readOnly
                       value={url}
-                      className="flex-1 text-xs bg-gray-50 dark:bg-gray-800 cursor-text"
+                      className="flex-1 text-xs bg-gray-50 dark:bg-muted cursor-text"
                       onClick={(e) => (e.target as HTMLInputElement).select()}
                       data-testid="xgestao-share-url"
                     />
@@ -341,7 +341,7 @@ export function CompartilharModal({
                     </Button>
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-[11px] text-gray-500 dark:text-muted-foreground">
                       {shareLink.expiraEm ? `Expira em ${formatarData(shareLink.expiraEm)}` : 'Não expira'}
                       {' · '}
                       {shareLink.visualizacoes === 0
@@ -364,18 +364,18 @@ export function CompartilharModal({
 
                 {/* Compartilhar via */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 mb-3">Compartilhar via</p>
+                  <p className="text-xs font-semibold text-gray-500 mb-3 dark:text-muted-foreground">Compartilhar via</p>
                   <div className="flex gap-3">
                     {/* E-mail */}
                     <a
                       href={url ? emailUrl : undefined}
                       aria-disabled={!url}
-                      className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                      className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-border hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:hover:border-blue-800"
                     >
                       <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                         <IconMail className="text-white text-xl" />
                       </div>
-                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">E-mail</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">E-mail</span>
                     </a>
 
                     {/* Copiar direto */}
@@ -383,19 +383,19 @@ export function CompartilharModal({
                       type="button"
                       onClick={handleCopiar}
                       disabled={!url}
-                      className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+                      className="flex-1 flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 dark:border-border hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-muted transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 dark:hover:border-border"
                     >
                       <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
                         <IconLink className="text-white text-xl" />
                       </div>
-                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Copiar link</span>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">Copiar link</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-4 dark:border-gray-800">
-                  <p className="text-xs font-semibold text-gray-500">O que {shareLink.nome} vê</p>
-                  <p className="mt-1 text-xs text-gray-500">
+                <div className="border-t border-gray-100 pt-4 dark:border-border">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-muted-foreground">O que {shareLink.nome} vê</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-muted-foreground">
                     Vale só para este link. Desmarcar esconde a seção na hora, sem trocar o
                     endereço.
                   </p>
@@ -404,13 +404,13 @@ export function CompartilharModal({
                       <label
                         key={secao}
                         htmlFor={`secao-${secao}`}
-                        className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 p-3 dark:border-gray-800"
+                        className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-gray-100 p-3 dark:border-border"
                       >
                         <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                          <span className="block text-sm font-semibold text-gray-900 dark:text-foreground">
                             {SECAO_LABELS[secao].titulo}
                           </span>
-                          <span className="mt-0.5 block text-xs text-gray-500">
+                          <span className="mt-0.5 block text-xs text-gray-500 dark:text-muted-foreground">
                             {secao === 'pagamentos' && sharesQuery.data?.valoresPublicos === false
                             ? 'Disponível nos planos Basic Plus e Premium.'
                             : SECAO_LABELS[secao].descricao}
@@ -442,7 +442,7 @@ export function CompartilharModal({
                       </label>
                     ))}
                   </div>
-                  <p className="mt-3 text-xs text-gray-500">
+                  <p className="mt-3 text-xs text-gray-500 dark:text-muted-foreground">
                     Valores só aparecem com Pagamentos ligado. Custos, lucro, equipe e o endereço
                     exato nunca são compartilhados.
                   </p>

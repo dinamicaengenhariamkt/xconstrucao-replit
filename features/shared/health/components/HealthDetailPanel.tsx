@@ -84,11 +84,11 @@ export function HealthDetailPanel({ health, actionsByFactor, className, luminous
                       : `${scoreFactorsCount} ${scoreFactorsCount === 1 ? 'ponto requer' : 'pontos requerem'} atenção`}
                   </span>
                 </div>
-                <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+                <h3 className="text-xl font-extrabold text-gray-900 dark:text-foreground tracking-tight">
                   {HEALTH_LABELS[health.status]}: {HEALTH_DESCRIPTIONS[health.status]}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2">{OVERALL_RECOMMENDATION[health.status]}</p>
-                <p className="text-xs text-gray-400 mt-3">
+                <p className="text-xs text-gray-400 mt-3 dark:text-muted-foreground">
                   Última avaliação: {new Date(health.updatedAt).toLocaleString('pt-BR')}
                 </p>
               </div>
@@ -129,7 +129,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className, luminous
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col gap-4">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold tabular-nums text-gray-900 dark:text-gray-100">
+                    <span className="text-3xl font-extrabold tabular-nums text-gray-900 dark:text-foreground">
                       {value}
                     </span>
                     <span className="text-xs text-muted-foreground">/ 100</span>
@@ -148,7 +148,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className, luminous
                         {drivers.map((d, i) => (
                           <li
                             key={i}
-                            className="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-2"
+                            className="text-xs text-gray-700 dark:text-slate-300 flex items-start gap-2"
                           >
                             <span
                               className={cn(
@@ -260,7 +260,7 @@ export function HealthDetailPanel({ health, actionsByFactor, className, luminous
                 {health.recommendations.map((rec, i) => (
                   <li
                     key={i}
-                    className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                    className="text-sm text-gray-700 dark:text-slate-300 flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted"
                   >
                     <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {i + 1}

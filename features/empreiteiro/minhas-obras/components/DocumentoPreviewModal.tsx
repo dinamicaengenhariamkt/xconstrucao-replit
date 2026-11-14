@@ -99,7 +99,7 @@ function PreviewConteudo({
           <img
             src={url}
             alt={doc.nome}
-            className="w-full max-h-[65vh] object-contain rounded-lg bg-gray-50 dark:bg-gray-900"
+            className="w-full max-h-[65vh] object-contain rounded-lg bg-gray-50 dark:bg-muted"
             data-testid="preview-imagem"
             onError={aoFalharImagem}
           />
@@ -107,7 +107,7 @@ function PreviewConteudo({
           <iframe
             src={url}
             title={doc.nome}
-            className="w-full h-[65vh] rounded-lg border border-gray-200 dark:border-gray-800"
+            className="w-full h-[65vh] rounded-lg border border-gray-200 dark:border-border"
             data-testid="preview-pdf"
           />
         ) : (

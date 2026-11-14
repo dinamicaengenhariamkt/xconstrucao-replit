@@ -54,7 +54,7 @@ const SITUACAO_OBRA: Record<SituacaoObraAdmin, { rotulo: string; estilo: string 
   atrasada: { rotulo: 'Atrasada', estilo: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
   parada: { rotulo: 'Parada', estilo: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
   no_prazo: { rotulo: 'No prazo', estilo: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-  concluida: { rotulo: 'Concluída', estilo: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+  concluida: { rotulo: 'Concluída', estilo: 'bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300' },
 };
 
 function Linha({ rotulo, children, testId }: { rotulo: string; children: React.ReactNode; testId?: string }) {
@@ -85,7 +85,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
         <div className="p-6 md:p-10">
           {voltar}
           <div
-            className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-gray-800"
+            className="rounded-2xl border border-dashed border-gray-200 py-14 text-center text-sm text-muted-foreground dark:border-border"
             data-testid="xgestao-assinante-nao-encontrado"
           >
             Assinante não encontrado no xgestão.
@@ -156,7 +156,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
           )}
           {assinante.contaInterna && (
             <span
-              className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+              className="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-muted dark:text-slate-300"
               data-testid="xgestao-assinante-detalhe-interna"
             >
               Conta interna: fora das métricas
@@ -187,30 +187,30 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
           label="Orçamento gerenciado"
           value={formatCurrency(consolidado.orcamento)}
           icon={RiMoneyDollarCircleLine}
-          iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20"
+          iconBgColor="bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-300"
         />
         <StatsCard
           label="Custo real (saídas pagas)"
           value={formatCurrency(consolidado.custoReal)}
           icon={RiMoneyDollarCircleLine}
-          iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
+          iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300"
         />
         <StatsCard
           label="Obras"
           value={`${assinante.obrasGerenciadas} (${assinante.obrasAtivas} em andamento)`}
           icon={RiHammerLine}
-          iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20"
+          iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300"
         />
         <StatsCard
           label="Último acesso"
           value={assinante.ultimoAcessoEm ? formatarDataAdmin(assinante.ultimoAcessoEm) : 'Nunca'}
           icon={RiTimeLine}
-          iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+          iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-plano">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-plano">
           <CardHeader><CardTitle className="text-lg">Plano e situação</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <Linha rotulo="Plano">{plano.nome}</Linha>
@@ -219,7 +219,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
             </Linha>
             <Linha rotulo="Situação">{situacao.rotulo}</Linha>
             {descricaoSituacao(situacao) && (
-              <p className="rounded-lg bg-gray-50 p-2 text-xs text-muted-foreground dark:bg-gray-800/60">{descricaoSituacao(situacao)}</p>
+              <p className="rounded-lg bg-gray-50 p-2 text-xs text-muted-foreground dark:bg-muted">{descricaoSituacao(situacao)}</p>
             )}
             {/* CRM-03 — motivo informado ao cancelar (opcional). */}
             {assinante.cancelamento && (
@@ -260,14 +260,14 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-uso">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-uso">
           <CardHeader><CardTitle className="text-lg">Uso do plano</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <UsoRecursoBarra rotulo="Obras em aberto" uso={usoPlano.obras} testId="xgestao-assinante-uso-obras" />
             <UsoRecursoBarra rotulo="Pessoas na empresa (com o titular)" uso={usoPlano.pessoas} testId="xgestao-assinante-uso-pessoas" />
             <UsoRecursoBarra rotulo="Links públicos na obra com mais links" uso={usoPlano.links} testId="xgestao-assinante-uso-links" />
             {(assinante.bloqueiosPlano.obrasBloqueadas > 0 || assinante.bloqueiosPlano.membrosPausados > 0) && (
-              <div className="space-y-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-800/60" data-testid="xgestao-assinante-bloqueios-plano">
+              <div className="space-y-2 rounded-lg bg-gray-50 p-2 dark:bg-muted" data-testid="xgestao-assinante-bloqueios-plano">
                 <Linha rotulo="Obras bloqueadas pelo plano" testId="xgestao-assinante-obras-bloqueadas">{assinante.bloqueiosPlano.obrasBloqueadas}</Linha>
                 <Linha rotulo="Membros pausados" testId="xgestao-assinante-membros-pausados">{assinante.bloqueiosPlano.membrosPausados}</Linha>
               </div>
@@ -278,7 +278,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-saude">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-saude">
           <CardHeader><CardTitle className="text-lg">Saúde das obras</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <Linha rotulo="Atrasadas" testId="xgestao-assinante-saude-atrasadas">{consolidado.obrasAtrasadas}</Linha>
@@ -293,7 +293,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
               <span className={cn(saldo < 0 && 'text-red-600 dark:text-red-400')}>{formatCurrency(Math.abs(saldo))}</span>
             </Linha>
             {/* XG46 — uso do app pela empresa (responsável e equipe) e registros nas obras. */}
-            <div className="space-y-3 border-t border-gray-100 pt-3 dark:border-gray-800" data-testid="xgestao-assinante-engajamento" data-nivel={assinante.engajamento.nivel}>
+            <div className="space-y-3 border-t border-gray-100 pt-3 dark:border-border" data-testid="xgestao-assinante-engajamento" data-nivel={assinante.engajamento.nivel}>
               <Linha rotulo="Uso" testId="xgestao-assinante-engajamento-nivel">{ROTULO_ENGAJAMENTO[assinante.engajamento.nivel]}</Linha>
               <Linha rotulo="Último uso da equipe">
                 {assinante.engajamento.ultimoUsoEquipeEm ? formatarDataAdmin(assinante.engajamento.ultimoUsoEquipeEm) : '—'}
@@ -309,7 +309,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
 
       {/* CRM-01/CRM-07 — contato do responsável e acompanhamento dos contatos do admin. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-contato">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-contato">
           <CardHeader><CardTitle className="text-lg">Contato</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <Linha rotulo="Telefone" testId="xgestao-assinante-telefone">
@@ -331,37 +331,37 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
       <section className="space-y-3" data-testid="xgestao-assinante-obras">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Obras</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-foreground">Obras</h2>
             <p className="text-sm text-muted-foreground">Clique numa obra para ver o conteúdo completo, os links e o lucro.</p>
           </div>
         </div>
         {obras.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-sm text-muted-foreground dark:border-gray-800">
+          <div className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-sm text-muted-foreground dark:border-border">
             Nenhuma obra cadastrada.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-border dark:bg-card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-800/50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Obra</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Situação</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Orçamento</th>
-                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Custo real</th>
-                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">Previsão</th>
-                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Última atividade</th>
-                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell">Links</th>
+                  <tr className="border-b border-gray-100 bg-gray-50 dark:border-border dark:bg-muted">
+                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Obra</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Situação</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-muted-foreground">Orçamento</th>
+                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell dark:text-muted-foreground">Custo real</th>
+                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell dark:text-muted-foreground">Previsão</th>
+                    <th className="hidden px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell dark:text-muted-foreground">Última atividade</th>
+                    <th className="hidden px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 lg:table-cell dark:text-muted-foreground">Links</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                <tbody className="divide-y divide-gray-50 dark:divide-border">
                   {obras.map((obra) => (
-                    <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40" data-testid={`xgestao-assinante-obra-${obra.id}`}>
+                    <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-muted" data-testid={`xgestao-assinante-obra-${obra.id}`}>
                       <td className="px-5 py-3">
                         <Link href={`/admin/xgestao/obras/${obra.id}`} className="font-semibold hover:text-primary" data-testid={`xgestao-assinante-obra-link-${obra.id}`}>
                           {obra.nome}
                         </Link>
-                        <p className="mt-0.5 text-xs text-gray-400">
+                        <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground">
                           {STATUS_OBRA[obra.status] ?? obra.status} · {[obra.cidade, obra.uf].filter(Boolean).join(' - ') || 'Local não informado'}
                           {obra.bloqueadaPorPlano && <span data-testid={`xgestao-assinante-obra-bloqueada-${obra.id}`}> · bloqueada pelo plano</span>}
                         </p>
@@ -373,8 +373,8 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
                       </td>
                       <td className="px-4 py-3 text-right font-semibold">{formatCurrency(obra.valorTotal)}</td>
                       <td className="hidden px-4 py-3 text-right sm:table-cell">{formatCurrency(obra.custoReal)}</td>
-                      <td className="hidden px-4 py-3 text-gray-500 md:table-cell">{obra.dataPrevisao ? formatDate(obra.dataPrevisao) : '—'}</td>
-                      <td className="hidden px-4 py-3 text-gray-500 lg:table-cell">{formatarDataAdmin(obra.ultimaAtividadeEm)}</td>
+                      <td className="hidden px-4 py-3 text-gray-500 md:table-cell dark:text-muted-foreground">{obra.dataPrevisao ? formatDate(obra.dataPrevisao) : '—'}</td>
+                      <td className="hidden px-4 py-3 text-gray-500 lg:table-cell dark:text-muted-foreground">{formatarDataAdmin(obra.ultimaAtividadeEm)}</td>
                       <td className="hidden px-4 py-3 text-right lg:table-cell">
                         {obra.linksAtivos > 0 ? <span className="inline-flex items-center gap-1"><RiLinkM /> {obra.linksAtivos}</span> : '—'}
                       </td>
@@ -396,19 +396,19 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-equipe">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-equipe">
           <CardHeader><CardTitle className="text-lg">Equipe</CardTitle></CardHeader>
           <CardContent>
             {assinante.membros.length === 0 ? (
               <p className="text-sm text-muted-foreground">Só o titular. Nenhum membro convidado.</p>
             ) : (
-              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+              <ul className="divide-y divide-gray-100 dark:divide-border">
                 {assinante.membros.map((membro) => (
                   <li key={membro.userId} className="py-2 text-sm">
                     <p className="font-semibold">{membro.nome}</p>
                     <p className="text-xs text-muted-foreground">{membro.email} · {membro.papel} · {membro.status}</p>
                     {membro.obras.length > 0 && (
-                      <p className="mt-0.5 text-xs text-gray-400">{membro.obras.map((o) => `${o.nome} (${o.permissao})`).join(', ')}</p>
+                      <p className="mt-0.5 text-xs text-gray-400 dark:text-muted-foreground">{membro.obras.map((o) => `${o.nome} (${o.permissao})`).join(', ')}</p>
                     )}
                   </li>
                 ))}
@@ -417,7 +417,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-historico">
+        <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-historico">
           <CardHeader><CardTitle className="text-lg">Histórico da assinatura</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {historico.assinaturas.length === 0 ? (
@@ -425,7 +425,7 @@ export default function AdminXgestaoAssinanteDetalhePage({ params }: { params: P
             ) : (
               <ul className="space-y-2">
                 {historico.assinaturas.map((item) => (
-                  <li key={item.id} className="rounded-xl border border-gray-100 p-3 text-sm dark:border-gray-800">
+                  <li key={item.id} className="rounded-xl border border-gray-100 p-3 text-sm dark:border-border">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-semibold">{item.teste ? `Teste grátis · ${item.plano}` : item.plano}</span>
                       <span className="text-xs font-semibold text-muted-foreground">{rotuloStatusAssinatura(item.status)}</span>
@@ -497,7 +497,7 @@ function AcompanhamentoContatos({ userId, contatos }: { userId: string; contatos
     registrar.mutate({ canal, nota: nota.trim() || null }, { onSuccess: () => setNota('') });
   };
   return (
-    <Card className="border-gray-100 dark:border-gray-800" data-testid="xgestao-assinante-acompanhamento">
+    <Card className="border-gray-100 dark:border-border" data-testid="xgestao-assinante-acompanhamento">
       <CardHeader><CardTitle className="text-lg">Acompanhamento</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={enviar} className="space-y-2" data-testid="xgestao-contato-form">
@@ -515,7 +515,7 @@ function AcompanhamentoContatos({ userId, contatos }: { userId: string; contatos
                   'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
                   canal === c
                     ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300',
+                    : 'border-gray-200 text-gray-600 hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300',
                 )}
               >
                 {ROTULO_CANAL_CONTATO[c]}
@@ -548,7 +548,7 @@ function AcompanhamentoContatos({ userId, contatos }: { userId: string; contatos
           ) : (
             <ol className="space-y-2" data-testid="xgestao-contatos-historico">
               {contatos.map((c) => (
-                <li key={c.id} className="rounded-xl border border-gray-100 p-3 text-sm dark:border-gray-800" data-canal={c.canal}>
+                <li key={c.id} className="rounded-xl border border-gray-100 p-3 text-sm dark:border-border" data-canal={c.canal}>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="font-semibold">{ROTULO_CANAL_CONTATO[c.canal]}{c.adminNome ? ` · ${c.adminNome}` : ''}</span>
                     <span className="text-muted-foreground">{formatarDataAdmin(c.criadoEm)}</span>

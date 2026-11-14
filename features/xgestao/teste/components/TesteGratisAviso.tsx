@@ -112,8 +112,9 @@ export function TesteGratisAviso() {
     setOfertaFechada(true);
   };
 
+  // PRD 55 — os links da faixa ganham área de toque de 44 px sem a faixa crescer.
   const linkAssinar = (texto: string) => (
-    <Link href={PLANOS_HREF} className="shrink-0 font-semibold underline underline-offset-2" data-testid="link-teste-assinar">
+    <Link href={PLANOS_HREF} className="shrink-0 font-semibold underline underline-offset-2 relative after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']" data-testid="link-teste-assinar">
       {texto}
     </Link>
   );
@@ -184,7 +185,7 @@ export function TesteGratisAviso() {
           {teste.elegivel && (
             <button
               type="button"
-              className="font-semibold underline underline-offset-2 disabled:opacity-60"
+              className="font-semibold underline underline-offset-2 disabled:opacity-60 relative after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']"
               onClick={() => iniciar.mutate()}
               disabled={iniciar.isPending}
               data-testid="button-barra-iniciar-teste"
@@ -192,7 +193,7 @@ export function TesteGratisAviso() {
               Iniciar teste grátis
             </button>
           )}
-          <Link href={PLANOS_HREF} className="font-semibold underline underline-offset-2" data-testid="link-barra-ver-planos">
+          <Link href={PLANOS_HREF} className="font-semibold underline underline-offset-2 relative after:absolute after:-inset-x-2 after:-inset-y-3 after:content-['']" data-testid="link-barra-ver-planos">
             Ver planos
           </Link>
         </span>

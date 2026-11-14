@@ -30,7 +30,9 @@ import {
   getAdminNavigationContext,
   getAdminLogoutOptions,
   getAdminTopbarControls,
+  isAdminXgestaoPath,
 } from '../navigation-context';
+import { SeletorTemaMenu } from '@features/xgestao/tema/SeletorTemaMenu';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,10 +50,10 @@ const NOTIF_ICON: Record<NotificacaoTipo, React.ElementType> = {
 };
 
 const NOTIF_ICON_COLOR: Record<NotificacaoTipo, string> = {
-  lembrete: 'text-amber-500',
-  alerta: 'text-red-500',
-  info: 'text-blue-500',
-  sucesso: 'text-green-500',
+  lembrete: 'text-amber-500 dark:text-amber-400',
+  alerta: 'text-red-500 dark:text-red-400',
+  info: 'text-blue-500 dark:text-blue-400',
+  sucesso: 'text-green-500 dark:text-green-400',
 };
 
 const NOTIF_DOT_COLOR: Record<NotificacaoTipo, string> = {
@@ -103,7 +105,7 @@ export function AdminTopbar() {
   }, [showGlobalSearch]);
 
   return (
-    <header className="h-20 flex items-center justify-between px-4 md:px-12 py-2 border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
+    <header className="h-20 flex items-center justify-between px-4 md:px-12 py-2 border-b border-gray-100 dark:border-border bg-white/80 dark:bg-card/80 backdrop-blur-md sticky top-0 z-10">
       {/* Busca Global */}
       <div className="flex items-center gap-2 md:gap-4 w-full md:w-1/3">
         {/* Mobile Hamburger */}
@@ -117,7 +119,7 @@ export function AdminTopbar() {
           size="icon"
           variant="ghost"
           onClick={() => setSearchOpen(true)}
-          className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+          className="md:hidden size-10 rounded-xl bg-gray-50 dark:bg-muted text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-muted"
           aria-label="Abrir busca"
           data-testid="button-search-mobile"
         >
@@ -128,13 +130,13 @@ export function AdminTopbar() {
         {showGlobalSearch && <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-gray-800 border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer"
+          className="relative w-full max-w-xs md:max-w-sm hidden md:flex items-center gap-2 bg-gray-100 dark:bg-muted border-none rounded-xl pl-10 pr-2 py-2 text-sm text-left text-gray-400 hover:bg-gray-200/60 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors cursor-pointer dark:text-muted-foreground"
           aria-label="Abrir busca global"
           data-testid="button-search"
         >
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 dark:text-muted-foreground" />
           <span className="flex-1 truncate">Buscar clientes, empreiteiras, obras…</span>
-          <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 tabular-nums">
+          <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-gray-500 dark:text-muted-foreground bg-white dark:bg-card border border-gray-200 dark:border-border tabular-nums">
             ⌘K
           </kbd>
         </button>}
@@ -149,7 +151,7 @@ export function AdminTopbar() {
               <Button
                 size="icon"
                 variant="ghost"
-                className="size-10 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+                className="size-10 rounded-xl bg-gray-50 dark:bg-muted text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-muted"
                 aria-label="Notificações"
               >
                 <RiNotification3Line className="w-5 h-5" />
@@ -163,9 +165,9 @@ export function AdminTopbar() {
           </div>
           <PopoverContent className="w-96 p-0" align="end">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-border">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-gray-900 dark:text-white">Notificações</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-foreground">Notificações</span>
                 {unreadCount > 0 && (
                   <Badge className="h-5 px-1.5 bg-red-500 text-white text-[10px] rounded-full">
                     {unreadCount}
@@ -184,7 +186,7 @@ export function AdminTopbar() {
             </div>
 
             {/* Lista */}
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            <div className="divide-y divide-gray-100 dark:divide-border">
               {notifications.map((notif) => {
                 const Icon = NOTIF_ICON[notif.tipo];
                 const iconColor = NOTIF_ICON_COLOR[notif.tipo];
@@ -199,10 +201,10 @@ export function AdminTopbar() {
                       setNotifOpen(false);
                     }}
                     className={cn(
-                      'w-full text-left px-4 py-3 flex items-start gap-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60',
+                      'w-full text-left px-4 py-3 flex items-start gap-3 transition-colors hover:bg-gray-50 dark:hover:bg-muted',
                       !notif.lida
                         ? 'bg-primary/[0.04] dark:bg-primary/10'
-                        : 'bg-white dark:bg-gray-900'
+                        : 'bg-white dark:bg-card'
                     )}
                   >
                     {/* Dot não lida */}
@@ -222,15 +224,15 @@ export function AdminTopbar() {
                       <p className={cn(
                         'text-sm leading-snug',
                         !notif.lida
-                          ? 'font-semibold text-gray-900 dark:text-white'
-                          : 'font-medium text-gray-700 dark:text-gray-300'
+                          ? 'font-semibold text-gray-900 dark:text-foreground'
+                          : 'font-medium text-gray-700 dark:text-slate-300'
                       )}>
                         {notif.titulo}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug line-clamp-2">
+                      <p className="text-xs text-gray-500 dark:text-muted-foreground mt-0.5 leading-snug line-clamp-2">
                         {notif.descricao}
                       </p>
-                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                      <p className="text-[11px] text-gray-400 dark:text-muted-foreground mt-1">
                         {timeLabel}
                       </p>
                     </div>
@@ -240,7 +242,7 @@ export function AdminTopbar() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-2.5">
+            <div className="border-t border-gray-100 dark:border-border px-4 py-2.5">
               <button
                 onClick={() => { router.push('/admin/configuracoes'); setNotifOpen(false); }}
                 className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors w-full justify-center"
@@ -253,20 +255,20 @@ export function AdminTopbar() {
         </Popover>}
 
         {/* Separator */}
-        <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2" />
+        <div className="h-8 w-px bg-gray-200 dark:bg-white/10 mx-2" />
 
         {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div
               aria-label="Abrir menu da conta"
-              className="flex items-center gap-3 cursor-pointer rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors outline-none"
+              className="flex items-center gap-3 cursor-pointer rounded-xl p-1.5 hover:bg-gray-50 dark:hover:bg-muted transition-colors outline-none"
             >
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
+                <p className="text-sm font-bold text-gray-900 dark:text-foreground leading-none">
                   {user?.name ?? 'Administrador'}
                 </p>
-                <p className="text-[11px] text-gray-500 font-medium">
+                <p className="text-[11px] text-gray-500 font-medium dark:text-muted-foreground">
                   {navigationContext.isXgestao ? 'Administrador xgestão' : 'Administrador'}
                 </p>
               </div>
@@ -296,6 +298,8 @@ export function AdminTopbar() {
                 </DropdownMenuItem>
               </>
             )}
+            {/* PRD 55 — o tema do painel vale só no admin do xgestão. */}
+            {isAdminXgestaoPath(pathname) && <SeletorTemaMenu />}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}

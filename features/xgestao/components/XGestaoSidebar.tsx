@@ -17,6 +17,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from '@shared/components/ui/sidebar';
 import { Separator } from '@shared/components/ui/separator';
 import { XGESTAO_BOTTOM_NAV_ITEMS, XGESTAO_NAV_ITEMS } from '../constants';
@@ -29,6 +30,12 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
   const { logout } = useAuth();
   const { data: plano } = usePerfilPlano('xgestao', { enabled: isOwner });
 
+  // No celular o menu é uma gaveta: ao tocar num item ela fecha, para ficar claro que a tela mudou.
+  const { isMobile, setOpenMobile } = useSidebar();
+  const fecharNoCelular = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
+
   const handleLogout = useCallback(async () => {
     const { redirect } = await logout({ persona: 'xgestao', next: XGESTAO_HOME });
     router.push(redirect);
@@ -40,22 +47,21 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
       : pathname.startsWith(url);
 
   return (
-    <Sidebar className="bg-[#FAFAFA] dark:bg-background-dark">
+    <Sidebar className="bg-[#FAFAFA] dark:bg-background">
       <SidebarHeader className="p-6 pb-4">
-        <Link href="/xgestao/dashboard" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <Link onClick={fecharNoCelular} href="/xgestao/dashboard" className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <div className="flex cursor-pointer items-center">
             <Image
               src="/images/logo-xconstrucao-horizontal-01.png"
               alt="XConstrução"
               width={160}
               height={48}
-              className="h-12 w-auto"
+              className="h-12 w-auto dark:invert"
               priority
             />
           </div>
         </Link>
-        <div className="mt-3 flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-primary" />
+        <div className="mt-3 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           Área xgestão
         </div>
       </SidebarHeader>
@@ -71,9 +77,9 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      className={active ? 'border-r-3 border-primary bg-[#f3f7f8] font-semibold dark:bg-gray-800' : ''}
+                      className={`transition-colors duration-150 ${active ? 'bg-[#f3f7f8] font-semibold dark:bg-card' : ''}`}
                     >
-                      <Link href={item.url}>
+                      <Link onClick={fecharNoCelular} href={item.url}>
                         <item.icon className="size-5" />
                         <span className="text-sm">{item.title}</span>
                       </Link>
@@ -86,10 +92,11 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <SidebarMenu>
           {isOwner && <SidebarMenuItem>
             <Link
+              onClick={fecharNoCelular}
               href="/xgestao/configuracoes?tab=plano"
               data-testid="xgestao-sidebar-upgrade"
               className={[
@@ -118,9 +125,9 @@ export function XGestaoSidebar({ isOwner }: { isOwner: boolean }) {
                 <SidebarMenuButton
                   asChild
                   isActive={active}
-                  className={active ? 'border-r-3 border-primary bg-[#f3f7f8] font-semibold dark:bg-gray-800' : ''}
+                  className={`transition-colors duration-150 ${active ? 'bg-[#f3f7f8] font-semibold dark:bg-card' : ''}`}
                 >
-                  <Link href={item.url}>
+                  <Link onClick={fecharNoCelular} href={item.url}>
                     <item.icon className="size-4" />
                     <span className="text-sm font-medium">{item.title}</span>
                   </Link>

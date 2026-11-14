@@ -152,16 +152,16 @@ export function AtualizarProgressoModal({
       }}
     >
       <DialogContent className="w-full max-w-sm p-0 flex flex-col gap-0 overflow-hidden">
-        <DialogHeader className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <DialogHeader className="p-6 border-b border-gray-100 dark:border-border shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/5 rounded-lg">
               <IconDataUsage className="text-primary text-xl" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-lg font-bold text-gray-900 dark:text-foreground">
                 Atualizar progresso
               </DialogTitle>
-              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1">
+              <DialogDescription className="text-sm text-gray-500 mt-0.5 line-clamp-1 dark:text-muted-foreground">
                 {tarefa?.titulo}
               </DialogDescription>
             </div>
@@ -174,13 +174,13 @@ export function AtualizarProgressoModal({
             <span className="text-5xl font-extrabold text-primary tabular-nums" data-testid="text-valor-progresso">
               {valor}%
             </span>
-            <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="w-full h-3 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all duration-200"
                 style={{ width: `${valor}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1 text-center">
+            <p className="text-xs text-gray-500 mt-1 text-center dark:text-muted-foreground">
               Atual: <span className="font-semibold">{progressoAtual}%</span>
               {valor > progressoAtual && (
                 <>
@@ -215,7 +215,7 @@ export function AtualizarProgressoModal({
                 type="button"
                 onClick={() => setValor(v)}
                 disabled={mutation.isPending}
-                className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                className="px-3 py-1 rounded-full text-xs font-semibold border border-gray-200 dark:border-border hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {v}%
               </button>

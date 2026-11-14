@@ -217,7 +217,7 @@ export function XGestaoDashboard() {
             <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10">
               <RiBuilding2Line className="size-8 text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Comece pela sua primeira obra</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-foreground">Comece pela sua primeira obra</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
               Assim que uma obra própria for cadastrada, os indicadores de execução aparecerão aqui automaticamente.
             </p>
@@ -238,7 +238,9 @@ export function XGestaoDashboard() {
         <NovaObraModal />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* PRD 55 — no celular os dois contadores ficam lado a lado (menos rolagem);
+          os valores em reais seguem em linha inteira para não cortar o número. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 [&>*]:h-full">
         {/* XG13 — `luminous` (em todos os quatro cards) já existia no `StatsCard`
             e só não era passado aqui: o painel do xgestão renderizava card liso
             enquanto o dashboard do empreiteiro tinha o acabamento completo. Prop
@@ -263,25 +265,29 @@ export function XGestaoDashboard() {
               : undefined
           }
         />
-        <StatsCard luminous label="Obras concluídas" value={resumo.concluidas} icon={RiCheckboxCircleLine} iconBgColor="bg-success/10 text-success" />
+        <StatsCard luminous label="Obras concluídas" value={resumo.concluidas} icon={RiCheckboxCircleLine} iconBgColor="bg-[#22846D]/10 text-[#22846D] dark:text-emerald-400" />
         {/* XG27 — no lugar do "Progresso médio": quanto do orçamento da carteira
             já virou custo, com a cor do estado. Reusa a prop `badge` que o
             `StatsCard` já aceita — nenhum componente novo. */}
+        <div className="col-span-2 sm:col-span-1">
         <StatsCard
           luminous
           label="Saúde financeira"
           value={formatCurrency(resumo.custoReal)}
           icon={RiWallet3Line}
-          iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20"
+          iconBgColor="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
           badge={{
             label: resumo.consumo === null ? 'orçamento não lançado' : `${resumo.consumo}% do orçamento`,
             variant: SEMAFORO_BADGE[semaforoFinanceiro(resumo.consumo)],
           }}
         />
+        </div>
         {/* XG28 — era "Orçamento gerenciado". É a soma do orçamento de todas as
             obras da carteira, e "gerenciado" sugeria uma distinção inexistente:
             o próprio cliente perguntou se era o valor de uma obra só. */}
-        <StatsCard luminous label="Orçamento total" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20" />
+        <div className="col-span-2 sm:col-span-1">
+          <StatsCard luminous label="Orçamento total" value={formatCurrency(resumo.orcamento)} icon={RiMoneyDollarCircleLine} iconBgColor="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400" />
+        </div>
       </div>
 
       {/* XG17 — o resumo de Saúde saiu do dashboard do xgestão junto com o card

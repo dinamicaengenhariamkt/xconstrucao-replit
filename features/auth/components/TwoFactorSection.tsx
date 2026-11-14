@@ -27,7 +27,7 @@ import {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4 dark:text-muted-foreground">
       {children}
     </p>
   );
@@ -168,7 +168,7 @@ export function TwoFactorSection() {
   // Contas OAuth-only não fazem 2FA local — o provedor já cobre.
   if (!status.disponivel) {
     return (
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+      <Card className="rounded-xl border border-gray-100 dark:border-border">
         <CardHeader className="p-6 pb-2">
           <SectionTitle>Verificação em duas etapas</SectionTitle>
         </CardHeader>
@@ -182,7 +182,7 @@ export function TwoFactorSection() {
   }
 
   return (
-    <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+    <Card className="rounded-xl border border-gray-100 dark:border-border">
       <CardHeader className="p-6 pb-2">
         <SectionTitle>Verificação em duas etapas</SectionTitle>
       </CardHeader>
@@ -191,7 +191,7 @@ export function TwoFactorSection() {
         {status.enabled && fase !== 'recovery' && (
           <>
             <div className="flex items-start gap-2">
-              <RiCheckboxCircleLine className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <RiCheckboxCircleLine className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0 dark:text-green-300" />
               <p className="text-sm text-muted-foreground">
                 A verificação em duas etapas está <span className="font-medium text-foreground">ativa</span>.
                 A cada login pediremos um código do seu app autenticador.
@@ -270,7 +270,7 @@ export function TwoFactorSection() {
             </div>
             {status.obrigatorio && (
               <div className="flex items-start gap-2">
-                <RiAlertLine className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <RiAlertLine className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0 dark:text-amber-400" />
                 <p className="text-sm text-amber-600 dark:text-amber-400">
                   Sua conta é administrativa: a verificação em duas etapas é obrigatória.
                 </p>
@@ -293,7 +293,7 @@ export function TwoFactorSection() {
             </p>
             <div className="flex flex-col items-center gap-3">
               {qrDataUrl && (
-                <Image src={qrDataUrl} alt="QR code 2FA" width={180} height={180} className="rounded-lg border border-gray-100 dark:border-gray-800" unoptimized />
+                <Image src={qrDataUrl} alt="QR code 2FA" width={180} height={180} className="rounded-lg border border-gray-100 dark:border-border" unoptimized />
               )}
               <code className="text-xs bg-muted px-2 py-1 rounded tracking-widest break-all" data-testid="text-secret-2fa">
                 {secret}
@@ -325,7 +325,7 @@ export function TwoFactorSection() {
         {fase === 'recovery' && (
           <>
             <div className="flex items-start gap-2">
-              <RiAlertLine className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <RiAlertLine className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0 dark:text-amber-400" />
               <p className="text-sm text-muted-foreground">
                 Guarde estes <span className="font-medium text-foreground">códigos de recuperação</span> em local seguro.
                 Cada um funciona uma única vez e eles não serão exibidos novamente.

@@ -47,7 +47,7 @@ import { useObraShares, toAbsoluteShareUrl } from '@features/xgestao/obra-public
 import { useToast } from '@shared/hooks/use-toast';
 
 const STATUS_BG: Record<string, string> = {
-  em_execucao: 'bg-primary text-white',
+  em_execucao: 'bg-primary text-white dark:text-primary-foreground',
   com_atrasos: 'bg-red-500 text-white',
   com_pendencias: 'bg-amber-500 text-white',
   planejamento: 'bg-blue-500 text-white',
@@ -300,7 +300,7 @@ function BotaoAjuda({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-gray-700 dark:text-gray-300"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-border dark:text-slate-300"
       data-testid="botao-ajuda"
     >
       <IconHelpOutline className="text-base" />
@@ -341,10 +341,10 @@ function KpiCardShell({
   return (
     <div
       className={cn(
-        'relative flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm transition-all dark:bg-gray-900 sm:p-5',
+        'relative flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm transition-all dark:bg-card sm:p-5',
         luminous
-          ? 'luminous-card group overflow-hidden border-gray-100 hover:bg-gray-50/60 dark:border-gray-800 dark:hover:bg-gray-800/40'
-          : 'border-gray-100 dark:border-gray-800',
+          ? 'luminous-card group overflow-hidden border-gray-100 hover:bg-gray-50/60 dark:border-border dark:hover:bg-muted/60'
+          : 'border-gray-100 dark:border-border',
         className,
       )}
     >
@@ -425,7 +425,7 @@ function LinkPublicoBloco({
 
   return (
     <div
-      className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+      className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-border dark:bg-muted"
       data-testid="detalhes-link-publico"
       data-tour="compartilhar-link"
     >
@@ -435,7 +435,7 @@ function LinkPublicoBloco({
             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold',
             ativos > 0
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-              : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+              : 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-slate-300',
           )}
           data-testid="detalhes-link-status"
         >
@@ -460,7 +460,7 @@ function LinkPublicoBloco({
                 data-testid={`detalhes-link-${share.id}`}
               >
                 <div className="flex min-w-0 items-baseline gap-2 sm:w-40 sm:shrink-0 sm:flex-col sm:gap-0">
-                  <span className="truncate text-sm font-bold text-gray-900 dark:text-white">{share.nome}</span>
+                  <span className="truncate text-sm font-bold text-gray-900 dark:text-foreground">{share.nome}</span>
                   {share.pausadoPorPlano && (
                     <span
                       className="w-fit rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
@@ -469,7 +469,7 @@ function LinkPublicoBloco({
                       Pausado pelo plano
                     </span>
                   )}
-                  <span className="text-[11px] text-gray-500" data-testid="detalhes-link-metricas">
+                  <span className="text-[11px] text-gray-500 dark:text-muted-foreground" data-testid="detalhes-link-metricas">
                     {share.visualizacoes === 0
                       ? 'Ainda não foi aberto'
                       : `${share.visualizacoes} ${share.visualizacoes === 1 ? 'visualização' : 'visualizações'}`}
@@ -480,13 +480,13 @@ function LinkPublicoBloco({
                   readOnly
                   value={url}
                   onClick={(e) => e.currentTarget.select()}
-                  className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                  className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-xs text-gray-600 dark:border-border dark:bg-card dark:text-slate-300"
                   data-testid="detalhes-link-url"
                 />
                 <button
                   type="button"
                   onClick={() => copiar(share.id, url)}
-                  className="shrink-0 cursor-pointer rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90"
+                  className="shrink-0 cursor-pointer rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white dark:text-primary-foreground transition-opacity hover:opacity-90"
                   data-testid="detalhes-link-copiar"
                 >
                   {copiado === share.id ? 'Copiado' : 'Copiar'}
@@ -497,7 +497,7 @@ function LinkPublicoBloco({
         </ul>
       )}
 
-      <p className="mt-3 text-xs text-gray-500">
+      <p className="mt-3 text-xs text-gray-500 dark:text-muted-foreground">
         Quem recebe acompanha a obra somente leitura, sem criar conta. {onGerenciar
           ? 'Crie um link por pessoa (cliente, arquiteto…) para escolher o que cada uma vê.'
           : 'Cada link pode mostrar informações diferentes para seu destinatário.'} Valores só aparecem no link com
@@ -550,17 +550,17 @@ function DetalhesObraCard({
       // XG13 — `luminous-section` é o acabamento dos cards grandes no resto do
       // produto: borda em gradiente + degradê interno. Este card só existe em obra
       // própria (ver a condição no chamador), então não alcança o marketplace.
-      className="luminous-section rounded-2xl border border-transparent bg-white p-5 shadow-none dark:bg-gray-900 sm:p-6"
+      className="luminous-section rounded-2xl border border-transparent bg-white p-5 shadow-none dark:bg-card sm:p-6"
       aria-labelledby="detalhes-obra-console"
       data-testid="detalhes-obra-card"
       data-tour="detalhes-obra"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 id="detalhes-obra-console" className="text-lg font-extrabold text-gray-900 dark:text-white">
+          <h2 id="detalhes-obra-console" className="text-lg font-extrabold text-gray-900 dark:text-foreground">
             Detalhes da obra
           </h2>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-muted-foreground">
             Estas informações também aparecem para quem abrir o link público.
           </p>
         </div>
@@ -581,7 +581,7 @@ function DetalhesObraCard({
       </div>
 
       {vazio ? (
-        <p className="mt-4 text-sm text-gray-500" data-testid="detalhes-obra-vazio">
+        <p className="mt-4 text-sm text-gray-500 dark:text-muted-foreground" data-testid="detalhes-obra-vazio">
           Nenhum detalhe preenchido ainda. Adicione descrição, tipo, área e prazos para que o
           acompanhamento fique mais completo.
         </p>
@@ -589,7 +589,7 @@ function DetalhesObraCard({
         <>
           {obra.descricao && (
             <p
-              className="mt-3 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-gray-300"
+              className="mt-3 max-w-4xl whitespace-pre-line text-sm leading-6 text-gray-600 dark:text-slate-300"
               data-testid="detalhes-obra-descricao"
             >
               {obra.descricao}
@@ -598,9 +598,9 @@ function DetalhesObraCard({
           {itens.length > 0 && (
             <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {itens.map((item) => (
-                <div key={item.label} className="rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
-                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500">{item.label}</dt>
-                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{item.value}</dd>
+                <div key={item.label} className="rounded-xl bg-gray-50 p-4 dark:bg-muted">
+                  <dt className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-muted-foreground">{item.label}</dt>
+                  <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-foreground">{item.value}</dd>
                 </div>
               ))}
             </dl>
@@ -622,7 +622,7 @@ function DetalhesObraCard({
         continua no diálogo, que exige digitar o nome da obra — um clique
         acidental não apaga meses de registro.
       */}
-      {onExcluir && <div className="mt-6 border-t border-gray-100 pt-4 dark:border-gray-800">
+      {onExcluir && <div className="mt-6 border-t border-gray-100 pt-4 dark:border-border">
         <button
           type="button"
           onClick={onExcluir}
@@ -729,12 +729,12 @@ export function ObraConsoleView({
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-10 animate-pulse space-y-6">
-        <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded w-40" />
-        <div className="h-80 bg-gray-200 dark:bg-gray-800 rounded-3xl" />
+        <div className="h-5 bg-gray-200 dark:bg-white/10 rounded w-40" />
+        <div className="h-80 bg-gray-200 dark:bg-white/10 rounded-3xl" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => <div key={i} className="h-36 bg-gray-200 dark:bg-gray-800 rounded-2xl" />)}
+          {[...Array(5)].map((_, i) => <div key={i} className="h-36 bg-gray-200 dark:bg-white/10 rounded-2xl" />)}
         </div>
-        <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded-2xl" />
+        <div className="h-96 bg-gray-200 dark:bg-white/10 rounded-2xl" />
       </div>
     );
   }
@@ -743,7 +743,7 @@ export function ObraConsoleView({
     return (
       <div className="p-4 sm:p-6 lg:p-10 text-center py-20">
         <IconConstruction className="text-5xl text-gray-300 block mb-4" />
-        <h3 className="text-lg font-bold text-gray-500">Obra não encontrada</h3>
+        <h3 className="text-lg font-bold text-gray-500 dark:text-muted-foreground">Obra não encontrada</h3>
         <Link href={basePath} className="text-primary font-semibold mt-2 inline-block" data-testid="link-back-not-found">
           Voltar para Minhas Obras
         </Link>
@@ -773,7 +773,7 @@ export function ObraConsoleView({
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2">
         <Link
           href={basePath}
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors dark:text-muted-foreground"
           data-testid="link-back"
         >
           <IconArrowBack className="text-lg" />
@@ -781,7 +781,7 @@ export function ObraConsoleView({
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav className="flex items-center gap-2 text-sm flex-wrap">
-            <Link href={basePath} className="text-gray-400 hover:text-primary transition-colors">
+            <Link href={basePath} className="text-gray-400 hover:text-primary transition-colors dark:text-muted-foreground">
               Minhas Obras
             </Link>
             <IconChevronRight className="text-gray-300 text-base" />
@@ -818,7 +818,7 @@ export function ObraConsoleView({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm"
+        className="bg-white dark:bg-card rounded-3xl overflow-hidden border border-gray-100 dark:border-border shadow-sm"
         data-testid="hero-minha-obra"
       >
         {/*
@@ -900,7 +900,7 @@ export function ObraConsoleView({
           nenhuma, ancora no viewport e passa a acompanhar a rolagem. Os dois
           cenários já aconteceram — o wrapper é o que fecha a fronteira certa.
         */}
-        <div className="relative bg-white p-4 text-gray-900 dark:bg-gray-900 dark:text-white sm:p-6 md:absolute md:bottom-0 md:left-0 md:right-0 md:bg-transparent md:p-8 md:text-white md:dark:bg-transparent">
+        <div className="relative bg-white p-4 text-gray-900 dark:bg-card dark:text-foreground sm:p-6 md:absolute md:bottom-0 md:left-0 md:right-0 md:bg-transparent md:p-8 md:text-white md:dark:bg-transparent">
           <div className="md:relative">
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
@@ -925,7 +925,7 @@ export function ObraConsoleView({
                 <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight break-words mb-3" data-testid="text-titulo">
                   {obra.titulo}
                 </h1>
-                <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 md:items-center md:text-white/90">
+                <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-muted-foreground md:items-center md:text-white/90">
                   <IconLocationOn className="text-lg shrink-0" />
                   <span>{obra.endereco}</span>
                 </div>
@@ -937,10 +937,10 @@ export function ObraConsoleView({
                 lançar", 17:11). De `md` em diante volta a ser a linha do desktop.
               */}
               <div className="flex flex-col items-stretch gap-3 md:flex-row md:flex-wrap md:items-end md:gap-4">
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 md:text-white/90">
+                <div className="flex items-center gap-2 text-gray-600 dark:text-slate-300 md:text-white/90">
                   <IconEvent className="text-lg shrink-0" />
                   <div className="leading-tight">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 md:text-white/60">Entrega prevista</p>
+                    <p className="text-xs text-gray-500 dark:text-muted-foreground md:text-white/60">Entrega prevista</p>
                     {/* O adapter devolve "—" quando não há data; exibir o
                         travessão sozinho parece campo quebrado. */}
                     <p className="font-bold text-sm">
@@ -951,10 +951,10 @@ export function ObraConsoleView({
                   </div>
                 </div>
                 {obra.temContratante && (
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300 md:text-white/90">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-slate-300 md:text-white/90">
                     <IconGroups className="text-lg" />
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 md:text-white/60">Contratante</p>
+                      <p className="text-xs text-gray-500 dark:text-muted-foreground md:text-white/60">Contratante</p>
                       <div className="flex items-center gap-2">
                         <div className={cn('w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold', obra.contratante.cor)}>
                           {obra.contratante.iniciais}
@@ -1001,18 +1001,18 @@ export function ObraConsoleView({
           aprovadas pelo contratante, e tem peso contratual.
         */}
         {!obra.isObraPropria && (
-          <div className="border-t border-gray-100 p-4 dark:border-gray-800 sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-gray-800/50" data-testid="progress-bar-section">
+          <div className="border-t border-gray-100 p-4 dark:border-border sm:p-6 md:border-t-0 md:p-8 bg-gray-50 dark:bg-muted" data-testid="progress-bar-section">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="min-w-0">
-                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Progresso Geral</span>
-                <p className="mt-1 text-xs text-gray-400">Avanço consolidado da execução da obra</p>
+                <span className="text-sm font-bold text-gray-500 uppercase tracking-wider dark:text-muted-foreground">Progresso Geral</span>
+                <p className="mt-1 text-xs text-gray-400 dark:text-muted-foreground">Avanço consolidado da execução da obra</p>
               </div>
               <div className="flex shrink-0 items-baseline gap-0.5">
-                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">{obra.progresso}</span>
-                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">%</span>
+                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-foreground">{obra.progresso}</span>
+                <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-foreground">%</span>
               </div>
             </div>
-            <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-4 w-full bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${obra.progresso}%` }}
@@ -1072,8 +1072,8 @@ export function ObraConsoleView({
             </div>
             <div>
               {/* XG10 — "Real" não distinguia de nada: só existe um progresso. */}
-              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Progresso</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.progresso}%</p>
+              <p className="text-gray-500 text-xs font-bold uppercase tracking-wider dark:text-muted-foreground">Progresso</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-foreground mt-1">{obra.progresso}%</p>
             </div>
             <div className="h-1.5 w-full bg-success/20 rounded-full overflow-hidden">
               <div className="h-full bg-success rounded-full" style={{ width: `${obra.progresso}%` }} />
@@ -1089,11 +1089,11 @@ export function ObraConsoleView({
           className={obra.diasAtraso > 0 ? 'border-l-4 border-l-amber-500' : undefined}
         >
           <div className="flex justify-between items-start">
-            <div className={kpiIconClasses(kpiLuminous, obra.diasAtraso > 0 ? 'bg-amber-50 text-amber-600' : 'bg-success/10 text-success')}>
+            <div className={kpiIconClasses(kpiLuminous, obra.diasAtraso > 0 ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300' : 'bg-success/10 text-success')}>
               <IconSchedule />
             </div>
             {obra.diasAtraso > 0 && (
-              <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">Alerta</span>
+              <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full dark:text-amber-300 dark:bg-amber-900/20">Alerta</span>
             )}
           </div>
           {/* XG10 — antes mostrava "Dias em Atraso: 0" em obra no prazo, dando
@@ -1101,9 +1101,9 @@ export function ObraConsoleView({
               não, tipo, tá no prazo", 25:00). O número de dias só aparece
               quando há atraso de fato. */}
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Prazo da obra</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider dark:text-muted-foreground">Prazo da obra</p>
             {obra.diasAtraso > 0 ? (
-              <p className="text-2xl sm:text-3xl font-extrabold mt-1 text-amber-600">
+              <p className="text-2xl sm:text-3xl font-extrabold mt-1 text-amber-600 dark:text-amber-300">
                 {obra.diasAtraso}
                 <span className="text-base font-bold ml-1">
                   {obra.diasAtraso === 1 ? 'dia' : 'dias'}
@@ -1116,7 +1116,7 @@ export function ObraConsoleView({
               </p>
             )}
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">
             {obra.diasAtraso > 0
               ? `Em atraso desde ${obra.dataPrevisaoFim || 'a data prevista'}`
               : obra.dataPrevisaoFim
@@ -1132,10 +1132,10 @@ export function ObraConsoleView({
         {!obra.isObraPropria && (
         <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className={kpiIconClasses(kpiLuminous, 'bg-purple-50 dark:bg-purple-900/20 text-purple-600')}>
+            <div className={kpiIconClasses(kpiLuminous, 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300')}>
               <IconTaskAlt />
             </div>
-            <span className="text-purple-600 text-xs font-bold bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+            <span className="text-purple-600 text-xs font-bold bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full dark:text-purple-300">
               {obra.tarefasTotal} total
             </span>
           </div>
@@ -1144,12 +1144,12 @@ export function ObraConsoleView({
               executando, ele coloca como tarefa pendente", 25:39). Agora mostra
               o que está em andamento. */}
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Em andamento</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider dark:text-muted-foreground">Em andamento</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-foreground mt-1">
               {obra.tarefasEmAndamento ?? 0}
             </p>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">
             {obra.tarefasTotal - obra.tarefasPendentes} concluídas de {obra.tarefasTotal}
           </p>
         </KpiCardShell>
@@ -1158,21 +1158,21 @@ export function ObraConsoleView({
         {/* Problemas Abertos */}
         <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className={kpiIconClasses(kpiLuminous, 'bg-red-50 dark:bg-red-900/20 text-red-600')}>
+            <div className={kpiIconClasses(kpiLuminous, 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300')}>
               <IconErrorOutline />
             </div>
             {obra.problemasAbertos > 0 && (
-              <span className="text-red-600 text-xs font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full">Atenção</span>
+              <span className="text-red-600 text-xs font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full dark:text-red-300">Atenção</span>
             )}
           </div>
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Problemas Abertos</p>
-            <p className={cn('text-2xl sm:text-3xl font-extrabold mt-1', obra.problemasAbertos > 0 ? 'text-red-600' : 'text-gray-900 dark:text-white')}>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider dark:text-muted-foreground">Problemas Abertos</p>
+            <p className={cn('text-2xl sm:text-3xl font-extrabold mt-1', obra.problemasAbertos > 0 ? 'text-red-600 dark:text-red-300' : 'text-gray-900 dark:text-foreground')}>
               {obra.problemasAbertos}
             </p>
           </div>
           {/* XG10 — o subtítulo era "1 crítico, 2 médios" fixo no código. */}
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">
             {obra.problemasAbertos > 0
               ? [
                   obra.problemasPorGravidade?.critico
@@ -1194,20 +1194,20 @@ export function ObraConsoleView({
         {/* Equipe no Canteiro */}
         <KpiCardShell luminous={kpiLuminous}>
           <div className="flex justify-between items-start">
-            <div className={kpiIconClasses(kpiLuminous, 'bg-blue-50 dark:bg-blue-900/20 text-blue-600')}>
+            <div className={kpiIconClasses(kpiLuminous, 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300')}>
               <IconGroups />
             </div>
             {/* XG10 — o badge dizia "Hoje", mas o número é de cadastros na
                 equipe, não de presença no dia. Rótulo agora diz o que mede. */}
-            <span className="text-blue-600 text-xs font-bold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+            <span className="text-blue-600 text-xs font-bold bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full dark:text-blue-300">
               Cadastrados
             </span>
           </div>
           <div>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Equipe da obra</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{obra.equipeAtiva}</p>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider dark:text-muted-foreground">Equipe da obra</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-foreground mt-1">{obra.equipeAtiva}</p>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-muted-foreground">
             {obra.equipeAtiva === 1 ? 'pessoa registrada' : 'pessoas registradas'}
           </p>
         </KpiCardShell>
@@ -1234,10 +1234,10 @@ export function ObraConsoleView({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className={cn(
-          'bg-white dark:bg-gray-900 rounded-2xl overflow-hidden',
+          'bg-white dark:bg-card rounded-2xl overflow-hidden',
           kpiLuminous
             ? 'luminous-section border border-transparent shadow-none'
-            : 'border border-gray-100 dark:border-gray-800 shadow-sm',
+            : 'border border-gray-100 dark:border-border shadow-sm',
         )}
       >
         {/*
@@ -1247,7 +1247,7 @@ export function ObraConsoleView({
           intercepta clique, ao contrário de um overlay posicionado por cima.
         */}
         <div
-          className="flex overflow-x-auto border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
+          className="flex overflow-x-auto border-b border-gray-100 dark:border-border bg-gray-50 dark:bg-muted [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] md:[mask-image:none]"
           data-tour="abas-obra"
         >
           {abasVisiveis.map((tab) => (
@@ -1257,8 +1257,8 @@ export function ObraConsoleView({
               className={cn(
                 'flex items-center gap-2 px-4 py-3 sm:px-5 sm:py-4 text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer flex-shrink-0',
                 abaAtual === tab.key
-                  ? 'text-primary border-b-2 border-primary bg-white dark:bg-gray-900'
-                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                  ? 'text-primary border-b-2 border-primary bg-white dark:bg-card'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-muted dark:text-muted-foreground'
               )}
             >
               <tab.Icon className="text-[18px]" />

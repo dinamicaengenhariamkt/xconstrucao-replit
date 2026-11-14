@@ -52,7 +52,7 @@ export function ProfitSummary({
               label="Receita total"
               value={formatCurrencyRounded(metrics.receitaTotal)}
               icon={IconAttachMoney}
-              iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20"
+              iconBgColor="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
               luminous={luminous}
               compact
             />
@@ -60,7 +60,7 @@ export function ProfitSummary({
               label="Lucro estimado"
               value={formatCurrencyRounded(metrics.lucroEstimado)}
               icon={IconTrendingUp}
-              iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20"
+              iconBgColor="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-300"
               badge={metrics.lucroEstimado < 0 ? { label: 'Prejuízo', variant: 'error' } : undefined}
               luminous={luminous}
               compact
@@ -69,7 +69,7 @@ export function ProfitSummary({
               label="Margem média"
               value={`${metrics.margem.toFixed(1).replace('.', ',')}%`}
               icon={IconAnalytics}
-              iconBgColor="bg-purple-50 text-purple-600 dark:bg-purple-900/20"
+              iconBgColor="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300"
               badge={{
                 label: marginVariant === 'success' ? 'Saudável' : marginVariant === 'warning' ? 'Atenção' : 'Crítica',
                 variant: marginVariant,

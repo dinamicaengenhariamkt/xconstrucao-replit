@@ -46,14 +46,14 @@ const FILTER_TEXT_COLORS: Record<TaskFilter, string> = {
   todos: '',
   pendente: '',
   em_andamento: '',
-  bloqueado: 'text-amber-600',
+  bloqueado: 'text-amber-600 dark:text-amber-300',
   concluido: 'text-success',
 };
 
 const STATUS_BADGE: Record<MinhaObraTarefa['status'], { label: string; classes: string }> = {
-  pendente: { label: 'Pendente', classes: 'text-gray-500 bg-gray-200 dark:bg-gray-700 dark:text-gray-300' },
+  pendente: { label: 'Pendente', classes: 'text-gray-500 bg-gray-200 dark:bg-white/10 dark:text-muted-foreground' },
   em_andamento: { label: 'Em Andamento', classes: 'text-primary bg-primary/10' },
-  bloqueado: { label: 'Bloqueado', classes: 'text-amber-600 bg-amber-100' },
+  bloqueado: { label: 'Bloqueado', classes: 'text-amber-600 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/30' },
   concluido: { label: 'Concluído', classes: 'text-success bg-success/20' },
 };
 
@@ -107,9 +107,9 @@ function TaskRow({
       className={cn(
         'flex items-center gap-4 p-4 rounded-xl border group transition-colors',
         isConcluido && 'bg-success/5 border-success/20',
-        isBloqueado && 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 border-l-4 border-l-amber-500',
+        isBloqueado && 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 border-l-4 border-l-amber-500 dark:border-amber-800',
         isEmAndamento && 'bg-primary/5 border-primary/20',
-        isPendente && 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
+        isPendente && 'bg-gray-50 dark:bg-muted border-gray-100 dark:border-border hover:bg-gray-100 dark:hover:bg-muted'
       )}
     >
       {/* XG10 — o checkbox era `readOnly`, sem `onChange`: puramente decorativo.
@@ -125,24 +125,24 @@ function TaskRow({
         aria-label={isConcluido ? `Reabrir ${tarefa.titulo}` : `Concluir ${tarefa.titulo}`}
         data-testid={`checkbox-tarefa-${tarefa.id}`}
         className={cn(
-          'w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0',
+          'w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary flex-shrink-0 dark:border-border',
           isBloqueado ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
         )}
       />
 
       {/* Conteúdo principal */}
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm font-semibold text-gray-900 dark:text-white', isConcluido && 'line-through text-gray-400')}>
+        <p className={cn('text-sm font-semibold text-gray-900 dark:text-foreground', isConcluido && 'line-through text-gray-400 dark:text-muted-foreground')}>
           {tarefa.titulo}
         </p>
 
         {isBloqueado && tarefa.bloqueioMotivo ? (
-          <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
+          <div className="flex items-center gap-1 mt-1 text-xs text-amber-600 dark:text-amber-300">
             <IconBlock className="text-sm" />
             <span>Bloqueado: {tarefa.bloqueioMotivo}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <IconPerson className="text-sm" />
               {tarefa.responsavel}
@@ -168,7 +168,7 @@ function TaskRow({
 
         {isEmAndamento && tarefa.progresso != null && (
           <div className="mt-2 flex items-center gap-2">
-            <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${tarefa.progresso}%` }} />
             </div>
             <span className="text-xs font-bold text-primary">{tarefa.progresso}%</span>
@@ -185,7 +185,7 @@ function TaskRow({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="p-1.5 text-gray-400 hover:text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-1.5 text-gray-400 hover:text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-muted dark:text-muted-foreground"
               aria-label="Ações da tarefa"
             >
               <IconMoreVert className="text-lg" />
@@ -194,7 +194,7 @@ function TaskRow({
           <DropdownMenuContent align="end" className="w-52">
             {/* Editar — sempre disponível */}
             <DropdownMenuItem onClick={() => onEditar(tarefa)} className="cursor-pointer">
-              <IconEdit className="text-sm mr-2 text-gray-500" />
+              <IconEdit className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
               {isConcluido ? 'Ver / Editar detalhes' : 'Editar tarefa'}
             </DropdownMenuItem>
 
@@ -222,7 +222,7 @@ function TaskRow({
 
             {(isPendente || isEmAndamento) && (
               <DropdownMenuItem onClick={() => onBloquear(tarefa)} className="cursor-pointer">
-                <IconBlock className="text-sm mr-2 text-amber-500" />
+                <IconBlock className="text-sm mr-2 text-amber-500 dark:text-amber-400" />
                 Bloquear...
               </DropdownMenuItem>
             )}
@@ -242,14 +242,14 @@ function TaskRow({
 
             {isConcluido && (
               <DropdownMenuItem onClick={() => onReabrir(tarefa)} className="cursor-pointer">
-                <IconUndo className="text-sm mr-2 text-gray-500" />
+                <IconUndo className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
                 Reabrir tarefa
               </DropdownMenuItem>
             )}
 
             {/* Duplicar — sempre disponível */}
             <DropdownMenuItem onClick={() => onDuplicar(tarefa)} className="cursor-pointer">
-              <IconContentCopy className="text-sm mr-2 text-gray-500" />
+              <IconContentCopy className="text-sm mr-2 text-gray-500 dark:text-muted-foreground" />
               Duplicar tarefa
             </DropdownMenuItem>
 
@@ -258,7 +258,7 @@ function TaskRow({
             {/* Excluir */}
             <DropdownMenuItem
               onClick={() => onExcluir(tarefa)}
-              className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+              className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20 dark:text-red-300 dark:focus:text-red-300"
             >
               <IconDelete className="text-sm mr-2" />
               Excluir tarefa
@@ -283,10 +283,10 @@ interface TaskGroupProps {
 function TaskGroup({ etapaNome, tarefas, isActive, completedCount, rowProps }: TaskGroupProps) {
   return (
     <div className="mb-6">
-      <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+      <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 dark:text-muted-foreground">
         <span className={cn('w-2 h-2 rounded-full', isActive ? 'bg-primary animate-pulse' : 'bg-success')} />
         {etapaNome}
-        <span className="text-xs font-normal text-gray-400 ml-1">
+        <span className="text-xs font-normal text-gray-400 ml-1 dark:text-muted-foreground">
           {completedCount}/{tarefas.length} completas
         </span>
       </h4>
@@ -432,12 +432,12 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm" data-testid="task-manager-section">
+      <div className="bg-white dark:bg-card p-8 rounded-2xl border border-gray-100 dark:border-border shadow-sm" data-testid="task-manager-section">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Gerenciamento de Tarefas</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Gerenciamento de Tarefas</h3>
+            <p className="text-sm text-gray-500 dark:text-muted-foreground">
               Tarefas são ações específicas; o progresso geral é consolidado pelas atualizações da obra.
             </p>
           </div>
@@ -448,7 +448,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
             className={cn(
               'px-4 py-2 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 w-fit',
               obraFinalizada
-                ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed text-gray-500'
+                ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed text-gray-500 dark:text-muted-foreground'
                 : 'bg-primary hover:bg-primary/90 cursor-pointer'
             )}
           >
@@ -466,8 +466,8 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
               className={cn(
                 'px-4 py-2 rounded-full text-xs font-semibold transition-colors cursor-pointer',
                 activeFilter === filter
-                  ? 'bg-primary text-white'
-                  : cn('bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700', FILTER_TEXT_COLORS[filter] || 'text-gray-600 dark:text-gray-300')
+                  ? 'bg-primary text-white dark:text-primary-foreground'
+                  : cn('bg-gray-100 dark:bg-muted hover:bg-gray-200 dark:hover:bg-white/10', FILTER_TEXT_COLORS[filter] || 'text-gray-600 dark:text-slate-300')
               )}
             >
               {FILTER_LABELS[filter]} ({counts[filter]})
@@ -481,12 +481,12 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
             criar a primeira; filtro vazio precisa saber que é só o filtro. */}
         {Object.keys(etapaGroups).length === 0 ? (
           tarefas.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center dark:border-gray-700" data-testid="tarefas-vazio">
+            <div className="rounded-xl border border-dashed border-gray-200 py-10 text-center dark:border-border" data-testid="tarefas-vazio">
               <IconTaskAlt className="mb-2 block text-4xl text-gray-300" />
-              <p className="font-semibold text-gray-700 dark:text-gray-200">
+              <p className="font-semibold text-gray-700 dark:text-slate-300">
                 Nenhuma tarefa cadastrada ainda
               </p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-muted-foreground">
                 Tarefas são o que precisa ser feito no dia a dia — "assentar piso da sala",
                 "passar fiação do quarto". Cada uma pertence a uma etapa.
               </p>
@@ -494,7 +494,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
                 <button
                   type="button"
                   onClick={() => openModal('nova')}
-                  className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-all hover:shadow-md"
+                  className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white dark:text-primary-foreground transition-all hover:shadow-md"
                   data-testid="btn-primeira-tarefa"
                 >
                   <IconAddCircle className="text-lg" />
@@ -503,7 +503,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
               )}
             </div>
           ) : (
-            <div className="py-12 text-center text-sm text-gray-400" data-testid="tarefas-filtro-vazio">
+            <div className="py-12 text-center text-sm text-gray-400 dark:text-muted-foreground" data-testid="tarefas-filtro-vazio">
               <IconTaskAlt className="mb-2 block text-4xl opacity-40" />
               Nenhuma tarefa com este filtro.
             </div>
@@ -533,8 +533,8 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
           className={cn(
             'w-full py-3 border-2 border-dashed rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2',
             obraFinalizada
-              ? 'border-gray-100 dark:border-gray-800 text-gray-300 cursor-not-allowed'
-              : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:border-primary/40 hover:text-primary cursor-pointer'
+              ? 'border-gray-100 dark:border-border text-gray-300 cursor-not-allowed'
+              : 'border-gray-200 dark:border-border text-gray-500 hover:border-primary/40 hover:text-primary cursor-pointer dark:text-muted-foreground'
           )}
         >
           <IconAddCircle className="text-lg" />
@@ -576,7 +576,7 @@ export function TaskManagerSection({ obra }: TaskManagerSectionProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong className="text-gray-900 dark:text-white">{modalState.tarefa?.titulo}</strong> será removida permanentemente.
+              <strong className="text-gray-900 dark:text-foreground">{modalState.tarefa?.titulo}</strong> será removida permanentemente.
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

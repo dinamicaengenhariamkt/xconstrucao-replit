@@ -52,7 +52,7 @@ const STATUS_CLASS: Record<DisputaObraView['status'], string> = {
   em_analise: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
   aguardando_partes: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
   resolvida: 'bg-[#22846D]/10 text-[#22846D]',
-  cancelada: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+  cancelada: 'bg-gray-100 text-gray-500 dark:bg-muted dark:text-muted-foreground',
 };
 
 const PRIORIDADE_LABEL: Record<DisputaObraView['prioridade'], string> = {
@@ -92,7 +92,7 @@ export function TabDisputas({ obraId, alvos = [] }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Disputas</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">Disputas</h3>
           <p className="text-sm text-muted-foreground">
             Contestações sobre medições e pagamentos desta obra. A administração media e decide.
           </p>
@@ -120,7 +120,7 @@ export function TabDisputas({ obraId, alvos = [] }: Props) {
       {isLoading ? (
         <div className="py-12 text-center text-sm text-muted-foreground">Carregando disputas...</div>
       ) : !disputas || disputas.length === 0 ? (
-        <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+        <Card className="rounded-xl border border-gray-100 dark:border-border">
           <CardContent className="py-12 text-center">
             <RiCheckboxCircleLine className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">Nenhuma disputa nesta obra.</p>
@@ -132,7 +132,7 @@ export function TabDisputas({ obraId, alvos = [] }: Props) {
             <li key={d.id}>
               <button
                 onClick={() => setSelecionada(d.id)}
-                className="w-full text-left rounded-xl border border-gray-100 dark:border-gray-800 p-4 hover:bg-accent/60 dark:hover:bg-accent/30 transition-colors"
+                className="w-full text-left rounded-xl border border-gray-100 dark:border-border p-4 hover:bg-accent/60 dark:hover:bg-accent/30 transition-colors"
                 data-testid={`disputa-row-${d.id}`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -143,12 +143,12 @@ export function TabDisputas({ obraId, alvos = [] }: Props) {
                         {STATUS_LABEL[d.status]}
                       </Badge>
                       {d.prioridade === 'alta' && d.status !== 'resolvida' && (
-                        <Badge className="border-0 text-xs bg-red-50 text-red-600 dark:bg-red-900/20">
+                        <Badge className="border-0 text-xs bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300">
                           Prioridade {PRIORIDADE_LABEL[d.prioridade]}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1 truncate">
+                    <p className="text-sm font-bold text-gray-900 dark:text-foreground mt-1 truncate">
                       {d.titulo}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{d.descricao}</p>
@@ -221,7 +221,7 @@ function AbrirDisputaForm({
     <Card className="rounded-xl border border-amber-200 dark:border-amber-900/40">
       <CardHeader className="p-6 pb-2">
         <div className="flex items-center gap-2">
-          <RiAlertLine className="w-4 h-4 text-amber-500" />
+          <RiAlertLine className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           <p className="text-sm font-semibold">Abrir nova disputa</p>
         </div>
       </CardHeader>
@@ -325,7 +325,7 @@ function DisputaDetalhe({ disputaId, onVoltar }: { disputaId: string; onVoltar: 
     <div className="space-y-6">
       <button
         onClick={onVoltar}
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors dark:text-muted-foreground"
         data-testid="button-voltar-disputas"
       >
         <RiArrowLeftLine className="w-4 h-4" />
@@ -336,7 +336,7 @@ function DisputaDetalhe({ disputaId, onVoltar }: { disputaId: string; onVoltar: 
         <div className="py-12 text-center text-sm text-muted-foreground">Carregando disputa...</div>
       ) : (
         <>
-          <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+          <Card className="rounded-xl border border-gray-100 dark:border-border">
             <CardContent className="p-6 flex flex-col gap-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-mono text-muted-foreground">
@@ -346,22 +346,22 @@ function DisputaDetalhe({ disputaId, onVoltar }: { disputaId: string; onVoltar: 
                   {STATUS_LABEL[disputa.status]}
                 </Badge>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{disputa.titulo}</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">{disputa.titulo}</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{disputa.descricao}</p>
               {resolvida && disputa.resolucaoTexto && (
                 <div className="rounded-lg bg-[#22846D]/5 border border-[#22846D]/20 p-4 mt-2">
                   <p className="text-xs font-semibold text-[#22846D] uppercase tracking-wide mb-1">
                     Decisão da administração
                   </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{disputa.resolucaoTexto}</p>
+                  <p className="text-sm text-gray-700 dark:text-slate-300">{disputa.resolucaoTexto}</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="rounded-xl border border-gray-100 dark:border-gray-800">
+          <Card className="rounded-xl border border-gray-100 dark:border-border">
             <CardHeader className="p-6 pb-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Conversa</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide dark:text-muted-foreground">Conversa</p>
             </CardHeader>
             <CardContent className="px-6 pb-6 pt-2 flex flex-col gap-4">
               {mensagens.length === 0 ? (
@@ -373,12 +373,12 @@ function DisputaDetalhe({ disputaId, onVoltar }: { disputaId: string; onVoltar: 
                   {mensagens.map((m) => (
                     <li key={m.id} className="rounded-lg bg-accent/40 dark:bg-accent/20 p-3">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">
                           {m.autorNome ?? 'Usuário'}
                         </span>
                         <span className="text-[11px] text-muted-foreground">{fmtData(m.criadaEm)}</span>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{m.texto}</p>
+                      <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{m.texto}</p>
                     </li>
                   ))}
                 </ul>
